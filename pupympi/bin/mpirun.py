@@ -22,6 +22,7 @@ def usage():
     you don't give a [MPI_SCRIPT] you can specify the MPI program
     through the interactive python command line. 
     """ % mpi.__version__
+    sys.exit()
 
 if __name__ == "__main__":
     import getopt
@@ -33,10 +34,12 @@ if __name__ == "__main__":
 
     np = 0
 
+    if not optlist:
+        usage()
+
     for opt, arg in optlist:
         if opt in ("-h", "--help"):
             usage()
-            sys.exit()
         
         if opt in ("-np", "--number-procs"):
             try:
@@ -44,6 +47,5 @@ if __name__ == "__main__":
             except ValueError:
                 print "Argument to %s should be an integer" % opt
                 usage()
-                sys.exit()
 
     print "We're going to start %d runners" % np
