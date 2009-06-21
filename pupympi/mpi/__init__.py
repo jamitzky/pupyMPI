@@ -11,10 +11,13 @@ def initialize(size, target, *args, **kwargs):
     # Start np procs and go through with it :)
     from multiprocessing import Process
     procs = {}
+    start_list = []
 
     for rank in range(size):
         p = Process(target=runner, args=(target, rank, size) + args, kwargs=kwargs)
-        p.start()
+        start_list.append( p )
+
+    [ p.start() for p in start_list ]
 
 def rank(comm=None):
     import mpi
