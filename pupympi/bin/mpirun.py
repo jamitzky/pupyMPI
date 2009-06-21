@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 # This is the main pupympi startup script. See the usage function
 # for information about it
 
@@ -18,6 +18,9 @@ def usage():
      --np N  : The number of processes to start
      --number-procs N : See above
 
+     -d 
+     --debug : Allows internal logging and printing for debugging purposes
+
     And [MPI_SCRIPT] is a python script to execute N versions of. If
     you don't give a [MPI_SCRIPT] you can specify the MPI program
     through the interactive python command line. 
@@ -27,12 +30,14 @@ def usage():
 if __name__ == "__main__":
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'np:h', ['help','number-procs='])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'np:hv', ['help','verbose','number-procs='])
     except getopt.GetoptError, err:
         print str(err)
         usage()
 
     np = 0
+    debug = False
+    verbose = False
 
     if not optlist:
         usage()
@@ -48,4 +53,12 @@ if __name__ == "__main__":
                 print "Argument to %s should be an integer" % opt
                 usage()
 
-    print "We're going to start %d runners" % np
+        if opt in ("-d", "--debug"):
+            debug = True
+
+        if opt in ("-v", "--verbose"):
+            verbose = True
+
+    for rank in range(np):
+        p = Process(target=executeable)
+
