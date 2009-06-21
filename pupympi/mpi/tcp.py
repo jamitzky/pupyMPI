@@ -1,10 +1,30 @@
 import mpi
+import socket
 
-def isend(comm=None):
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+def irecv(destination, tag, comm=None):
     if not comm:
         comm = mpi.MPI_COMM_WORLD
+        
+    # Check the destination exists
+    if not comm.have_rank(destination):
+        raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+    
+    conn, addr = mpi.__server_socket.accept()
+    while 1:
+        data = conn.recv(1024)
+        if not data: break
+    print "Vi er kommet hertil ", data, type(data)
+    conn.close()
+    meaningless_handle_to_be_replaced = pickle.loads(data)
+    return meaningless_handle_to_be_replaced
 
-def irecv(destination, content, tag, comm=None):
+def isend(destination, content, tag, comm=None):
+    # Implemented as a regular send until we talk to Brian
     if not comm:
         comm = mpi.MPI_COMM_WORLD
 
@@ -14,4 +34,23 @@ def irecv(destination, content, tag, comm=None):
 
     # Find the network details
     dest = comm.get_network_details(destination)
+    
+    # Rewrite this, when we have the details
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((dest['host'], dest['port']))
+    s.send(pickle.dumps(content))
+    s.close()
+    
+    meaningless_handle_to_be_replaced = None
+    return meaningless_handle_to_be_replaced
 
+def wait(meaningless_handle_to_be_replaced):
+    return meaningless_handle_to_be_replaced
+    
+
+def prepare_process(rank):
+    # listen to a TCP port so we can receive messages.
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind( ('localhost', 6000+rank ))
+    s.listen(5)
+    mpi.__server_socket = s
