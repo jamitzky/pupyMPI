@@ -1,5 +1,6 @@
 import mpi
 import socket
+import time
 
 try:
     import cPickle as pickle
@@ -37,10 +38,15 @@ def isend(destination, content, tag, comm=None):
 
     # Find the network details
     dest = comm.get_network_details(destination)
-        
+            
     # Rewrite this, when we have the details
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print "socket done... wait a while"
+    #time.sleep(2)
+    # I think the line below produces a weird error in itself now my mony is on the port numbers being wrong...
+    #dummy = raw_input("wait?")
     s.connect((dest['host'], dest['port']))
+    time.sleep(2)
     s.send(pickle.dumps(content))
     s.close()
     
