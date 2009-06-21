@@ -16,16 +16,14 @@ def initialize(size, target, *args, **kwargs):
         p = Process(target=runner, args=(target, rank, size) + args, kwargs=kwargs)
         p.start()
 
-def rank(COMM=None):
+def rank(comm=None):
     import mpi
-    if COMM:
-        return 0
-    else:
-        return mpi.MPI_COMM_WORLD.rank
+    if not comm:
+        comm = mpi.MPI_COMM_WORLD
+    return comm.rank
 
-def size(COMM=None):
+def size(comm=None):
     import mpi
-    if COMM:
-        return 0
-    else:
-        return mpi.MPI_COMM_WORLD.size
+    if not comm:
+        comm = mpi.MPI_COMM_WORLD
+    return comm.size
