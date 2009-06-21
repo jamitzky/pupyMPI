@@ -4,21 +4,19 @@ from mpi.comm import Communicator
 from mpi.simplecomm.simplecomm import Testy
 #import mpi.simplecomm
 import mpi
-import socket
 
+
+NETWORK_METHOD = "tcp"
+if NETWORK_METHOD == "tcp":
+    from mpi.tcp import isend, irecv, prepare_process, wait
+    
+    
 # Define exceptions
 class MPIBadAddressException(Exception): pass
 
 def runner(target, rank, size, process_placeholder, *args, **kwargs):
     mpi.MPI_COMM_WORLD = Communicator(rank, size, process_placeholder)
-
-    # listen to a TCP port so we can receive messages.
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind( ('localhost', 6000+rank ))
-    s.listen(5)
-
-    mpi.__server_socket = s
-
+    prepare_process( rank )
     target(*args, **kwargs)
 
 def initialize(size, target, *args, **kwargs):
@@ -42,6 +40,7 @@ def initialize(size, target, *args, **kwargs):
     [ p.start() for (_,p, _) in allprocesses ]
 
 def finalize():
+    # Do stuff with this call (move it to tcp if we need it)
     #mpi.__server_socket.shutdown(socket.SHUT_RDWR) # Disallow both receives and sends
     pass
 
@@ -55,6 +54,4 @@ def size(comm=None):
         comm = mpi.MPI_COMM_WORLD
     return comm.size
 
-from mpi.tcp import isend, irecv
-
-__all__ = ('initialize', 'finalize', 'rank', 'size', 'isend', 'irecv', )
+__all__ = ('initialize', 'finalize', 'rank', 'size', 'isend', 'irecv', 'wait' )
