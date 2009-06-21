@@ -27,14 +27,15 @@ def initialize(size, target, *args, **kwargs):
 
     [ p.start() for (_,p) in allprocesses ]
 
+def finalize():
+    print "Finalize does nothing at this point"
+
 def rank(comm=None):
-    import mpi
     if not comm:
         comm = mpi.MPI_COMM_WORLD
     return comm.rank
 
 def size(comm=None):
-    import mpi
     if not comm:
         comm = mpi.MPI_COMM_WORLD
     return comm.size
