@@ -6,8 +6,8 @@ class Communicator():
         self.members = {}
 
         # Initialize the list with other processes
-        for (rank, process) in process_placeholder['all']:
-            self.members[rank] = process
+        for (rank, _, network_info) in process_placeholder['all']:
+            self.members[rank] = network_info
 
         self.ego = process_placeholder['self']
 
