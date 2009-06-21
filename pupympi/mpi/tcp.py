@@ -6,6 +6,9 @@ try:
 except ImportError:
     import pickle
 
+def recv(destination, tag, comm=None):
+	return wait(irecv(destination, tag, comm=comm))
+	
 def irecv(destination, tag, comm=None):
     if not comm:
         comm = mpi.MPI_COMM_WORLD
@@ -34,7 +37,7 @@ def isend(destination, content, tag, comm=None):
 
     # Find the network details
     dest = comm.get_network_details(destination)
-    
+        
     # Rewrite this, when we have the details
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((dest['host'], dest['port']))
@@ -48,6 +51,9 @@ def wait(meaningless_handle_to_be_replaced):
     return meaningless_handle_to_be_replaced
     
 
+def send(destination, content, tag, comm=None):
+	return wait(isend(destination, content, tag, comm=comm))
+	
 def prepare_process(rank):
     # listen to a TCP port so we can receive messages.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

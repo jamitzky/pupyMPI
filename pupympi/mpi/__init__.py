@@ -8,7 +8,7 @@ import mpi
 
 NETWORK_METHOD = "tcp"
 if NETWORK_METHOD == "tcp":
-    from mpi.tcp import isend, irecv, prepare_process, wait
+    from mpi.tcp import isend, irecv, prepare_process, wait, send, recv
     
     
 # Define exceptions
@@ -30,7 +30,7 @@ def initialize(size, target, *args, **kwargs):
         process_placeholder = {}
         p = Process(target=runner, args=(target, rank, size, process_placeholder) + args, kwargs=kwargs)
         process_list[ rank ] = {'process' : p, 'all' : process_placeholder }
-        allprocesses.append( (rank, p, {'port' : 6000 + rank, 'host' : ''}) )   
+        allprocesses.append( (rank, p, {'port' : 6000 + rank, 'host' : '127.0.0.1'}) )   
 
     for rank in process_list:
         placeholder = process_list[rank]['all']
@@ -54,4 +54,4 @@ def size(comm=None):
         comm = mpi.MPI_COMM_WORLD
     return comm.size
 
-__all__ = ('initialize', 'finalize', 'rank', 'size', 'isend', 'irecv', 'wait' )
+__all__ = ('initialize', 'finalize', 'rank', 'size', 'isend', 'irecv', 'wait', 'recv', 'send' )
