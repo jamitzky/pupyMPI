@@ -1,6 +1,8 @@
 __version__ = 0.01
 
 from mpi.comm import Communicator
+from mpi.simplecomm.simplecomm import Testy
+#import mpi.simplecomm
 import mpi
 
 def runner(target, rank, size, process_placeholder, *args, **kwargs):
