@@ -4,7 +4,7 @@ Network communication - simple
 
 __version__ = 0.01
 
-#from mpi.comm import Communicator
+from mpi.comm2 import Communicator
 
 
 def runner(target, rank, size, *args, **kwargs):
