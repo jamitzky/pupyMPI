@@ -11,3 +11,7 @@ def irecv(destination, content, tag, comm=None):
     # Check the destination exists
     if not comm.have_rank(destination):
         raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+
+    # Find the network details
+    dest = comm.get_network_details(destination)
+

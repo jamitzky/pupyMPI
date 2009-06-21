@@ -14,3 +14,8 @@ class Communicator():
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
 
+    def have_rank(self, rank):
+        return rank in self.members
+
+    def get_network_details(self, rank):
+        return self.members[rank]
