@@ -17,6 +17,7 @@ def initialize(size, target, *args, **kwargs):
         p = Process(target=runner, args=(target, rank, size) + args, kwargs=kwargs)
         start_list.append( p )
 
+
     [ p.start() for p in start_list ]
 
 def rank(comm=None):
