@@ -4,6 +4,9 @@ from mpi.comm import Communicator
 import mpi
 import socket
 
+# Define exceptions
+class MPIBadAddressException(Exception): pass
+
 def runner(target, rank, size, process_placeholder, *args, **kwargs):
     mpi.MPI_COMM_WORLD = Communicator(rank, size, process_placeholder)
 
