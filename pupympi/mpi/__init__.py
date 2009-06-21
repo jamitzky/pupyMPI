@@ -16,7 +16,7 @@ def initialize(size, target, *args, **kwargs):
     for rank in range(size):
         process_placeholder = {}
         p = Process(target=runner, args=(target, rank, size, process_placeholder) + args, kwargs=kwargs)
-        process_list[ rank ] = {'process' : p, 'all' : process_placeholder }
+        process_list[ rank ] = {'process' : p, 'all' : process_placeholder }
 
 def rank(comm=None):
     import mpi
