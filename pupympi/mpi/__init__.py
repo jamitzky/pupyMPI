@@ -1,57 +1,59 @@
 __version__ = 0.01
 
 from mpi.comm import Communicator
-from mpi.simplecomm.simplecomm import Testy
-#import mpi.simplecomm
-import mpi
 
+class MPI:
 
-NETWORK_METHOD = "tcp"
-if NETWORK_METHOD == "tcp":
-    from mpi.tcp import isend, irecv, prepare_process, wait, send, recv
-    
-    
-# Define exceptions
-class MPIBadAddressException(Exception): pass
+    def __init__(self):
+        import sys, getopt
+        try:
+            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank='])
+        except getopt.GetoptError, err:
+            print str(err)
 
-def runner(target, rank, size, process_placeholder, *args, **kwargs):
-    mpi.MPI_COMM_WORLD = Communicator(rank, size, process_placeholder)
-    prepare_process( rank )
-    target(*args, **kwargs)
+        debug = False
+        verbosity = 1
+        quiet = False
+        rank = 0
+        size = 0
 
-def initialize(size, target, *args, **kwargs):
-    # Start np procs and go through with it :)
-    from multiprocessing import Process
+        logfile = None
 
-    process_list = {}
-    allprocesses = []
+        for opt, arg in optlist:
+            if opt in ("-d", "--debug"):
+                debug = True
 
-    for rank in range(size):
-        process_placeholder = {}
-        p = Process(target=runner, args=(target, rank, size, process_placeholder) + args, kwargs=kwargs)
-        process_list[ rank ] = {'process' : p, 'all' : process_placeholder }
-        allprocesses.append( (rank, p, {'port' : 6000 + rank, 'host' : '127.0.0.1'}) )   
+            if opt in ("-v", "--verbosity"):
+                verbosity = arg
 
-    for rank in process_list:
-        placeholder = process_list[rank]['all']
-        placeholder['self'] = process_list[rank]['process']
-        placeholder['all'] = allprocesses
+            if opt in ("-q", "--quiet"):
+                quiet = True
 
-    [ p.start() for (_,p, _) in allprocesses ]
+            if opt in ("-l", "--log-file"):
+                logfile = arg
 
-def finalize():
-    # Do stuff with this call (move it to tcp if we need it)
-    #mpi.__server_socket.shutdown(socket.SHUT_RDWR) # Disallow both receives and sends
-    pass
+            if opt in ("-r", "--rank"):
+                try:
+                    rank = int(arg)
+                except ValueError:
+                    pass
 
-def rank(comm=None):
-    if not comm:
-        comm = mpi.MPI_COMM_WORLD
-    return comm.rank
+            if opt in ("-s", "--size"):
+                try:
+                    size = int(arg)
+                except:
+                    pass
 
-def size(comm=None):
-    if not comm:
-        comm = mpi.MPI_COMM_WORLD
-    return comm.size
+        self.config = {'size' : size, 'rank' : rank, 'debug' : debug, 'verbosity' : verbosity, 'quiet' : quiet, 'logfile' : logfile }
 
-__all__ = ('initialize', 'finalize', 'rank', 'size', 'isend', 'irecv', 'wait', 'recv', 'send' )
+        self.MPI_COMM_WORLD = Communicator(rank, size)
+
+    def rank(self, comm=None):
+        if not comm:
+            comm = self.MPI_COMM_WORLD
+        return comm.rank
+
+    def size(self, comm=None):
+        if not comm:
+            comm = self.MPI_COMM_WORLD
+        return comm.size

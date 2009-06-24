@@ -6,38 +6,48 @@ import mpi, sys
 
 def usage():
     print """
-    USAGE: 
+mpirun.py (pupympi) %s
 
-    mpirun (pupympi) version %s.
+Usage: ./mpirun.py [OPTION]... [PROGRAM]...
+Start the program with pupympi
 
-    Syntax:
-    ./mpirun [OPTIONS] [MPI_SCRIPT]
+    -c | -np | --np <arg0>      The number of processes to run
+    -d | --debug                Makes the system prints a bunch
+                                of debugging information. You can
+                                control the verbosity of the output
+                                with the -v parameter.
+    -v | --verbosity <arg0>     The level of verbosity the system 
+                                should print. Set this between 0 (no output)
+                                and 3 (a lot of input).
+    -q | --quiet                Overriddes any argument set by -v and makes
+                                sure the framework is quiet. 
+    -l | --log-file <arg0>      Sets which log file the system should insert
+                                debug information into.
+    -hf | --host-file <arg0>    The host file where the processes should be
+                                started. See the documentation for the proper
+                                format. 
+    -h | --help                 Display this help. 
 
-    Where [OPTIONS] can be of the following:
-
-     --np N  : The number of processes to start
-     --number-procs N : See above
-
-     -d 
-     --debug : Allows internal logging and printing for debugging purposes
-
-    And [MPI_SCRIPT] is a python script to execute N versions of. If
-    you don't give a [MPI_SCRIPT] you can specify the MPI program
-    through the interactive python command line. 
+Bugs should not be reported. But if you need to please call Frederik. He can be 
+contacted between 2 and 5 in the middle of the night. 
     """ % mpi.__version__
     sys.exit()
 
 if __name__ == "__main__":
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'np:hv', ['help','verbose','number-procs='])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:hf:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug'])
     except getopt.GetoptError, err:
         print str(err)
         usage()
 
     np = 0
     debug = False
-    verbose = False
+    verbosity = 1
+    quiet = False
+
+    logfile = None
+    hostfile = None
 
     if not optlist:
         usage()
@@ -46,7 +56,7 @@ if __name__ == "__main__":
         if opt in ("-h", "--help"):
             usage()
         
-        if opt in ("-np", "--number-procs"):
+        if opt in ("-c","-np", "--number-procs"):
             try:
                 np = int(arg)
             except ValueError:
@@ -56,9 +66,29 @@ if __name__ == "__main__":
         if opt in ("-d", "--debug"):
             debug = True
 
-        if opt in ("-v", "--verbose"):
-            verbose = True
+        if opt in ("-v", "--verbosity"):
+            verbosity = arg
+
+        if opt in ("-q", "--quiet"):
+            quiet = True
+
+        if opt in ("-l", "--log-file"):
+            logfile = arg
+
+        if opt in ("-hf", "--host-file"):
+            hostfile = arg
 
     for rank in range(np):
-        p = Process(target=executeable)
+        # Prepare the command line args for the subprocesses
+        command = "/usr/bin/env python %s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
+        if quiet:
+            command += " --quiet"
 
+        if debug:
+            command += " --debug"
+
+        if logfile:
+            command += " --log-file=%s" % logfile
+    
+        import os
+        os.system( command )
