@@ -78,6 +78,10 @@ if __name__ == "__main__":
         if opt in ("-hf", "--host-file"):
             hostfile = arg
 
+    # Here comes some nasty code. We'll fork the processes. 
+
+
+    # FIXME: We should not use threads to start the processes. A fork should do this better 
     for rank in range(np):
         # Prepare the command line args for the subprocesses
         command = "/usr/bin/env python %s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
@@ -89,6 +93,8 @@ if __name__ == "__main__":
 
         if logfile:
             command += " --log-file=%s" % logfile
-    
+
         import os
-        os.system( command )
+        pid = os.fork()
+        if pid == 0:
+            os.system( command )
