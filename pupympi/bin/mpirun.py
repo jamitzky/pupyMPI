@@ -34,6 +34,11 @@ def usage():
     print __doc__
     sys.exit()
 
+def parse_hostfile(hostfile, rank):
+    if not hostfile:
+        # Fake it
+        return {"host" : range(rank) ]
+
 if __name__ == "__main__":
     import getopt
     try:
@@ -79,22 +84,25 @@ if __name__ == "__main__":
         if opt in ("-hf", "--host-file"):
             hostfile = arg
 
-    # Here comes some nasty code. We'll fork the processes. 
+    # Manage the hostfile. The hostfile should properly return a host -> [ranks] structure
+    # so we know how many processes to start on each machine. See the parse_hostfile 
+    # function above.
+    hosts = parse_hostfile(hostfile, rank)
 
-
-    # FIXME: We should not use threads to start the processes. A fork should do this better 
-    for rank in range(np):
+    # Start a process for each rank. 
+    for (host, ranks) in hosts:
         # Prepare the command line args for the subprocesses
-        command = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
-        if quiet:
-            command += " --quiet"
+        for rank in ranks:
+            command = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
+            if quiet:
+                command += " --quiet"
 
-        if debug:
-            command += " --debug"
+            if debug:
+                command += " --debug"
 
-        if logfile:
-            command += " --log-file=%s" % logfile
+            if logfile:
+                command += " --log-file=%s" % logfile
 
-        import os
-        print os.spawnl(os.P_WAIT, '/usr/bin/env python', 'python', command)
-        #os.system( command )
+            if host == "localhost":             # This should be done a bit clever
+                from subprocess import Popen
+                p = Popen(["/usr/bin/env python", arguments])
