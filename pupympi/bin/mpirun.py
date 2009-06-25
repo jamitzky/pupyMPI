@@ -34,10 +34,10 @@ def usage():
     print __doc__
     sys.exit()
 
-def parse_hostfile(hostfile, rank):
+def parse_hostfile(hostfile, size):
     if not hostfile:
         # Fake it
-        return {"host" : range(rank) ]
+        return [("localhost", range(size) )]
     else:
         fh = open(hostfile, "r")
         host_division = {}
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # so we know how many processes to start on each machine. See the parse_hostfile 
     # function above.
     try:
-        hosts = parse_hostfile(hostfile, rank)
+        hosts = parse_hostfile(hostfile, np)
     except IOError:
         print "Something bad happended when we tried to read the hostfile. "
         sys.exit()
@@ -110,16 +110,18 @@ if __name__ == "__main__":
     for (host, ranks) in hosts:
         # Prepare the command line args for the subprocesses
         for rank in ranks:
-            command = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
+            arguments = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
             if quiet:
-                command += " --quiet"
+                arguments += " --quiet"
 
             if debug:
-                command += " --debug"
+                arguments += " --debug"
 
             if logfile:
-                command += " --log-file=%s" % logfile
+                arguments += " --log-file=%s" % logfile
 
             if host == "localhost":             # This should be done a bit clever
+                print "Starting a local process"
                 from subprocess import Popen
-                p = Popen(["/usr/bin/env python", arguments])
+                p = Popen(["python", arguments])
+                print "Started the process with pid %d" % p.pid
