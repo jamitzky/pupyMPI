@@ -1,11 +1,7 @@
 #!/usr/bin/env python2.6
 # This is the main pupympi startup script. See the usage function
 # for information about it
-
-import mpi, sys
-
-def usage():
-    print """
+"""
 mpirun.py (pupympi) %s
 
 Usage: ./mpirun.py [OPTION]... [PROGRAM]...
@@ -30,7 +26,12 @@ Start the program with pupympi
 
 Bugs should not be reported. But if you need to please call Frederik. He can be 
 contacted between 2 and 5 in the middle of the night. 
-    """ % mpi.__version__
+""" 
+
+import mpi, sys
+
+def usage():
+    print __doc__
     sys.exit()
 
 if __name__ == "__main__":
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     # FIXME: We should not use threads to start the processes. A fork should do this better 
     for rank in range(np):
         # Prepare the command line args for the subprocesses
-        command = "/usr/bin/env python %s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
+        command = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
         if quiet:
             command += " --quiet"
 
@@ -95,6 +96,5 @@ if __name__ == "__main__":
             command += " --log-file=%s" % logfile
 
         import os
-        pid = os.fork()
-        if pid == 0:
-            os.system( command )
+        print os.spawnl(os.P_WAIT, '/usr/bin/env python', 'python', command)
+        #os.system( command )
