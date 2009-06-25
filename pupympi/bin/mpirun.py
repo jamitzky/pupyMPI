@@ -38,6 +38,19 @@ def parse_hostfile(hostfile, rank):
     if not hostfile:
         # Fake it
         return {"host" : range(rank) ]
+    else:
+        fh = open(hostfile, "r")
+        host_division = {}
+        for line in rh.readlines():
+            # We need a format for the hostfile
+            pass
+
+        fh.close()
+
+        if len(host_division):
+            return host_division
+
+        raise IOError("No lines in your hostfile, or somethign else went wrong")
 
 if __name__ == "__main__":
     import getopt
@@ -87,7 +100,11 @@ if __name__ == "__main__":
     # Manage the hostfile. The hostfile should properly return a host -> [ranks] structure
     # so we know how many processes to start on each machine. See the parse_hostfile 
     # function above.
-    hosts = parse_hostfile(hostfile, rank)
+    try:
+        hosts = parse_hostfile(hostfile, rank)
+    except IOError:
+        print "Something bad happended when we tried to read the hostfile. "
+        sys.exit()
 
     # Start a process for each rank. 
     for (host, ranks) in hosts:
