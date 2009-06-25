@@ -28,7 +28,7 @@ Bugs should not be reported. But if you need to please call Frederik. He can be
 contacted between 2 and 5 in the middle of the night. 
 """ 
 
-import mpi, sys
+import mpi, sys, os
 
 def usage():
     print __doc__
@@ -110,7 +110,12 @@ if __name__ == "__main__":
     for (host, ranks) in hosts:
         # Prepare the command line args for the subprocesses
         for rank in ranks:
-            arguments = "%s --rank=%d --size=%d --verbosity=%d" % (sys.argv[-1], rank, np, verbosity)
+            # This should be rewritten to be nicer
+            executeable = sys.argv[-1]
+            if not executeable.startswith("/"):
+                executeable = os.path.join( os.getcwd(), sys.argv[-1])
+
+            arguments = "--rank=%d --size=%d --verbosity=%d" % (rank, np, verbosity)
             if quiet:
                 arguments += " --quiet"
 
@@ -123,5 +128,5 @@ if __name__ == "__main__":
             if host == "localhost":             # This should be done a bit clever
                 print "Starting a local process"
                 from subprocess import Popen
-                p = Popen(["python", arguments])
+                p = Popen(["python", executeable, arguments])
                 print "Started the process with pid %d" % p.pid
