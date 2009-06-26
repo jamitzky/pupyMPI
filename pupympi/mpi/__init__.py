@@ -5,7 +5,6 @@ from mpi.comm import Communicator
 class MPI:
 
     def __init__(self):
-        print "got init"
         import sys, getopt
         try:
             optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank='])
@@ -19,6 +18,8 @@ class MPI:
         size = 0
 
         logfile = None
+
+        print optlist
 
         for opt, arg in optlist:
             if opt in ("-d", "--debug"):
