@@ -126,7 +126,5 @@ if __name__ == "__main__":
                 arguments += " --log-file=%s" % logfile
 
             if host == "localhost":             # This should be done a bit clever
-                print "Starting a local process"
                 from subprocess import Popen
                 p = Popen(["python", executeable, arguments])
-                print "Started the process with pid %d" % p.pid
