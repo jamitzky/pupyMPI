@@ -37,22 +37,70 @@ def usage():
     sys.exit()
 
 def parse_hostfile(hostfile, size):
+	# NOTE: Size is ignored, I think this function should only parse, and deliver list of tuples of the form (hostname, hostparameters_in_dict)
+	#   then according to what how many procs are needed and what kind of mapping is selected we can map that list into something nice
+    # NOTE: Standard port below and maybe other defaults should not be hardcoded here
+    # (defaults should probably be a parameter for this function)
+    defaults = {"cpu":"1","max_cpu":"1024","port":"14000"}
+    malformed = False
+    
     if not hostfile:
-        # Fake it
-        return [("localhost", range(size) )]
+        print "File not found"
+        # NOTE: Here we can: fake it by defaulting, search in some standard dir or crap out
+        #return [("localhost", range(size) )]
     else:
         fh = open(hostfile, "r")
-        host_division = {}
-        for line in rh.readlines():
-            # We need a format for the hostfile
-            pass
+        hosts = []        
+        for line in fh.readlines():
+            pseudo_list = line.split( "#", 1 )            
+            content = pseudo_list[0] # the comment would be pseudo_list[1] but those are ignored
+            if content <> '\n' and content <> '': # Ignore empty lines and lines that are all comment
+                values = content.split() # split on whitespace with multiple spaces ignored
+                # There is always a hostname
+                hostname = values[0]
+                specified = defaults.copy()
+                                
+                # Check if non-defaults were specified
+                values = values[1:] # Ignore hostname we already know that
+                for v in values:
+                    (key,separator,val) = v.partition('=')
+                    if separator == '': # empty if malformed key-value pair
+                        malformed = True
+                    elif not defaults.has_key(key): # unrecognized keys are considered malformed
+                    	malformed = True
+                    else:                        
+                        specified[key] = val
+                        #NOTE: Should check for value type here (probably non-int = malformed for now)
+                
+                hosts += [(hostname, specified)]
 
-        fh.close()
+        fh.close()        
 
-        if len(host_division):
-            return host_division
+        if len(hosts):
+        	# uncomment if you wanna see the format
+        	#for (hName, hDict) in hosts:
+        		#print hName
+        		#print hDict
+        	return hosts
+        else:
+            raise IOError("No lines in your hostfile, or something else went wrong")
+            
+def map_hostfile(hosts, np=1, type="rr"):
+	# Assign ranks and host to all processes
+	# NO MAPPING IS DONE YET - HAS TO CONFORM TO NEEDED DATASTRUCTURE
+	if type == "rr": # Round-robin assigning
+		i = 0
+	    while np <> 0:
+	    	(hostname,params) = hosts[i]
+	    	# DO ACTUAL MAPPING HERE
+	        np -= 1
+	else: # Exhaustive assigning
+		i = 0
+	    while np <> 0:
+	    	(hostname,params) = hosts[i]
+	    	# DO ACTUAL MAPPING HERE
+	        np -= 1
 
-        raise IOError("No lines in your hostfile, or something else went wrong")
 
 if __name__ == "__main__":
     import getopt
