@@ -3,6 +3,7 @@ firstpyrotest.py
 
 Testing Pyro communication among multiple processes
 """
+import pdb
 
 import Pyro.core
 import Pyro.naming # For naming server
