@@ -25,7 +25,9 @@ Start the program with pupympi
     -h | --help                 Display this help. 
 
 Bugs should not be reported. But if you need to please call Frederik. He can be 
-contacted between 2 and 5 in the middle of the night. 
+contacted between 2 and 5 in the middle of the night. In the unlikely event
+that he does not respond, please visit Rune at his home address - just bang the
+door until he wakes up.
 """ 
 
 import mpi, sys, os
@@ -50,7 +52,7 @@ def parse_hostfile(hostfile, size):
         if len(host_division):
             return host_division
 
-        raise IOError("No lines in your hostfile, or somethign else went wrong")
+        raise IOError("No lines in your hostfile, or something else went wrong")
 
 if __name__ == "__main__":
     import getopt
