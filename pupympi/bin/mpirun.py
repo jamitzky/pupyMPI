@@ -30,23 +30,25 @@ that he does not respond, please visit Rune at his home address - just bang the
 door until he wakes up.
 """ 
 
-import mpi, sys, os
+#import mpi, sys, os
+#limiting import since mpi cannot be found currently
+import sys, os
 
 def usage():
     print __doc__
     sys.exit()
 
-def parse_hostfile(hostfile, size):
-	# NOTE: Size is ignored, I think this function should only parse, and deliver list of tuples of the form (hostname, hostparameters_in_dict)
-	#   then according to what how many procs are needed and what kind of mapping is selected we can map that list into something nice
+def parse_hostfile(hostfile):
+    # NOTE: Size is ignored, I think this function should only parse, and deliver list of tuples of the form (hostname, hostparameters_in_dict)
+    #   then according to what how many procs are needed and what kind of mapping is selected we can map that list into something nice
     # NOTE: Standard port below and maybe other defaults should not be hardcoded here
     # (defaults should probably be a parameter for this function)
-    defaults = {"cpu":"1","max_cpu":"1024","port":"14000"}
+    defaults = {"cpu":1,"max_cpu":1024,"port":14000}
     malformed = False
     
     if not hostfile:
         print "File not found"
-        # NOTE: Here we can: fake it by defaulting, search in some standard dir or crap out
+        # NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
         #return [("localhost", range(size) )]
     else:
         fh = open(hostfile, "r")
@@ -69,7 +71,7 @@ def parse_hostfile(hostfile, size):
                     elif not defaults.has_key(key): # unrecognized keys are considered malformed
                     	malformed = True
                     else:                        
-                        specified[key] = val
+                        specified[key] = int(val)
                         #NOTE: Should check for value type here (probably non-int = malformed for now)
                 
                 hosts += [(hostname, specified)]
@@ -77,29 +79,51 @@ def parse_hostfile(hostfile, size):
         fh.close()        
 
         if len(hosts):
-        	# uncomment if you wanna see the format
+        	# uncomment below if you wanna see the format
         	#for (hName, hDict) in hosts:
-        		#print hName
-        		#print hDict
+        	#	print hName
+        	#	print hDict
         	return hosts
         else:
             raise IOError("No lines in your hostfile, or something else went wrong")
             
 def map_hostfile(hosts, np=1, type="rr"):
-	# Assign ranks and host to all processes
-	# NO MAPPING IS DONE YET - HAS TO CONFORM TO NEEDED DATASTRUCTURE
-	if type == "rr": # Round-robin assigning
-		i = 0
-	    while np <> 0:
-	    	(hostname,params) = hosts[i]
-	    	# DO ACTUAL MAPPING HERE
-	        np -= 1
-	else: # Exhaustive assigning
-		i = 0
-	    while np <> 0:
-	    	(hostname,params) = hosts[i]
-	    	# DO ACTUAL MAPPING HERE
-	        np -= 1
+    # Assign ranks and host to all processes
+    # NOTE: ISSUE: We do not allow overcommitting yet, ie. "max_cpu" is ignored for now
+    # eventually we should decide how to map more processes than "cpu" specifies, onto hosts
+    # eg. does higher cpu/max_cpu mean a more realistic estimate, or should we only take cpu into account    
+
+    mappedHosts = [] # list containing the (host,rank) tuples to return    
+    hostCount = len(hosts) # How many hosts do we have
+        
+    # Check viability of mapping np onto all CPUs from all hosts
+    totalCPUs = 0
+    for (hostname,params) in hosts:
+        totalCPUs += params["cpu"]
+    if totalCPUs < np:
+        print "Why that's (currently) unpossible!"
+        return mappedHosts # empty
+    
+    i = 0 # host indexer
+    rank = 0 # rank counter           
+    while rank < np: # Assign until no more ranks to assign            
+        (hostname,params) = hosts[i%hostCount]
+        if params["cpu"] > 0: # Are there CPUs available on host?
+            params["cpu"] -= 1 # mark as one less unused            
+            mappedHosts += [(hostname, rank)] # map it
+            rank += 1 # assign next rank
+            #DEBUG
+            #print "mapped %i to %s" % (rank,hostname)
+            
+            if type == "rr": # round-robin ?
+                i += 1 # for round-robin always go to next host
+            
+        else: # if no CPUs left we always go to next host
+            i += 1 # pick next host
+            
+    #DEBUG
+    #print mappedHosts
+    return mappedHosts
 
 
 if __name__ == "__main__":
@@ -151,30 +175,32 @@ if __name__ == "__main__":
     # so we know how many processes to start on each machine. See the parse_hostfile 
     # function above.
     try:
-        hosts = parse_hostfile(hostfile, np)
+        hosts = parse_hostfile(hostfile)
     except IOError:
         print "Something bad happended when we tried to read the hostfile. "
         sys.exit()
+    #NOTE: This call should get scheduling option from args to replace "rr" parameter
+    mappedHosts = map_hostfile(hosts,np,"rr")    
 
-    # Start a process for each rank. 
-    for (host, ranks) in hosts:
+    # Start a process for each rank on associated host. 
+    for (host, rank) in mappedHosts:
         # Prepare the command line args for the subprocesses
-        for rank in ranks:
-            # This should be rewritten to be nicer
-            executeable = sys.argv[-1]
-            if not executeable.startswith("/"):
-                executeable = os.path.join( os.getcwd(), sys.argv[-1])
 
-            arguments = "--rank=%d --size=%d --verbosity=%d" % (rank, np, verbosity)
-            if quiet:
-                arguments += " --quiet"
+        # This should be rewritten to be nicer
+        executeable = sys.argv[-1]
+        if not executeable.startswith("/"):
+            executeable = os.path.join( os.getcwd(), sys.argv[-1])
 
-            if debug:
-                arguments += " --debug"
+        arguments = "--rank=%d --size=%d --verbosity=%d" % (rank, np, verbosity)
+        if quiet:
+            arguments += " --quiet"
 
-            if logfile:
-                arguments += " --log-file=%s" % logfile
+        if debug:
+            arguments += " --debug"
 
-            if host == "localhost":             # This should be done a bit clever
-                from subprocess import Popen
-                p = Popen(["python", executeable, arguments])
+        if logfile:
+            arguments += " --log-file=%s" % logfile
+
+        if host == "localhost":             # This should be done a bit clever
+            from subprocess import Popen
+            p = Popen(["python", executeable, arguments])
