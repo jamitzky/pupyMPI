@@ -45,14 +45,16 @@ def parse_hostfile(hostfile):
     # (defaults should probably be a parameter for this function)
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
     malformed = False
+    hosts = []
     
     if not hostfile:
-        print "File not found"
-        # NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
+        print "No hostfile specified - going with lousy defaults!"
+        #NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
         #return [("localhost", range(size) )]
+        # If no hostfile is specified, default is localhost
+        hosts = ["localhost",defaults]
     else:
         fh = open(hostfile, "r")
-        hosts = []        
         for line in fh.readlines():
             pseudo_list = line.split( "#", 1 )            
             content = pseudo_list[0] # the comment would be pseudo_list[1] but those are ignored
@@ -76,16 +78,16 @@ def parse_hostfile(hostfile):
                 
                 hosts += [(hostname, specified)]
 
-        fh.close()        
+        fh.close()
 
-        if len(hosts):
-        	# uncomment below if you wanna see the format
-        	#for (hName, hDict) in hosts:
-        	#	print hName
-        	#	print hDict
-        	return hosts
-        else:
-            raise IOError("No lines in your hostfile, or something else went wrong")
+    if len(hosts):
+        # uncomment below if you wanna see the format
+        #for (hName, hDict) in hosts:
+        #   print hName
+        #   print hDict
+        return hosts
+    else:
+        raise IOError("No lines in your hostfile, or something else went wrong")
             
 def map_hostfile(hosts, np=1, type="rr"):
     # Assign ranks and host to all processes
@@ -170,6 +172,8 @@ if __name__ == "__main__":
 
         if opt in ("-hf", "--host-file"):
             hostfile = arg
+        else:
+            hostfile = None
 
     # Manage the hostfile. The hostfile should properly return a host -> [ranks] structure
     # so we know how many processes to start on each machine. See the parse_hostfile 
