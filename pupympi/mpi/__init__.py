@@ -55,7 +55,7 @@ class MPI:
         # Let the communication handle start up if it need to.
         if network_type == "tcp":
             from mpi.tcp import TCPNetwork
-            network = TCPNetwork(port)
+            self.network = network = TCPNetwork(port)
 
         self.MPI_COMM_WORLD = Communicator(rank, size)
 
@@ -68,3 +68,6 @@ class MPI:
         if not comm:
             comm = self.MPI_COMM_WORLD
         return comm.size
+    
+    def finalize(self):
+        self.network.finalize()
