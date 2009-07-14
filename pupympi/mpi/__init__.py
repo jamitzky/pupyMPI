@@ -7,7 +7,7 @@ class MPI:
     def __init__(self):
         import sys, getopt
         try:
-            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank='])
+            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port='])
         except getopt.GetoptError, err:
             print str(err)
 
@@ -16,7 +16,9 @@ class MPI:
         quiet = False
         rank = 0
         size = 0
-
+        network_type = "tcp"
+        port = 0
+        
         logfile = None
 
         for opt, arg in optlist:
@@ -37,14 +39,23 @@ class MPI:
                     rank = int(arg)
                 except ValueError:
                     pass
+            if opt == "--network-type":
+                if arg in ('tcp', ):
+                    network_type = arg
 
             if opt in ("-s", "--size"):
                 try:
                     size = int(arg)
                 except:
                     pass
+                
+            if opt == "--port":
+                port = int(arg)
 
-        self.config = {'size' : size, 'rank' : rank, 'debug' : debug, 'verbosity' : verbosity, 'quiet' : quiet, 'logfile' : logfile }
+        # Let the communication handle start up if it need to.
+        if network_type == "tcp":
+            from mpi.tcp import TCPNetwork
+            network = TCPNetwork(port)
 
         self.MPI_COMM_WORLD = Communicator(rank, size)
 
