@@ -215,7 +215,8 @@ if __name__ == "__main__":
         if opt in ("-f", "--host-file"):
             hostfile = arg
         else:
-            hostfile = None
+            # NOTE: Rune mumbled that it should not be None here, but it does the job for now
+            hostfile = None # No hostfile specified, go with default
 
     # Parse the hostfile.
     try:
@@ -225,7 +226,7 @@ if __name__ == "__main__":
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts,np,"rr") #NOTE: This call should get scheduling option from args to replace "rr" parameter
+    mappedHosts = map_hostfile(hosts,np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
@@ -234,9 +235,15 @@ if __name__ == "__main__":
 
         # This should be rewritten to be nicer
         executeable = sys.argv[-1]
+        
+        # If the pupympi program resides in a subdir the PYTHONPATH needs to be set to allow import mpi
+        if executeable.find("/") != -1: # does executable contain '/'? (meaning a subdir)
+            auxCmd = "export PYTHONPATH="+os.getcwd() #NOTE: Improve! Not nice as we might overwrite a PYTHONPATH
+            os.system(auxCmd)
+        # Make sure we have a full path
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
-
+        
         arguments = ["python", executeable, "--network-type=%s" % network_type, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity, '--port=%d' % port] 
         
         if quiet:

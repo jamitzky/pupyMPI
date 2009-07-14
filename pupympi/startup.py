@@ -1,13 +1,11 @@
 #!/usr/bin/env python2.6
 
-import mpi, time, sys
+import mpi, time
 
 mpi = mpi.MPI()
 
 rank = mpi.rank()
 size = mpi.size()
-
-print sys.path
 
 time.sleep(max(2,size-rank))
 
