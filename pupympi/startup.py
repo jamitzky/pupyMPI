@@ -7,7 +7,9 @@ mpi = mpi.MPI()
 rank = mpi.rank()
 size = mpi.size()
 
-time.sleep(size-rank)
+time.sleep(max(2,size-rank))
 
 print "Closing process process %d of %d after %d seconds sleep" % (rank, size, size-rank)
 
+# Close the sockets down nicely
+mpi.finalize()
