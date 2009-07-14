@@ -2,15 +2,13 @@
 
 # Simple pupympi program to test startup of processes and assigning/reporting of ranks
 
-
 import mpi
+
 
 mpi = mpi.MPI()
 
 rank = mpi.rank()
 size = mpi.size()
-
-#time.sleep(max(2,size-rank))
 
 print "I am the process with rank %d of %d processes" % (rank, size)
 
