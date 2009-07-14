@@ -109,7 +109,7 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     # Check if it can be done without overmapping
     if totalCPUs >= np:  # No need to overmap
         overmapping = False
-    elif maxCPUs >= np: # Overmapping needed
+    elif maxCPUs >= np: # Overmapping should do
         if overmapping: # Is it allowed?
             print "gonna overmap"
             # This idea is not enough (just counting on different key) since it would often
