@@ -197,9 +197,9 @@ if __name__ == "__main__":
         sys.exit()
     #NOTE: This call should get scheduling option from args to replace "rr" parameter
     mappedHosts = map_hostfile(hosts,np,"rr")
-
+    
     # Start a process for each rank on associated host. 
-    for (host, rank) in mappedHosts:
+    for (host, rank, port) in mappedHosts:
         # Prepare the command line args for the subprocesses
 
         # This should be rewritten to be nicer
@@ -207,7 +207,8 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
 
-        arguments = ["python", executeable, "--network-type=%s" % network_type, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
+        arguments = ["python", executeable, "--network-type=%s" % network_type, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity, '--port=%d' % port] 
+        
         if quiet:
             arguments.append('--quiet')
 
