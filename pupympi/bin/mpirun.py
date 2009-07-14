@@ -55,7 +55,7 @@ def parse_hostfile(hostfile):
         #NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
         #return [("localhost", range(size) )]
         # If no hostfile is specified, default is localhost
-        hosts = ["localhost",defaults]
+        hosts = [("localhost",defaults)]
     else:
         fh = open(hostfile, "r")
         for line in fh.readlines():
@@ -74,7 +74,7 @@ def parse_hostfile(hostfile):
                     if separator == '': # empty if malformed key-value pair
                         malformed = True
                     elif not defaults.has_key(key): # unrecognized keys are considered malformed
-                    	malformed = True
+                        malformed = True
                     else:                        
                         specified[key] = int(val)
                         #NOTE: Should check for value type here (probably non-int = malformed for now)
@@ -92,7 +92,7 @@ def parse_hostfile(hostfile):
     else:
         raise IOError("No lines in your hostfile, or something else went wrong")
             
-def map_hostfile(hosts, np=1, type="rr"):
+def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     # Assign ranks and host to all processes
     # NOTE: ISSUE: We do not allow overcommitting yet, ie. "max_cpu" is ignored for now
     # eventually we should decide how to map more processes than "cpu" specifies, onto hosts
@@ -100,22 +100,38 @@ def map_hostfile(hosts, np=1, type="rr"):
 
     mappedHosts = [] # list containing the (host,rank) tuples to return    
     hostCount = len(hosts) # How many hosts do we have
+    mapType = "cpu"
         
     # Check viability of mapping np onto all CPUs from all hosts
     totalCPUs = 0
+    maxCPUs = 0
     for (hostname,params) in hosts:
         totalCPUs += params["cpu"]
-    if totalCPUs < np:
-        print "Why that's (currently) unpossible!"
-        return mappedHosts # empty
-    
+        maxCPUs += params["max_cpu"]
+
+    # Check if it can be done without overmapping
+    if totalCPUs >= np:  # No need to overmap
+        overmapping = False
+    elif maxCPUs >= np: # Overmapping needed
+        if overmapping: # Is it allowed?
+            print "gonna overmap"
+            # This idea is not enough (just counting on different key) since it would often
+            # just map all to first host and ignoring perfectly valid hosts
+            mapType = "max_cpu"
+        else: # Overmapping needed but not allowed
+            print "Number of processes exceeds the total CPUs and overmapping is not allowed"
+            return []
+    else: # Can't be done even with overmapping
+        print "Number of processes exceeds the maximum allowed CPUs"
+        return []
+        
     i = 0 # host indexer
     rank = 0 # rank counter           
     while rank < np: # Assign until no more ranks to assign            
         (hostname,params) = hosts[i%hostCount]
         if params["cpu"] > 0: # Are there CPUs available on host?
             params["cpu"] -= 1 # mark as one less unused            
-            mappedHosts += [(hostname, rank)] # map it
+            mappedHosts += [(hostname, rank, params["port"])] # map it
             rank += 1 # assign next rank
             #DEBUG
             #print "mapped %i to %s" % (rank,hostname)
