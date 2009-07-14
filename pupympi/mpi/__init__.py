@@ -19,8 +19,6 @@ class MPI:
 
         logfile = None
 
-        print optlist
-
         for opt, arg in optlist:
             if opt in ("-d", "--debug"):
                 debug = True
