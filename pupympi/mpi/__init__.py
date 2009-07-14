@@ -49,12 +49,12 @@ class MPI:
                 except:
                     pass
                 
-            if opt == "--post":
+            if opt == "--port":
                 port = int(arg)
 
         # Let the communication handle start up if it need to.
         if network_type == "tcp":
-            from mpi.tcp import TCPNetwork as Network
+            from mpi.tcp import TCPNetwork
             network = TCPNetwork(port)
 
         self.MPI_COMM_WORLD = Communicator(rank, size)
