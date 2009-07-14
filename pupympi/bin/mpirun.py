@@ -15,6 +15,9 @@ Start the program with pupympi
     -v | --verbosity <arg0>     The level of verbosity the system 
                                 should print. Set this between 0 (no output)
                                 and 3 (a lot of input).
+    --network-type              <arg0> Let you control which network type you wish to
+                                use in your communication. Currently only "tcp"
+                                is handled. Defaults to "tcp".
     -q | --quiet                Overriddes any argument set by -v and makes
                                 sure the framework is quiet. 
     -l | --log-file <arg0>      Sets which log file the system should insert
@@ -132,7 +135,7 @@ if __name__ == "__main__":
 
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug'])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug','network-type='])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -144,6 +147,8 @@ if __name__ == "__main__":
 
     logfile = None
     hostfile = None
+    
+    network_type = "tcp"
 
     if not optlist:
         usage()
@@ -170,7 +175,13 @@ if __name__ == "__main__":
 
         if opt in ("-l", "--log-file"):
             logfile = arg
-
+            
+        if opt == "--network-type":
+            if arg in ('tcp', ):
+                network_type = arg
+            else:
+                print "Network type not recognised. "
+                usage()
         if opt in ("-f", "--host-file"):
             hostfile = arg
         else:
@@ -185,7 +196,7 @@ if __name__ == "__main__":
         print "Something bad happended when we tried to read the hostfile. "
         sys.exit()
     #NOTE: This call should get scheduling option from args to replace "rr" parameter
-    mappedHosts = map_hostfile(hosts,np,"rr")    
+    mappedHosts = map_hostfile(hosts,np,"rr")
 
     # Start a process for each rank on associated host. 
     for (host, rank) in mappedHosts:
@@ -196,7 +207,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
 
-        arguments = ["python", executeable, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
+        arguments = ["python", executeable, "--network-type=%s" % network_type, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
         if quiet:
             arguments.append('--quiet')
 

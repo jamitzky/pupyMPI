@@ -6,6 +6,11 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    
+class TCPNetwork():
+    def __init__(self):
+        print "The network initialization is starting"
+        print "The network initialization is completing"
 
 def recv(destination, tag, comm=None):
 	return wait(irecv(destination, tag, comm=comm))
@@ -56,7 +61,6 @@ def isend(destination, content, tag, comm=None):
 def wait(meaningless_handle_to_be_replaced):
     return meaningless_handle_to_be_replaced
     
-
 def send(destination, content, tag, comm=None):
 	return wait(isend(destination, content, tag, comm=comm))
 	

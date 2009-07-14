@@ -1,7 +1,13 @@
 #!/usr/bin/env python2.6
 
-import mpi
+import mpi, time
 
 mpi = mpi.MPI()
 
-print "Started process %d of %d" % (mpi.rank(), mpi.size())
+rank = mpi.rank()
+size = mpi.size()
+
+time.sleep(size-rank)
+
+print "Closing process process %d of %d after %d seconds sleep" % (rank, size, size-rank)
+
