@@ -91,8 +91,8 @@ def parse_hostfile(hostfile):
             
 def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     # Assign ranks and host to all processes
-    # NOTE: ISSUE: We do not allow overcommitting yet, ie. "max_cpu" is ignored for now
-    # eventually we should decide how to map more processes than "cpu" specifies, onto hosts
+    # NOTE: ISSUE: We only do primitive overcommitting so far.
+    # Eventually we should decide how to map more processes than "cpu" specifies, onto hosts
     # eg. does higher cpu/max_cpu mean a more realistic estimate, or should we only take cpu into account    
 
     mappedHosts = [] # list containing the (host,rank) tuples to return    
