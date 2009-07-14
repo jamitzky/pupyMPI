@@ -52,7 +52,7 @@ def parse_hostfile(hostfile):
         #NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
         #return [("localhost", range(size) )]
         # If no hostfile is specified, default is localhost
-        hosts = ["localhost",defaults]
+        hosts = [("localhost",defaults)]
     else:
         fh = open(hostfile, "r")
         for line in fh.readlines():
