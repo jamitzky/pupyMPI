@@ -1,5 +1,5 @@
 # sample hostfile - showing off some nifty parameterizing
-# TIP: Fill this out properly, rename to .hostfile and you've got yourself a hostfile
+# TIP: Fill this out properly, copy to .hostfile and you've got yourself a hostfile
 # PROTIP: from # rest of line is ignored. Empty lines likewise.
 
 
