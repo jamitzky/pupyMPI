@@ -8,8 +8,9 @@ except ImportError:
     import pickle
     
 class TCPNetwork():
-    def __init__(self):
-        print "The network initialization is starting"
+    def __init__(self, port):
+        self.port = port
+        print "The network initialization is starting on port %d" % self.port
         print "The network initialization is completing"
 
 def recv(destination, tag, comm=None):
