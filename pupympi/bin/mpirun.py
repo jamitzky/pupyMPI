@@ -217,16 +217,15 @@ if __name__ == "__main__":
         else:
             hostfile = None
 
-    # Manage the hostfile. The hostfile should properly return a host -> [ranks] structure
-    # so we know how many processes to start on each machine. See the parse_hostfile 
-    # function above.
+    # Parse the hostfile.
     try:
         hosts = parse_hostfile(hostfile)
     except IOError:
         print "Something bad happended when we tried to read the hostfile. "
         sys.exit()
-    #NOTE: This call should get scheduling option from args to replace "rr" parameter
-    mappedHosts = map_hostfile(hosts,np,"rr")
+    
+    # Map processes/ranks to hosts/CPUs
+    mappedHosts = map_hostfile(hosts,np,"rr") #NOTE: This call should get scheduling option from args to replace "rr" parameter
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
