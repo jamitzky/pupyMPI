@@ -216,6 +216,7 @@ if __name__ == "__main__":
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
+        port = port+rank
         # Prepare the command line args for the subprocesses
 
         # This should be rewritten to be nicer
