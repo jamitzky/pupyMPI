@@ -10,8 +10,16 @@ except ImportError:
 class TCPNetwork():
     def __init__(self, port):
         self.port = port
-        print "The network initialization is starting on port %d" % self.port
-        print "The network initialization is completing"
+        self.bind_socket()
+        
+    def bind_socket(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind( ('localhost', self.port ))
+        s.listen(5)
+        self.socket = s
+        
+    def finalize(self):
+        self.socket.close()
 
 def recv(destination, tag, comm=None):
 	return wait(irecv(destination, tag, comm=comm))
@@ -65,9 +73,3 @@ def wait(meaningless_handle_to_be_replaced):
 def send(destination, content, tag, comm=None):
 	return wait(isend(destination, content, tag, comm=comm))
 	
-def prepare_process(rank):
-    # listen to a TCP port so we can receive messages.
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind( ('localhost', 6000+rank ))
-    s.listen(5)
-    mpi.__server_socket = s
