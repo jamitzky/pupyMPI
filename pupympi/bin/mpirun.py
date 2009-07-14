@@ -2,7 +2,7 @@
 # This is the main pupympi startup script. See the usage function
 # for information about it
 """
-mpirun.py (pupympi) %s
+mpirun.py (pupympi) 
 
 Usage: ./mpirun.py [OPTION]... [PROGRAM]...
 Start the program with pupympi
@@ -19,7 +19,7 @@ Start the program with pupympi
                                 sure the framework is quiet. 
     -l | --log-file <arg0>      Sets which log file the system should insert
                                 debug information into.
-    -hf | --host-file <arg0>    The host file where the processes should be
+    -f | --host-file <arg0>    The host file where the processes should be
                                 started. See the documentation for the proper
                                 format. 
     -h | --help                 Display this help. 
@@ -47,7 +47,7 @@ def parse_hostfile(hostfile):
     malformed = False
     
     if not hostfile:
-        print "File not found"
+        pass
         # NOTE: Here we can: fake it by defaulting, search in some standard dir or just crap out
         #return [("localhost", range(size) )]
     else:
@@ -127,9 +127,10 @@ def map_hostfile(hosts, np=1, type="rr"):
 
 
 if __name__ == "__main__":
+
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:hf:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug'])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug'])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -168,7 +169,7 @@ if __name__ == "__main__":
         if opt in ("-l", "--log-file"):
             logfile = arg
 
-        if opt in ("-hf", "--host-file"):
+        if opt in ("-f", "--host-file"):
             hostfile = arg
 
     # Manage the hostfile. The hostfile should properly return a host -> [ranks] structure
@@ -191,16 +192,16 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
 
-        arguments = "--rank=%d --size=%d --verbosity=%d" % (rank, np, verbosity)
+        arguments = ["python", executeable, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
         if quiet:
-            arguments += " --quiet"
+            arguments.append('--quiet')
 
         if debug:
-            arguments += " --debug"
+            arguments.append('--debug')
 
         if logfile:
-            arguments += " --log-file=%s" % logfile
+            arguments.append('--log-file=%s' % logfile)
 
         if host == "localhost":             # This should be done a bit clever
             from subprocess import Popen
-            p = Popen(["python", executeable, arguments])
+            p = Popen(arguments)

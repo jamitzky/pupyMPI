@@ -5,4 +5,3 @@ import mpi
 mpi = mpi.MPI()
 
 print "Started process %d of %d" % (mpi.rank(), mpi.size())
-
