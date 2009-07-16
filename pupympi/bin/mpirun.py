@@ -15,9 +15,6 @@ Start the program with pupympi
     -v | --verbosity <arg0>     The level of verbosity the system 
                                 should print. Set this between 0 (no output)
                                 and 3 (a lot of input).
-    --network-type              <arg0> Let you control which network type you wish to
-                                use in your communication. Currently only "tcp"
-                                is handled. Defaults to "tcp".
     -q | --quiet                Overriddes any argument set by -v and makes
                                 sure the framework is quiet. 
     -l | --log-file <arg0>      Sets which log file the system should insert
@@ -206,12 +203,6 @@ if __name__ == "__main__":
         if opt in ("-l", "--log-file"):
             logfile = arg
             
-        if opt == "--network-type":
-            if arg in ('tcp', ):
-                network_type = arg
-            else:
-                print "Network type not recognised. "
-                usage()
         if opt in ("-f", "--host-file"):
             hostfile = arg
         else:
@@ -252,7 +243,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
         
-        arguments = ["python", executeable, "--network-type=%s" % network_type, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity, '--port=%d' % port] 
+        arguments = ["python", executeable, "--mpirun-conn-host=%s" % hostname,"--mpirun-conn-port=%d" % port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity, '--port=%d' % port] 
         
         if quiet:
             arguments.append('--quiet')
@@ -262,6 +253,7 @@ if __name__ == "__main__":
 
         if logfile:
             arguments.append('--log-file=%s' % logfile)
+            
 
         if host == "localhost":             # This should be done a bit clever
             from subprocess import Popen
