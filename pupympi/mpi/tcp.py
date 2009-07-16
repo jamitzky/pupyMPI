@@ -18,7 +18,7 @@ class TCPNetwork():
         s.listen(5)
         self.socket = s
         
-    def handshake(mpirun_hostname, mpirun_port):
+    def handshake(self, mpirun_hostname, mpirun_port):
         pass
         
     def finalize(self):

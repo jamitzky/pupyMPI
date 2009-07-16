@@ -58,7 +58,8 @@ class MPI:
         from mpi.tcp import TCPNetwork
         
         logger.debug("Starting the network")
-        self.network = network = TCPNetwork()
+        port = 6000+rank
+        self.network = network = TCPNetwork(port)
         logger.debug("Communicating ports and hostname to mpirun")
 
         self.network.handshake(hostname, port)
