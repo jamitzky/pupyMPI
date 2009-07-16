@@ -8,8 +8,9 @@ except ImportError:
     import pickle
     
 class TCPNetwork():
-    def __init__(self, port):
+    def __init__(self, port, logger):
         self.port = port
+        self.logger = logger
         self.bind_socket()
         
     def bind_socket(self):
@@ -19,10 +20,12 @@ class TCPNetwork():
         self.socket = s
         
     def handshake(self, mpirun_hostname, mpirun_port):
-        pass
-        
+        self.logger.debug("Communicating ports and hostname to mpirun")
+        self.logger.debug("Shaking done")
+
     def finalize(self):
         self.socket.close()
+        self.logger.debug("The TCP network is closed")
 
 def recv(destination, tag, comm=None):
 	return wait(irecv(destination, tag, comm=comm))
