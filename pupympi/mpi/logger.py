@@ -24,7 +24,7 @@ def setup_log(filename, logname, debug, verbosity, quiet):
         console.setFormatter(formatter)
         console.setLevel(level)
         logging.getLogger(logname).addHandler(console)
-        
+
     logger = logging.getLogger(logname)
-    
+    logger.setLevel(level)
     return logger
