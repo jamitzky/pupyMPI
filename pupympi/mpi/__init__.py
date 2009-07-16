@@ -59,11 +59,9 @@ class MPI:
         
         logger.debug("Starting the network")
         port = 6000+rank
-        self.network = network = TCPNetwork(port)
-        logger.debug("Communicating ports and hostname to mpirun")
+        self.network = network = TCPNetwork(port, logger)
 
         self.network.handshake(hostname, port)
-        logger.debug("Shaking done")
 
         self.MPI_COMM_WORLD = Communicator(rank, size)
         logger.debug("MPI_COMM_WORLD started")

@@ -252,7 +252,6 @@ if __name__ == "__main__":
         if logfile:
             arguments.append('--log-file=%s' % logfile)
             
-
         if host == "localhost":             # This should be done a bit clever
             from subprocess import Popen
             p = Popen(arguments)
