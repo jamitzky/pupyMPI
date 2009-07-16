@@ -35,7 +35,7 @@ door until he wakes up.
 
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
-import sys, os
+import sys, os, socket
 
 def usage():
     print __doc__
@@ -227,6 +227,14 @@ if __name__ == "__main__":
     
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(hosts,np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
+
+    # We hardcode for TCP currently. This should be made more generic in the future. 
+    hostname = socket.gethostname()
+    port = 5555 # Rewrite to find some port
+    
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((hostname, port))
+    s.listen(5)
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
