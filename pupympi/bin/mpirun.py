@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug','network-type='])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -175,8 +175,6 @@ if __name__ == "__main__":
     logfile = None
     hostfile = None
     
-    network_type = "tcp"
-
     if not optlist:
         usage()
 

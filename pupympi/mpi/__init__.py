@@ -7,7 +7,7 @@ class MPI:
     def __init__(self):
         import sys, getopt
         try:
-            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port='])
+            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port=','mpirun-conn-port=', 'mpirun-conn-host='])
         except getopt.GetoptError, err:
             print str(err)
 
@@ -16,8 +16,8 @@ class MPI:
         quiet = False
         rank = 0
         size = 0
-        network_type = "tcp"
-        port = 0
+        hostname = None
+        port = None
         
         logfile = None
 
@@ -39,25 +39,33 @@ class MPI:
                     rank = int(arg)
                 except ValueError:
                     pass
-            if opt == "--network-type":
-                if arg in ('tcp', ):
-                    network_type = arg
-
             if opt in ("-s", "--size"):
                 try:
                     size = int(arg)
                 except:
                     pass
                 
-            if opt == "--port":
+            if opt == "--mpirun-conn-host":
+                hostname = arg
+            if opt == "--mpirun-conn-port":
                 port = int(arg)
-
+                
+        # Initialise the logger
+        from mpi.logger import setup_log
+        logger = setup_log(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
+        
         # Let the communication handle start up if it need to.
-        if network_type == "tcp":
-            from mpi.tcp import TCPNetwork
-            self.network = network = TCPNetwork(port)
+        from mpi.tcp import TCPNetwork
+        
+        logger.debug("Starting the network")
+        self.network = network = TCPNetwork()
+        logger.debug("Communicating ports and hostname to mpirun")
+
+        self.network.handshake(hostname, port)
+        logger.debug("Shaking done")
 
         self.MPI_COMM_WORLD = Communicator(rank, size)
+        logger.debug("MPI_COMM_WORLD started")
 
     def rank(self, comm=None):
         if not comm:
