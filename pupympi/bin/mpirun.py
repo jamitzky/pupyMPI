@@ -235,11 +235,6 @@ if __name__ == "__main__":
 
         # This should be rewritten to be nicer
         executeable = sys.argv[-1]
-        
-        # If the pupympi program resides in a subdir the PYTHONPATH needs to be set to allow import mpi
-        if executeable.find("/") != -1: # does executable contain '/'? (meaning a subdir)
-            auxCmd = "export PYTHONPATH="+os.getcwd() #NOTE: Improve! Not nice as we might overwrite a PYTHONPATH
-            os.system(auxCmd)
         # Make sure we have a full path
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
