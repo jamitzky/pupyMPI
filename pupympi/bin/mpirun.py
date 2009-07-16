@@ -41,7 +41,7 @@ def usage():
     print __doc__
     sys.exit()
 
-def parse_hostfile(hostfile):
+def parse_hostfile(hostfile, logger):
     # Parses hostfile, and returns list of tuples of the form (hostname, hostparameters_in_dict)
     # NOTE: Standard port below and maybe other defaults should not be hardcoded here
     # (defaults should probably be a parameter for this function)
@@ -50,7 +50,7 @@ def parse_hostfile(hostfile):
     hosts = []
     
     if not hostfile:
-        print "No hostfile specified - going with lousy defaults!"
+        logger.info("No hostfile specified - going with lousy defaults!")
         # If no hostfile is specified, default is localhost with default parameters
         hosts = [("localhost",defaults)]
     else:
@@ -89,7 +89,7 @@ def parse_hostfile(hostfile):
     else:
         raise IOError("No lines in your hostfile, or something else went wrong")
             
-def map_hostfile(hosts, np=1, type="rr", overmapping=True):
+def map_hostfile(hosts, logger, np=1, type="rr", overmapping=True):
     # Assign ranks and host to all processes
     # NOTE: We only do primitive overcommitting so far.
     # Eventually we should decide how to best map more processes than "cpu" specifies, onto hosts
@@ -110,12 +110,12 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
         pass
     elif maxCPUs >= np: # Overmapping is needed
         if overmapping: # Overmapping allowed?
-            print "gonna overmap"
+            logger.info("gonna overmap")
         else: # Overmapping needed but not allowed
-            print "Number of processes exceeds the total CPUs and overmapping is not allowed"
+            logger.info("Number of processes exceeds the total CPUs and overmapping is not allowed")
             return []
     else: # Can't be done even with overmapping
-        print "Number of processes exceeds the maximum allowed CPUs"
+        logger.info("Number of processes exceeds the maximum allowed CPUs")
         return []
         
     i = 0 # host indexer
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dvql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug','network-type='])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug','network-type='])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -198,7 +198,7 @@ if __name__ == "__main__":
             debug = True
 
         if opt in ("-v", "--verbosity"):
-            verbosity = arg
+            verbosity = int(arg)
 
         if opt in ("-q", "--quiet"):
             quiet = True
@@ -218,24 +218,29 @@ if __name__ == "__main__":
             # NOTE: Rune mumbled that it should not be None here, but it does the job for now
             hostfile = None # No hostfile specified, go with default
 
+    # Start the logger
+    from mpi.logger import setup_log
+    logger = setup_log(logfile or "mpi", "mpirun", debug, verbosity, quiet)
+
     # Parse the hostfile.
     try:
-        hosts = parse_hostfile(hostfile)
+        hosts = parse_hostfile(hostfile, logger)
     except IOError:
-        print "Something bad happended when we tried to read the hostfile. "
+        logger.error("Something bad happended when we tried to read the hostfile. ")
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts,np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
+    mappedHosts = map_hostfile(hosts, logger, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
 
     # We hardcode for TCP currently. This should be made more generic in the future. 
     hostname = socket.gethostname()
-    port = 5555 # Rewrite to find some port
     
+    port = 5555 # Rewrite to find some port
+    logger.debug("Found hostname: %s and port %d.. Creating the socket" % (hostname, port))
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((hostname, port))
     s.listen(5)
-    
+    logger.debug("Socket bound")
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
         port = port+rank
