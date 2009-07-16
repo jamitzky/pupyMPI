@@ -26,7 +26,7 @@ class MPI:
                 debug = True
 
             if opt in ("-v", "--verbosity"):
-                verbosity = arg
+                verbosity = int(arg)
 
             if opt in ("-q", "--quiet"):
                 quiet = True
