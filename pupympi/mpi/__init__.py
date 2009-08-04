@@ -59,12 +59,9 @@ class MPI:
         
         logger.debug("Starting the network")
         port = 6000+rank
-        self.network = network = TCPNetwork(port, logger)
-
+        self.MPI_COMM_WORLD = Communicator(rank, size, self)
+        self.network = network = TCPNetwork(port, self)
         self.network.handshake(hostname, port)
-
-        self.MPI_COMM_WORLD = Communicator(rank, size)
-        logger.debug("MPI_COMM_WORLD started")
 
     def rank(self, comm=None):
         if not comm:
