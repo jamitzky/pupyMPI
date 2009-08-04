@@ -17,15 +17,20 @@ class MPITopologyException(Exception):
     pass
 
 class dummycomm():
+    """Haxx communicator for unittests only"""
     def __init__(self, size):
         self.size = size
         import sys
         sys.path.append("../..")
+        
         from mpi.logger import setup_log
-        self.logger = setup_log( "dummycomm", "proc-%d" % rank, debug, verbosity, quiet)
+        self.logger = setup_log( "dummycomm", "proc-%d" % 0, False, 3, True)
         
     def associate(self, arg):
         pass
+        
+    def __repr__(self):
+        return "dummycomm"
 
 class Cartesian(BaseTopology):
     """
@@ -56,7 +61,7 @@ class Cartesian(BaseTopology):
         self.communicator = communicator
         self.logger = communicator.logger
         communicator.associate(self)
-        logger.info("Creating new topology %s and associated with communicator %s." % (self, communicator))
+        self.logger.info("Creating new topology %s and associated with communicator %s." % (self, communicator))
         
     def __repr__(self):
         return "<Cartesian topology, %sD with dims %s>" % (len(self.dims), 'x'.join(map(_writeDimStr, self.dims, self.periodic)))
