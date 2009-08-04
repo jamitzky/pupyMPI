@@ -1,18 +1,17 @@
 # Fred dabbling in communication
 
 class Communicator():
-    def __init__(self, rank, size, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
         self.rank = rank
         self.size = size
         self.name = name
-        
-        # List of process-members of the communicator
-        processList = []
-        for i in range(size):
-            # Tuple describing a process
-            # is (address,port,status)
-            processList += [(None,None,None)] # appending here preserves indexing=order=rank
-            
+        self.all_procs = {}
+        self.logger = mpi_instance.logger
+    
+    def build_world(self, all_procs):
+        for (hostname, port_no, rank) in all_procs:
+            self.all_procs[ rank ] = (hostname, port_no)
+            self.logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)

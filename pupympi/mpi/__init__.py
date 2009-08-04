@@ -58,11 +58,13 @@ class MPI:
         # Let the communication handle start up if it need to.
         from mpi.tcp import TCPNetwork
         
-        logger.debug("Starting the network")
-        
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
         self.network = network = TCPNetwork(self)
-        self.network.handshake(mpi_run_hostname, mpi_run_port)
+        logger.debug("Network started")
+        
+        all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port)
+        self.MPI_COMM_WORLD.build_world( all_procs )
+        logger.debug("Communicator started")
 
     def rank(self, comm=None):
         if not comm:

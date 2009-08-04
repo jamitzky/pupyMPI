@@ -39,9 +39,16 @@ class TCPNetwork():
         self.logger.debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
         s_conn.send(data)
+        
+        # Receiving data about the communicator
+        all_procs = s_conn.recv(1024)
+        all_procs = pickle.loads( all_procs )
+        self.logger.debug("Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
         
         self.logger.debug("Shaking done")
+        
+        return all_procs
 
     def finalize(self):
         self.socket.close()
