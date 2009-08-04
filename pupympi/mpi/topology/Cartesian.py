@@ -136,27 +136,45 @@ def _writeDimStr(dim, periodic):
     # used to combine dims and periodic lists for the __repr__ function. There's probably a better way to do this :o
     return "%s%s" % (dim, "P" if periodic else "")
 
-def MPI_Dims_Create(size, desiredDimensions):
+def isprime(n):
+    '''check if integer n is a prime'''
+    # range starts with 2 and only needs to go up the squareroot of n
+    for x in range(2, int(n**0.5)+1):
+        if n % x == 0:
+            return False
+    return True
+    
+def MPI_Dims_Create(size, d, constraints = None):
     """MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the user select a balanced distribution of processes per coordinate direction, depending on the number of processes in the group to be balanced and optional constraints that can be specified by the user. One use is to partition all the processes (the size of MPI_COMM_WORLD's group) into an n-dimensional topology. """      
     
     # TODO Improve dims_create algorithm
     # FIXME Constrains parameter.
-    if desiredDimensions < 1:
+    if d < 1:
         raise MPITopologyException("Dimensions must be higher or equal to 1.")
+    if constraints and not len(constraints) is d:
+        raise MPITopologyException("If constraints are specified, they must match requested dimensionality.")
+        
+    if not constraints:
+        constraints = [0] * d
+            
+    if isprime(size):
+        tmpdims = [1] * d
+        dims = [t if c == 0 else c for c,t in zip(constraints,tmpdims)]
+        dims[0] = size
+    else:
+        base = math.pow (size, 1.0/d)
+        tmpdims = [int(base)] * d
+        dims = [t if c == 0 else c for c,t in zip(constraints,tmpdims)]
 
-    base = math.pow (size, 1.0/desiredDimensions)
-    dims = [int(base)] * desiredDimensions
-    #print("base %s, dims %s" % (base, dims))
-
-    last_empty = 0
-    while reduce(mul, dims) < size:
-        dims[last_empty] += 1;
-        last_empty += 1
-        if last_empty >= desiredDimensions:
-            last_empty = 0
+        last_empty = 0
+        while reduce(mul, dims) < size:
+            dims[last_empty] += 1;
+            last_empty += 1
+            if last_empty >= d:
+                last_empty = 0
                 
     if reduce(mul, dims) > size:
-        raise MPITopologyException("Size (%s) must be a multipla of the resulting grid size (%s)." % (size, dims))
+        raise MPITopologyException("Size (%s) must be a multiple of the resulting grid size (%s)." % (size, dims))
         
     return dims      
 
@@ -220,10 +238,11 @@ class CartesianTests(unittest.TestCase):
     def testCreateDims(self):
         ca = MPI_Dims_Create(6,2)
         self.assertEqual(ca, [3,2])
-        # test case fails with current algo
-        #ca = MPI_Dims_Create(7,2)
-        #self.assertEqual(ca, [7,1])
-        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3)
+        ca = MPI_Dims_Create(7,2)
+        self.assertEqual(ca, [7,1])
+        ca = MPI_Dims_Create(6,3,[0,3,0])
+        self.assertEqual(ca, [2,3,1])
+        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0])
 
     # test rank -> [grid coords]
     def testCartGet(self):
