@@ -20,7 +20,7 @@ class MPI:
         port = None
         
         logfile = None
-
+        
         for opt, arg in optlist:
             if opt in ("-d", "--debug"):
                 debug = True
