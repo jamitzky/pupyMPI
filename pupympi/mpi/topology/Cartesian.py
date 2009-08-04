@@ -19,6 +19,10 @@ class MPITopologyException(Exception):
 class dummycomm():
     def __init__(self, size):
         self.size = size
+        import sys
+        sys.path.append("../..")
+        from mpi.logger import setup_log
+        self.logger = setup_log( "dummycomm", "proc-%d" % rank, debug, verbosity, quiet)
         
     def associate(self, arg):
         pass
@@ -50,7 +54,9 @@ class Cartesian(BaseTopology):
         self.dims = dims
         self.periodic = periodic
         self.communicator = communicator
+        self.logger = communicator.logger
         communicator.associate(self)
+        logger.info("Creating new topology %s and associated with communicator %s." % (self, communicator))
         
     def __repr__(self):
         return "<Cartesian topology, %sD with dims %s>" % (len(self.dims), 'x'.join(map(_writeDimStr, self.dims, self.periodic)))
