@@ -5,12 +5,12 @@ class Communicator():
         self.rank = rank
         self.size = size
         self.name = name
-        self.all_procs = {}
+        self.members = {}
         self.logger = mpi_instance.logger
     
     def build_world(self, all_procs):
         for (hostname, port_no, rank) in all_procs:
-            self.all_procs[ rank ] = (hostname, port_no)
+            self.members[ rank ] = (hostname, port_no)
             self.logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
 
     def __repr__(self):
