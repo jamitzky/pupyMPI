@@ -6,12 +6,13 @@ except ImportError:
     import pickle
     
 class TCPNetwork():
-    def __init__(self, port, mpi_instance):
-        self.port = port
+    def __init__(self, mpi_instance):
         self.logger = mpi_instance.logger
         self.mpi_instance = mpi_instance
         self.hostname = socket.gethostname()
-        self.port = 6000+mpi_instance.rank()#FIXME: This should just locate a free port.	
+        self.port = 14000+mpi_instance.rank()#FIXME: This should just locate a free port.
+        
+        self.bind_socket()
         
     def bind_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
