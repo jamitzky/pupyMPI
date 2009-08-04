@@ -1,6 +1,6 @@
 __version__ = 0.01
 
-from mpi.comm import Communicator
+from mpi.comm3 import Communicator
 
 class MPI:
 
@@ -61,10 +61,22 @@ class MPI:
         port = 6000+rank
         self.network = network = TCPNetwork(port, logger)
 
+<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
         self.network.handshake(hostname, port)
+=======
+        self.MPI_COMM_WORLD = Communicator(rank, size)        
 
+        # Let the communication handle start up if it need to.
+        if network_type == "tcp":
+            from mpi.tcp import TCPNetwork
+            self.network = network = TCPNetwork(port)
+>>>>>>> /tmp/__init__.py~other.9qKPUh
+
+<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
         self.MPI_COMM_WORLD = Communicator(rank, size)
         logger.debug("MPI_COMM_WORLD started")
+=======
+>>>>>>> /tmp/__init__.py~other.9qKPUh
 
     def rank(self, comm=None):
         if not comm:
