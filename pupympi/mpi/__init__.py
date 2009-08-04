@@ -7,7 +7,7 @@ class MPI:
     def __init__(self):
         import sys, getopt
         try:
-            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port='])
+            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port=','mpirun-conn-port=', 'mpirun-conn-host='])
         except getopt.GetoptError, err:
             print str(err)
 
@@ -16,8 +16,8 @@ class MPI:
         quiet = False
         rank = 0
         size = 0
-        network_type = "tcp"
-        port = 0
+        hostname = None
+        port = None
         
         logfile = None
 
@@ -26,7 +26,7 @@ class MPI:
                 debug = True
 
             if opt in ("-v", "--verbosity"):
-                verbosity = arg
+                verbosity = int(arg)
 
             if opt in ("-q", "--quiet"):
                 quiet = True
@@ -39,26 +39,44 @@ class MPI:
                     rank = int(arg)
                 except ValueError:
                     pass
-            if opt == "--network-type":
-                if arg in ('tcp', ):
-                    network_type = arg
-
             if opt in ("-s", "--size"):
                 try:
                     size = int(arg)
                 except:
                     pass
                 
-            if opt == "--port":
+            if opt == "--mpirun-conn-host":
+                hostname = arg
+            if opt == "--mpirun-conn-port":
                 port = int(arg)
+                
+        # Initialise the logger
+        from mpi.logger import setup_log
+        logger = setup_log(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
+        
+        # Let the communication handle start up if it need to.
+        from mpi.tcp import TCPNetwork
+        
+        logger.debug("Starting the network")
+        port = 6000+rank
+        self.network = network = TCPNetwork(port, logger)
 
+<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
+        self.network.handshake(hostname, port)
+=======
         self.MPI_COMM_WORLD = Communicator(rank, size)        
 
         # Let the communication handle start up if it need to.
         if network_type == "tcp":
             from mpi.tcp import TCPNetwork
             self.network = network = TCPNetwork(port)
+>>>>>>> /tmp/__init__.py~other.9qKPUh
 
+<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
+        self.MPI_COMM_WORLD = Communicator(rank, size)
+        logger.debug("MPI_COMM_WORLD started")
+=======
+>>>>>>> /tmp/__init__.py~other.9qKPUh
 
     def rank(self, comm=None):
         if not comm:
