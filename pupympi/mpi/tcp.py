@@ -11,7 +11,7 @@ class TCPNetwork():
         self.logger = mpi_instance.logger
         self.mpi_instance = mpi_instance
         self.hostname = socket.gethostname()
-        self.port = port
+        self.port = 6000+mpi_instance.rank()#FIXME: This should just locate a free port.	
         
     def bind_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,7 +34,9 @@ class TCPNetwork():
         
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s_conn.connect((mpirun_hostname, mpirun_port))
+        recipient = (mpirun_hostname, mpirun_port)
+        self.logger.debug("Trying to connect to (%s,%s)" % recipient)
+        s_conn.connect(recipient)
         s_conn.send(data)
         s_conn.close()
         

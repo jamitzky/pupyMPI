@@ -46,9 +46,9 @@ class MPI:
                     pass
                 
             if opt == "--mpirun-conn-host":
-                hostname = arg
+                mpi_run_hostname = arg
             if opt == "--mpirun-conn-port":
-                port = int(arg)
+                mpi_run_port = int(arg)
                 
         # Initialise the logger
         from mpi.logger import setup_log
@@ -59,10 +59,10 @@ class MPI:
         from mpi.tcp import TCPNetwork
         
         logger.debug("Starting the network")
-        port = 6000+rank
+        
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        self.network = network = TCPNetwork(port, self)
-        self.network.handshake(hostname, port)
+        self.network = network = TCPNetwork(self)
+        self.network.handshake(mpi_run_hostname, mpi_run_port)
 
     def rank(self, comm=None):
         if not comm:
