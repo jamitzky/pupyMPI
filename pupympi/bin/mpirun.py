@@ -33,6 +33,10 @@ door until he wakes up.
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 def usage():
     print __doc__
@@ -223,12 +227,21 @@ if __name__ == "__main__":
 
     # We hardcode for TCP currently. This should be made more generic in the future. 
     mpi_run_hostname = socket.gethostname()
-    mpi_run_port = 5555 # Rewrite to find some port
-    logger.debug("Found hostname: %s and port %d.. Creating the socket" % (mpi_run_hostname, mpi_run_port))
+    logger.debug("Found hostname: %s" % mpi_run_hostname)
+    
+    # FIXME:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((mpi_run_hostname, mpi_run_port))
+    
+    for tries in range(10):
+        mpi_run_port = 5555+tries # Rewrite to find some port
+        try:
+            s.bind((mpi_run_hostname, mpi_run_port))
+            break
+        except socket.error:
+            continue
+            
     s.listen(5)
-    logger.debug("Socket bound")
+    logger.debug("Socket bound to port %d" % mpi_run_port)
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
@@ -259,11 +272,21 @@ if __name__ == "__main__":
         logger.debug("Process with rank %d started" % rank)
         
     # Listing for (rank, host, port) from all the procs.
-    all_procs = {}
-    for (hostname,rank,port) in mappedHosts:
-        print (hostname,rank,port)
-        pass
+    all_procs = []
+    sender_conns = []
+    for _ in mappedHosts:
+        sender_conn, sender_addr = s.accept()
+        sender_conns.append( sender_conn )
+        # Recieve listings from newly started proccesses phoning in
+        data = pickle.loads(sender_conn.recv(4096))
+        all_procs.append( data )
+        logger.debug("Received initial startup date from proc-%d" % data[2])
+        
+    # Send all the data to all the connections
+    for conn in sender_conns:
+        conn.send( pickle.dumps( all_procs ))
     
-    # Recieve listings from newly started proccesses phoning in
-    recieved_data = s.recv(4096)
-    logger.debug(("Hul igennem "))
+    # Close all the connections
+    [ c.close for c in sender_conns ]
+
+    s.close()
