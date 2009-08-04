@@ -255,3 +255,15 @@ if __name__ == "__main__":
         if host == "localhost":             # This should be done a bit clever
             from subprocess import Popen
             p = Popen(arguments)
+            
+        logger.debug("Process with rank %d started" % rank)
+        
+    # Listing for (rank, host, port) from all the procs.
+    all_procs = {}
+    for (hostname,rank,port) in mappedHosts:
+        print (hostname,rank,port)
+        pass
+    
+    # Recieve listings from newly started proccesses phoning in
+    recieved_data = s.recv(4096)
+    logger.debug(("Hul igennem "))
