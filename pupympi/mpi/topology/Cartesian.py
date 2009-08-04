@@ -49,8 +49,8 @@ class Cartesian(BaseTopology):
             raise MPITopologyException("Cannot have higher dimensionality of periodicity than dimensions")
         if not communicator:
             raise MPITopologyException("No existing communicator given")
-#        if d in dims == 0: 
-#            raise MPITopologyException("All extants must be at least 1 wide")
+        if 0 in dims:
+            raise MPITopologyException("All extants must be at least 1 wide")
 
         # SOLVED  Extend periodic to be same length as dims, use consistent approach to mismatched lists, or disallow althogether
         if len(periodic) < len(dims):
@@ -185,16 +185,21 @@ class CartesianTests(unittest.TestCase):
         t = Cartesian(c, [2, 3, 4, 5, 6, 7], [True])
         self.assertEqual(t.dims, [2, 3, 4, 5, 6, 7])
         self.assertEqual(t.periodic, [True, False, False, False, False, False])
-
         
+    def testCreateError(self):
+        c = dummycomm(10)
+        
+        self.assertRaises(MPITopologyException, Cartesian, None, [2,2])
+        self.assertRaises(MPITopologyException, Cartesian, c, [0])
+        self.assertRaises(MPITopologyException, Cartesian ,c, [2], [False, False])
+        self.assertRaises(MPITopologyException, Cartesian, c, [], [False, False])
+            
     def test_normalize(self):
         c = dummycomm(10)
 
         t = Cartesian(c, [10, 10])
         self.assertEqual(t.periodic, [False, False])
-        
 
-        
         t = Cartesian(c, [10, 10], [False])
         result = t._normalize([0, 0])
         self.assertEqual(result, [0, 0])
@@ -203,7 +208,7 @@ class CartesianTests(unittest.TestCase):
         result = t._normalize([10, 10])
         self.assertEqual(result, [10, 10])
         self.assertRaises(MPITopologyException, t._normalize, [12, 12])
-        
+
         t = Cartesian(c, [10, 10], [True, True])
         result = t._normalize([0, 0])
         self.assertEqual(result, [0, 0])
@@ -219,23 +224,6 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, [2, 10, 2, 9])
 
         # TODO more tests
-        
-    def testCreateError(self):
-        c = dummycomm(10)
-        cond1 = False
-        cond2 = False
-        # Not sure how to get assertRaises to work on an __init__ method, so work around it.
-        try: 
-            Cartesian(c, [2], [False, False])
-        except MPITopologyException:
-            cond1 = True
-        try: 
-            Cartesian(c, [], [False, False])
-        except MPITopologyException:
-            cond2 = True
-            
-        if not cond1 and cond2:
-            self.fail("No exception caught")
 
     def testCreateDims(self):
         # ca = MPI_Dims_Create(6,2)
