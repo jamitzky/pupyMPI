@@ -1,7 +1,5 @@
-from mpi.topology.Cartesian import Cartesian
-
 class Communicator():
-    def __init__(self, rank, size, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
         self.rank = rank
         self.size = size
         self.name = name

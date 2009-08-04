@@ -1,6 +1,4 @@
-import mpi
-import socket
-import time
+import mpi, time, socket
 
 try:
     import cPickle as pickle
@@ -8,19 +6,38 @@ except ImportError:
     import pickle
     
 class TCPNetwork():
-    def __init__(self, port, logger):
+    def __init__(self, port, mpi_instance):
         self.port = port
-        self.logger = logger
-        self.bind_socket()
+        self.logger = mpi_instance.logger
+        self.mpi_instance = mpi_instance
+        self.hostname = socket.gethostname()
+        self.port = port
         
     def bind_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind( ('localhost', self.port ))
+        s.bind( (self.hostname, self.port ))
         s.listen(5)
         self.socket = s
         
     def handshake(self, mpirun_hostname, mpirun_port):
+        """
+        This method create the MPI_COMM_WORLD communicator, by receiving
+        (hostname, port, rank) for all the processes started by mpirun.
+        
+        For mpirun to have this information we first send all the data
+        from our own process. So we bind a socket. 
+        """
         self.logger.debug("Communicating ports and hostname to mpirun")
+        
+        # Packing the data
+        data = picke.dumps( (self.host, self.port, self.mpi_instance.get_rank() ) )
+        
+        # Connection to the mpirun processs
+        s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_conn.connect(mpirun_hostname, mpirun_port)
+        s_conn.send(data)
+        s_conn.close()
+        
         self.logger.debug("Shaking done")
 
     def finalize(self):
@@ -36,7 +53,8 @@ def irecv(destination, tag, comm=None):
         
     # Check the destination exists
     if not comm.have_rank(destination):
-        raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+        error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
+        raise MPIBadAddressException(error_str)
     
     conn, addr = mpi.__server_socket.accept()
     while 1:
