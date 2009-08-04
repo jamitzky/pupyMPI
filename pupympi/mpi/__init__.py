@@ -53,6 +53,7 @@ class MPI:
         # Initialise the logger
         from mpi.logger import setup_log
         logger = setup_log(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
+        self.logger = logger
         
         # Let the communication handle start up if it need to.
         from mpi.tcp import TCPNetwork
