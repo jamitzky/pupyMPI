@@ -1,3 +1,4 @@
+from mpi.topology.Cartesian import Cartesian
 
 class Communicator():
     def __init__(self, rank, size, name="MPI_COMM_WORLD"):
