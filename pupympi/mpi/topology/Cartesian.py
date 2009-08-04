@@ -6,6 +6,7 @@ Cartesian.py
 Created by Jan Wiberg on 2009-07-21.
 """
 
+import math
 import unittest
 from operator import mul
 from BaseTopology import BaseTopology
@@ -24,7 +25,7 @@ class dummycomm():
         sys.path.append("../..")
         
         from mpi.logger import setup_log
-        self.logger = setup_log( "dummycomm", "proc-%d" % 0, False, 3, True)
+        self.logger = setup_log( "dummycomm", "proc-%d" % 0, False, 1, False)
         
     def associate(self, arg):
         pass
@@ -69,7 +70,7 @@ class Cartesian(BaseTopology):
     def _normalize(self, coords):
         """Normalizes potentially periodic grid coordinates to fit within the grid, if possible, otherwise raise error."""
         retcords = [c % g if p and c is not g else c for c, g, p in zip(coords, self.dims, self.periodic)]
-        # FIXME Validation could be rolled into primary loop, or just do the whole without list comprehensions?
+        # FIXME just do the whole without list comprehensions?
         for checkcoords, dims in zip(retcords, self.dims):
             if checkcoords > dims:
                 raise MPITopologyException("Grid dimensions overflow")
@@ -138,35 +139,26 @@ def _writeDimStr(dim, periodic):
 def MPI_Dims_Create(size, desiredDimensions):
     """MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the user select a balanced distribution of processes per coordinate direction, depending on the number of processes in the group to be balanced and optional constraints that can be specified by the user. One use is to partition all the processes (the size of MPI_COMM_WORLD's group) into an n-dimensional topology. """      
     
-    # brute force method for creating dim array. This is not the correct way to solve this issue, need to factor the numbers instead, but it was fast to write
+    # TODO Improve dims_create algorithm
+    # FIXME Constrains parameter.
     if desiredDimensions < 1:
         raise MPITopologyException("Dimensions must be higher or equal to 1.")
 
-    dims = [0] * desiredDimensions
-    looping = True
-    
-    while looping:
-        for n in range(desiredDimensions):
-            dims[n] += 1
-            #print "%s, %s, %s, %s, %s" % (size, n, desiredDimensions, dims, reduce(mul, dims))
-            if reduce(mul, dims) >= size: # went over, go back one step
-                looping = False
-                if reduce(mul, dims) == size:
-                    print "Returning exact hit %s " % dims
-                    return dims
-                dims[n] -= 1
-                if reduce(mul, dims) < size: # no easy solution 
-                    altdim = [1] * desiredDimensions
-                    altdim[0] = size
-                    print "hit a special case, return unbalanced result %s" % altdim
-                    return altdim
-                break
+    base = math.pow (size, 1.0/desiredDimensions)
+    dims = [int(base)] * desiredDimensions
+    #print("base %s, dims %s" % (base, dims))
+
+    last_empty = 0
+    while reduce(mul, dims) < size:
+        dims[last_empty] += 1;
+        last_empty += 1
+        if last_empty >= desiredDimensions:
+            last_empty = 0
                 
     if reduce(mul, dims) > size:
-        raise MPITopologyException("size must be a multipla of the resulting grid size.")
-    print "Returning break hit %s " % dims
+        raise MPITopologyException("Size (%s) must be a multipla of the resulting grid size (%s)." % (size, dims))
         
-    return dims # shouldnt go here.        
+    return dims      
 
 class CartesianTests(unittest.TestCase):
     def setUp(self):
@@ -226,13 +218,12 @@ class CartesianTests(unittest.TestCase):
         # TODO more tests
 
     def testCreateDims(self):
-        # ca = MPI_Dims_Create(6,2)
-        # self.assertEqual(ca, [3,2])
-        # ca = MPI_Dims_Create(7,2)
-        # self.assertEqual(ca, [7,1])
-        # ca = MPI_Dims_Create(6,3)
-        # self.assertEqual(ca, [6,1,1])
-        pass
+        ca = MPI_Dims_Create(6,2)
+        self.assertEqual(ca, [3,2])
+        # test case fails with current algo
+        #ca = MPI_Dims_Create(7,2)
+        #self.assertEqual(ca, [7,1])
+        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3)
 
     # test rank -> [grid coords]
     def testCartGet(self):

@@ -56,13 +56,16 @@ class MPI:
         self.logger = logger
         
         # Let the communication handle start up if it need to.
-        from mpi.tcp import TCPNetwork
+        from mpi.tcp import TCPNetwork as Network
+        self.network = Network()
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        self.network = network = TCPNetwork(self)
+        self.network = network = TCPNetwork()
+        self.network.set_logger(logger)
+        self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
         
-        all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port)
+        all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
 
@@ -78,3 +81,11 @@ class MPI:
     
     def finalize(self):
         self.network.finalize()
+
+    # Some wrapper methods
+    def isend(*kargs, **kwargs):
+        self.network.isend(*kargs, **kwargs)
+
+from mpi.tcp import TCPNetwork
+for methodname in ('isend','irecv','send','recv'):
+    setattr(MPI, methodname, getattr(TCPNetwork, methodname))
