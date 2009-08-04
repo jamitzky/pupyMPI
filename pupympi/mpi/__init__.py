@@ -86,6 +86,14 @@ class MPI:
     def isend(*kargs, **kwargs):
         self.network.isend(*kargs, **kwargs)
 
-from mpi.tcp import TCPNetwork
-for methodname in ('isend','irecv','send','recv'):
-    setattr(MPI, methodname, getattr(TCPNetwork, methodname))
+    def send(*kargs, **kwargs):
+        self.network.send(*kargs, **kwargs)
+
+    def wait(*kargs, **kwargs):
+        self.network.wait(*kargs, **kwargs)
+
+    def recv(*kargs, **kwargs):
+        self.network.recv(*kargs, **kwargs)
+
+    def irecv(*kargs, **kwargs):
+        self.network.irecv(*kargs, **kwargs)
