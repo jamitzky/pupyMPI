@@ -59,33 +59,10 @@ class MPI:
         
         logger.debug("Starting the network")
         port = 6000+rank
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
         self.network = network = TCPNetwork(port, self)
-=======
-        self.network = network = TCPNetwork(port, logger)
-
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
->>>>>>> /tmp/__init__.py~other.dSEr4_
         self.network.handshake(hostname, port)
-=======
-        self.MPI_COMM_WORLD = Communicator(rank, size)        
 
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
-=======
-        # Let the communication handle start up if it need to.
-        if network_type == "tcp":
-            from mpi.tcp import TCPNetwork
-            self.network = network = TCPNetwork(port)
->>>>>>> /tmp/__init__.py~other.9qKPUh
-
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
-        self.MPI_COMM_WORLD = Communicator(rank, size)
-        logger.debug("MPI_COMM_WORLD started")
-=======
->>>>>>> /tmp/__init__.py~other.9qKPUh
-
->>>>>>> /tmp/__init__.py~other.dSEr4_
     def rank(self, comm=None):
         if not comm:
             comm = self.MPI_COMM_WORLD
