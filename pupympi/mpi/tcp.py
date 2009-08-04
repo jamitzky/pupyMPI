@@ -30,11 +30,11 @@ class TCPNetwork():
         self.logger.debug("Communicating ports and hostname to mpirun")
         
         # Packing the data
-        data = picke.dumps( (self.host, self.port, self.mpi_instance.get_rank() ) )
+        data = pickle.dumps( (self.hostname, self.port, self.mpi_instance.rank() ) )
         
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s_conn.connect(mpirun_hostname, mpirun_port)
+        s_conn.connect((mpirun_hostname, mpirun_port))
         s_conn.send(data)
         s_conn.close()
         
