@@ -2,6 +2,8 @@ import os
 import logging, logging.handlers
 
 def setup_log(filename, logname, debug, verbosity, quiet):
+    # FIXME: There is something wrong with the logger. Without options
+    # errors is not in the file or stderr. It should. 
     if debug:
         verbosity = 3
         
