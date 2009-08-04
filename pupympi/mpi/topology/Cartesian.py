@@ -104,8 +104,16 @@ class Cartesian(BaseTopology):
  
         return offset
         
-    def MPI_Cart_shift(self, tbd):
-        pass
+    def MPI_Cart_shift(self, direction, displacement, rank_source):
+        """Shifts by rank in one coordinate direction. Displacement specifies step width. 
+            http://www.mpi-forum.org/docs/mpi-11-html/node137.html#Node137"""
+        rank_target = (rank_source + displacement)
+        if self.periodic[displacement]:
+            return rank_target % self.dims[dims]
+        elif rank_target > self.dims[dims]:
+            raise MPITopologyException("Shift exceeded grid boundaries")
+        
+        return rank_target        
 
 
 # convience and "statics"
