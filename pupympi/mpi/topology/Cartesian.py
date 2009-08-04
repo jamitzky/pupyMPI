@@ -118,14 +118,17 @@ class Cartesian(BaseTopology):
     def MPI_Cart_shift(self, direction, displacement, rank_source):
         """Shifts by rank in one coordinate direction. Displacement specifies step width. 
             http://www.mpi-forum.org/docs/mpi-11-html/node137.html#Node137"""
+        if direction >= len(self.dims):
+            raise MPITopologyException("Dimensionality exceeded")
+            
         rank_target = (rank_source + displacement)
-        if self.periodic[displacement]:
-            return rank_target % self.dims[dims]
-        elif rank_target > self.dims[dims]:
+        
+        if self.periodic[direction]:
+            return rank_target % self.dims[direction]
+        elif rank_target < 0 or rank_target >= self.dims[direction]:
             raise MPITopologyException("Shift exceeded grid boundaries")
         
         return rank_target        
-
 
 # convience and "statics"
 def _writeDimStr(dim, periodic):
@@ -186,8 +189,13 @@ class CartesianTests(unittest.TestCase):
         
     def test_normalize(self):
         c = dummycomm(10)
-        t = Cartesian(c, [10, 10], [False, False])
+
+        t = Cartesian(c, [10, 10])
+        self.assertEqual(t.periodic, [False, False])
         
+
+        
+        t = Cartesian(c, [10, 10], [False])
         result = t._normalize([0, 0])
         self.assertEqual(result, [0, 0])
         result = t._normalize([5, 5])
@@ -304,6 +312,43 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, 27)
 
         # need more cases and fix expected result
+        
+    def testCartShift(self):
+        c = dummycomm(10)    
+        
+        # test non periodic, 1D
+        t = Cartesian(c, [50])
+
+        result = t.MPI_Cart_shift(0, 5, 5)
+        self.assertEqual(result, 10)
+        result = t.MPI_Cart_shift(0, 5, -5)
+        self.assertEqual(result, 0)
+        result = t.MPI_Cart_shift(0, 0, 45)
+        self.assertEqual(result, 45)
+        result = t.MPI_Cart_shift(0, 4, 45)
+        self.assertEqual(result, 49)
+        result = t.MPI_Cart_shift(0, -5, 45)
+        self.assertEqual(result, 40)
+        self.assertRaises(MPITopologyException, t.MPI_Cart_shift, 0, -10, 5)
+        self.assertRaises(MPITopologyException, t.MPI_Cart_shift, 1, 5, 5)
+        
+        # test periodic, 1D
+        t = Cartesian(c, [50], [True])
+        result = t.MPI_Cart_shift(0, 5, 5)
+        self.assertEqual(result, 10)
+        result = t.MPI_Cart_shift(0, 5, -5)
+        self.assertEqual(result, 0)
+        result = t.MPI_Cart_shift(0, 0, 45)
+        self.assertEqual(result, 45)
+        result = t.MPI_Cart_shift(0, 4, 45)
+        self.assertEqual(result, 49)
+        result = t.MPI_Cart_shift(0, 5, 45)
+        self.assertEqual(result, 0)
+        result = t.MPI_Cart_shift(0, -5, 45)
+        self.assertEqual(result, 40)
+        result = t.MPI_Cart_shift(0, 1024, 45)
+        self.assertEqual(result, 19)
+    
 
     def test__repr__(self):
         c = dummycomm(10)    
