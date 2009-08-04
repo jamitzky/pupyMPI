@@ -1,6 +1,6 @@
 __version__ = 0.01
 
-from mpi.comm import Communicator
+from mpi.comm3 import Communicator
 
 class MPI:
 
@@ -52,12 +52,13 @@ class MPI:
             if opt == "--port":
                 port = int(arg)
 
+        self.MPI_COMM_WORLD = Communicator(rank, size)        
+
         # Let the communication handle start up if it need to.
         if network_type == "tcp":
             from mpi.tcp import TCPNetwork
             self.network = network = TCPNetwork(port)
 
-        self.MPI_COMM_WORLD = Communicator(rank, size)
 
     def rank(self, comm=None):
         if not comm:
