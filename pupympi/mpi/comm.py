@@ -3,8 +3,6 @@ class Communicator():
         self.rank = rank
         self.size = size
         self.name = name
-        if not topology:
-            topology = Cartesian([size], [False])
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
