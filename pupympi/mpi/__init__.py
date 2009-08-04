@@ -60,7 +60,7 @@ class MPI:
         self.network = Network()
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        self.network = network = TCPNetwork()
+        self.network = network = Network()
         self.network.set_logger(logger)
         self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
@@ -83,17 +83,17 @@ class MPI:
         self.network.finalize()
 
     # Some wrapper methods
-    def isend(*kargs, **kwargs):
+    def isend(self, *kargs, **kwargs):
         self.network.isend(*kargs, **kwargs)
 
-    def send(*kargs, **kwargs):
+    def send(self, *kargs, **kwargs):
         self.network.send(*kargs, **kwargs)
 
-    def wait(*kargs, **kwargs):
+    def wait(self, *kargs, **kwargs):
         self.network.wait(*kargs, **kwargs)
 
-    def recv(*kargs, **kwargs):
+    def recv(self, *kargs, **kwargs):
         self.network.recv(*kargs, **kwargs)
 
-    def irecv(*kargs, **kwargs):
+    def irecv(self, *kargs, **kwargs):
         self.network.irecv(*kargs, **kwargs)
