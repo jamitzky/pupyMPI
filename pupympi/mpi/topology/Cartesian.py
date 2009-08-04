@@ -147,12 +147,12 @@ def isprime(n):
 def MPI_Dims_Create(size, d, constraints = None):
     """MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the user select a balanced distribution of processes per coordinate direction, depending on the number of processes in the group to be balanced and optional constraints that can be specified by the user. One use is to partition all the processes (the size of MPI_COMM_WORLD's group) into an n-dimensional topology. """      
     
-    # TODO Improve dims_create algorithm
-    # FIXME Constrains parameter.
     if d < 1:
         raise MPITopologyException("Dimensions must be higher or equal to 1.")
     if constraints and not len(constraints) is d:
         raise MPITopologyException("If constraints are specified, they must match requested dimensionality.")
+    if constraints and not 0 in constraints:
+        raise MPITopologyException("If constraints are specified, they must not bind all dimensions.")
         
     if not constraints:
         constraints = [0] * d
@@ -168,7 +168,8 @@ def MPI_Dims_Create(size, d, constraints = None):
 
         last_empty = 0
         while reduce(mul, dims) < size:
-            dims[last_empty] += 1;
+            if constraints[last_empty] is 0:
+                dims[last_empty] += 1;
             last_empty += 1
             if last_empty >= d:
                 last_empty = 0
@@ -236,13 +237,17 @@ class CartesianTests(unittest.TestCase):
         # TODO more tests
 
     def testCreateDims(self):
+        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 6,2,[2,3]) # test fully bound constraint
         ca = MPI_Dims_Create(6,2)
         self.assertEqual(ca, [3,2])
-        ca = MPI_Dims_Create(7,2)
+        ca = MPI_Dims_Create(7,2) # test impossible-to-balance value
         self.assertEqual(ca, [7,1])
         ca = MPI_Dims_Create(6,3,[0,3,0])
         self.assertEqual(ca, [2,3,1])
-        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0])
+        self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0]) # test unable to reach multiple scenario
+
+        ca = MPI_Dims_Create(32,4)
+        self.assertEqual(ca, [4,2,2,2])
 
     # test rank -> [grid coords]
     def testCartGet(self):
