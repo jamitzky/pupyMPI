@@ -82,18 +82,25 @@ class MPI:
     def finalize(self):
         self.network.finalize()
 
+    def _ensure_comm(self, comm):
+        return comm or self.MPI_COMM_WORLD
+
     # Some wrapper methods
-    def isend(self, *kargs, **kwargs):
-        self.network.isend(*kargs, **kwargs)
+    def isend(self, destination, content, tag, comm=None):
+        comm = self._ensure_comm(comm)
+        return self.network.isend(destination, tag, comm)
 
-    def send(self, *kargs, **kwargs):
-        self.network.send(*kargs, **kwargs)
+    def send(self, destination, content, tag, comm=None):
+        comm = self._ensure_comm(comm)
+        return self.network.send(destination, content, tag, comm)
 
-    def wait(self, *kargs, **kwargs):
-        self.network.wait(*kargs, **kwargs)
+    def wait(self, handle):
+        return self.network.wait(handle)
 
-    def recv(self, *kargs, **kwargs):
-        self.network.recv(*kargs, **kwargs)
+    def recv(self, destination, tag, comm=None):
+        comm = self._ensure_comm(comm)
+        return self.network.recv(destination, tag, comm)
 
-    def irecv(self, *kargs, **kwargs):
-        self.network.irecv(*kargs, **kwargs)
+    def irecv(self, destination, tag, comm=None):
+        comm = self._ensure_comm(comm)
+        return self.network.irecv(destination, tag, comm)
