@@ -65,13 +65,10 @@ class TCPNetwork():
         self.socket.close()
         self.logger.debug("The TCP network is closed")
 
-    def recv(self, destination, tag, comm=None):
-        return self.wait(self.irecv(destination, tag, comm=comm))
+    def recv(self, destination, tag, comm):
+        return self.wait(self.irecv(destination, tag, comm))
         
-    def irecv(self, destination, tag, comm=None):
-        if not comm:
-            comm = mpi.MPI_COMM_WORLD
-            
+    def irecv(self, destination, tag, comm):
         # Check the destination exists
         if not comm.have_rank(destination):
             error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
@@ -86,13 +83,8 @@ class TCPNetwork():
         meaningless_handle_to_be_replaced = pickle.loads(data)
         return meaningless_handle_to_be_replaced
 
-    def isend(self, destination, content, tag, comm=None):
+    def isend(self, destination, content, tag, comm):
         # Implemented as a regular send until we talk to Brian
-        print destination
-        print "comm:" 
-        print comm
-        if not comm:
-            comm = mpi.MPI_COMM_WORLD
 
         # Check the destination exists
         if not comm.have_rank(destination):
@@ -117,6 +109,6 @@ class TCPNetwork():
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
         
-    def send(self, destination, content, tag, comm=None):
+    def send(self, destination, content, tag, comm):
         return self.wait(self.isend(destination, content, tag, comm=comm))
 	
