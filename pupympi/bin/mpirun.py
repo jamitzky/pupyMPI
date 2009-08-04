@@ -222,14 +222,14 @@ if __name__ == "__main__":
     mappedHosts = map_hostfile(hosts, logger, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
 
     # We hardcode for TCP currently. This should be made more generic in the future. 
-    hostname = socket.gethostname()
-    
-    port = 5555 # Rewrite to find some port
-    logger.debug("Found hostname: %s and port %d.. Creating the socket" % (hostname, port))
+    mpi_run_hostname = socket.gethostname()
+    mpi_run_port = 5555 # Rewrite to find some port
+    logger.debug("Found hostname: %s and port %d.. Creating the socket" % (mpi_run_hostname, mpi_run_port))
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((hostname, port))
+    s.bind((mpi_run_hostname, mpi_run_port))
     s.listen(5)
     logger.debug("Socket bound")
+    
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
         port = port+rank
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
         
-        arguments = ["python", executeable, "--mpirun-conn-host=%s" % hostname,"--mpirun-conn-port=%d" % port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity, '--port=%d' % port] 
+        arguments = ["python", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,"--mpirun-conn-port=%d" % mpi_run_port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
         
         if quiet:
             arguments.append('--quiet')
