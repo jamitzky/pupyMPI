@@ -117,6 +117,6 @@ class TCPNetwork():
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
         
-    def send(destination, content, tag, comm=None):
+    def send(self, destination, content, tag, comm=None):
         return self.wait(self.isend(destination, content, tag, comm=comm))
 	
