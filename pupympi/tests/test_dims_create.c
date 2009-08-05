@@ -54,11 +54,11 @@ int main( int argc, char *argv[] )
     }
 
     /* 4 dimensional tests */
-    for (nnodes=4; nnodes <= 32; nnodes = nnodes * 2) {
-        dims[0] = 0;
+    for (nnodes=4; nnodes <= 64; nnodes = nnodes + 2) {
+        /*dims[0] = 0;
         dims[1] = nnodes/2;
         dims[2] = 0;
-        dims[3] = 2;
+        dims[3] = 2;*/
         dims[0] = 0;
         dims[1] = 0;
         dims[2] = 0;

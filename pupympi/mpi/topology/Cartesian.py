@@ -167,11 +167,20 @@ def MPI_Dims_Create(size, d, constraints = None):
         dims = [t if c == 0 else c for c,t in zip(constraints,tmpdims)]
 
         last_empty = 0
+        block = d
         while reduce(mul, dims) < size:
             if constraints[last_empty] is 0:
                 dims[last_empty] += 1;
             last_empty += 1
-            if last_empty >= d:
+            if reduce(mul, dims) > size:
+                if block is 0:
+                    raise MPITopologyException("!Size (%s) must be a multiple of the resulting grid size (%s)." % (size, dims))
+                else:
+                    block -= 1
+                    dims[last_empty-1] -= 1
+                    last_empty = 0
+                    continue
+            if last_empty >= block:
                 last_empty = 0
                 
     if reduce(mul, dims) > size:
@@ -246,6 +255,10 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(ca, [2,3,1])
         self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0]) # test unable to reach multiple scenario
 
+        # based on openmpi 3.x
+        ca = MPI_Dims_Create(30,4)
+        self.assertEqual(ca, [5,3,2,1])
+        
         ca = MPI_Dims_Create(32,4)
         self.assertEqual(ca, [4,2,2,2])
 
