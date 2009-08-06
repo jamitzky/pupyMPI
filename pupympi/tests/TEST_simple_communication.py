@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.6
 
 # Simple pupympi program to test basic blocking communication between two processes
+# only works for two processes
 
 # first rank 0 sends then 1 recieves, then vice versa
 
