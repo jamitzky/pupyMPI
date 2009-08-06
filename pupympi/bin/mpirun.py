@@ -24,15 +24,13 @@ Start the program with pupympi
                                 format. 
     -h | --help                 Display this help. 
 
-Bugs should not be reported. But if you need to please call Frederik. He can be 
-contacted between 2 and 5 in the middle of the night. In the unlikely event
-that he does not respond, please visit Rune at his home address - just bang the
-door until he wakes up.
 """ 
 
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
+from mpi.processloaders import popen as starter
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -229,7 +227,7 @@ if __name__ == "__main__":
     mpi_run_hostname = socket.gethostname()
     logger.debug("Found hostname: %s" % mpi_run_hostname)
     
-    # FIXME:
+    # FIXME: Fix what?
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     for tries in range(10):
@@ -265,9 +263,7 @@ if __name__ == "__main__":
         if logfile:
             arguments.append('--log-file=%s' % logfile)
             
-        if host == "localhost":             # This should be done a bit clever
-            from subprocess import Popen
-            p = Popen(arguments)
+        starter(host, arguments)
             
         logger.debug("Process with rank %d started" % rank)
         
