@@ -106,19 +106,19 @@ class TCPNetwork():
         return unpickled_data
 
     def isend(self, destination_rank, content, tag, comm):
-        # Implemented as a regular send until we talk to Brian
-
         # Check the destination exists
         if not comm.have_rank(destination_rank):
             raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
 
         # Find the network details for recieving rank
         host,port = comm.get_network_details(destination_rank)
-                
-        # Rewrite this, when we have the details
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
+        s.setblocking(False) # False flag means non blocking
         s.connect((host, port))
-        s.send(pickle.dumps(content))
+        s.send(pickle.dumps("y"))
+        #s.send(pickle.dumps(content))
+        
         s.close()
         
         meaningless_handle_to_be_replaced_could_be_a_status_code = None
