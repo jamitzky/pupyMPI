@@ -9,18 +9,29 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 import sys
 import os
+from exceptions import MPIException
+from subprocess import Popen
 
+# TODO Output redirect. Log files?
 
-def popenssh(args):
-    pass
+def _islocal(host):
+    return host == "localhost" or host == "127.0.0.1"
     
-def ssh(args):
+def popenssh(host, arguments):
+    """Mixed Popen/SSH process starter. Uses Popen for localhost hosts, otherwise ssh"""
+    if _islocal(host):
+        p = Popen(host, arguments)
+    else:
+        ssh(host, arguments)
+    
+def ssh(host, arguments):
+    """SSH process starter. Non-loadbalancing."""
     pass
     
 def popen(host, arguments):
-    if host == "localhost":             # This should be done a bit clever
-        from subprocess import Popen
+    if _islocal(host):
         p = Popen(arguments)
+        return p
     else:
-        raise InputException("This processloader can only start processes on localhost.")
+        raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
     
