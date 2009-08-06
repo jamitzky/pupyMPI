@@ -74,37 +74,38 @@ class TCPNetwork():
             error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
             raise MPIBadAddressException(error_str)
         
-        conn, addr = mpi.__server_socket.accept()
-        while 1:
-            data = conn.recv(1024)
-            if not data: break
-        print "Vi er kommet hertil ", data, type(data)
+        # Get incoming communication
+        conn, addr = self.socket.accept()
+        msg = ""
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            else:
+                msg += data
+            
         conn.close()
-        meaningless_handle_to_be_replaced = pickle.loads(data)
-        return meaningless_handle_to_be_replaced
+        unpickled_data = pickle.loads(msg)
+        return unpickled_data
 
-    def isend(self, destination, content, tag, comm):
+    def isend(self, destination_rank, content, tag, comm):
         # Implemented as a regular send until we talk to Brian
 
         # Check the destination exists
-        if not comm.have_rank(destination):
+        if not comm.have_rank(destination_rank):
             raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
 
-        # Find the network details
-        dest = comm.get_network_details(destination)
+        # Find the network details for recieving rank
+        host,port = comm.get_network_details(destination_rank)
                 
         # Rewrite this, when we have the details
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #time.sleep(2)
-        # I think the line below produces a weird error in itself now my mony is on the port numbers being wrong...
-        #dummy = raw_input("wait?")
-        s.connect((dest['host'], dest['port']))
-        time.sleep(2)
+        s.connect((host, port))
         s.send(pickle.dumps(content))
         s.close()
         
-        meaningless_handle_to_be_replaced = None
-        return meaningless_handle_to_be_replaced
+        meaningless_handle_to_be_replaced_could_be_a_status_code = None
+        return meaningless_handle_to_be_replaced_could_be_a_status_code
 
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
