@@ -29,7 +29,7 @@ Start the program with pupympi
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
-from mpi.processloaders import popen as starter
+from mpi.processloaders import popenssh as starter
 
 try:
     import cPickle as pickle
