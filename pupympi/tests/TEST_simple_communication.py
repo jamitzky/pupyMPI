@@ -1,9 +1,10 @@
 #!/usr/bin/env python2.6
 
-# Simple pupympi program to test basic communication between two processes
+# Simple pupympi program to test basic blocking communication between two processes
+
+# first rank 0 sends then 1 recieves, then vice versa
 
 import mpi, time
-#from mpi import tcp
 
 
 mpi = mpi.MPI()
@@ -11,19 +12,29 @@ mpi = mpi.MPI()
 rank = mpi.rank()
 size = mpi.size()
 
-time.sleep(max(2,size-rank)) # NOTE: Why sleep here?
 
-# 0 sends to 1
 neighbour = (rank + 1) % size # Send to own rank + 1
+content = "Message from rank %d" % (rank)
 
 if rank == 0:
-    content = "Message from rank %d" % (rank)
+    # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
-    mpi.isend(neighbour,content,"Dummy tag here")
-else: # rank == 1
+    mpi.send(neighbour,content,"Dummy tag here")
+
+    # Recieve
     print "Rank: %d recieving from %d" % (rank,neighbour)
-    recieved = mpi.irecv(neighbour,"Dummy tag here")    
+    recieved = mpi.recv(neighbour,"Dummy tag here")    
     print "Rank: %d recieved %s" % (rank,recieved)
+    
+else: # rank == 1
+    # Recieve
+    print "Rank: %d recieving from %d" % (rank,neighbour)
+    recieved = mpi.recv(neighbour,"Dummy tag here")    
+    print "Rank: %d recieved %s" % (rank,recieved)
+    
+    # Send
+    print "Rank: %d sending to %d" % (rank,neighbour)
+    mpi.send(neighbour,content,"Dummy tag here")
 
 print "Sending/recieving done rank %d of %d after %d seconds sleep" % (rank, size, size-rank)
 

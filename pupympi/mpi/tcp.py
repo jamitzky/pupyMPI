@@ -66,7 +66,24 @@ class TCPNetwork():
         self.logger.debug("The TCP network is closed")
 
     def recv(self, destination, tag, comm):
-        return self.wait(self.irecv(destination, tag, comm))
+        # Check the destination exists
+        if not comm.have_rank(destination):
+            error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
+            raise MPIBadAddressException(error_str)
+        
+        # Get incoming communication
+        conn, addr = self.socket.accept()
+        msg = ""
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            else:
+                msg += data
+            
+        conn.close()
+        unpickled_data = pickle.loads(msg)
+        return unpickled_data
         
     def irecv(self, destination, tag, comm):
         # Check the destination exists
@@ -110,6 +127,19 @@ class TCPNetwork():
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
         
-    def send(self, destination, content, tag, comm):
-        return self.wait(self.isend(destination, content, tag, comm=comm))
-	
+    def send(self, destination_rank, content, tag, comm):
+        # Check the destination exists
+        if not comm.have_rank(destination_rank):
+            raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+
+        # Find the network details for recieving rank
+        host,port = comm.get_network_details(destination_rank)
+                
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.send(pickle.dumps(content))
+        s.close()
+        
+        meaningless_handle_to_be_replaced_could_be_a_status_code = None
+        return meaningless_handle_to_be_replaced_could_be_a_status_code
+    
