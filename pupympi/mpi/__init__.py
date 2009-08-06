@@ -1,6 +1,8 @@
 __version__ = 0.01
 
 from mpi.communicator import Communicator
+from mpi.decorators import error_handling
+from mpi.errorhandlers import eh_about_program
 
 class MPI:
 
@@ -69,6 +71,18 @@ class MPI:
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
 
+        # Setting a standard error handler in the system. People can override 
+        # this by passing a function to the set_error_handler()
+        self.set_error_handler( eh_about_program )
+
+    def set_error_handler(self, error_handler ):
+        if not callable( error_handler ):
+            raise Exception("We can only handle callable error handlers. Try passing a function")
+
+        self.logger.debug("Setting error handler to function named %s" % error_handler.__name__)
+        self.error_handler = error_handler
+
+    @error_handling
     def rank(self, comm=None):
         if not comm:
             comm = self.MPI_COMM_WORLD
