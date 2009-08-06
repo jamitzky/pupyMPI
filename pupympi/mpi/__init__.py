@@ -88,7 +88,7 @@ class MPI:
     # Some wrapper methods
     def isend(self, destination, content, tag, comm=None):
         comm = self._ensure_comm(comm)
-        return self.network.isend(destination, tag, comm)
+        return self.network.isend(destination, content, tag, comm)
 
     def send(self, destination, content, tag, comm=None):
         comm = self._ensure_comm(comm)
