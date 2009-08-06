@@ -255,10 +255,13 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(ca, [2,3,1])
         self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0]) # test unable to reach multiple scenario
 
-        # based on openmpi 3.x
-        ca = MPI_Dims_Create(30,4)
-        self.assertEqual(ca, [5,3,2,1])
-        
+        # none of these should raise errors
+        for d in range(1, 10):
+            for s in range(2, 96):
+                ca = MPI_Dims_Create(s,d)
+                self.assertEqual(reduce(mul, ca), s)
+                
+        # based on openmpi 3.x        
         ca = MPI_Dims_Create(32,4)
         self.assertEqual(ca, [4,2,2,2])
 
