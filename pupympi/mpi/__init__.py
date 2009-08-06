@@ -1,6 +1,6 @@
 __version__ = 0.01
 
-from mpi.comm3 import Communicator
+from mpi.communicator import Communicator
 
 class MPI:
 
