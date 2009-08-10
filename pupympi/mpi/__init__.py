@@ -64,7 +64,7 @@ class MPI:
         self.network.set_logger(logger)
         self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
-        
+
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
