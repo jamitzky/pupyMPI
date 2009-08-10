@@ -11,3 +11,6 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 class MPIException(Exception): 
     """Custom exception for Topologies"""
     pass
+
+class MPINoSuchRankException(MPIException):
+    pass
