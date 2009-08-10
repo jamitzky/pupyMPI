@@ -29,7 +29,8 @@ Start the program with pupympi
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
-from mpi.processloaders import ssh as starter
+from mpi.processloaders import ssh as remote_start
+from mpi.processloaders import shutdown as remote_stop_all
 
 try:
     import cPickle as pickle
@@ -263,7 +264,7 @@ if __name__ == "__main__":
         if logfile:
             arguments.append('--log-file=%s' % logfile)
             
-        starter(logger, host, arguments)
+        remote_start(logger, host, arguments)
             
         logger.debug("Process with rank %d started" % rank)
         
@@ -286,3 +287,5 @@ if __name__ == "__main__":
     [ c.close for c in sender_conns ]
 
     s.close()
+    
+    remote_stop_all()
