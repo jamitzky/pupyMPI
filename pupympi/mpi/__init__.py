@@ -68,16 +68,6 @@ class MPI:
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
-
-    def rank(self, comm=None):
-        if not comm:
-            comm = self.MPI_COMM_WORLD
-        return comm.rank
-
-    def size(self, comm=None):
-        if not comm:
-            comm = self.MPI_COMM_WORLD
-        return comm.size
     
     def finalize(self):
         self.network.finalize()
