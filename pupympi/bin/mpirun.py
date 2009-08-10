@@ -252,7 +252,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
         
-        arguments = ["python", "-ui", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,"--mpirun-conn-port=%d" % mpi_run_port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
+        arguments = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,"--mpirun-conn-port=%d" % mpi_run_port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
         
         if quiet:
             arguments.append('--quiet')
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         if logfile:
             arguments.append('--log-file=%s' % logfile)
             
-        starter(host, arguments)
+        starter(logger, host, arguments)
             
         logger.debug("Process with rank %d started" % rank)
         
