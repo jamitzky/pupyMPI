@@ -22,5 +22,14 @@ class Communicator():
     def get_network_details(self, rank):
         return self.members[rank]
     
+    def rank(self, comm=None):
+        if not comm:
+            comm = self.MPI_COMM_WORLD
+        return comm.rank
+
+    def size(self, comm=None):
+        if not comm:
+            comm = self.MPI_COMM_WORLD
+        return comm.size
     
     
