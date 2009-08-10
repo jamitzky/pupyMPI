@@ -7,7 +7,7 @@ mpirun.py (pupympi)
 Usage: ./mpirun.py [OPTION]... [PROGRAM]...
 Start the program with pupympi
 
-    -c | -np | --np <arg0>      The number of processes to run
+    -c | --np <arg0>            The number of processes to run
     -d | --debug                Makes the system prints a bunch
                                 of debugging information. You can
                                 control the verbosity of the output
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:np:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         if opt in ("-h", "--help"):
             usage()
         
-        if opt in ("-c","-np", "--number-procs"):
+        if opt in ("-c","--np"):
             try:
                 np = int(arg)
             except ValueError:
