@@ -17,22 +17,22 @@ from exceptions import MPIException
 def _islocal(host):
     return host == "localhost" or host == "127.0.0.1"
     
-def popenssh(host, arguments):
+def popenssh(logger, host, arguments):
     """Mixed Popen/SSH process starter. Uses Popen for localhost hosts, otherwise ssh"""
     if _islocal(host):
-        p = popen(host, arguments)
+        p = popen(logger, host, arguments)
     else:
-        ssh(host, arguments)
+        ssh(logger, host, arguments)
     
-def ssh(host, arguments):
+def ssh(logger, host, arguments):
     """SSH process starter. Non-loadbalancing."""
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=Documents/DIKU/python-mpi/code/pupympi/"]+ arguments 
-    print sshexec
+    logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, stderr=subprocess.PIPE)
     errdata = p.communicate()
     print "SSH PROCESS RETURN:\n",errdata
     
-def popen(host, arguments):
+def popen(logger, host, arguments):
     if _islocal(host):
         p = subprocess.Popen(arguments)
         return p
