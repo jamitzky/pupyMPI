@@ -1,4 +1,5 @@
 # Fred dabbling in communication
+from mpi.exceptions import MPINoSuchRankException
 
 class Communicator():
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
@@ -20,6 +21,9 @@ class Communicator():
         return rank in self.members
     
     def get_network_details(self, rank):
+        if not self.have_rank(rank):
+            raise MPINoSuchRankException()
+
         return self.members[rank]
     
     def rank(self, comm=None):
