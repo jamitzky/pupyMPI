@@ -26,10 +26,10 @@ def popenssh(host, arguments):
     
 def ssh(host, arguments):
     """SSH process starter. Non-loadbalancing."""
-    sshexec = ["ssh"] + [host] + arguments
+    sshexec = ["ssh"] + [host] + ["PYTHONPATH=Documents/DIKU/python-mpi/code/pupympi/"]+ arguments 
     print sshexec
     p = subprocess.Popen(sshexec, stderr=subprocess.PIPE)
-    errdata = p.communicate()[1]
+    errdata = p.communicate()
     print "SSH PROCESS RETURN:\n",errdata
     
 def popen(host, arguments):
