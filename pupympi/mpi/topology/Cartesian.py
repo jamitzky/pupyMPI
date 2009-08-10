@@ -12,10 +12,6 @@ from operator import mul
 from BaseTopology import BaseTopology
 from BaseTopology import MPI_CARTESIAN
 
-# Define exception class
-class MPITopologyException(Exception): 
-    """Custom exception for Topologies"""
-    pass
 
 class dummycomm():
     """Haxx communicator for unittests only"""
