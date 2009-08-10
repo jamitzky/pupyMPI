@@ -3,8 +3,8 @@ from mpi.exceptions import MPINoSuchRankException
 
 class Communicator():
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
-        self.rank = rank
-        self.size = size
+        self._rank = rank
+        self._size = size
         self.name = name
         self.members = {}
         self.logger = mpi_instance.logger
@@ -26,20 +26,14 @@ class Communicator():
 
         return self.members[rank]
     
-    def rank(self, comm=None):
-        if not comm:
-            comm = self.MPI_COMM_WORLD
-        return comm.rank
+    def rank(self):
+        return self._rank
 
-    def size(self, comm=None):
-        if not comm:
-            comm = self.MPI_COMM_WORLD
-        return comm.size
+    def size(self):
+        return self._size
 
     def get_name(self):
         return self.name
 
     def set_name(self, name):
         self.name = name
-    
-    
