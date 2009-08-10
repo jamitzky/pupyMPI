@@ -31,5 +31,8 @@ class Communicator():
         if not comm:
             comm = self.MPI_COMM_WORLD
         return comm.size
+
+    def get_name(self):
+        return self.name
     
     
