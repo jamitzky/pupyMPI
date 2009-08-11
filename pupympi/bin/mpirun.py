@@ -274,7 +274,8 @@ if __name__ == "__main__":
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
     sender_conns = []
-    for _ in mappedHosts:
+    
+    for _ in mappedHosts:        
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
         # Recieve listings from newly started proccesses phoning in

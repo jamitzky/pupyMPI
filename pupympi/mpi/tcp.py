@@ -1,15 +1,23 @@
 import mpi, time, socket
 from mpi.logger import Logger
+import threading
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
     
-class TCPNetwork():
+class TCPNetwork(threading.Thread):
     def __init__(self):
         self.hostname = socket.gethostname()
         self.bind_socket()
+    
+    #def run(self):
+    #    logger.debug("starting run method")
+    #    self.hostname = socket.gethostname()
+    #    logger.debug("got host name")
+    #    self.bind_socket()
+    #    logger.debug("finishing run method")
 
     def set_start_port(self, port_no):
         self.start_port_no = port_no
