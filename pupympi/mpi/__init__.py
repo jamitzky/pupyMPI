@@ -1,6 +1,7 @@
 __version__ = 0.01
 
 from mpi.communicator import Communicator
+from mpi.logger import Logger
 
 class MPI:
 
@@ -51,9 +52,7 @@ class MPI:
                 mpi_run_port = int(arg)
                 
         # Initialise the logger
-        from mpi.logger import setup_log
-        logger = setup_log(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
-        self.logger = logger
+        logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
         
         # Let the communication handle start up if it need to.
         from mpi.tcp import TCPNetwork as Network
@@ -61,7 +60,6 @@ class MPI:
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
         self.network = network = Network()
-        self.network.set_logger(logger)
         self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
 

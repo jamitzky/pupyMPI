@@ -9,23 +9,25 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 import sys, os, subprocess
 from exceptions import MPIException
+from mpi.logger import Logger
 
 # TODO Output redirect. Log files?
 
 def _islocal(host):
     return host == "localhost" or host == "127.0.0.1"
     
-def popenssh(logger, host, arguments):
+def popenssh(host, arguments):
     """Mixed Popen/SSH process starter. Uses Popen for localhost hosts, otherwise ssh"""
     if _islocal(host):
-        p = popen(logger, host, arguments)
+        p = popen(host, arguments)
     else:
-        ssh(logger, host, arguments)
+        ssh(host, arguments)
     
 process_list = []
 
-def ssh(logger, host, arguments):
+def ssh(host, arguments):
     global remote_list
+    logger = Logger()
     """SSH process starter. Non-loadbalancing."""
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
@@ -34,8 +36,10 @@ def ssh(logger, host, arguments):
     process_list.append(p)
     
     
-def popen(logger, host, arguments):
+def popen(host, arguments):
     global process_list
+    logger = Logger()
+
     if _islocal(host):
         p = subprocess.Popen(arguments)
         process_list.append(p)
@@ -43,8 +47,9 @@ def popen(logger, host, arguments):
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
     
-def gather_io(logger):
+def gather_io():
     global process_list
+    logger = Logger()
     for p in process_list:
         if p.poll():
             print "%s exited: %s" % (p, p.returncode)
@@ -52,8 +57,9 @@ def gather_io(logger):
             out,err = p.communicate()
             print "%s NOT exited: %s, out %s, ERr %s" % (p, p.returncode, out, err)
 
-def shutdown(logger):
+def shutdown():
     global process_list
+    logger = Logger()
     for p in process_list:
         if not p.poll():
             logger.debug("Killing %s" % p)
