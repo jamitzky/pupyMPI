@@ -54,18 +54,17 @@ class MPI:
 
         # Initialise the logger
         logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
-        logger.debug("WHERE'S MY LOG MSG!?")
         # Let the communication handle start up if it need to.
         from mpi.tcp import TCPNetwork as Network
-        logger.debug("WHERE'S MY 2 LOG MSG!?")
-        self.network = Network()
-        #Trying threading
-        #logger.debug("trying to start network")
-        #self.network = Network().start()
-        #logger.debug("started network")
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        self.network = network = Network()
+        ##Trying threading
+        #from mpi.tcp import ThreadTCPNetwork as Network
+        #logger.debug("trying to start network")
+        #self.network = Network().start()
+
+        self.network = Network()
+        # self.network = network = Network() # NOTE: We seem to do fine without this
         self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
 
