@@ -50,13 +50,47 @@ def popen(host, arguments):
     
 def gather_io():
     global process_list
+    import select
     logger = Logger()
-    for p in process_list:
-        if p.poll():
-            logger.debug( "Active remote process: %s" % (p, p.returncode))
-        else:
-            out,err = p.communicate()
-            logger.info( "Active remote process: %s\n\tStdout: %s\n\tStderr: %s" % ( p.returncode, out, str(err)))
+
+    def get_list(process_list):
+        pipes = []
+        for p in process_list:
+            pipes.append(p.stderr)
+            pipes.append(p.stdout)
+        return pipes
+   
+    list = process_list
+    pipes = get_list(list)
+
+    def print_fh(fh):
+        try:
+            lines = fh.readlines()
+            for line in lines:
+                print line
+        except Exception, e:
+            print "test ", e.message
+
+    while list:
+        readlist, _, _ =  select.select(pipes, [], [], 1.0)
+        for fh in readlist:
+            print_fh(fh)
+
+        # Test if anyone is read
+        for p in list:
+            returncode = p.poll()
+            if returncode is not None:
+                list.remove(p)
+
+                if returncode != 0:
+                    logger.error("A child returned with an errorcode: %s" % returncode)
+                else:
+                    logger.debug("Child exited normally")
+
+                print_fh(p.stderr)
+                print_fh(p.stdout)
+
+            pipes = get_list(list)
 
 def shutdown():
     global process_list
