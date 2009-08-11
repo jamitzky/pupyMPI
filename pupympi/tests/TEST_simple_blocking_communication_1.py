@@ -10,8 +10,8 @@ import mpi, time
 
 mpi = mpi.MPI()
 
-rank = mpi.rank()
-size = mpi.size()
+rank = mpi.MPI_COMM_WORLD.rank()
+size = mpi.MPI_COMM_WORLD.size()
 
 
 neighbour = (rank + 1) % size # Send to own rank + 1

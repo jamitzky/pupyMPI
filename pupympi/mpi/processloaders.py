@@ -61,7 +61,7 @@ def shutdown():
     global process_list
     logger = Logger()
     for p in process_list:
-        if not p.poll():
+        if p.poll():
             logger.debug("Killing %s" % p)
             p.kill()
         
