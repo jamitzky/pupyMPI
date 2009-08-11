@@ -52,10 +52,10 @@ def gather_io():
     logger = Logger()
     for p in process_list:
         if p.poll():
-            print "%s exited: %s" % (p, p.returncode)
+            logger.debug( "Active remote process: %s" % (p, p.returncode))
         else:
             out,err = p.communicate()
-            print "%s NOT exited: %s, out %s, ERr %s" % (p, p.returncode, out, err)
+            logger.info( "Active remote process: %s\n\tStdout: %s\n\tStderr: %s" % ( p.returncode, out, str(err)))
 
 def shutdown():
     global process_list
@@ -63,5 +63,5 @@ def shutdown():
     for p in process_list:
         if p.poll():
             logger.debug("Killing %s" % p)
-            p.kill()
+            p.texrminate()
         
