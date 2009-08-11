@@ -5,7 +5,7 @@
 # first rank 0 isends timestamp to rank 1 who is a very slow reciever so rank 0 should quit early
 
 import mpi, time
-
+dsafjdsafokj
 
 mpi = mpi.MPI()
 
