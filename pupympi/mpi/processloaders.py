@@ -7,9 +7,7 @@ Created by Jan Wiberg on 2009-08-06.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-import sys
-import os
-import subprocess
+import sys, os, subprocess
 from exceptions import MPIException
 
 # TODO Output redirect. Log files?
@@ -29,7 +27,8 @@ process_list = []
 def ssh(logger, host, arguments):
     global remote_list
     """SSH process starter. Non-loadbalancing."""
-    sshexec = ["ssh"] + [host] + ["PYTHONPATH=Documents/DIKU/python-mpi/code/pupympi/"]+ arguments 
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, shell=False, stderr=subprocess.PIPE)
     process_list.append(p)
