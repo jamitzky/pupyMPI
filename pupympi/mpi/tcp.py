@@ -10,9 +10,6 @@ class TCPNetwork():
         self.hostname = socket.gethostname()
         self.bind_socket()
 
-    def set_logger(self, logger):
-        self.logger = logger
-
     def set_start_port(self, port_no):
         self.start_port_no = port_no
         
@@ -39,7 +36,9 @@ class TCPNetwork():
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket. 
         """
-        self.logger.debug("Communicating ports and hostname to mpirun")
+        logger = Logger()
+
+        logger.debug("Communicating ports and hostname to mpirun")
         
         # Packing the data
         data = pickle.dumps( (self.hostname, self.port, internal_rank ) )
@@ -47,23 +46,24 @@ class TCPNetwork():
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
-        self.logger.debug("Trying to connect to (%s,%s)" % recipient)
+        logger.debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
         s_conn.send(data)
         
         # Receiving data about the communicator
         all_procs = s_conn.recv(1024)
         all_procs = pickle.loads( all_procs )
-        self.logger.debug("Received information for all processes (%d)" % len(all_procs))
+        logger.debug("Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
         
-        self.logger.debug("Shaking done")
+        logger.debug("Shaking done")
         
         return all_procs
 
     def finalize(self):
         self.socket.close()
-        self.logger.debug("The TCP network is closed")
+        logger = Logger()
+        logger.debug("The TCP network is closed")
 
     def recv(self, destination, tag, comm):
         # Check the destination exists

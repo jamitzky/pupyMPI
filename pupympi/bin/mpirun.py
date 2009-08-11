@@ -32,6 +32,7 @@ import sys, os, socket
 from mpi.processloaders import ssh as remote_start
 from mpi.processloaders import shutdown as remote_stop_all
 from mpi.processloaders import gather_io as remote_gather
+from mpi.logger import Logger
 
 try:
     import cPickle as pickle
@@ -42,10 +43,12 @@ def usage():
     print __doc__
     sys.exit()
 
-def parse_hostfile(hostfile, logger):
+def parse_hostfile(hostfile):
     # Parses hostfile, and returns list of tuples of the form (hostname, hostparameters_in_dict)
     # NOTE: Standard port below and maybe other defaults should not be hardcoded here
     # (defaults should probably be a parameter for this function)
+    logger = Logger()
+
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
     malformed = False # Flag bad hostfile
     hosts = []
@@ -90,7 +93,7 @@ def parse_hostfile(hostfile, logger):
     else:
         raise IOError("No lines in your hostfile, or something else went wrong")
             
-def map_hostfile(hosts, logger, np=1, type="rr", overmapping=True):
+def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     # Assign ranks and host to all processes
     # NOTE: We only do primitive overcommitting so far.
     # Eventually we should decide how to best map more processes than "cpu" specifies, onto hosts
@@ -212,18 +215,17 @@ if __name__ == "__main__":
             hostfile = None # No hostfile specified, go with default
 
     # Start the logger
-    from mpi.logger import setup_log
-    logger = setup_log(logfile or "mpi", "mpirun", debug, verbosity, quiet)
+    logger = Logger(logfile or "mpi", "mpirun", debug, verbosity, quiet)
 
     # Parse the hostfile.
     try:
-        hosts = parse_hostfile(hostfile, logger)
+        hosts = parse_hostfile(hostfile)
     except IOError:
         logger.error("Something bad happended when we tried to read the hostfile. ")
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts, logger, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
+    mappedHosts = map_hostfile(hosts, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
 
     # We hardcode for TCP currently. This should be made more generic in the future. 
     mpi_run_hostname = socket.gethostname()
@@ -265,7 +267,7 @@ if __name__ == "__main__":
         if logfile:
             arguments.append('--log-file=%s' % logfile)
             
-        remote_start(logger, host, arguments)
+        remote_start(host, arguments)
             
         logger.debug("Process with rank %d started" % rank)
         
@@ -290,9 +292,9 @@ if __name__ == "__main__":
 
     s.close()
     # debug: check status on all children
-    remote_gather(logger)
+    remote_gather()
 
-    remote_stop_all(logger)
+    remote_stop_all()
     # debug: check status on all children
     # import time
     # time.sleep(2)
