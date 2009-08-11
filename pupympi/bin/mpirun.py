@@ -294,6 +294,6 @@ if __name__ == "__main__":
 
     remote_stop_all(logger)
     # debug: check status on all children
-    import time
-    time.sleep(2)
-    remote_gather(logger)
+    # import time
+    # time.sleep(2)
+    # remote_gather(logger)
