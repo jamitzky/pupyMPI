@@ -8,9 +8,9 @@ from sys import stderr
 
 mpi = mpi.MPI()
 
-rank = mpi.rank()
+rank = mpi.MPI_COMM_WORLD.rank()
 
-size = mpi.size()
+size = mpi.MPI_COMM_WORLD.size()
 
 print "I am the process with rank %d of %d processes" % (rank, size)
 
