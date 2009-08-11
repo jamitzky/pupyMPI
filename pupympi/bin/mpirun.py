@@ -280,8 +280,6 @@ if __name__ == "__main__":
         all_procs.append( data )
         logger.debug("Received initial startup date from proc-%d" % data[2])
     
-    # debug: check status on all children
-    remote_gather(logger)
         
     # Send all the data to all the connections
     for conn in sender_conns:
@@ -291,7 +289,11 @@ if __name__ == "__main__":
     [ c.close for c in sender_conns ]
 
     s.close()
+    # debug: check status on all children
+    remote_gather(logger)
 
     remote_stop_all(logger)
     # debug: check status on all children
+    import time
+    time.sleep(2)
     remote_gather(logger)

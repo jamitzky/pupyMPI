@@ -30,14 +30,8 @@ def ssh(logger, host, arguments):
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
-    p = subprocess.Popen(sshexec, shell=False, stderr=subprocess.PIPE)
+    p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process_list.append(p)
-    #errdata = p.communicate()[1]
-    if p.poll():
-        print "SSH PROCESS RETURN:\n",errdata
-    else:
-        pass
-        #print "Not Exited: ",p.returncode
     
     
 def popen(logger, host, arguments):
@@ -53,14 +47,15 @@ def gather_io(logger):
     global process_list
     for p in process_list:
         if p.poll():
-            print "%s exited" % p
+            print "%s exited: %s" % (p, p.returncode)
         else:
-            pass
-            #print "%s NOT exited: %s" % (p, p.returncode)
+            out,err = p.communicate()
+            print "%s NOT exited: %s, out %s, ERr %s" % (p, p.returncode, out, err)
 
 def shutdown(logger):
     global process_list
     for p in process_list:
-        #logger.debug("Killing %s" % p)
-        p.kill()
+        if not p.poll():
+            logger.debug("Killing %s" % p)
+            p.kill()
         
