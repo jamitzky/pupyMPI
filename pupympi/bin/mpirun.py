@@ -31,6 +31,7 @@ Start the program with pupympi
 import sys, os, socket
 from mpi.processloaders import ssh as remote_start
 from mpi.processloaders import shutdown as remote_stop_all
+from mpi.processloaders import gather_io as remote_gather
 
 try:
     import cPickle as pickle
@@ -278,6 +279,9 @@ if __name__ == "__main__":
         data = pickle.loads(sender_conn.recv(4096))
         all_procs.append( data )
         logger.debug("Received initial startup date from proc-%d" % data[2])
+    
+    # debug: check status on all children
+    remote_gather(logger)
         
     # Send all the data to all the connections
     for conn in sender_conns:
@@ -287,3 +291,7 @@ if __name__ == "__main__":
     [ c.close for c in sender_conns ]
 
     s.close()
+
+    remote_stop_all(logger)
+    # debug: check status on all children
+    remote_gather(logger)
