@@ -31,10 +31,13 @@ def ssh(logger, host, arguments):
     """SSH process starter. Non-loadbalancing."""
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=Documents/DIKU/python-mpi/code/pupympi/"]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
-    p = subprocess.Popen(sshexec, stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+    p = subprocess.Popen(sshexec, shell=False, stderr=subprocess.PIPE)
     process_list.append(p)
-    # errdata = p.communicate()
-    # print "SSH PROCESS RETURN:\n",errdata
+    errdata = p.communicate()[1]
+    if p.poll():
+        print "SSH PROCESS RETURN:\n",errdata
+    else:
+        print "Not Exited: ",p.returncode
     
     
 def popen(logger, host, arguments):
@@ -46,7 +49,18 @@ def popen(logger, host, arguments):
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
     
-def shutdown(logger):
+def gather_io(logger):
+    global process_list
     for p in process_list:
-        p.terminate()
+        if p.poll():
+            print "%s exited" % p
+        else:
+            pass
+            #print "%s NOT exited: %s" % (p, p.returncode)
+
+def shutdown(logger):
+    global process_list
+    for p in process_list:
+        #logger.debug("Killing %s" % p)
+        p.kill()
         
