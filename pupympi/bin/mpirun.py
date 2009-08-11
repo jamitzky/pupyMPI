@@ -164,9 +164,7 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     #print mappedHosts
     return mappedHosts
 
-
-if __name__ == "__main__":
-
+def parse_arguments():
     import getopt
     try:
         optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
@@ -213,6 +211,11 @@ if __name__ == "__main__":
         else:
             # NOTE: Rune mumbled that it should not be None here, but it does the job for now
             hostfile = None # No hostfile specified, go with default
+
+    return np, debug, verbosity, quiet, logfile, hostfile
+
+if __name__ == "__main__":
+    np, debug, verbosity, quiet, logfile, hostfile = parse_arguments()
 
     # Start the logger
     logger = Logger(logfile or "mpi", "mpirun", debug, verbosity, quiet)
