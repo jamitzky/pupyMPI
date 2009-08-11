@@ -3,6 +3,7 @@
 # Simple pupympi program to test startup of processes and assigning/reporting of ranks
 
 import mpi
+from sys import stderr
 
 
 mpi = mpi.MPI()

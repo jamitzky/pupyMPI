@@ -32,11 +32,12 @@ def ssh(logger, host, arguments):
     logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, shell=False, stderr=subprocess.PIPE)
     process_list.append(p)
-    errdata = p.communicate()[1]
+    #errdata = p.communicate()[1]
     if p.poll():
         print "SSH PROCESS RETURN:\n",errdata
     else:
-        print "Not Exited: ",p.returncode
+        pass
+        #print "Not Exited: ",p.returncode
     
     
 def popen(logger, host, arguments):
