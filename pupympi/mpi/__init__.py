@@ -90,7 +90,13 @@ class MPI:
         return self.network.send(destination, content, tag, comm)
 
     def wait(self, handle):
+        Logger().warn("Non-Implemented method 'wait' called.")
         return self.network.wait(handle)
+        
+    def barrier(self, comm=None):
+        comm = self._ensure_comm(comm)
+        Logger().warn("Non-Implemented method 'Barrier' called.")
+        return self.network.barrier(comm)
 
     def recv(self, destination, tag, comm=None):
         comm = self._ensure_comm(comm)
