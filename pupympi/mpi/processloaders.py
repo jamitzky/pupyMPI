@@ -55,7 +55,7 @@ def gather_io(logger):
 def shutdown(logger):
     global process_list
     for p in process_list:
-        if not p.poll():
+        if p.poll():
             logger.debug("Killing %s" % p)
             p.kill()
         
