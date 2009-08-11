@@ -50,7 +50,7 @@ class MPI:
                 mpi_run_hostname = arg
             if opt == "--mpirun-conn-port":
                 mpi_run_port = int(arg)
-                
+
         # Initialise the logger
         logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
         
