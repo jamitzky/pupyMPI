@@ -8,6 +8,13 @@ class Communicator():
         self._size = size
         self.name = name
         self.members = {}
+        self.attr = {}
+        if name == "MPI_COMM_WORLD":
+            self.attr = {   "MPI_TAG_UB": 2**30, \
+                            "MPI_HOST": "TODO", \
+                            "MPI_IO": rank, \
+                            "MPI_WTIME_IS_GLOBAL": False
+                        }
     
     def build_world(self, all_procs):
         logger = Logger()
@@ -38,3 +45,13 @@ class Communicator():
 
     def set_name(self, name):
         self.name = name
+
+    # TODO: may want to drop this and simply allow users access to the underlying dict?
+    # TODO: Global fixed keys (http://www.mpi-forum.org/docs/mpi-11-html/node143.html) should be defined?
+    def attr_get(self, key):
+        """Implements http://www.mpi-forum.org/docs/mpi-11-html/node119.html, python-style:
+        keyval is now any immutable datatype, and flag is not used. If the key is not defined, None is returned. """
+        return self.attr[key]
+    def attr_put(self, key, value):
+        """Implements http://www.mpi-forum.org/docs/mpi-11-html/node119.html"""
+        self.attr[key] = value        
