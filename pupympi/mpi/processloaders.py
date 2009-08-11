@@ -33,6 +33,7 @@ def ssh(host, arguments):
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     process_list.append(p)
     
     
