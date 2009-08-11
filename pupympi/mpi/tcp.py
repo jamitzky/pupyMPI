@@ -128,6 +128,10 @@ class TCPNetwork():
 
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
+    
+    def barrier(self, comm):
+        # TODO Implement
+        pass
         
     def send(self, destination_rank, content, tag, comm):
         # Check the destination exists
