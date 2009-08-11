@@ -1,4 +1,5 @@
 import mpi, time, socket
+from mpi.logger import Logger
 
 try:
     import cPickle as pickle

@@ -1,5 +1,6 @@
 # Fred dabbling in communication
 from mpi.exceptions import MPINoSuchRankException
+from mpi.logger import Logger
 
 class Communicator():
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
@@ -7,12 +8,12 @@ class Communicator():
         self._size = size
         self.name = name
         self.members = {}
-        self.logger = mpi_instance.logger
     
     def build_world(self, all_procs):
+        logger = Logger()
         for (hostname, port_no, rank) in all_procs:
             self.members[ rank ] = (hostname, port_no)
-            self.logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
+            logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
