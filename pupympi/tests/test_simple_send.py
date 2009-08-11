@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.6
 
+# Is this test program used anymore???
+
 # Simple pupympi program to test basic communication between to processes
 
 import mpi, time
