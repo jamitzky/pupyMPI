@@ -29,7 +29,7 @@ Start the program with pupympi
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
-from mpi.processloaders import ssh as remote_start
+from mpi.processloaders import popen as remote_start
 from mpi.processloaders import shutdown, gather_io 
 from mpi.logger import Logger
 
