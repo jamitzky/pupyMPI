@@ -272,13 +272,18 @@ if __name__ == "__main__":
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
     sender_conns = []
-    for _ in mappedHosts:
+
+    logger.debug("Waiting for %d processes" % np)
+
+    for i in range(np):
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
         # Recieve listings from newly started proccesses phoning in
         data = pickle.loads(sender_conn.recv(4096))
         all_procs.append( data )
-        logger.debug("Received initial startup date from proc-%d" % data[2])
+        logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
+
+    logger.debug("Received information for all %d processes" % np)
     
     # Send all the data to all the connections
     for conn in sender_conns:
