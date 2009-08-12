@@ -30,7 +30,7 @@ Start the program with pupympi
 #limiting import since mpi cannot be found currently
 import sys, os, socket
 import time
-from mpi.processloaders import ssh as remote_start
+from mpi.processloaders import popen as remote_start
 from mpi.processloaders import shutdown as remote_stop_all
 from mpi.processloaders import gather_io as remote_gather
 from mpi.logger import Logger
@@ -152,8 +152,6 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
             params[mapType] -= 1 # mark as one less unused
             mappedHosts += [(hostname, rank, params["port"])] # map it
             rank += 1 # assign next rank
-            #DEBUG
-            #print "overmapped %i to %s" % (rank,hostname)
             
             if type == "rr": # round-robin?
                 i += 1 # for round-robin always go to next host
@@ -161,8 +159,6 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
         else: # if no CPUs left we always go to next host
             i += 1 # pick next host
             
-    #DEBUG
-    #print mappedHosts
     return mappedHosts
 
 def parse_arguments():
@@ -235,7 +231,7 @@ if __name__ == "__main__":
     mpi_run_hostname = socket.gethostname()
     logger.debug("Found hostname: %s" % mpi_run_hostname)
     
-    # FIXME: Fix what?
+    # FIXME: Fix what? Fix it..  Fix it.. 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     for tries in range(10):
@@ -299,7 +295,6 @@ if __name__ == "__main__":
         all_procs.append( data )
         logger.debug("Received initial startup data from proc-%d" % data[2])
     
-        
     # Send all the data to all the connections
     for conn in sender_conns:
         conn.send( pickle.dumps( all_procs ))
