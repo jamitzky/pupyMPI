@@ -103,6 +103,7 @@ class MPI:
         
     def barrier(self, comm=None):
         comm = self._ensure_comm(comm)
+        raise Exception("test")
         Logger().warn("Non-Implemented method 'Barrier' called.")
         return self.network.barrier(comm)
 
