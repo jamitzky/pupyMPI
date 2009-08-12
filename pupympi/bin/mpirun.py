@@ -29,10 +29,8 @@ Start the program with pupympi
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
-import time
 from mpi.processloaders import ssh as remote_start
-from mpi.processloaders import shutdown as remote_stop_all
-from mpi.processloaders import gather_io as remote_gather
+from mpi.processloaders import shutdown, gather_io 
 from mpi.logger import Logger
 
 try:
@@ -239,12 +237,12 @@ if __name__ == "__main__":
         mpi_run_port = 5555+tries # Rewrite to find some port
         try:
             s.bind((mpi_run_hostname, mpi_run_port))
-            logger.debug("Socket bound to port %d" % mpi_run_port)
             break
         except socket.error:
             continue
             
     s.listen(5)
+    logger.debug("Socket bound to port %d" % mpi_run_port)
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
@@ -275,26 +273,13 @@ if __name__ == "__main__":
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
     sender_conns = []
-    
     for _ in mappedHosts:
-        logger.debug(mappedHosts)
-        # We timeout on the accept below when threaded, why is no one calling in?
-        while True:
-            s.settimeout(2)
-            try:
-                sender_conn, sender_addr = s.accept()
-            except socket.timeout:
-                logger.debug("Timed out trying again...")
-                time.sleep(1)
-                continue
-            logger.debug("Accepted!")
-            break
-            
+        sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
         # Recieve listings from newly started proccesses phoning in
         data = pickle.loads(sender_conn.recv(4096))
         all_procs.append( data )
-        logger.debug("Received initial startup data from proc-%d" % data[2])
+        logger.debug("Received initial startup date from proc-%d" % data[2])
     
         
     # Send all the data to all the connections
@@ -306,9 +291,9 @@ if __name__ == "__main__":
 
     s.close()
     # debug: check status on all children
-    remote_gather()
+    gather_io()
 
-    remote_stop_all()
+    shutdown()
     # debug: check status on all children
     # import time
     # time.sleep(2)
