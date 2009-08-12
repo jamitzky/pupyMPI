@@ -8,16 +8,19 @@ except ImportError:
     import pickle
     
 class TCPNetwork():
-    def __init__(self):        
+    def __init__(self, start_port_no=None):
         self.hostname = socket.gethostname()
         self.bind_socket()
+    
+        if start_port_no:
+            self.start_port_no = start_port_no
 
-    def set_start_port(self, port_no):
-        self.start_port_no = port_no
-        
     def bind_socket(self):
         start_port = getattr(self, 'start_port_no', 14000)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger = Logger()
+
+        logger.debug("Starting on port_no %d" % start_port)
 
         for tries in range(10):
             try:

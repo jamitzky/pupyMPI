@@ -2,12 +2,13 @@ __version__ = 0.01
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
+from mpi.tcp import TCPNetwork as Network
 import threading
+import sys, getopt
 
 class MPI:
 
     def __init__(self):
-        import sys, getopt
         try:
             optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port=','mpirun-conn-port=', 'mpirun-conn-host='])
         except getopt.GetoptError, err:
@@ -55,7 +56,8 @@ class MPI:
         # Initialise the logger
         logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
         # Let the communication handle start up if it need to.
-        from mpi.tcp import TCPNetwork as Network
+
+        logger.debug("Finished all the runtime arguments")
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
         ##Trying threading
@@ -64,8 +66,6 @@ class MPI:
         #self.network = Network().start()
 
         self.network = Network()
-        # self.network = network = Network() # NOTE: We seem to do fine without this
-        self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
 
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
@@ -103,7 +103,6 @@ class MPI:
         
     def barrier(self, comm=None):
         comm = self._ensure_comm(comm)
-        raise Exception("test")
         Logger().warn("Non-Implemented method 'Barrier' called.")
         return self.network.barrier(comm)
 
