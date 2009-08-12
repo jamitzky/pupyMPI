@@ -298,3 +298,4 @@ if __name__ == "__main__":
     # import time
     # time.sleep(2)
     #remote_gather(logger)
+    sys.exit(0)
