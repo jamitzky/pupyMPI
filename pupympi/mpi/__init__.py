@@ -71,6 +71,10 @@ class MPI:
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
+
+        # Set a static attribute on the class so we know it's initialised.
+        self.__class__._initialized = True
+        logger.debug("Set the MPI environment to initialised")
     
     def finalize(self):
         logger = Logger()
@@ -79,6 +83,10 @@ class MPI:
 
     def _ensure_comm(self, comm):
         return comm or self.MPI_COMM_WORLD
+
+    @classmethod
+    def initialized(cls):
+        return getattr(cls, '_initialized', False)
 
     # Some wrapper methods
     def isend(self, destination, content, tag, comm=None):
