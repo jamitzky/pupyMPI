@@ -2,6 +2,7 @@ __version__ = 0.01
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
+import threading
 
 class MPI:
 
@@ -53,13 +54,17 @@ class MPI:
 
         # Initialise the logger
         logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
-        
         # Let the communication handle start up if it need to.
         from mpi.tcp import TCPNetwork as Network
-        self.network = Network()
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        self.network = network = Network()
+        ##Trying threading
+        #from mpi.tcp import ThreadTCPNetwork as Network
+        #logger.debug("trying to start network")
+        #self.network = Network().start()
+
+        self.network = Network()
+        # self.network = network = Network() # NOTE: We seem to do fine without this
         self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
 
@@ -85,7 +90,13 @@ class MPI:
         return self.network.send(destination, content, tag, comm)
 
     def wait(self, handle):
+        Logger().warn("Non-Implemented method 'wait' called.")
         return self.network.wait(handle)
+        
+    def barrier(self, comm=None):
+        comm = self._ensure_comm(comm)
+        Logger().warn("Non-Implemented method 'Barrier' called.")
+        return self.network.barrier(comm)
 
     def recv(self, destination, tag, comm=None):
         comm = self._ensure_comm(comm)
