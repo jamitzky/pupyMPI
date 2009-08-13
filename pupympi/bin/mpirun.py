@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.6
 import sys, os, socket
+from optparse import OptionParser, OptionGroup
+
 from mpi import processloaders 
 from mpi.processloaders import shutdown, gather_io 
 from mpi.logger import Logger
@@ -128,13 +130,11 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
     return mappedHosts
 # }}}1
 def parse_options():
-    from optparse import OptionParser, OptionGroup
 
     usage = 'usage: %prog [options] arg'
     parser = OptionParser(usage=usage, version="Pupympi version 0.01 (dev)")
     parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
     parser.add_option('--host-file', dest='hostfile', help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
-    parser.add_option('-W', action='append', metavar='arg', help='Set user defined arguments all will be sent through to the individual processes. Use this option multiple times if you want multiple arguments for your program')
 
     # Add a logging and debugging
     parser_debug_group = OptionGroup(parser, "Logging and debugging", 
@@ -155,10 +155,17 @@ def parse_options():
     if options.debug and options.quiet:
         parser.error("options --debug and -quiet are mutually exclusive")
 
-    return options, args
+    # Trying to find user args
+    import sys
+    try:
+        user_options = sys.argv[sys.argv.index("--")+1:]
+    except ValueError:
+        user_options = []
+
+    return options, args, user_options
 
 if __name__ == "__main__":
-    options, args = parse_options()
+    options, args, user_options = parse_options()
     executeable = args[0]
 
     # Start the logger
@@ -188,9 +195,13 @@ if __name__ == "__main__":
 
         # Make sure we have a full path
         if not executeable.startswith("/"):
-            executeable = os.path.join( os.getcwd(), sys.argv[-1])
+            executeable = os.path.join( os.getcwd(), executeable)
         
-        run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,"--mpirun-conn-port=%d" % mpi_run_port, "--rank=%d" % rank, "--size=%d" % options.np, "--verbosity=%d" % options.verbosity] 
+        run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+                "--mpirun-conn-port=%d" % mpi_run_port, 
+                "--rank=%d" % rank, 
+                "--size=%d" % options.np, 
+                "--verbosity=%d" % options.verbosity] 
         
         if options.quiet:
             run_options.append('--quiet')
@@ -199,7 +210,11 @@ if __name__ == "__main__":
             run_options.append('--debug')
 
         run_options.append('--log-file=%s' % options.logfile)
-            
+
+        # Adding user options. Gnu style says this must be after --
+        run_options.append( "--" )
+        run_options.extend( user_options )
+
         remote_start(host, run_options)
             
         logger.debug("Process with rank %d started" % rank)
