@@ -32,6 +32,7 @@ import sys, os, socket
 from mpi.processloaders import ssh as remote_start
 from mpi.processloaders import shutdown, gather_io 
 from mpi.logger import Logger
+from mpi.tcp import get_socket
 
 try:
     import cPickle as pickle
@@ -225,20 +226,8 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(hosts, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
 
-    # We hardcode for TCP currently. This should be made more generic in the future. 
-    mpi_run_hostname = socket.gethostname()
-    logger.debug("Found hostname: %s" % mpi_run_hostname)
-    
-    # FIXME: Fix what? Fix it..  Fix it.. 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    for tries in range(10):
-        mpi_run_port = 5555+tries # Rewrite to find some port
-        try:
-            s.bind((mpi_run_hostname, mpi_run_port))
-            break
-        except socket.error:
-            continue
+
+    s, mpi_run_hostname, mpi_run_port = get_socket()
             
     s.listen(5)
     logger.debug("Socket bound to port %d" % mpi_run_port)
