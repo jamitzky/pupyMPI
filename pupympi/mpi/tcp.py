@@ -40,7 +40,7 @@ def get_socket(range=(10000, 30000)):
     logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
     
-class TCPNetwork():
+class TCPNetwork:
 
     def __init__(self):
         (socket, hostname, port_no) = get_socket()
