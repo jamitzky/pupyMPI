@@ -153,28 +153,24 @@ class TCPNetwork():
         return meaningless_handle_to_be_replaced_could_be_a_status_code
     
 class ThreadTCPNetwork(threading.Thread):
-    #def __init__(self):
-    #    self.hostname = socket.gethostname()
-    #    self.bind_socket()
-    
-    def run(self):
-        logger.debug("starting run method")
-        self.hostname = socket.gethostname()
-        logger.debug("got host name")
-        self.bind_socket()
-        logger.debug("finishing run method")
+    def run(self, start_port_no=None):
         self.alive = True
+        self.hostname = socket.gethostname()
+        self.bind_socket()
+    
+        if start_port_no:
+            self.start_port_no = start_port_no
+            
         while self.alive:
             time.sleep(2)
-            logger.debug("HEARTBEAT")
-            pass
+            print "yawn"
 
-    def set_start_port(self, port_no):
-        self.start_port_no = port_no
-        
     def bind_socket(self):
         start_port = getattr(self, 'start_port_no', 14000)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger = Logger()
+
+        logger.debug("Starting on port_no %d" % start_port)
 
         for tries in range(10):
             try:
@@ -221,6 +217,7 @@ class ThreadTCPNetwork(threading.Thread):
 
     def finalize(self):
         self.socket.close()
+        self.alive = False
         logger = Logger()
         logger.debug("The TCP network is closed")
 
@@ -285,6 +282,10 @@ class ThreadTCPNetwork(threading.Thread):
 
     def wait(self, meaningless_handle_to_be_replaced):
         return meaningless_handle_to_be_replaced
+    
+    def barrier(self, comm):
+        # TODO Implement
+        pass
         
     def send(self, destination_rank, content, tag, comm):
         # Check the destination exists
@@ -301,3 +302,4 @@ class ThreadTCPNetwork(threading.Thread):
         
         meaningless_handle_to_be_replaced_could_be_a_status_code = None
         return meaningless_handle_to_be_replaced_could_be_a_status_code
+    

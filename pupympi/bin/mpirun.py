@@ -229,7 +229,7 @@ if __name__ == "__main__":
     mpi_run_hostname = socket.gethostname()
     logger.debug("Found hostname: %s" % mpi_run_hostname)
     
-    # FIXME: Fix what? Fix it..  Fix it.. 
+    # FIXME: Fix what? Fix it..  Fix it.. Fax it... Fax it!
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     for tries in range(10):

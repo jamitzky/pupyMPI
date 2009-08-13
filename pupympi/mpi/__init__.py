@@ -60,12 +60,12 @@ class MPI:
         logger.debug("Finished all the runtime arguments")
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
-        ##Trying threading
-        #from mpi.tcp import ThreadTCPNetwork as Network
-        #logger.debug("trying to start network")
-        #self.network = Network().start()
+        #Trying threading
+        from mpi.tcp import ThreadTCPNetwork as ThreadNetwork
+        logger.debug("trying to start network")
+        self.network = ThreadNetwork().start()
 
-        self.network = Network()
+        #self.network = Network()
         logger.debug("Network started")
 
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
