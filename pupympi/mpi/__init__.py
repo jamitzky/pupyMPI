@@ -1,65 +1,36 @@
 __version__ = 0.01
 
+from optparse import OptionParser, OptionGroup
+import threading
+import sys, getopt
+
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.tcp import TCPNetwork as Network
-import threading
-import sys, getopt
 
 class MPI:
 
     def __init__(self):
-        try:
-            optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port=','mpirun-conn-port=', 'mpirun-conn-host='])
-        except getopt.GetoptError, err:
-            print str(err)
+        parser = OptionParser()
+        parser.add_option('--rank', type='int')
+        parser.add_option('--size', type='int')
+        parser.add_option('--verbosity', type='int')
+        parser.add_option('--debug', action='store_true')
+        parser.add_option('--quiet', action='store_true')
+        parser.add_option('--log-file', dest='logfile', default="mpi")
+        parser.add_option('--network-type', dest='network_type')
+        parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
+        parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
 
-        debug = False
-        verbosity = 1
-        quiet = False
-        rank = 0
-        size = 0
-        hostname = None
-        port = None
-        
-        logfile = None
-        
-        for opt, arg in optlist:
-            if opt in ("-d", "--debug"):
-                debug = True
-
-            if opt in ("-v", "--verbosity"):
-                verbosity = int(arg)
-
-            if opt in ("-q", "--quiet"):
-                quiet = True
-
-            if opt in ("-l", "--log-file"):
-                logfile = arg
-
-            if opt in ("-r", "--rank"):
-                try:
-                    rank = int(arg)
-                except ValueError:
-                    pass
-            if opt in ("-s", "--size"):
-                try:
-                    size = int(arg)
-                except:
-                    pass
-                
-            if opt == "--mpirun-conn-host":
-                mpi_run_hostname = arg
-            if opt == "--mpirun-conn-port":
-                mpi_run_port = int(arg)
+        options, args = parser.parse_args()
 
         # Initialise the logger
-        logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
+        logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
         
-        self.MPI_COMM_WORLD = Communicator(rank, size, self)
+        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
         ##Trying threading
         #from mpi.tcp import ThreadTCPNetwork as Network
         #logger.debug("trying to start network")
@@ -68,14 +39,20 @@ class MPI:
         self.network = Network()
         logger.debug("Network started")
 
-        all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
+        all_procs = self.network.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
+
+        import sys
+        user_options =[sys.argv[0], ] 
+        user_options.append(sys.argv[sys.argv.index("--")+1:])
+
+        sys.argv = user_options
 
         # Set a static attribute on the class so we know it's initialised.
         self.__class__._initialized = True
         logger.debug("Set the MPI environment to initialised")
-    
+
     def finalize(self):
         logger = Logger()
         self.network.finalize()
