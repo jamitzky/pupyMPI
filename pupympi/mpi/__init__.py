@@ -22,7 +22,18 @@ class MPI:
 
     def __init__(self):
         """
-        Initializes the MPI environment. 
+        Initializes the MPI environment. This process will give each process 
+        the rank and size in the MPI_COMM_WORLD communicator. This includes the
+        rank and size of this, which and be read just after startup::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+        
+            print "Proc %d of %d started" % (rank, size)
+            
         """
         parser = OptionParser()
         parser.add_option('--rank', type='int')
@@ -68,7 +79,8 @@ class MPI:
 
     def finalize(self):
         """
-        document me
+        This method cleans up after a MPI run. Closes filehandles, 
+        logfiles and sockets. 
         """
         logger = Logger()
         self.network.finalize()
@@ -81,7 +93,14 @@ class MPI:
     def initialized(cls):
         """
         Returns a boolean indicating wheather the MPI environment is 
-        initialized. 
+        initialized:: 
+
+            from mpi import MPI
+
+            status = MPI.initialized()  # status will be False
+            mpi = MPI()
+
+            status = MPI.initialized()  # status will now be True
 
         Please, if you're thinking of using this method, you might
         be down the wrong track. Don't write ugly code. 
