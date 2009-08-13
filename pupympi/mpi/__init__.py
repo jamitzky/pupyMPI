@@ -68,7 +68,11 @@ class MPI:
 
     def finalize(self):
         """
-        Run this last
+        Returns a boolean indicating wheather the MPI environment is 
+        initialized. 
+
+        Please, if you're thinking of using this method, you might
+        be down the wrong track. Don't write ugly code. 
         """
         logger = Logger()
         self.network.finalize()
