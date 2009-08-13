@@ -20,7 +20,8 @@ Read the source, lazy bum.
 
 # settings
 RUN_COUNT = 2 # MPI processes started...tests can use no more than this number
-TEST_MAX_RUNTIME = 4 # max time in seconds that one single test may take.
+TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
+TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take.
 LOG_VERBOSITY = 3
 
 class RunTest(Thread):
@@ -43,7 +44,7 @@ class RunTest(Thread):
         while time.time() < (self.start + TEST_MAX_RUNTIME): # hax: wait for max 10'ish seconds
             if self.process.poll() is not None:
                 break
-            time.sleep(0.5)
+            time.sleep(TEST_EXECUTION_TIME_GRANULARITY)
 
         self.executiontime = time.time() - self.start 
         #print "Time to kill ",str(self.process)
