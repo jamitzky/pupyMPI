@@ -150,13 +150,16 @@ def parse_options():
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option_group( parser_adv_group )
 
-    return parser.parse_args()
+    options, args = parser.parse_args()
+
+    if options.debug and options.quiet:
+        parser.error("options --debug and -quiet are mutually exclusive")
+
+    return options, args
 
 if __name__ == "__main__":
     options, args = parse_options()
     executeable = args[0]
-
-    print options
 
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
