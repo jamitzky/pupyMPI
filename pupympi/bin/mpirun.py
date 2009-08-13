@@ -230,24 +230,19 @@ if __name__ == "__main__":
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
-
+    mappedHosts = map_hostfile(hosts, np,"rr") # TODO: This call should get scheduling option from args to replace "rr" parameter
 
     s, mpi_run_hostname, mpi_run_port = get_socket()
-
             
     s.listen(5)
     logger.debug("Socket bound to port %d" % mpi_run_port)
 
-    if startup_method == "ssh":
-        remote_start = processloaders.ssh
-    elif startup_method == "popen":
-        remote_start = processloaders.popen
+    # Select the proper starter method from processloaders based on cli args
+    remote_start = getattr(processloaders, startup_method)
     
-    # Start a process for each rank on associated host. 
+    # Start a process for each rank on associated host.
     for (host, rank, port) in mappedHosts:
         port = port+rank
-        # Prepare the command line args for the subprocesses
 
         # This should be rewritten to be nicer
         executeable = sys.argv[-1]
@@ -255,6 +250,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), sys.argv[-1])
         
+        # Prepare the command line args for the subprocesses
         arguments = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,"--mpirun-conn-port=%d" % mpi_run_port, "--rank=%d" % rank, "--size=%d" % np, "--verbosity=%d" % verbosity] 
         
         if quiet:
@@ -292,9 +288,10 @@ if __name__ == "__main__":
     
     # Close all the connections
     [ c.close for c in sender_conns ]
-
+    # Close own "server" socket
     s.close()
-    # debug: check status on all children
+    
+    # Check status on all children
     gather_io()
 
     shutdown()

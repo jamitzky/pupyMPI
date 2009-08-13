@@ -7,7 +7,7 @@ Created by Jan Wiberg on 2009-08-06.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-import sys, os, subprocess, select
+import sys, os, subprocess, select, copy
 from exceptions import MPIException
 from mpi.logger import Logger
 
@@ -45,11 +45,13 @@ def popen(host, arguments):
         return p
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
-    
+
+# Selects on std_err and std_out for all running processes to convey status
 def gather_io():
     global process_list
     logger = Logger()
-
+        
+    # Return open pipes of all processes in the process_list
     def get_list(process_list):
         pipes = []
         for p in process_list:
@@ -59,10 +61,12 @@ def gather_io():
             if p.stdout:
                 pipes.append(p.stdout)
         return pipes
-   
-    list = process_list
+    
+    # Allow destructive operations on copy of process_list
+    list = copy.deepcopy(process_list)
     pipes = get_list(list)
 
+    # print lines from a filehandle
     def print_fh(fh):
         if not fh:
             return 
@@ -73,7 +77,8 @@ def gather_io():
                 print line + " forwarded to mpirun.py"
         except Exception, e:
             Logger().error("print_fh: %s" % e.message)
-
+    
+    # Check on processes unless process_list was empty
     while list:
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
         for fh in readlist:
