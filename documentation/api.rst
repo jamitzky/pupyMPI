@@ -14,7 +14,7 @@ The :mod:`mpi.tcp` Module
 -----------------------------
 
 .. module:: mpi.tcp
-.. autoclass:: TcpNetwork
+.. autoclass:: TCPNetwork
 
 Contains all the tcp stuff.
 
