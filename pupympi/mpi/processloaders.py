@@ -40,7 +40,7 @@ def popen(host, arguments):
     logger = Logger()
 
     if _islocal(host):
-        p = subprocess.Popen(arguments)
+        p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)
         return p
     else:
@@ -70,7 +70,8 @@ def gather_io():
         try:
             lines = fh.readlines()
             for line in lines:
-                print line + " forwarded to mpirun.py"
+                if line:
+                    print line.strip("\n")
         except Exception, e:
             Logger().error("print_fh: %s" % e.message)
 
