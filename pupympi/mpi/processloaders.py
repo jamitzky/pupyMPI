@@ -72,9 +72,9 @@ def gather_io():
         try:
             lines = fh.readlines()
             for line in lines:
-                print line
+                print line + " forwarded to mpirun.py"
         except Exception, e:
-            print "test ", e.message
+            Logger().error("print_fh: %s" % e.message)
 
     while list:
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
