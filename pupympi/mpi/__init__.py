@@ -9,8 +9,21 @@ from mpi.logger import Logger
 from mpi.tcp import TCPNetwork as Network
 
 class MPI:
+    """
+    This is the main class that contains most of the public API. Initializing 
+    the MPI system is done by creating an instance of this class. Through a
+    MPI instance a program can interact with other processes through different
+    communicators. 
+
+    NOTE: The MPI instance state is a static class variable, so creating multiple
+    instances will always yield 'the same' instance, much like a singleton design
+    pattern. 
+    """
 
     def __init__(self):
+        """
+        Initializes the MPI environment. 
+        """
         parser = OptionParser()
         parser.add_option('--rank', type='int')
         parser.add_option('--size', type='int')
@@ -54,6 +67,9 @@ class MPI:
         logger.debug("Set the MPI environment to initialised")
 
     def finalize(self):
+        """
+        Run this last
+        """
         logger = Logger()
         self.network.finalize()
         logger.debug("Network finalized")
@@ -63,30 +79,51 @@ class MPI:
 
     @classmethod
     def initialized(cls):
+        """
+        document me
+        """
         return getattr(cls, '_initialized', False)
 
     # Some wrapper methods
     def isend(self, destination, content, tag, comm=None):
+        """
+        document me
+        """
         comm = self._ensure_comm(comm)
         return self.network.isend(destination, content, tag, comm)
 
     def send(self, destination, content, tag, comm=None):
+        """
+        document me
+        """
         comm = self._ensure_comm(comm)
         return self.network.send(destination, content, tag, comm)
 
     def wait(self, handle):
+        """
+        document me
+        """
         Logger().warn("Non-Implemented method 'wait' called.")
         return self.network.wait(handle)
         
     def barrier(self, comm=None):
+        """
+        document me
+        """
         comm = self._ensure_comm(comm)
         Logger().warn("Non-Implemented method 'Barrier' called.")
         return self.network.barrier(comm)
 
     def recv(self, destination, tag, comm=None):
+        """
+        document me
+        """
         comm = self._ensure_comm(comm)
         return self.network.recv(destination, tag, comm)
 
     def irecv(self, destination, tag, comm=None):
+        """
+        document me
+        """
         comm = self._ensure_comm(comm)
         return self.network.irecv(destination, tag, comm)
