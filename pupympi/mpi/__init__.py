@@ -119,16 +119,9 @@ class MPI:
         """
         document me
         """
-        comm = self._ensure_comm(comm)
-        return self.network.send(destination, content, tag, comm)
+        request = self.isend(destination, content, tag, comm)
+        return request.wait()
 
-    def wait(self, handle):
-        """
-        document me
-        """
-        Logger().warn("Non-Implemented method 'wait' called.")
-        return self.network.wait(handle)
-        
     def barrier(self, comm=None):
         """
         document me
@@ -141,8 +134,8 @@ class MPI:
         """
         document me
         """
-        comm = self._ensure_comm(comm)
-        return self.network.recv(destination, tag, comm)
+        request = self.irecv(destination, tag, comm)
+        return request.wait()
 
     def irecv(self, destination, tag, comm=None):
         """

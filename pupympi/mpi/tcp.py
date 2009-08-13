@@ -87,32 +87,12 @@ class TCPNetwork:
         self.socket.close()
         logger = Logger().debug("The TCP network is closed")
 
-    def recv(self, destination, tag, comm):
-        # Check the destination exists
-        if not comm.have_rank(destination):
-            error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
-            raise MPIBadAddressException(error_str)
-        
-        # Get incoming communication
-        conn, addr = self.socket.accept()
-        msg = ""
-        while True:
-            data = conn.recv(4096)
-            if not data:
-                break
-            else:
-                msg += data
-            
-        conn.close()
-        unpickled_data = pickle.loads(msg)
-        return unpickled_data
-        
     def irecv(self, destination, tag, comm):
         # Check the destination exists
         if not comm.have_rank(destination):
             error_str = "No process with rank %d in communicator %s. " % (destination, comm.name)
             raise MPIBadAddressException(error_str)
-        
+
         # Get incoming communication
         conn, addr = self.socket.accept()
         msg = ""
@@ -125,8 +105,11 @@ class TCPNetwork:
             
         conn.close()
         unpickled_data = pickle.loads(msg)
-        return unpickled_data
 
+        handle = Request("receive", comm)
+        handle.data = unpickled_data        # FIXME: This is not how it's supposed to work
+        return handle
+        
     def isend(self, destination_rank, content, tag, comm):
         # Check the destination exists
         if not comm.have_rank(destination_rank):
@@ -138,37 +121,16 @@ class TCPNetwork:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
         s.setblocking(False) # False flag means non blocking
         s.connect((host, port))
-        s.send(pickle.dumps("y"))
-        #s.send(pickle.dumps(content))
-        
+        s.send(pickle.dumps(content))
         s.close()
         
-        meaningless_handle_to_be_replaced_could_be_a_status_code = None
-        return meaningless_handle_to_be_replaced_could_be_a_status_code
+        handle = Request("send", comm)
+        return handle
 
-    def wait(self, meaningless_handle_to_be_replaced):
-        return meaningless_handle_to_be_replaced
-    
     def barrier(self, comm):
         # TODO Implement
         pass
         
-    def send(self, destination_rank, content, tag, comm):
-        # Check the destination exists
-        if not comm.have_rank(destination_rank):
-            raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
-
-        # Find the network details for recieving rank
-        host,port = comm.get_network_details(destination_rank)
-                
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((host, port))
-        s.send(pickle.dumps(content))
-        s.close()
-        
-        meaningless_handle_to_be_replaced_could_be_a_status_code = None
-        return meaningless_handle_to_be_replaced_could_be_a_status_code
-    
 class ThreadTCPNetwork(threading.Thread):
     #def __init__(self):
     #    self.hostname = socket.gethostname()
