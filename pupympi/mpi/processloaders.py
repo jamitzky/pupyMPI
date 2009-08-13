@@ -49,8 +49,6 @@ def popen(host, arguments):
 def gather_io():
     global process_list
     logger = Logger()
-    print "logger: "
-    print logger
 
     def get_list(process_list):
         pipes = []
