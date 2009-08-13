@@ -2,12 +2,13 @@ __version__ = 0.01
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
+from mpi.tcp import TCPNetwork as Network
 import threading
+import sys, getopt
 
 class MPI:
 
     def __init__(self):
-        import sys, getopt
         try:
             optlist, args = getopt.gnu_getopt(sys.argv[1:], 'dv:ql:s:r:', ['verbosity=','quiet','log-file=','debug','size=','rank=','network-type=','port=','mpirun-conn-port=', 'mpirun-conn-host='])
         except getopt.GetoptError, err:
@@ -55,7 +56,8 @@ class MPI:
         # Initialise the logger
         logger = Logger(logfile or "mpi", "proc-%d" % rank, debug, verbosity, quiet)
         # Let the communication handle start up if it need to.
-        from mpi.tcp import TCPNetwork as Network
+
+        logger.debug("Finished all the runtime arguments")
         
         self.MPI_COMM_WORLD = Communicator(rank, size, self)
         ##Trying threading
@@ -64,13 +66,15 @@ class MPI:
         #self.network = Network().start()
 
         self.network = Network()
-        # self.network = network = Network() # NOTE: We seem to do fine without this
-        self.network.set_start_port( 14000 + rank )
         logger.debug("Network started")
 
         all_procs = self.network.handshake(mpi_run_hostname, mpi_run_port, rank)
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
+
+        # Set a static attribute on the class so we know it's initialised.
+        self.__class__._initialized = True
+        logger.debug("Set the MPI environment to initialised")
     
     def finalize(self):
         logger = Logger()
@@ -79,6 +83,10 @@ class MPI:
 
     def _ensure_comm(self, comm):
         return comm or self.MPI_COMM_WORLD
+
+    @classmethod
+    def initialized(cls):
+        return getattr(cls, '_initialized', False)
 
     # Some wrapper methods
     def isend(self, destination, content, tag, comm=None):
