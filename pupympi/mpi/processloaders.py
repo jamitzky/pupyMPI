@@ -102,4 +102,3 @@ def shutdown():
         if p.poll():
             logger.debug("Killing %s" % p)
             p.terminate()
-        
