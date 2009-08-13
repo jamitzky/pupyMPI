@@ -7,7 +7,7 @@ Created by Jan Wiberg on 2009-08-06.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-import sys, os, subprocess
+import sys, os, subprocess, select
 from exceptions import MPIException
 from mpi.logger import Logger
 
@@ -33,9 +33,7 @@ def ssh(host, arguments):
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
     process_list.append(p)
-    
     
 def popen(host, arguments):
     global process_list
@@ -50,8 +48,9 @@ def popen(host, arguments):
     
 def gather_io():
     global process_list
-    import select
     logger = Logger()
+    print "logger: "
+    print logger
 
     def get_list(process_list):
         pipes = []

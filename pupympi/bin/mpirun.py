@@ -150,8 +150,6 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
             params[mapType] -= 1 # mark as one less unused
             mappedHosts += [(hostname, rank, params["port"])] # map it
             rank += 1 # assign next rank
-            #DEBUG
-            #print "overmapped %i to %s" % (rank,hostname)
             
             if type == "rr": # round-robin?
                 i += 1 # for round-robin always go to next host
@@ -159,13 +157,9 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
         else: # if no CPUs left we always go to next host
             i += 1 # pick next host
             
-    #DEBUG
-    #print mappedHosts
     return mappedHosts
 
-
-if __name__ == "__main__":
-
+def parse_arguments():
     import getopt
     try:
         optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
@@ -213,6 +207,11 @@ if __name__ == "__main__":
             # NOTE: Rune mumbled that it should not be None here, but it does the job for now
             hostfile = None # No hostfile specified, go with default
 
+    return np, debug, verbosity, quiet, logfile, hostfile
+
+if __name__ == "__main__":
+    np, debug, verbosity, quiet, logfile, hostfile = parse_arguments()
+
     # Start the logger
     logger = Logger(logfile or "mpi", "mpirun", debug, verbosity, quiet)
 
@@ -230,7 +229,7 @@ if __name__ == "__main__":
     mpi_run_hostname = socket.gethostname()
     logger.debug("Found hostname: %s" % mpi_run_hostname)
     
-    # FIXME: Fix what?
+    # FIXME: Fix what? Fix it..  Fix it.. 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     for tries in range(10):
@@ -273,15 +272,19 @@ if __name__ == "__main__":
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
     sender_conns = []
-    for _ in mappedHosts:
+
+    logger.debug("Waiting for %d processes" % np)
+
+    for i in range(np):
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
         # Recieve listings from newly started proccesses phoning in
         data = pickle.loads(sender_conn.recv(4096))
         all_procs.append( data )
-        logger.debug("Received initial startup date from proc-%d" % data[2])
+        logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
+
+    logger.debug("Received information for all %d processes" % np)
     
-        
     # Send all the data to all the connections
     for conn in sender_conns:
         conn.send( pickle.dumps( all_procs ))
