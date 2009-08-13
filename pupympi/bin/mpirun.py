@@ -22,6 +22,8 @@ Start the program with pupympi
     -f | --host-file <arg0>    The host file where the processes should be
                                 started. See the documentation for the proper
                                 format. 
+    --startup-method <arg0>     How the system should start up. Currently arg0 
+                                can be 'ssh' or 'popen'. Defaults to popen. 
     -h | --help                 Display this help. 
 
 """ 
@@ -29,9 +31,10 @@ Start the program with pupympi
 #import mpi, sys, os
 #limiting import since mpi cannot be found currently
 import sys, os, socket
-from mpi.processloaders import ssh as remote_start
+from mpi import processloaders 
 from mpi.processloaders import shutdown, gather_io 
 from mpi.logger import Logger
+from mpi.tcp import get_socket
 
 try:
     import cPickle as pickle
@@ -162,7 +165,7 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True):
 def parse_arguments():
     import getopt
     try:
-        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug',])
+        optlist, args = getopt.gnu_getopt(sys.argv[1:], 'c:dv:ql:f:h', ['np=','verbosity=','quiet','log-file=','host','host-file=','debug','startup-method='])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -174,6 +177,7 @@ def parse_arguments():
 
     logfile = None
     hostfile = None
+    startup_method = "ssh"
     
     if not optlist:
         usage()
@@ -207,10 +211,13 @@ def parse_arguments():
             # NOTE: Rune mumbled that it should not be None here, but it does the job for now
             hostfile = None # No hostfile specified, go with default
 
-    return np, debug, verbosity, quiet, logfile, hostfile
+        if opt in ('--startup-method') and arg in ('ssh', 'popen'):
+            startup_method = arg
+
+    return np, debug, verbosity, quiet, logfile, hostfile, startup_method
 
 if __name__ == "__main__":
-    np, debug, verbosity, quiet, logfile, hostfile = parse_arguments()
+    np, debug, verbosity, quiet, logfile, hostfile, startup_method = parse_arguments()
 
     # Start the logger
     logger = Logger(logfile or "mpi", "mpirun", debug, verbosity, quiet)
@@ -225,23 +232,17 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(hosts, np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
 
-    # We hardcode for TCP currently. This should be made more generic in the future. 
-    mpi_run_hostname = socket.gethostname()
-    logger.debug("Found hostname: %s" % mpi_run_hostname)
-    
-    # FIXME: Fix what? Fix it..  Fix it.. Fax it... Fax it!
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    for tries in range(10):
-        mpi_run_port = 5555+tries # Rewrite to find some port
-        try:
-            s.bind((mpi_run_hostname, mpi_run_port))
-            break
-        except socket.error:
-            continue
+
+    s, mpi_run_hostname, mpi_run_port = get_socket()
+
             
     s.listen(5)
     logger.debug("Socket bound to port %d" % mpi_run_port)
+
+    if startup_method == "ssh":
+        remote_start = processloaders.ssh
+    elif startup_method == "popen":
+        remote_start = processloaders.popen
     
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:

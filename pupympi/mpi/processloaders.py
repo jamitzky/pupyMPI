@@ -49,26 +49,30 @@ def popen(host, arguments):
 def gather_io():
     global process_list
     logger = Logger()
-    print "logger: "
-    print logger
 
     def get_list(process_list):
         pipes = []
         for p in process_list:
-            pipes.append(p.stderr)
-            pipes.append(p.stdout)
+            if p.stderr:
+                pipes.append(p.stderr)
+            
+            if p.stdout:
+                pipes.append(p.stdout)
         return pipes
    
     list = process_list
     pipes = get_list(list)
 
     def print_fh(fh):
+        if not fh:
+            return 
+
         try:
             lines = fh.readlines()
             for line in lines:
-                print line
+                print line + " forwarded to mpirun.py"
         except Exception, e:
-            print "test ", e.message
+            Logger().error("print_fh: %s" % e.message)
 
     while list:
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
@@ -96,6 +100,5 @@ def shutdown():
     logger = Logger()
     for p in process_list:
         if p.poll():
-            logger.debug("Killing %s" % p)        
+            logger.debug("Killing %s" % p)
             p.terminate()
-        

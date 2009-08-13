@@ -1,38 +1,56 @@
-import mpi, time, socket
+import mpi, time, socket, threading, random
 from mpi.logger import Logger
-import threading
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+def get_socket(range=(10000, 30000)):
+    """
+    A simple helper method for creating a socket,
+    binding it to a fee port. 
+    """
+    logger = Logger()
+    used = []
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    
+    hostname = socket.gethostname()
+    port_no = None
+
+    logger.debug("get_socket: Starting loop with hostname %s" % hostname)
+
+    while True:
+        port_no = int(random.uniform(*range))
+        if port_no in used:
+            logger.debug("get_socket: Port %d is already in use %d" % port_no)
+            continue
+
+        try:
+            logger.debug("get_socket: Trying to bind on port %d" % port_no)
+            sock.bind( (hostname, port_no) )
+            break
+        except socket.error, e:
+            raise e
+            logger.debug("get_socket: Permission error on port %d" % port_no)
+            used.append( port_no )
+
+    logger.debug("get_socket: Bound socket on port %d" % port_no)
+    return sock, hostname, port_no
     
 class TCPNetwork():
-    def __init__(self, start_port_no=None):
-        self.hostname = socket.gethostname()
-        self.bind_socket()
-    
-        if start_port_no:
-            self.start_port_no = start_port_no
 
-    def bind_socket(self):
-        start_port = getattr(self, 'start_port_no', 14000)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        logger = Logger()
+    def __init__(self):
+        (socket, hostname, port_no) = get_socket()
+        self.port = port_no
+        self.hostname = hostname
+        socket.listen(5)
+        self.socket = socket
 
-        logger.debug("Starting on port_no %d" % start_port)
+        logger = Logger().debug("Network started on port %s" % port_no)
 
-        for tries in range(10):
-            try:
-                s.bind( (self.hostname, start_port+tries))
-                self.port = start_port+tries
-                break
-            except socket.error:
-                continue
-
-        s.listen(5)
-        self.socket = s
-        
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
         This method create the MPI_COMM_WORLD communicator, by receiving
@@ -67,8 +85,7 @@ class TCPNetwork():
 
     def finalize(self):
         self.socket.close()
-        logger = Logger()
-        logger.debug("The TCP network is closed")
+        logger = Logger().debug("The TCP network is closed")
 
     def recv(self, destination, tag, comm):
         # Check the destination exists
