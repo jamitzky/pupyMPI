@@ -8,7 +8,7 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
 import sys, os, subprocess, select
-from exceptions import MPIException
+from mpi.exceptions import MPIException
 from mpi.logger import Logger
 
 # TODO Output redirect. Log files?
