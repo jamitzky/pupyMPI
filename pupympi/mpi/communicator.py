@@ -2,7 +2,7 @@
 from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
 
-class Communicator():
+class Communicator:
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
         self._rank = rank
         self._size = size
