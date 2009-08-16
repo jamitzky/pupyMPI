@@ -40,6 +40,7 @@ def popen(host, arguments):
     logger = Logger()
 
     if _islocal(host):
+        print str(arguments)
         p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)
         return p
@@ -63,7 +64,11 @@ def gather_io():
         return pipes
     
     # Allow destructive operations on copy of process_list
-    list = copy.deepcopy(process_list)
+    #list = copy.deepcopy(process_list)
+    # ...but it seems we just want the shallow ref
+    list = process_list
+    pipes = get_list(list)
+
     pipes = get_list(list)
 
     # print lines from a filehandle
