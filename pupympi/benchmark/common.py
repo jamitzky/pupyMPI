@@ -12,22 +12,26 @@ import os
 import unittest
 import array
 
-def 
+# bunch of useless constants for now
+MPI_ANY_TAG = 0
+MPI_ANY_SOURCE = 0
 
 baseset = "abcdefghijklmnopqrstuvwxyz"
 
 def gen_testset(size):
+    """Generates a test message byte array of asked-for size. Used for single and parallel ops."""
     data = array.array('b')
     for x in xrange(0, size):
         data.append(ord(baseset[x % len(baseset)]))
     return data
     
 def gen_reductionset(size):
+    """Generates a test message float array of asked-for size. Used for reduction ops."""
     raise Exception("Method not implemented")
-    pass
 
 
 class commonTests(unittest.TestCase):
+    """Unittests"""
     def setUp(self):
         pass
         
