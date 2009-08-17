@@ -13,7 +13,8 @@ import mpi
 import comm_info as c_info
 import common
 
-def PingPing(size, iteration_schedule = None):
+def test_PingPing(size, iteration_schedule = None):
+    print "test_PingPing ",size
     s_tag = 1
     r_tag = s_tag if c_info.select_tag else common.MPI_ANY_TAG
     dest = -1
@@ -24,13 +25,13 @@ def PingPing(size, iteration_schedule = None):
     
     source = dest if c_info.select_source else common.MPI_ANY_SOURCE   
     
-def PingPong():
-    pass
-
-def main():
-    pass # this should never run
-
-
-if __name__ == '__main__':
-    main()
+    # TODO actual test!
+    counter = 0
+    for r in xrange(iteration_schedule[size] if iteration_schedule is not None else 1000):
+        counter += size
+        
+    return counter
+    
+def test_PingPong(size, iteration_schedule = None):
+    print "test_PingPong"
 

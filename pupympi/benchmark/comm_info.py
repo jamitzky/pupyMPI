@@ -9,7 +9,7 @@ Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-from common import get_testset, gen_reductionset
+from common import gen_testset, gen_reductionset
  
 w_num_procs = None          # number of procs in COMM_WORLD             
 w_rank = None               # rank of actual process in COMM_WORLD      
@@ -25,7 +25,7 @@ rank = None                 # rank of actual process in communicator
 
 s_data_type = 'b'           # data type of sent data                    
 r_data_type = 'b'           # data type of received data                
-s_data_generator = get_testset # NEW: generator function
+s_data_generator = gen_testset # NEW: generator function
 
 red_data_type = 'f'         # data type of reduced data                
 op_type = None              # operation type                           
