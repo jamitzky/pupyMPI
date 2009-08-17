@@ -22,7 +22,7 @@ class Request:
         """
         Blocks until the request data can be garbage collected. This method can be used
         to create stable methods limiting the memory usage by not creating new send
-        requets before the ressources for the current one has been removed.
+        requests before the ressources for the current one has been removed.
 
         When waiting for a receive, the data will be returned to the calling function.
 
@@ -34,7 +34,7 @@ class Request:
 
     def test(self):
         """
-        A non-blocking way to see if the requset is ready to complete. If true a 
+        A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
         pass
