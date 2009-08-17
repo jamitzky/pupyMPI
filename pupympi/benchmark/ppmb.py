@@ -25,9 +25,9 @@ The help message goes here.
 
 
 def runsingletest(test):
-    results = {}
+    results = []
     for size in common.size_array:        
-        results[size] = test(size, None)
+        results.append((size, test(size, None)))
         
     return results
 
