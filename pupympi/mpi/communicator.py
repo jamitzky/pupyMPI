@@ -242,7 +242,7 @@ class Communicator:
     
         Logger().warn("Non-Implemented method 'bcast' called.")
         
-    # FIXME Defer/discuss whether to implement these
+    # FIXME Defer/discuss whether to implement these (probes for incoming receives)
     def probe(self, arg):
         # TODO Document
         pass
@@ -250,4 +250,16 @@ class Communicator:
         # TODO Document
         pass
 
+    ################################################################################################################
+    # LOCAL OPERATIONS
+    ################################################################################################################
     
+    #### Inter-communicator operations
+    # TODO Need to officially decide if inter-communicators are implemented and if not, why (imo: not to be implemented.) 
+    def test_inter(self):
+        """
+        This local routine allows the calling process to determine if a communicator is an inter-communicator or an intra-communicator. It returns true if it is an inter-communicator, otherwise false. 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node112.html
+        """
+        return False
