@@ -191,7 +191,6 @@ if __name__ == "__main__":
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
         port = port+rank
-        # Prepare the command line args for the subprocesses
 
         # Make sure we have a full path
         if not executeable.startswith("/"):
@@ -241,9 +240,10 @@ if __name__ == "__main__":
     
     # Close all the connections
     [ c.close for c in sender_conns ]
-
+    # Close own "server" socket
     s.close()
-    # debug: check status on all children
+    
+    # Check status on all children
     gather_io()
 
     shutdown()

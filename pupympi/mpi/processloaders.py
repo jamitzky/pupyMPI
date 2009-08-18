@@ -40,16 +40,19 @@ def popen(host, arguments):
     logger = Logger()
 
     if _islocal(host):
+        print str(arguments)
         p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)
         return p
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
-    
+
+# Selects on std_err and std_out for all running processes to convey status
 def gather_io():
     global process_list
     logger = Logger()
-
+        
+    # Return open pipes of all processes in the process_list
     def get_list(process_list):
         pipes = []
         for p in process_list:
@@ -59,10 +62,16 @@ def gather_io():
             if p.stdout:
                 pipes.append(p.stdout)
         return pipes
-   
+    
+    # Allow destructive operations on copy of process_list
+    #list = copy.deepcopy(process_list)
+    # ...but it seems we just want the shallow ref
     list = process_list
     pipes = get_list(list)
 
+    pipes = get_list(list)
+
+    # print lines from a filehandle
     def print_fh(fh):
         if not fh:
             return 
@@ -74,7 +83,8 @@ def gather_io():
                     print line.strip("\n")
         except Exception, e:
             Logger().error("print_fh: %s" % e.message)
-
+    
+    # Check on processes unless process_list was empty
     while list:
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
         for fh in readlist:
@@ -103,4 +113,3 @@ def shutdown():
         if p.poll():
             logger.debug("Killing %s" % p)
             p.terminate()
-        
