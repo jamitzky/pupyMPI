@@ -50,14 +50,27 @@ class MPI(threading.Thread):
         options, args = parser.parse_args()
     
         mpi = MPI()
-        mpi.start()
         mpi.startup(options, args)
+        mpi.start()
         return mpi
     # }}}1
 
     def run(self):
-        """Remember.. no logging here"""
-        pass
+        self.request_queue = []
+        self.request_queue_lock = threading.Lock()
+        self.shutdown_lock = threading.Lock()
+        self.is_shutting_down = False
+
+        # This can be moved out of there
+        while True:
+            with self.shutdown_lock:
+                if self.is_shutting_down:
+                    print "Breaking"
+                    break
+
+            # Continue with the stuff
+            print "In the main true loop"
+            break
 
     def startup(self, options, args): # {{{1
         print "Staring the MPI thread"
@@ -94,6 +107,8 @@ class MPI(threading.Thread):
 
         FIXME: Should be manully try to kill some threads?
         """
+        with self.shutdown_lock:
+            self.is_shutting_down = True
         self.network.finalize()
         Logger().debug("Network finalized")
 
