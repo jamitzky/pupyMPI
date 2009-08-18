@@ -15,6 +15,8 @@ class Request:
         """
         Cancel a request. This can be used to free memory, but the request must be redone
         by all parties involved.
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node50.html
         """
         pass
 
