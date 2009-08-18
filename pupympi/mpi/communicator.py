@@ -1,6 +1,7 @@
 # Fred dabbling in communication
 from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
+import threading
 
 class Communicator:
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
@@ -15,6 +16,8 @@ class Communicator:
                             "MPI_IO": rank, \
                             "MPI_WTIME_IS_GLOBAL": False
                         }
+        self.request_queue = []
+        self.request_queue_lock = threading.Lock()
     
     def build_world(self, all_procs):
         logger = Logger()
@@ -46,6 +49,35 @@ class Communicator:
     def set_name(self, name):
         self.name = name
 
+    def irecv(self, sender, tag):
+        # Check the destination exists
+        if not comm.have_rank(sender):
+            error_str = "No process with rank %d in communicator %s. " % (sender, self.name)
+            raise MPIBadAddressException(error_str)
+
+        # Create a receive request object and return
+        handle = Request("receive", self, sender, tag)
+
+        # Add to the queue
+        with self.request_queue_lock:
+            self.request_queue.append(handle)
+
+        return handle
+
+    def isend(self, destination_rank, content, tag):
+        # Check the destination exists
+        if not comm.have_rank(destination_rank):
+            raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+
+        # Create a receive request object and return
+        handle = Request("send", self, destination_rank, tag, data=content)
+
+        # Add to the queue
+        with self.request_queue_lock:
+            self.request_queue.append(handle)
+
+        return handle
+
     # TODO: may want to drop this and simply allow users access to the underlying dict?
     # TODO: Global fixed keys (http://www.mpi-forum.org/docs/mpi-11-html/node143.html) should be defined?
     def attr_get(self, key):
@@ -73,18 +105,11 @@ class Communicator:
     #
 
     # Some wrapper methods
-    def isend(self, destination, content, tag):
-        """
-        document me
-        """
-        return self.network.isend(destination, content, tag, self)
-
     def send(self, destination, content, tag):
         """
         document me
         """
-        request = self.isend(destination, content, tag, self)
-        return request.wait()
+        return self.isend(destination, content, tag, self).wait()
 
     def barrier(self):
         """
@@ -97,15 +122,8 @@ class Communicator:
         """
         document me
         """
-        request = self.irecv(destination, tag, self)
-        return request.wait()
+        return self.irecv(destination, tag, self).wait()
 
-    def irecv(self, destination, tag):
-        """
-        document me
-        """
-        return self.network.irecv(destination, tag, self)
-     
     def abort(self, arg):
         """
         This routine makes a "best attempt" to abort all tasks in the group of comm.

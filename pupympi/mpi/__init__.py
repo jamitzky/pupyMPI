@@ -56,8 +56,6 @@ class MPI(threading.Thread):
     # }}}1
 
     def run(self):
-        self.request_queue = []
-        self.request_queue_lock = threading.Lock()
         self.shutdown_lock = threading.Lock()
         self.is_shutting_down = False
 

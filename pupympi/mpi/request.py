@@ -2,14 +2,15 @@ from mpi.exceptions import MPIException
 
 class Request:
 
-    def __init__(self, type, communicator):
+    def __init__(self, type, communicator, participant, tag, data=None):
         if type not in ('send','receive'):
             raise MPIException("Invalid type in request creation. This should never happen. ")
 
         self.type = type
         self.communicator = communicator
-
-        # FIXME: We also need other stuff here, but we'll wait
+        self.participant = participant
+        self.tag = tag
+        sef.data = data
 
     def cancel(self):
         """
@@ -32,13 +33,11 @@ class Request:
         be garbage collected.
         """
         if self.type == 'receive':
-            return self.data
-
+            pass
+            
     def test(self):
         """
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
         pass
-
-
