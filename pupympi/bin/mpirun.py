@@ -13,9 +13,11 @@ except ImportError:
     import pickle
 
 def parse_hostfile(hostfile): # {{{1
-    # Parses hostfile, and returns list of tuples of the form (hostname, hostparameters_in_dict)
-    # NOTE: Standard port below and maybe other defaults should not be hardcoded here
-    # (defaults should probably be a parameter for this function)
+    """
+    Parses hostfile, and returns list of tuples of the form (hostname, hostparameters_in_dict)
+    NOTE: Standard port below and maybe other defaults should not be hardcoded here
+    (defaults should probably be a parameter for this function)
+    """
     logger = Logger()
 
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
@@ -61,12 +63,15 @@ def parse_hostfile(hostfile): # {{{1
         return hosts
     else:
         raise IOError("No lines in your hostfile, or something else went wrong")
-# }}}1
+
 def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
-    # Assign ranks and host to all processes
-    # NOTE: We only do primitive overcommitting so far.
-    # Eventually we should decide how to best map more processes than "cpu" specifies, onto hosts
-    # eg. does higher cpu/max_cpu ratio mean a more realistic estimate of a good max cpu?
+    """
+    Assign ranks and host to all processes
+    NOTE: We only do primitive overcommitting so far.
+    Eventually we should decide how to best map more processes than "cpu" specifies, onto hosts
+    eg. does higher cpu/max_cpu ratio mean a more realistic estimate of a good max cpu?
+    """
+
 
     mappedHosts = [] # list containing the (host,rank) tuples to return   
     hostCount = len(hosts) # How many hosts do we have
@@ -128,7 +133,7 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
             i += 1 # pick next host
             
     return mappedHosts
-# }}}1
+
 def parse_options():
 
     usage = 'usage: %prog [options] arg'

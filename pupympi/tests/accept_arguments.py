@@ -1,8 +1,8 @@
 #!/usr/bin/env python2.6
 
-import mpi
+from mpi import MPI
 
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 import sys
 print sys.argv
