@@ -69,8 +69,6 @@ def gather_io():
     list = process_list
     pipes = get_list(list)
 
-    pipes = get_list(list)
-
     # print lines from a filehandle
     def print_fh(fh):
         if not fh:
@@ -105,7 +103,7 @@ def gather_io():
                 print_fh(p.stdout)
 
             pipes = get_list(list)
-
+        
 def shutdown():
     global process_list
     logger = Logger()

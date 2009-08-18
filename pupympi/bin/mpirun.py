@@ -201,7 +201,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), executeable)
         
-        run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+        run_options = ["python2.6", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
