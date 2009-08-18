@@ -2,11 +2,10 @@
 
 # Simple pupympi program to test barrier
 
-import mpi
+from mpi import MPI
 from sys import stderr
 
-
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 

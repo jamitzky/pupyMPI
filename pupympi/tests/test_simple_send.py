@@ -4,12 +4,12 @@
 
 # Simple pupympi program to test basic communication between to processes
 
-import mpi, time
-from mpi import tcp
+import time
+from mpi import tcp, MPI
 
 MY_TAG = 12
 
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 rank = mpi.rank()
 size = mpi.size()

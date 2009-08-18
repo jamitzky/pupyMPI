@@ -5,10 +5,10 @@
 
 # first rank 0 sends then 1 recieves, then vice versa
 
-import mpi, time
+import time
+from mpi import MPI
 
-
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
