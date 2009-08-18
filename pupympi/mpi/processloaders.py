@@ -48,11 +48,14 @@ def popen(host, arguments):
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
 
-        
-def shutdown():
-    global process_list
+def wait_for_shutdown(process_list):
     logger = Logger()
-    for p in process_list:
-        if p.poll():
-            logger.debug("Killing %s" % p)
-            p.terminate()
+    while process_list:
+        for p in process_list:
+            returncode = p.poll()
+            if returncode is None:
+                process_list.remove( p )
+            else:
+                logger.debug("Process exited with status: %d" % returncode)
+
+        time.sleep(1)

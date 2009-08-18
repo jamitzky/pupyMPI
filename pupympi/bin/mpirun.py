@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.6
 import sys, os, socket
 from optparse import OptionParser, OptionGroup
-import select
+import select, time
 
 from mpi import processloaders 
-from mpi.processloaders import shutdown 
+from mpi.processloaders import wait_for_shutdown 
 from mpi.logger import Logger
 from mpi.tcp import get_socket
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
@@ -51,58 +51,21 @@ def parse_options():
 
 def io_forwarder(list):
     logger = Logger()
-        
-    # Return open pipes of all processes in the process_list
-    def get_list(process_list):
-        pipes = []
-        for p in process_list:
-            if p.stderr:
-                pipes.append(p.stderr)
-            
-            if p.stdout:
-                pipes.append(p.stdout)
-        return pipes
-    
-    # Allow destructive operations on copy of process_list
-    #list = copy.deepcopy(process_list)
-    # ...but it seems we just want the shallow ref
-    pipes = get_list(list)
 
-    # print lines from a filehandle
-    def print_fh(fh):
-        if not fh:
-            return 
+    pipes = [p.stderr for p in process_list]
+    pipes.extend( [p.stdout for p in process_list] )
+    pipes = filter(lambda x: x is not None, pipes)
 
-        try:
-            lines = fh.readlines()
-            for line in lines:
-                if line:
-                    print line.strip("\n")
-        except Exception, e:
-            Logger().error("print_fh: %s" % e.message)
-    
-    # Check on processes unless process_list was empty
-    while list:
+    while pipes:
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
+
         for fh in readlist:
-            print_fh(fh)
+            content = fh.readlines()
+            for line in content:
+                print >> sys.stdout, content
 
-        # Test if anyone is read
-        for p in list:
-            returncode = p.poll()
-            if returncode is not None:
-                list.remove(p)
-
-                if returncode != 0:
-                    logger.error("A child returned with an errorcode: %s" % returncode)
-                else:
-                    logger.debug("Child exited normally")
-
-                print_fh(p.stderr)
-                print_fh(p.stdout)
-
-        pipes = get_list(list)
-
+        time.sleep(1)
+        
 if __name__ == "__main__":
     options, args, user_options = parse_options()
     executeable = args[0]
@@ -161,7 +124,8 @@ if __name__ == "__main__":
         logger.debug("Process with rank %d started" % rank)
 
     # Start a thread to handle io forwarding
-    t = threading.Thread(target=io_forwarder, args=(process_list,)).start()
+    t = threading.Thread(target=io_forwarder, args=(process_list,))
+    t.start()
         
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
