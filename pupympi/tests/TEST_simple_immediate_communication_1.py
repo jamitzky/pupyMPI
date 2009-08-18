@@ -18,7 +18,7 @@ content = "Message from rank %d" % (rank)
 if rank == 0:
     # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
-    mpi.isend(neighbour,content,"Dummy tag here")
+    mpi.MPI_COMM_WORLD.isend(neighbour,content,"Dummy tag here")
     
     print "Rank: %d DONE" % (rank)
     
@@ -28,7 +28,7 @@ else: # rank == 1
     
     # Recieve
     print "Yawn, rank: %d recieving from %d" % (rank,neighbour)
-    recieved = mpi.irecv(neighbour,"Dummy tag here")    
+    recieved = mpi.MPI_COMM_WORLD.irecv(neighbour,"Dummy tag here")    
     print "Rank: %d recieved %s" % (rank,recieved)
 
 print "Sending/recieving done rank %d of %d after %d seconds sleep" % (rank, size, size-rank)
