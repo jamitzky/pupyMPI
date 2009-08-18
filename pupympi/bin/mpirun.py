@@ -49,8 +49,7 @@ def parse_options():
 
     return options, args, user_options
 
-def io_forwarder(process_list):
-    process_list = process_list
+def io_forwarder(list):
     logger = Logger()
         
     # Return open pipes of all processes in the process_list
@@ -67,7 +66,6 @@ def io_forwarder(process_list):
     # Allow destructive operations on copy of process_list
     #list = copy.deepcopy(process_list)
     # ...but it seems we just want the shallow ref
-    list = process_list
     pipes = get_list(list)
 
     # print lines from a filehandle
@@ -103,7 +101,7 @@ def io_forwarder(process_list):
                 print_fh(p.stderr)
                 print_fh(p.stdout)
 
-            pipes = get_list(list)
+        pipes = get_list(list)
 
 if __name__ == "__main__":
     options, args, user_options = parse_options()
