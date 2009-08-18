@@ -87,9 +87,6 @@ class MPI:
         self.network.finalize()
         logger.debug("Network finalized")
 
-    def _ensure_comm(self, comm):
-        return comm or self.MPI_COMM_WORLD
-
     @classmethod
     def initialized(cls):
         """
