@@ -118,7 +118,9 @@ class Communicator:
     # due to making no sense in a python environment:
     # bsend, ibsend
     # rsend, irsend
-    #
+    # 
+    # due to having to do with error handling: 
+    # mpi_error_*
 
     # Some wrapper methods
     def send(self, destination, content, tag):
