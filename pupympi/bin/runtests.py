@@ -62,13 +62,16 @@ def get_testnames():
     return sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
     
 def format_output(threads):
+    total_time = 0
     print "TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE"
     print "-----------------------------------------------------------------------------------------------------------"
     for thread in threads:
-        print "%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, round(thread.executiontime,1), \
+        total_time += thread.executiontime
+        print "%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, round(thread.executiontime, 1), \
                                             thread.killed, \
                                             "%s (%s)" % ("OK" if thread.returncode == 0 else "FAILURE", thread.returncode))
         
+    print "\nTotal execution time: %ss" % (round(total_time, 1))
 
 def combine_logs(logfile_prefix):
     combined = open(logfile_prefix+".log", "w")
@@ -85,7 +88,7 @@ def combine_logs(logfile_prefix):
         os.remove(log)    
 
     combined.close()        
-    print "\nCombined %d log files into %s.log" % (counter, logfile_prefix)
+    print "Combined %d log files into %s.log" % (counter, logfile_prefix)
 
 def run_tests(test_files):
     threadlist = []
