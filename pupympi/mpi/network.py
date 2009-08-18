@@ -16,5 +16,3 @@ class Network(threading.Thread):
     def run(self):
         self.initialize()
         Logger().debug("Network: Initialized")
-
-    

@@ -21,7 +21,7 @@ class MPI(threading.Thread):
     """
 
     @classmethod
-    def initialize(cls):
+    def initialize(cls): # {{{1
         """
         Initializes the MPI environment. This process will give each process 
         the rank and size in the MPI_COMM_WORLD communicator. This includes the
@@ -53,11 +53,13 @@ class MPI(threading.Thread):
         mpi.start()
         mpi.startup(options, args)
         return mpi
+    # }}}1
 
     def run(self):
-        print "Fucking fuck"
+        """Remember.. no logging here"""
+        pass
 
-    def startup(self, options, args):
+    def startup(self, options, args): # {{{1
         print "Staring the MPI thread"
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
@@ -83,15 +85,17 @@ class MPI(threading.Thread):
         # Set a static attribute on the class so we know it's initialised.
         self.__class__.initialized = True
         logger.debug("Set the MPI environment to initialised")
+    # }}}1
 
     def finalize(self):
         """
         This method cleans up after a MPI run. Closes filehandles, 
         logfiles and sockets. 
+
+        FIXME: Should be manully try to kill some threads?
         """
-        logger = Logger()
         self.network.finalize()
-        logger.debug("Network finalized")
+        Logger().debug("Network finalized")
 
     @classmethod
     def initialized(cls):
