@@ -1,8 +1,9 @@
 __version__ = 0.01
 
+
 from optparse import OptionParser, OptionGroup
 import threading
-import sys, getopt
+import sys, getopt, time
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger

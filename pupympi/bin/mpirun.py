@@ -85,6 +85,7 @@ def io_forwarder(process_list):
     
     # Check on processes unless process_list was empty
     while list:
+        logger.debug("In IO gather loop")
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
         for fh in readlist:
             print_fh(fh)
@@ -104,6 +105,8 @@ def io_forwarder(process_list):
                 print_fh(p.stdout)
 
             pipes = get_list(list)
+    
+    logger.debug("IO gather loop DONE DEAD")
 
 if __name__ == "__main__":
     options, args, user_options = parse_options()
