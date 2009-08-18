@@ -1,12 +1,14 @@
 #!/usr/bin/env python2.6
 import sys, os, socket
 from optparse import OptionParser, OptionGroup
+import select
 
 from mpi import processloaders 
-from mpi.processloaders import shutdown, gather_io 
+from mpi.processloaders import shutdown 
 from mpi.logger import Logger
 from mpi.tcp import get_socket
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
+import threading
 
 try:
     import cPickle as pickle
@@ -47,6 +49,62 @@ def parse_options():
 
     return options, args, user_options
 
+def io_forwarder(process_list):
+    process_list = process_list
+    logger = Logger()
+        
+    # Return open pipes of all processes in the process_list
+    def get_list(process_list):
+        pipes = []
+        for p in process_list:
+            if p.stderr:
+                pipes.append(p.stderr)
+            
+            if p.stdout:
+                pipes.append(p.stdout)
+        return pipes
+    
+    # Allow destructive operations on copy of process_list
+    #list = copy.deepcopy(process_list)
+    # ...but it seems we just want the shallow ref
+    list = process_list
+    pipes = get_list(list)
+
+    # print lines from a filehandle
+    def print_fh(fh):
+        if not fh:
+            return 
+
+        try:
+            lines = fh.readlines()
+            for line in lines:
+                if line:
+                    print line.strip("\n")
+        except Exception, e:
+            Logger().error("print_fh: %s" % e.message)
+    
+    # Check on processes unless process_list was empty
+    while list:
+        readlist, _, _ =  select.select(pipes, [], [], 1.0)
+        for fh in readlist:
+            print_fh(fh)
+
+        # Test if anyone is read
+        for p in list:
+            returncode = p.poll()
+            if returncode is not None:
+                list.remove(p)
+
+                if returncode != 0:
+                    logger.error("A child returned with an errorcode: %s" % returncode)
+                else:
+                    logger.debug("Child exited normally")
+
+                print_fh(p.stderr)
+                print_fh(p.stdout)
+
+            pipes = get_list(list)
+
 if __name__ == "__main__":
     options, args, user_options = parse_options()
     executeable = args[0]
@@ -70,6 +128,8 @@ if __name__ == "__main__":
     logger.debug("Socket bound to port %d" % mpi_run_port)
 
     remote_start = getattr(processloaders, options.startup_method)
+
+    process_list = []
 
     # Start a process for each rank on associated host. 
     for (host, rank, port) in mappedHosts:
@@ -97,9 +157,13 @@ if __name__ == "__main__":
         run_options.append( "--" )
         run_options.extend( user_options )
 
-        remote_start(host, run_options)
+        p = remote_start(host, run_options)
+        process_list.append(p)
             
         logger.debug("Process with rank %d started" % rank)
+
+    # Start a thread to handle io forwarding
+    t = threading.Thread(target=io_forwarder, args=(process_list,)).start()
         
     # Listing for (rank, host, port) from all the procs.
     all_procs = []
@@ -128,5 +192,5 @@ if __name__ == "__main__":
     s.close()
     
     # Check status on all children
-    gather_io()
     shutdown()
+

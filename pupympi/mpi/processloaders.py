@@ -34,6 +34,7 @@ def ssh(host, arguments):
     logger.debug("Exec: %s" % (' '.join(sshexec)))
     p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process_list.append(p)
+    return p
     
 def popen(host, arguments):
     global process_list
@@ -47,62 +48,6 @@ def popen(host, arguments):
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
 
-# Selects on std_err and std_out for all running processes to convey status
-def gather_io():
-    global process_list
-    logger = Logger()
-        
-    # Return open pipes of all processes in the process_list
-    def get_list(process_list):
-        pipes = []
-        for p in process_list:
-            if p.stderr:
-                pipes.append(p.stderr)
-            
-            if p.stdout:
-                pipes.append(p.stdout)
-        return pipes
-    
-    # Allow destructive operations on copy of process_list
-    #list = copy.deepcopy(process_list)
-    # ...but it seems we just want the shallow ref
-    list = process_list
-    pipes = get_list(list)
-
-    # print lines from a filehandle
-    def print_fh(fh):
-        if not fh:
-            return 
-
-        try:
-            lines = fh.readlines()
-            for line in lines:
-                if line:
-                    print line.strip("\n")
-        except Exception, e:
-            Logger().error("print_fh: %s" % e.message)
-    
-    # Check on processes unless process_list was empty
-    while list:
-        readlist, _, _ =  select.select(pipes, [], [], 1.0)
-        for fh in readlist:
-            print_fh(fh)
-
-        # Test if anyone is read
-        for p in list:
-            returncode = p.poll()
-            if returncode is not None:
-                list.remove(p)
-
-                if returncode != 0:
-                    logger.error("A child returned with an errorcode: %s" % returncode)
-                else:
-                    logger.debug("Child exited normally")
-
-                print_fh(p.stderr)
-                print_fh(p.stdout)
-
-            pipes = get_list(list)
         
 def shutdown():
     global process_list
