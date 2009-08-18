@@ -1,5 +1,6 @@
 import mpi, time, socket, threading, random
 from mpi.logger import Logger
+from mpi.network import Network
 
 try:
     import cPickle as pickle
@@ -40,9 +41,10 @@ def get_socket(range=(10000, 30000)):
     logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
     
-class TCPNetwork:
 
-    def __init__(self):
+class TCPNetwork(Network):
+
+    def initialize(self):
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
         self.hostname = hostname

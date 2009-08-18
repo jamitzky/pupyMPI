@@ -8,7 +8,7 @@ from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.tcp import TCPNetwork as Network
 
-class MPI:
+class MPI(threading.Thread):
     """
     This is the main class that contains most of the public API. Initializing 
     the MPI system is done by creating an instance of this class. Through a
@@ -20,7 +20,8 @@ class MPI:
     pattern. 
     """
 
-    def __init__(self):
+    @classmethod
+    def initialize(cls):
         """
         Initializes the MPI environment. This process will give each process 
         the rank and size in the MPI_COMM_WORLD communicator. This includes the
@@ -47,35 +48,40 @@ class MPI:
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
 
         options, args = parser.parse_args()
+    
+        mpi = MPI()
+        mpi.start()
+        mpi.startup(options, args)
+        return mpi
 
+    def run(self):
+        print "Fucking fuck"
+
+    def startup(self, options, args):
+        print "Staring the MPI thread"
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
-        #Trying threading
-        #from mpi.tcp import ThreadTCPNetwork as ThreadNetwork
-        #logger.debug("trying to start network")
-        #self.network = ThreadNetwork().start()
 
-        from mpi.tcp import TCPNetwork as Network
         logger.debug("trying to start network")
         self.network = Network()
+        self.network.run()
         logger.debug("Network started")
 
         all_procs = self.network.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         self.MPI_COMM_WORLD.build_world( all_procs )
         logger.debug("Communicator started")
 
-        import sys
         user_options =[sys.argv[0], ] 
         user_options.append(sys.argv[sys.argv.index("--")+1:])
 
         sys.argv = user_options
 
         # Set a static attribute on the class so we know it's initialised.
-        self.__class__._initialized = True
+        self.__class__.initialized = True
         logger.debug("Set the MPI environment to initialised")
 
     def finalize(self):
