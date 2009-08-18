@@ -53,13 +53,14 @@ class MPI:
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
-        
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
-        ##Trying threading
-        #from mpi.tcp import ThreadTCPNetwork as Network
+        #Trying threading
+        #from mpi.tcp import ThreadTCPNetwork as ThreadNetwork
         #logger.debug("trying to start network")
-        #self.network = Network().start()
+        #self.network = ThreadNetwork().start()
 
+        from mpi.tcp import TCPNetwork as Network
+        logger.debug("trying to start network")
         self.network = Network()
         logger.debug("Network started")
 
