@@ -28,6 +28,19 @@ class Communicator:
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
 
+    def update(self):
+        """
+        This method is responsible for listening on the TCP layer, receive
+        information on network requests and update the internal Requests 
+        objects that live in the request_queue.
+
+        FIXME: We need to have access to the network layer and receive all
+        the finished tasks for this communicator. We can then update the 
+        request status.
+        """
+        Logger().debug("Update by the mpi thread")
+        pass
+
     def have_rank(self, rank):
         return rank in self.members
     
