@@ -64,7 +64,8 @@ class Communicator:
     # deliberately skipped:
     # 
     # due to having to do with data types or memory management:
-    # mpi_address
+    # mpi_address,
+    # mpi_buffer_attach, mpi_buffer_detach
     #
     # due to making no sense in a python environment:
     # bsend, ibsend
@@ -206,3 +207,13 @@ class Communicator:
         """
     
         Logger().warn("Non-Implemented method 'bcast' called.")
+        
+    # FIXME Defer/discuss whether to implement these
+    def probe(self, arg):
+        # TODO Document
+        pass
+    def iprobe(self, arg):
+        # TODO Document
+        pass
+
+    
