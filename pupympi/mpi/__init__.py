@@ -1,8 +1,9 @@
 __version__ = 0.01
 
+
 from optparse import OptionParser, OptionGroup
 import threading
-import sys, getopt
+import sys, getopt, time
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -131,3 +132,43 @@ class MPI(threading.Thread):
         be down the wrong track. Don't write ugly code. 
         """
         return getattr(cls, '_initialized', False)
+        
+    #### Communicator creation, deletion
+    def comm_create(self, arg):
+        """
+        This function creates a new communicator newcomm with communication group defined by group and a new context. No cached information propagates from comm to newcomm. The function returns MPI_COMM_NULL (None) to processes that are not in group. The call is erroneous if not all group arguments have the same value, or if group is not a subset of the group associated with comm. Note that the call is to be executed by all processes in comm, even if they do not belong to the new group. This call applies only to intra-communicators. 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node102.html
+        """
+        Logger().warn("Non-Implemented method 'comm_create' called.")
+
+    def comm_free(self, existing_communicator):
+        """
+        This collective operation marks the communication object for deallocation. The handle is set to MPI_COMM_NULL. Any pending operations that use this communicator will complete normally; the object is actually deallocated only if there are no other active references to it. This call applies to intra- and inter-communicators. The delete callback functions for all cached attributes (see section Caching ) are called in arbitrary order.
+    
+        http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
+        """
+        Logger().warn("Non-Implemented method 'comm_free' called.")
+
+
+    def comm_split(self, existing_communicator, color = None, key = None):
+        """
+        FIXME
+        """
+        Logger().warn("Non-Implemented method 'comm_split' called.")
+
+    def comm_dup(self, todo_args_missing):
+        """
+        FIXME
+        """
+        Logger().warn("Non-Implemented method 'comm_split' called.")
+        
+    def comm_compare(self, communicator1, communicator2):
+        """
+        MPI_IDENT results if and only if comm1 and comm2 are handles for the same object (identical groups and same contexts). MPI_CONGRUENT results if the underlying groups are identical in constituents and rank order; these communicators differ only by context. MPI_SIMILAR results if the group members of both communicators are the same but the rank order differs. MPI_UNEQUAL results otherwise. 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
+        """
+        Logger().warn("Non-Implemented method 'comm_compare' called.")
+        
+        pass
