@@ -2,11 +2,10 @@
 
 # Simple pupympi program to test startup of processes and assigning/reporting of ranks
 
-import mpi
 from sys import stderr
+from mpi import MPI
 
-
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 

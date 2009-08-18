@@ -4,9 +4,10 @@
 
 # first rank 0 isends timestamp to rank 1 who is a very slow reciever so rank 0 should quit early
 
-import mpi, time
+import time
+from mpi import MPI
 
-mpi = mpi.MPI()
+mpi = MPI.initialize()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
