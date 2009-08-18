@@ -67,8 +67,10 @@ class MPI(threading.Thread):
                     break
 
             # Continue with the stuff
-            print "In the main true loop"
-            break
+            for comm in self.communicators:
+                comm.update()
+
+            time.sleep(1)
 
     def startup(self, options, args): # {{{1
         print "Staring the MPI thread"
@@ -78,6 +80,8 @@ class MPI(threading.Thread):
 
         logger.debug("Finished all the runtime arguments")
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
+        self.communicators = []
+        self.communicators.append( self.MPI_COMM_WORLD )
 
         logger.debug("trying to start network")
         self.network = Network()
