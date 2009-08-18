@@ -25,7 +25,7 @@ TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take.
 LOG_VERBOSITY = 3
 
 class RunTest(Thread):
-    cmd = "python bin/mpirun.py -q -c RUN_COUNT -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "python2.6 bin/mpirun.py -q -c RUN_COUNT -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     def __init__(self, test, primary_log):
         Thread.__init__(self)
         self.test = test
