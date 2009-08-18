@@ -63,8 +63,12 @@ class Communicator:
     
     # deliberately skipped:
     # 
-    # due to having to do with data types or memory management
+    # due to having to do with data types or memory management:
     # mpi_address
+    #
+    # due to making no sense in a python environment:
+    # bsend, ibsend
+    # rsend, irsend
     #
 
     # Some wrapper methods
@@ -143,21 +147,20 @@ class Communicator:
 
     def allreduce(self, sendbuf, recvbuf, count, op):
         """
-        Same as MPI REDUCE except that the result appears in the receive buﬀer of all the group members.
-        
-        http://www.mpi-forum.org/docs/mpi-11-html/node82.html
-        
+        Same as MPI_REDUCE except that the result appears in the receive buffer of all the group members.
+
+        http://www.mpi-forum.org/docs/mpi-11-html/node82.html        
         Examples: http://mpi.deino.net/mpi_functions/MPI_Allreduce.html
         """
         Logger().warn("Non-Implemented method 'allreduce' called.")
         
     def alltoall(self, sendbuf, sendcount, recvbuf, recvcount):
         """
-        IN sendbuf starting address of send buﬀer (choice) 
+        IN sendbuf starting address of send buffer (choice) 
         IN sendcount number of elements sent to each process (integer) 
         IN recvcount number of elements received from any process (integer) 
         IN comm communicator (handle) 
-        OUT recvbuf address of receive buﬀer (choice) 
+        OUT recvbuf address of receive buffer (choice) 
         
         MPI ALLTOALL is an extension of MPI ALLGATHER to the case where each process 
         sends distinct data to each of the receivers. The jth block sent from process i is received 
@@ -171,23 +174,35 @@ class Communicator:
         
     def alltoallv(self, sendbuf, sendcount, sdispls, recvbuf, recvcount, rdispls):
         """
-        IN sendbuf starting address of send buﬀer (choice) 
-        IN sendcounts integer array equal to the group size specifying the 
-        number of elements to send to each processor 
-        IN sdispls integer array (of length group size). Entry j speciﬁes 
-        the displacement (relative to sendbuf from which to 
-        take the outgoing data destined for process j 
-        IN sendtype data type of send buﬀer elements (handle) 
-        OUT recvbuf address of receive buﬀer (choice) 
-        IN recvcounts integer array equal to the group size specifying the 
-        number of elements that can be received from each 
-        processor 
-        IN rdispls integer array (of length group size). Entry i speciﬁes 
-        the displacement (relative to recvbuf at which to place 
-        the incoming data from process i 
+        IN sendbuf starting address of send buffer (choice) 
+        IN sendcounts integer array equal to the group size specifying the number of elements to send to each processor 
+        IN sdispls integer array (of length group size). Entry j specifies the displacement (relative to sendbuf from which to take the outgoing data destined for process j 
+        IN sendtype data type of send buffer elements (handle) 
+        OUT recvbuf address of receive buffer (choice) 
+        IN recvcounts integer array equal to the group size specifying the number of elements that can be received from each processor 
+        IN rdispls integer array (of length group size). Entry i specifies the displacement (relative to recvbuf at which to place the incoming data from process i) 
+        
+        MPI_ALLTOALLV adds flexibility to MPI_ALLTOALL in that the location of data for the send is specified by sdispls
+        and the location of the placement of the data on the receive side is specified by rdispls. 
         
         http://www.mpi-forum.org/docs/mpi-11-html/node75.html    
         """
         
         Logger().warn("Non-Implemented method 'alltoallv' called.")
         
+    def bcast(self, buffer, count, root):
+        """
+        INOUT buffer starting address of buffer (choice) 
+        IN count number of entries in buffer (integer) 
+        IN datatype data type of buffer (handle) 
+        IN root rank of broadcast root (integer) 
+        IN comm communicator (handle) 
+
+        MPI BCAST broadcasts a message from the process with rank root to all processes of 
+        the group, itself included. It is called by all members of group using the same arguments 
+        or comm, root. On return, the contents of root's communication buffer has been copied to all processes. 
+
+        http://www.mpi-forum.org/docs/mpi-11-html/node67.html
+        """
+    
+        Logger().warn("Non-Implemented method 'bcast' called.")
