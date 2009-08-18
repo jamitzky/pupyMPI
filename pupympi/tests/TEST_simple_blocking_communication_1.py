@@ -20,11 +20,11 @@ content = "Message from rank %d" % (rank)
 if rank == 0:
     # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
-    mpi.send(neighbour,content,"Dummy tag here")
+    mpi.MPI_COMM_WORLD.send(neighbour,content,"Dummy tag here")
 
     # Recieve
     print "Rank: %d recieving from %d" % (rank,neighbour)
-    recieved = mpi.recv(neighbour,"Dummy tag here")    
+    recieved = mpi.MPI_COMM_WORLD.recv(neighbour,"Dummy tag here")    
     print "Rank: %d recieved %s" % (rank,recieved)
     
 else: # rank == 1

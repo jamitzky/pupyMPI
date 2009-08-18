@@ -57,42 +57,42 @@ class Communicator:
         self.attr[key] = value   
         
 
-     ################################################################################################################
-     # NETWORK OPERATIONS
-     ################################################################################################################
+    ################################################################################################################
+    # NETWORK OPERATIONS
+    ################################################################################################################
 
-     # Some wrapper methods
-     def isend(self, destination, content, tag):
-         """
-         document me
-         """
-         return self.network.isend(destination, content, tag, self)
+    # Some wrapper methods
+    def isend(self, destination, content, tag):
+     """
+     document me
+     """
+     return self.network.isend(destination, content, tag, self)
 
-     def send(self, destination, content, tag):
-         """
-         document me
-         """
-         request = self.isend(destination, content, tag, self)
-         return request.wait()
+    def send(self, destination, content, tag):
+     """
+     document me
+     """
+     request = self.isend(destination, content, tag, self)
+     return request.wait()
 
-     def barrier(self):
-         """
-         document me
-         """
-         Logger().warn("Non-Implemented method 'Barrier' called.")
-         return self.network.barrier(self)
+    def barrier(self):
+     """
+     document me
+     """
+     Logger().warn("Non-Implemented method 'Barrier' called.")
+     return self.network.barrier(self)
 
-     def recv(self, destination, tag):
-         """
-         document me
-         """
-         request = self.irecv(destination, tag, self)
-         return request.wait()
+    def recv(self, destination, tag):
+     """
+     document me
+     """
+     request = self.irecv(destination, tag, self)
+     return request.wait()
 
-     def irecv(self, destination, tag):
-         """
-         document me
-         """
-         comm = self._ensure_comm(comm)
-         return self.network.irecv(destination, tag, self)
-    
+    def irecv(self, destination, tag):
+     """
+     document me
+     """
+     comm = self._ensure_comm(comm)
+     return self.network.irecv(destination, tag, self)
+
