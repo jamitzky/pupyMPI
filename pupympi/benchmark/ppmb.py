@@ -13,6 +13,7 @@ import sys
 import getopt
 import mpi
 
+import common as c_info
 import common
 import single
 import collective
@@ -32,6 +33,10 @@ def runsingletest(test):
     return results
 
 def testrunner():
+    mpi = MPI()
+    c_info.mpi = mpi
+    c_info.communicator = mpi.MPI_COMM_WORLD
+    
     # TODO generalize for several modules.
     testlist = [c for c in dir(single) if c.startswith("test_")] 
     resultlist = {}

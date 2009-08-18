@@ -11,6 +11,7 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 from common import gen_testset, gen_reductionset
  
+mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
 w_rank = None               # rank of actual process in COMM_WORLD      
 
