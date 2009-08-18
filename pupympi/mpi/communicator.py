@@ -4,6 +4,9 @@ from mpi.logger import Logger
 import threading
 
 class Communicator:
+    """
+    This class represents a communicator.
+    """
     def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
         self._rank = rank
         self._size = size

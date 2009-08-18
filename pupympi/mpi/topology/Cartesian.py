@@ -44,9 +44,8 @@ class dummycomm():
     def __repr__(self):
         return "dummycomm"
     
-    
-        
-
+    def rank(self):
+        return 0
             
 
 class Cartesian(BaseTopology):
@@ -68,8 +67,9 @@ class Cartesian(BaseTopology):
             raise MPITopologyException("No existing communicator given")
         if 0 in dims:
             raise MPITopologyException("All extants must be at least 1 wide")
+        if rank_reordering:
+            raise MPITopologyException("Rank reordering not supported in this release.")
 
-        # SOLVED  Extend periodic to be same length as dims, use consistent approach to mismatched lists, or disallow althogether
         if len(periodic) < len(dims):
             periodic.extend([False] * (len(dims) - len(periodic)))
             
@@ -85,12 +85,12 @@ class Cartesian(BaseTopology):
 
     def _normalize(self, coords):
         """Normalizes potentially periodic grid coordinates to fit within the grid, if possible, otherwise raise error."""
-        retcords = [c % g if p and c is not g else c for c, g, p in zip(coords, self.dims, self.periodic)]
-        # FIXME just do the whole without list comprehensions?
-        for checkcoords, dims in zip(retcords, self.dims):
+        normcoords = [c % g if p and c is not g else c for c, g, p in zip(coords, self.dims, self.periodic)]
+        # TODO just do the whole without list comprehensions?
+        for checkcoords, dims in zip(normcoords, self.dims):
             if checkcoords > dims:
                 raise MPITopologyException("Grid dimensions overflow")
-        return retcords
+        return normcoords
         
     # MPI Cartesian functions
     def MPI_Topo_test():
@@ -98,7 +98,10 @@ class Cartesian(BaseTopology):
         return MPI_CARTESIAN
                 
     def get(self, rank):
-        """Get my grid coordinates based on my rank"""
+        """
+        Get my grid coordinates based on my rank
+        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        """
         if self.communicator.size <= rank:
             raise MPITopologyException("Rank given exceeds size of communicator")
         
@@ -114,7 +117,10 @@ class Cartesian(BaseTopology):
         return coords
         
     def rank(self, coords):
-        """Get my 1D rank from grid coordinates"""
+        """
+        Get my 1D rank from grid coordinates
+        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        """
         if len(coords) is not len(self.dims):
             raise MPITopologyException("Dimensions given must match those of this topology.")
             
@@ -141,6 +147,23 @@ class Cartesian(BaseTopology):
             raise MPITopologyException("Shift exceeded grid boundaries")
         
         return rank_target        
+    
+    def map(self):
+        """
+        MPI_CART_MAP computes an ``optimal'' placement for the calling process on the physical machine. A possible implementation of this function is to always return the rank of the calling process, that is, not to perform any reordering. 
+        
+        This implementation does just that, as mapping to physical hardware is not supported.
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node139.html
+        """
+        return self.communicator.rank()
+        
+    def coords(self):
+        """
+        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        """
+        # FIXME: Implement
+        raise MPITopologyException("Not implemented")
 
 # convience and "statics"
 def _writeDimStr(dim, periodic):
@@ -385,6 +408,12 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, 40)
         result = t.shift(0, 1024, 45)
         self.assertEqual(result, 19)
+        
+    def testMap(self):
+        c = dummycomm(10)
+        t = Cartesian(c, [10, 10, 10])
+        result = t.map()
+        self.assertEqual(result, 0)
     
 
     def test__repr__(self):
