@@ -45,7 +45,7 @@ def popen(host, arguments):
 
     if _islocal(host):
         print str(arguments)
-        p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_env()
+        p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_env())
         process_list.append(p)
         return p
     else:
