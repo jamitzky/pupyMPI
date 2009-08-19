@@ -25,6 +25,9 @@ def popenssh(host, arguments):
     
 process_list = []
 
+def build_env():
+    return {"PATH": "/opt/local/bin/"}
+
 def ssh(host, arguments):
     global remote_list
     logger = Logger()
@@ -32,7 +35,7 @@ def ssh(host, arguments):
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
     logger.debug("Exec: %s" % (' '.join(sshexec)))
-    p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_env())
     process_list.append(p)
     return p
     
@@ -42,7 +45,7 @@ def popen(host, arguments):
 
     if _islocal(host):
         print str(arguments)
-        p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_env()
         process_list.append(p)
         return p
     else:
