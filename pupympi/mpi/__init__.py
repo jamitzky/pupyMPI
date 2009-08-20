@@ -112,7 +112,7 @@ class MPI(threading.Thread):
         sys.argv = user_options
 
         # Set a static attribute on the class so we know it's initialised.
-        self.__class__.initialized = True
+        self.__class__._initialized = True
         logger.debug("Set the MPI environment to initialised")
     # }}}1
 
@@ -139,7 +139,7 @@ class MPI(threading.Thread):
             from mpi import MPI
 
             status = MPI.initialized()  # status will be False
-            mpi = MPI()
+            mpi = MPI.initialize()
 
             status = MPI.initialized()  # status will now be True
 

@@ -180,4 +180,5 @@ if __name__ == "__main__":
     shutdown_lock.release()
 
     t.join()
+    logger.debug("IO forward thread joined")
 

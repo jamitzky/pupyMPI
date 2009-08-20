@@ -11,3 +11,4 @@ assert MPI.initialized(), "The mpi environment was not initialized after startin
 
 # Close the sockets down nicely
 mpi.finalize()
+
