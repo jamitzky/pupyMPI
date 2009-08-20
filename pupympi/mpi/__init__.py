@@ -6,8 +6,19 @@ import threading
 import sys, getopt, time
 
 from mpi.communicator import Communicator
+from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.tcp import TCPNetwork as Network
+
+def flush_all():
+    logger = Logger()
+
+    for input in (sys.stdout, sys.stderr):
+        try:
+            input.flush()
+            logger.debug("%s flushed" % input.name)
+        except ValueError():
+            logger.debug("Error in flushing %s" % input.name)
 
 class MPI(threading.Thread):
     """
@@ -58,14 +69,11 @@ class MPI(threading.Thread):
 
     def run(self):
         self.shutdown_lock = threading.Lock()
-        self.is_shutting_down = False
 
         # This can be moved out of there
         while True:
-            self.shutdown_lock.acquire()
-            if self.is_shutting_down:
+            if not self.shutdown_lock.acquire(False):
                 print "Breaking"
-                self.shutdown_lock.release()
                 break
             self.shutdown_lock.release()
 
@@ -74,8 +82,7 @@ class MPI(threading.Thread):
                 comm.update()
             
             # Trying to flush pipes
-            sys.stdout.flush()
-            sys.stderr.flush()
+            flush_all()
 
             time.sleep(1)
 
@@ -117,10 +124,11 @@ class MPI(threading.Thread):
         FIXME: Should be manully try to kill some threads?
         """
         self.shutdown_lock.acquire()
-        self.is_shutting_down = True
-        self.shutdown_lock.release()
         self.network.finalize()
         Logger().debug("Network finalized")
+
+        # Trying to flush pipes
+        flush_all()
 
     @classmethod
     def initialized(cls):
