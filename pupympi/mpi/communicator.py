@@ -135,7 +135,7 @@ class Communicator:
         document me
         """
         Logger().warn("Non-Implemented method 'Barrier' called.")
-        return self.network.barrier(self)
+        # FIXME: Insert something on the request queue
 
     def recv(self, destination, tag):
         """
