@@ -56,7 +56,9 @@ def io_forwarder(list):
     pipes.extend( [p.stdout for p in process_list] )
     pipes = filter(lambda x: x is not None, pipes)
 
-    while pipes:
+    logger.debug("Starting the IO forwarder")
+
+    while True:
         readlist, _, _ =  select.select(pipes, [], [], 0.5)
 
         for fh in readlist:
@@ -65,9 +67,14 @@ def io_forwarder(list):
                 print >> sys.stdout, line.strip()
     
         if shutdown_lock.acquire(False):
+            logger.debug("IO forwarder got the lock!.. breaking")
+            shutdown_lock.release()
             break
+        else:
+            logger.debug("IO forwarder could not get the lock")
 
         time.sleep(1)
+    logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
     options, args, user_options = parse_options()
@@ -161,5 +168,7 @@ if __name__ == "__main__":
     # Check status on all children
     wait_for_shutdown(process_list)
     shutdown_lock.release()
+
+    t.join()
     print "Done"
 
