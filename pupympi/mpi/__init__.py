@@ -62,18 +62,18 @@ class MPI(threading.Thread):
         options, args = parser.parse_args()
     
         mpi = MPI()
+        mpi.shutdown_lock = threading.Lock()
         mpi.startup(options, args)
         mpi.start()
         return mpi
     # }}}1
 
     def run(self):
-        self.shutdown_lock = threading.Lock()
-
         # This can be moved out of there
         while True:
             if not self.shutdown_lock.acquire(False):
                 print "Breaking"
+                self.shutdown_lock.release()
                 break
             self.shutdown_lock.release()
 
