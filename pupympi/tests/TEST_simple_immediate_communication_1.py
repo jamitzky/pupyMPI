@@ -27,7 +27,7 @@ if rank == 0:
     
 else: # rank == 1
     # Waaaaait for it...
-    time.sleep(7)
+    time.sleep(4)
     
     # Recieve
     print "Yawn, rank: %d recieving from %d" % (rank,neighbour)
