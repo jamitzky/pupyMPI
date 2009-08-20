@@ -102,13 +102,9 @@ def io_forwarder(list):
                 print_fh(p.stderr)
                 print_fh(p.stdout)
 
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/bin/mpirun.py
         pipes = get_list(list)
-=======
-            pipes = get_list(list)
     
     logger.debug("IO gather loop DONE DEAD")
->>>>>>> /tmp/mpirun.py~other.e8tuj9
 
 if __name__ == "__main__":
     options, args, user_options = parse_options()
