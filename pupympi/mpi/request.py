@@ -10,7 +10,7 @@ class Request:
         self.communicator = communicator
         self.participant = participant
         self.tag = tag
-        sef.data = data
+        self.data = data
 
     def cancel(self):
         """

@@ -2,6 +2,7 @@
 from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
 import threading
+from mpi.request import Request
 
 class Communicator:
     """
@@ -67,7 +68,7 @@ class Communicator:
 
     def irecv(self, sender, tag):
         # Check the destination exists
-        if not comm.have_rank(sender):
+        if not self.have_rank(sender):
             error_str = "No process with rank %d in communicator %s. " % (sender, self.name)
             raise MPIBadAddressException(error_str)
 
@@ -81,17 +82,22 @@ class Communicator:
         return handle
 
     def isend(self, destination_rank, content, tag):
+        logger = Logger()
         # Check the destination exists
-        if not comm.have_rank(destination_rank):
+        if not self.have_rank(destination_rank):
             raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
 
         # Create a receive request object and return
         handle = Request("send", self, destination_rank, tag, data=content)
+        logger.debug("isend: RequestObject created")
 
         # Add to the queue
         self.request_queue_lock.acquire()
+        logger.debug("isend: Queue acquired")
         self.request_queue.append(handle)
+        logger.debug("isend: Queue altered")
         self.request_queue_lock.release()
+        logger.debug("isend: Queue released")
 
         return handle
 
@@ -128,7 +134,7 @@ class Communicator:
         """
         document me
         """
-        return self.isend(destination, content, tag, self).wait()
+        return self.isend(destination, content, tag).wait()
 
     def barrier(self):
         """
@@ -141,7 +147,7 @@ class Communicator:
         """
         document me
         """
-        return self.irecv(destination, tag, self).wait()
+        return self.irecv(destination, tag).wait()
 
     def abort(self, arg):
         """
