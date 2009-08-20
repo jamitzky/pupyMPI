@@ -62,15 +62,16 @@ class MPI(threading.Thread):
 
         # This can be moved out of there
         while True:
-            with self.shutdown_lock:
-                if self.is_shutting_down:
-                    print "Breaking"
-                    break
+            self.shutdown_lock.acquire()
+            if self.is_shutting_down:
+                print "Breaking"
+                self.shutdown_lock.release()
+                break
+            self.shutdown_lock.release()
 
             # Continue with the stuff
             for comm in self.communicators:
                 comm.update()
-
             time.sleep(1)
 
     def startup(self, options, args): # {{{1
@@ -110,8 +111,9 @@ class MPI(threading.Thread):
 
         FIXME: Should be manully try to kill some threads?
         """
-        with self.shutdown_lock:
-            self.is_shutting_down = True
+        self.shutdown_lock.acquire()
+        self.is_shutting_down = True
+        self.shutdown_lock.release()
         self.network.finalize()
         Logger().debug("Network finalized")
 

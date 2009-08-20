@@ -75,9 +75,9 @@ class Communicator:
         handle = Request("receive", self, sender, tag)
 
         # Add to the queue
-        with self.request_queue_lock:
-            self.request_queue.append(handle)
-
+        self.request_queue_lock.acquire()
+        self.request_queue.append(handle)
+        self.request_queue_lock.release()
         return handle
 
     def isend(self, destination_rank, content, tag):
@@ -89,8 +89,9 @@ class Communicator:
         handle = Request("send", self, destination_rank, tag, data=content)
 
         # Add to the queue
-        with self.request_queue_lock:
-            self.request_queue.append(handle)
+        self.request_queue_lock.acquire()
+        self.request_queue.append(handle)
+        self.request_queue_lock.release()
 
         return handle
 

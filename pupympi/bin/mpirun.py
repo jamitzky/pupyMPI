@@ -57,15 +57,18 @@ def io_forwarder(list):
     pipes = filter(lambda x: x is not None, pipes)
 
     while pipes:
-        readlist, _, _ =  select.select(pipes, [], [], 1.0)
+        readlist, _, _ =  select.select(pipes, [], [], 0.5)
 
         for fh in readlist:
             content = fh.readlines()
             for line in content:
-                print >> sys.stdout, content
+                print >> sys.stdout, line.strip()
+    
+        if shutdown_lock.acquire(False):
+            break
 
         time.sleep(1)
-        
+
 if __name__ == "__main__":
     options, args, user_options = parse_options()
     executeable = args[0]
@@ -100,7 +103,7 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), executeable)
         
-        run_options = ["python2.6", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+        run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
@@ -124,6 +127,8 @@ if __name__ == "__main__":
         logger.debug("Process with rank %d started" % rank)
 
     # Start a thread to handle io forwarding
+    shutdown_lock = threading.Lock()
+    shutdown_lock.acquire()
     t = threading.Thread(target=io_forwarder, args=(process_list,))
     t.start()
         
@@ -154,5 +159,7 @@ if __name__ == "__main__":
     s.close()
     
     # Check status on all children
-    shutdown()
+    wait_for_shutdown(process_list)
+    shutdown_lock.release()
+    print "Done"
 

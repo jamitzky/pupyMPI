@@ -7,7 +7,7 @@ Created by Jan Wiberg on 2009-08-06.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-import sys, os, subprocess, select
+import sys, os, subprocess, select, time
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 
