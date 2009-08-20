@@ -128,6 +128,12 @@ class Communicator:
     # 
     # due to having to do with error handling: 
     # mpi_error_*
+    # 
+    # due to user defined functions:
+    # mpi_op_create/free
+    # 
+    # due to being about inter communicators:
+    # mpi_comm_remote_group/size, mpi_intercomm_create/merge
 
     # Some wrapper methods
     def send(self, destination, content, tag):
@@ -251,11 +257,10 @@ class Communicator:
     
         Logger().warn("Non-Implemented method 'bcast' called.")
         
-    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, root):
+    def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """
-        Each process (root process included) sends the contents of its send buﬀer to the root 
+        Each process (root process included) sends the contents of its send buffer to the root 
         process. The root process receives the messages and stores them in rank order. 
-         
         
         IN sendbuf starting address of send buffer (choice) 
         IN sendcount number of elements in send buffer (integer) 
@@ -266,6 +271,28 @@ class Communicator:
         IN root rank of receiving process (integer) 
         IN comm communicator (handle) 
         
+        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        """
+        Logger().warn("Non-Implemented method 'gather' called.")
+        
+    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, displs, root):
+        """
+        MPI GATHERV extends the functionality of MPI GATHER by allowing a varying count 
+        of data from each process, since recvcounts is now an array. It also allows more flexibility 
+        as to where the data is placed on the root, by providing the new argument, displs. 
+
+        IN sendbuf starting address of send buffer (choice) 
+        IN sendcount number of elements in send buffer (integer) 
+        IN sendtype data type of send buffer elements (handle) 
+        OUT recvbuf address of receive buffer (choice, significant only at root) 
+        IN recvcount number of elements for any single receive (integer, significant only at root) 
+        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
+        IN displs integer array (of length group size). Entry i specifies the displacement relative to recvbuf at which to place 
+        the incoming data from process i (significant only at root) 
+        
+        IN root rank of receiving process (integer) 
+        IN comm communicator (handle) 
+
         http://www.mpi-forum.org/docs/mpi-11-html/node69.html
         """
         Logger().warn("Non-Implemented method 'gatherv' called.")
