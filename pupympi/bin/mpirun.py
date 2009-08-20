@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python2.5
 import sys, os, socket
 from optparse import OptionParser, OptionGroup
 import select, time

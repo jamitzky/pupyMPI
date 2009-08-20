@@ -251,6 +251,25 @@ class Communicator:
     
         Logger().warn("Non-Implemented method 'bcast' called.")
         
+    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, root):
+        """
+        Each process (root process included) sends the contents of its send buﬀer to the root 
+        process. The root process receives the messages and stores them in rank order. 
+         
+        
+        IN sendbuf starting address of send buffer (choice) 
+        IN sendcount number of elements in send buffer (integer) 
+        IN sendtype data type of send buffer elements (handle) 
+        OUT recvbuf address of receive buffer (choice, significant only at root) 
+        IN recvcount number of elements for any single receive (integer, significant only at root) 
+        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
+        IN root rank of receiving process (integer) 
+        IN comm communicator (handle) 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        """
+        Logger().warn("Non-Implemented method 'gatherv' called.")
+        
     # FIXME Defer/discuss whether to implement these (probes for incoming receives)
     def probe(self, arg):
         # TODO Document
