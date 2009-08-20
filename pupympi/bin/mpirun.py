@@ -60,10 +60,7 @@ def io_forwarder(list):
         readlist, _, _ =  select.select(pipes, [], [], 1.0)
 
         for fh in readlist:
-            content = fh.readlines()
-            for line in content:
-                print >> sys.stdout, content
-
+            print_fh(fh)
         time.sleep(1)
         
 if __name__ == "__main__":
