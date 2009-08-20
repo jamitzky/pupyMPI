@@ -121,6 +121,7 @@ class Communicator:
     # due to having to do with data types or memory management:
     # mpi_address,
     # mpi_buffer_attach, mpi_buffer_detach
+    # pack, pack_size
     #
     # due to making no sense in a python environment:
     # bsend, ibsend
@@ -134,6 +135,23 @@ class Communicator:
     # 
     # due to being about inter communicators:
     # mpi_comm_remote_group/size, mpi_intercomm_create/merge
+    #
+    # due to being related to profiling:
+    # mpi_pcontrol
+    # 
+    # other stuff, related to requests that may get done:
+    # MPI TEST, 43 
+    # MPI TEST CANCELLED, 55 
+    # MPI TESTALL, 48 
+    # MPI TESTANY, 47 
+    # MPI TESTSOME, 50 
+    # MPI TOPO TEST, 184 
+    # MPI WAIT, 42 
+    # MPI WAITALL, 48 
+    # MPI WAITANY, 46 
+    # MPI WAITSOME, 49 
+    # MPI WTICK, 201 
+
 
     # Some wrapper methods
     def send(self, destination, content, tag):
@@ -303,6 +321,39 @@ class Communicator:
         pass
     def iprobe(self, arg):
         # TODO Document
+        pass
+        
+    def reduce(self, arg):
+        # FIXME
+        pass
+    
+    def reduce_scatter(self, arg):
+        # FIXME
+        pass
+        
+    def scan(self, arg):
+        # FIXME
+        pass
+        
+    def scatter(self, arg):
+        # FIXME
+        pass
+        
+    def scatterv(self, arg):
+        # FIXME
+        pass
+    
+    def start(self, arg):
+        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
+        # FIXME        
+        pass
+    
+    def startall(self, arg):
+        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
+        # FIXME        
+        pass
+        
+    def mname(self, arg):
         pass
 
     ################################################################################################################
