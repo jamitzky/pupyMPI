@@ -72,6 +72,11 @@ class MPI(threading.Thread):
             # Continue with the stuff
             for comm in self.communicators:
                 comm.update()
+            
+            # Trying to flush pipes
+            sys.stdout.flush()
+            sys.stderr.flush()
+
             time.sleep(1)
 
     def startup(self, options, args): # {{{1
