@@ -52,8 +52,8 @@ def parse_options():
 def io_forwarder(list):
     logger = Logger()
 
-    pipes = [p.stderr for p in process_list]
-    pipes.extend( [p.stdout for p in process_list] )
+    pipes = [p.stderr for p in list]
+    pipes.extend( [p.stdout for p in list] )
     pipes = filter(lambda x: x is not None, pipes)
 
     logger.debug("Starting the IO forwarder")
@@ -74,6 +74,16 @@ def io_forwarder(list):
             logger.debug("IO forwarder could not get the lock")
 
         time.sleep(1)
+
+    # Go through the pipes manuall to see if there is anything
+    for pipe in pipes:
+        while True:
+            line = pipe.read()
+            if line:
+                print line
+            else:
+                break
+
     logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
@@ -170,5 +180,4 @@ if __name__ == "__main__":
     shutdown_lock.release()
 
     t.join()
-    print "Done"
 

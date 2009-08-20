@@ -12,7 +12,5 @@ size = mpi.MPI_COMM_WORLD.size()
 
 print "Started process process %d / %d" % (rank, size)
 
-time.sleep(7)
-
 # Close the sockets down nicely
 mpi.finalize()
