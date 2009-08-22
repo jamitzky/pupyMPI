@@ -121,6 +121,7 @@ class Communicator:
     # due to having to do with data types or memory management:
     # mpi_address,
     # mpi_buffer_attach, mpi_buffer_detach
+    # pack, pack_size
     #
     # due to making no sense in a python environment:
     # bsend, ibsend
@@ -128,6 +129,29 @@ class Communicator:
     # 
     # due to having to do with error handling: 
     # mpi_error_*
+    # 
+    # due to user defined functions:
+    # mpi_op_create/free
+    # 
+    # due to being about inter communicators:
+    # mpi_comm_remote_group/size, mpi_intercomm_create/merge
+    #
+    # due to being related to profiling:
+    # mpi_pcontrol
+    # 
+    # other stuff, related to requests that may get done:
+    # MPI TEST, 43 
+    # MPI TEST CANCELLED, 55 
+    # MPI TESTALL, 48 
+    # MPI TESTANY, 47 
+    # MPI TESTSOME, 50 
+    # MPI TOPO TEST, 184 
+    # MPI WAIT, 42 
+    # MPI WAITALL, 48 
+    # MPI WAITANY, 46 
+    # MPI WAITSOME, 49 
+    # MPI WTICK, 201 
+
 
     # Some wrapper methods
     def send(self, destination, content, tag):
@@ -251,12 +275,85 @@ class Communicator:
     
         Logger().warn("Non-Implemented method 'bcast' called.")
         
+    def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
+        """
+        Each process (root process included) sends the contents of its send buffer to the root 
+        process. The root process receives the messages and stores them in rank order. 
+        
+        IN sendbuf starting address of send buffer (choice) 
+        IN sendcount number of elements in send buffer (integer) 
+        IN sendtype data type of send buffer elements (handle) 
+        OUT recvbuf address of receive buffer (choice, significant only at root) 
+        IN recvcount number of elements for any single receive (integer, significant only at root) 
+        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
+        IN root rank of receiving process (integer) 
+        IN comm communicator (handle) 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        """
+        Logger().warn("Non-Implemented method 'gather' called.")
+        
+    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, displs, root):
+        """
+        MPI GATHERV extends the functionality of MPI GATHER by allowing a varying count 
+        of data from each process, since recvcounts is now an array. It also allows more flexibility 
+        as to where the data is placed on the root, by providing the new argument, displs. 
+
+        IN sendbuf starting address of send buffer (choice) 
+        IN sendcount number of elements in send buffer (integer) 
+        IN sendtype data type of send buffer elements (handle) 
+        OUT recvbuf address of receive buffer (choice, significant only at root) 
+        IN recvcount number of elements for any single receive (integer, significant only at root) 
+        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
+        IN displs integer array (of length group size). Entry i specifies the displacement relative to recvbuf at which to place 
+        the incoming data from process i (significant only at root) 
+        
+        IN root rank of receiving process (integer) 
+        IN comm communicator (handle) 
+
+        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        """
+        Logger().warn("Non-Implemented method 'gatherv' called.")
+        
     # FIXME Defer/discuss whether to implement these (probes for incoming receives)
     def probe(self, arg):
         # TODO Document
         pass
     def iprobe(self, arg):
         # TODO Document
+        pass
+        
+    def reduce(self, arg):
+        # FIXME
+        pass
+    
+    def reduce_scatter(self, arg):
+        # FIXME
+        pass
+        
+    def scan(self, arg):
+        # FIXME
+        pass
+        
+    def scatter(self, arg):
+        # FIXME
+        pass
+        
+    def scatterv(self, arg):
+        # FIXME
+        pass
+    
+    def start(self, arg):
+        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
+        # FIXME        
+        pass
+    
+    def startall(self, arg):
+        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
+        # FIXME        
+        pass
+        
+    def mname(self, arg):
         pass
 
     ################################################################################################################
