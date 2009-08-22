@@ -78,7 +78,7 @@ class Communicator:
                 # the future
                 self.request_queue.remove( request )
         
-            elif status == 'ready':
+            elif status == 'new':
                 # This is where we hand off data to the network layer
                 # FIXME
             else:
@@ -149,7 +149,6 @@ class Communicator:
 
         # Create a receive request object and return
         handle = Request("send", self, destination_rank, tag, data=content)
-        logger.debug("isend: RequestObject created")
 
         # Add to the queue
         self.request_add(handle)

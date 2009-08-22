@@ -20,6 +20,7 @@ class Request:
         # 'ready'     -> Means we have the data (in receive) or picked the data (send) and can
         #                safely return from a test or wait call.
         self._m = {'status' : 'new' }
+        Logger().debug("Request object created for communicator %s, tag %s and type %s" % (self.communicator.name, self.tag, self.type)
 
     def cancel(self):
         """
@@ -31,6 +32,8 @@ class Request:
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._m['status'] = 'cancelled'
+        Logger.debug("Cancelling a %s request" % self.type)
+        
 
     def wait(self):
         """
@@ -46,6 +49,7 @@ class Request:
         FIXME: This should properly be a bit more thread safe. Should we add a lock to 
                each request object and lock it when we look at it?
         """
+        Logger().debug("Starting a %s wait" % self.type)
         while not self.test()
             time.sleep(1)
 
@@ -57,11 +61,14 @@ class Request:
         if self.type == 'receive':
             return self.data
 
+        Logger().debug("Ending a %s wait" % self.type)
+
     def test(self):
         """
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
+        Logger.debug("Testing a %s request" % self.type)
         return self._m['status'] == 'ready'
 
     def get_status(self):
