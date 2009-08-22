@@ -1,4 +1,5 @@
 from mpi.exceptions import MPIException
+import threading
 
 class Request:
 
@@ -20,7 +21,26 @@ class Request:
         # 'ready'     -> Means we have the data (in receive) or picked the data (send) and can
         #                safely return from a test or wait call.
         self._m = {'status' : 'new' }
-        Logger().debug("Request object created for communicator %s, tag %s and type %s" % (self.communicator.name, self.tag, self.type)
+
+        # Start a lock for this request object. The lock should be taken
+        # whenever we change the content. It should be legal to read 
+        # information without locking (like test()). We implement the lock() and
+        # acquire function on this class directly so the variabel stays private
+        self._m['lock'] = threading.Lock()
+
+        Logger().debug("Request object created for communicator %s, tag %s and type %s" % (self.communicator.name, self.tag, self.type))
+
+    def lock(*args, **kwargs):
+        """
+        Just forwarding method call to the internal lock
+        """
+        return self._m['lock'].lock(*args, **kwargs)
+
+    def acquire(*args, **kwargs):
+        """
+        Just forwarding method call to the internal lock
+        """
+        return self._m['lock'].acquire(*args, **kwargs)
 
     def cancel(self):
         """
@@ -50,7 +70,7 @@ class Request:
                each request object and lock it when we look at it?
         """
         Logger().debug("Starting a %s wait" % self.type)
-        while not self.test()
+        while not self.test():
             time.sleep(1)
 
         # We're done at this point. Set the request to be completed so it can be removed

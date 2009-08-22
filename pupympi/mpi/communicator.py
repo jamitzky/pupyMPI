@@ -50,13 +50,12 @@ class Communicator:
         logger.debug("Update by the mpi thread in communicator: %s" % self.name)
 
         # Loook through all the request objects to see if there is anything we can do here
-        # This is locking the entire queue for furhter operations, so it's pretty bad. I'm
-        # not sure that we need to lock to change the dictionary. It might be an atom. If so
-        # it's better to introduce a lock on the request objects and lock on each objects
-        # before we're doing stuff. 
-        self.request_queue_lock.acquire()
-
         for request in self.request_queue.values():
+            # We will skip requests objects that are not possible to
+            # acquire a lock on right away. 
+            if not request.lock(False):
+                continue
+
             status = request.get_status()
 
             # Just switch on the different status something can have
@@ -81,10 +80,12 @@ class Communicator:
             elif status == 'new':
                 # This is where we hand off data to the network layer
                 # FIXME
+                pass
             else:
                 logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
 
-        self.request_queue_lock.release()
+            # Release the lock after we're done
+            request.release()
 
     def request_add(self, request_obj):
         """
