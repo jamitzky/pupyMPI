@@ -86,37 +86,6 @@ class MPI(threading.Thread):
 
             time.sleep(1)
 
-    def initialize_request_queue(self):
-        """
-        Currently the request queue is a simple dict (for quick lookup), and
-        all the used indexes are integers, casted to strings. The next integer
-        is kept in a simple variable call "current_request_id".
-        """
-        Logger().debug("MPI.startup() initializing the request queue")
-        self.current_request_id_lock = threading.Lock()
-        self.current_request_id = 0
-        self.request_queue = {}
-
-    def request_add(self, request_obj):
-        """
-        Add the request object to a queue so we can get a hold of it later.
-        Returns the lookup idx for later use.
-        self.current_request_id_lock.acquire()
-        self.current_request_id = 0
-        self.request_queue = {}
-        self.current_request_id_lock.release()
-        """
-        self.current_request_id_lock.acquire()
-        self.current_request_id += 1
-        idx = self.current_request_id
-        self.current_request_id_lock.release()
-
-        # Set the id on the request object so we can read it directly later
-        request_obj.queue_idx = idx
-
-        self.request_queue[idx] = request_obj
-        return idx
-
     def startup(self, options, args): # {{{1
         print "Staring the MPI thread"
         # Initialise the logger
@@ -127,8 +96,6 @@ class MPI(threading.Thread):
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
         self.communicators = []
         self.communicators.append( self.MPI_COMM_WORLD )
-
-        self.initialize_request_queue()
 
         logger.debug("trying to start network")
         self.network = Network()
