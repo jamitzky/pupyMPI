@@ -63,3 +63,6 @@ class Request:
         following wait() should return very fast.
         """
         return self._m['status'] == 'ready'
+
+    def get_status(self):
+        return self._['status']

@@ -46,8 +46,45 @@ class Communicator:
         the finished tasks for this communicator. We can then update the 
         request status.
         """
-        Logger().debug("Update by the mpi thread")
-        pass
+        logger = Logger()
+        logger.debug("Update by the mpi thread in communicator: %s" % self.name)
+
+        # Loook through all the request objects to see if there is anything we can do here
+        # This is locking the entire queue for furhter operations, so it's pretty bad. I'm
+        # not sure that we need to lock to change the dictionary. It might be an atom. If so
+        # it's better to introduce a lock on the request objects and lock on each objects
+        # before we're doing stuff. 
+        self.request_queue_lock.acquire()
+
+        for request in self.request_queue.values():
+            status = request.get_status()
+
+            # Just switch on the different status something can have
+            if status == 'cancelled':
+                # We remove the cancelled request, but I think we might need to
+                # cache it. What if there is a subsequent isend/irecv starting 
+                # receiving the data ment for this one. (the data might already
+                # be here)
+                self.request_queue.remove( request )
+
+            elif status == 'ready':
+                # Ready means that we're waiting for the user to do something about
+                # it. We can't do anything.
+                continue
+
+            elif status == 'finished':
+                # All done, so it should be safe to remove. We're seperating this
+                # request from the cancelled so it's easier to make different in 
+                # the future
+                self.request_queue.remove( request )
+        
+            elif status == 'ready':
+                # This is where we hand off data to the network layer
+                # FIXME
+            else:
+                logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
+
+        self.request_queue_lock.release()
 
     def request_add(self, request_obj):
         """
