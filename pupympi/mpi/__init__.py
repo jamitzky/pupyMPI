@@ -186,4 +186,17 @@ class MPI(threading.Thread):
         """
         Logger().warn("Non-Implemented method 'comm_compare' called.")
         
+    def get_count(self, arg):
+        # FIXME
         pass
+        
+    def get_elements(self, arg):
+        # FIXME
+        pass
+    def get_processor_name(self, arg):
+        # FIXME
+        pass
+        
+    def get_version(self):
+        # FIXME (doc)
+        return __version__
