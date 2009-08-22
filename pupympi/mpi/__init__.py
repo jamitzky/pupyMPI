@@ -58,6 +58,7 @@ class MPI(threading.Thread):
         parser.add_option('--network-type', dest='network_type')
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
+        parser.add_option('--single-communication-thread', dest='single_communication_thread')
 
         options, args = parser.parse_args()
     
@@ -72,7 +73,6 @@ class MPI(threading.Thread):
         # This can be moved out of there
         while True:
             if not self.shutdown_lock.acquire(False):
-                print "Breaking"
                 self.shutdown_lock.release()
                 break
             self.shutdown_lock.release()
@@ -87,7 +87,6 @@ class MPI(threading.Thread):
             time.sleep(1)
 
     def startup(self, options, args): # {{{1
-        print "Staring the MPI thread"
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
@@ -98,7 +97,7 @@ class MPI(threading.Thread):
         self.communicators.append( self.MPI_COMM_WORLD )
 
         logger.debug("trying to start network")
-        self.network = Network()
+        self.network = Network(single_communication_thread=options.single_communication_thread)
         self.network.run()
         logger.debug("Network started")
 
