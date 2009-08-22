@@ -344,13 +344,15 @@ class Communicator:
         pass
     
     def start(self, arg):
-        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
-        # FIXME        
+        # TODO The argument, request, is a handle returned by one of the
+        # previous five  calls. The ass. request should be inactive. The
+        # request becomes active once the call is made.
         pass
     
     def startall(self, arg):
-        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
-        # FIXME        
+        # TODO The argument, request, is a handle returned by one of the
+        # previous five  calls. The ass. request should be inactive. The
+        # request becomes active once the call is made.
         pass
         
     def mname(self, arg):
