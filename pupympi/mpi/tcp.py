@@ -1,6 +1,7 @@
 import mpi, time, socket, threading, random
 from mpi.logger import Logger
-from mpi.network import Network
+from mpi.network import Network, CommunicationHandler
+from threading import Thread
 
 try:
     import cPickle as pickle
@@ -40,17 +41,35 @@ def get_socket(range=(10000, 30000)):
 
     logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
-    
+
+class TCPCommunicationHandler(CommunicationHandler):
+    """
+    This is the TCP implementation of the main CommunicationHandler. There
+    will be one or two threads of this class.
+
+    The main purpose of this class is to select on a read and writelist and
+    and handle incomming / outgoing requests. 
+
+    Whenever some job is completed the request object matching the job will
+    be updated. 
+
+    We also keep an internal queue of the jobs not mathing a request object 
+    yet. Whenever a new request objects comes into the queue we look through
+    the already finished TCP jobs to find a mathing one. In this case a recv()
+    call might return almost without blocking.
+    """
+    pass
 
 class TCPNetwork(Network):
 
-    def initialize(self):
+    def __init__(self, single_communication_thread=False):
+        super(TCPNetwork, self).__init__(single_communication_thread=False, TCPCommunicationHandler)
+
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-
         logger = Logger().debug("Network started on port %s" % port_no)
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):

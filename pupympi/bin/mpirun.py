@@ -33,6 +33,7 @@ def parse_options():
     parser_adv_group = OptionGroup(parser, "Advanced options", 
             "Be carefull. You could actually to strange things here. OMG Ponies!")
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
+    parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser.add_option_group( parser_adv_group )
 
     options, args = parser.parse_args()
