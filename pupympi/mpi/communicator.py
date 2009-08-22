@@ -116,7 +116,6 @@ class Communicator:
 
         # Add to the queue
         self.request_add(handle)
-
         return handle
 
     # TODO: may want to drop this and simply allow users access to the underlying dict?
