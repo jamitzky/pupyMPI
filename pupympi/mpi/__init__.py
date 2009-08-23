@@ -107,7 +107,7 @@ class MPI(threading.Thread):
         # Tell the communicator to build it "world" of the results in the network
         # initialization. All network types will create a variable call all_procs
         # containing nework specific information for each specific rank. 
-        self.MPI_COMM_WORLD.build_world( network.all_procs )
+        self.MPI_COMM_WORLD.build_world( self.network.all_procs )
 
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.

@@ -64,16 +64,15 @@ class TCPNetwork(Network):
 
     def __init__(self, options):
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
-
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-        logger = Logger().debug("Network started on port %s" % port_no)
+        Logger().debug("Network started on port %s" % port_no)
 
         # Do the initial handshaking with the other processes
-        self.handshake(options.mpi_conn_host, options.mpi_conn_port, int(options.rank))
+        self.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -91,14 +90,14 @@ class TCPNetwork(Network):
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
-        logger.debug("Trying to connect to (%s,%s)" % recipient)
+        Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
         s_conn.send(data)
         
         # Receiving data about the communicator
         all_procs = s_conn.recv(1024)
         all_procs = pickle.loads( all_procs )
-        logger.debug("handshake: Received information for all processes (%d)" % len(all_procs))
+        Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
 
         self.all_procs = {}
@@ -108,7 +107,7 @@ class TCPNetwork(Network):
     def finalize(self):
         # Call the finalize in the parent class. This will handle
         # proper shutdown of the communication threads (in/out).
-        super(self, TCPNetwork).finalize()
+        super(TCPNetwork, self).finalize()
 
         self.socket.close()
         logger = Logger().debug("The TCP network is closed")

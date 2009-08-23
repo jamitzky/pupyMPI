@@ -2,7 +2,7 @@ import threading
 from threading import Thread
 from mpi.logger import Logger
 
-class Network:
+class Network(object):
 
     def _not_impl(self):
         raise NotImplementedError("Don't use the Network class directly. Please use a inherited class")
@@ -15,7 +15,7 @@ class Network:
     finalize = _not_impl
 
     def __init__(self, CommunicationHandler, options):
-        Logger.debug("Starting generic network")
+        Logger().debug("Starting generic network")
 
         # Defining some "queues", just simple dicts for now
         self.incomming = {}
@@ -30,10 +30,10 @@ class Network:
             
             threads = [t_in, t_out]
 
-        [t.start() for t in threds]
+        [t.start() for t in threads]
         self.threads = threads
 
-    def finalize():
+    def finalize(self):
         """
         FIXME: We should handle proper shutdown of the threads
         """
