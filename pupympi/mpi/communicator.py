@@ -64,7 +64,8 @@ class Communicator:
                 # cache it. What if there is a subsequent isend/irecv starting 
                 # receiving the data ment for this one. (the data might already
                 # be here)
-                self.request_queue.remove( request )
+                self.request_remove( request )
+                Logger().info("Removing cancelled request")
 
             elif status == 'ready':
                 # Ready means that we're waiting for the user to do something about
@@ -75,7 +76,8 @@ class Communicator:
                 # All done, so it should be safe to remove. We're seperating this
                 # request from the cancelled so it's easier to make different in 
                 # the future
-                self.request_queue.remove( request )
+                self.request_remove( request )
+                Logger().info("Removing finished request")
         
             elif status == 'new':
                 # This is where we hand off data to the network layer
@@ -86,6 +88,11 @@ class Communicator:
 
             # Release the lock after we're done
             request.release()
+
+    def request_remove(self, request_obj):
+        self.request_queue_lock.acquire()
+        del self.request_queue[request_obj.queue_idx]
+        self.request_queue_lock.release()
 
     def request_add(self, request_obj):
         """
