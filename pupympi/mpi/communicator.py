@@ -151,6 +151,7 @@ class Communicator:
     # MPI WAITANY, 46 
     # MPI WAITSOME, 49 
     # MPI WTICK, 201 
+    # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
 
 
     # Some wrapper methods
