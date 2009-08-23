@@ -14,14 +14,14 @@ class Network:
     initialize = _not_impl
     finalize = _not_impl
 
-    def __init__(self, single_communication_thread=False, CommunicationHandler):
+    def __init__(self, CommunicationHandler, options):
         Logger.debug("Starting generic network")
 
         # Defining some "queues", just simple dicts for now
         self.incomming = {}
         self.outgoing = {}
 
-        if single_communication_thread:
+        if options.single_communication_thread:
             t = CommunicationHandler(self.incomming, self.outgoing)
             threads = [t, ]
         else:
@@ -32,6 +32,12 @@ class Network:
 
         [t.start() for t in threds]
         self.threads = threads
+
+    def finalize():
+        """
+        FIXME: We should handle proper shutdown of the threads
+        """
+        pass
 
 class CommunicationHandler(Thread):
     def __init__(self, ingoing, outgoing):
