@@ -53,7 +53,7 @@ class Communicator:
         for request in self.request_queue.values():
             # We will skip requests objects that are not possible to
             # acquire a lock on right away. 
-            if not request.lock(False):
+            if not request.acquire(False):
                 continue
 
             status = request.get_status()
@@ -132,8 +132,7 @@ class Communicator:
     def irecv(self, sender, tag):
         # Check the destination exists
         if not self.have_rank(sender):
-            error_str = "No process with rank %d in communicator %s. " % (sender, self.name)
-            raise MPIBadAddressException(error_str)
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
         # Create a receive request object and return
         handle = Request("receive", self, sender, tag)
@@ -146,7 +145,7 @@ class Communicator:
         logger = Logger()
         # Check the destination exists
         if not self.have_rank(destination_rank):
-            raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Create a receive request object and return
         handle = Request("send", self, destination_rank, tag, data=content)

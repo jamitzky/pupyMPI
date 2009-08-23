@@ -1,5 +1,6 @@
 from mpi.exceptions import MPIException
-import threading
+from mpi.logger import Logger
+import threading, time
 
 class Request:
 
@@ -24,7 +25,7 @@ class Request:
 
         # Start a lock for this request object. The lock should be taken
         # whenever we change the content. It should be legal to read 
-        # information without locking (like test()). We implement the lock() and
+        # information without locking (like test()). We implement the release() and
         # acquire function on this class directly so the variabel stays private
         self._m['lock'] = threading.Lock()
 
@@ -33,13 +34,13 @@ class Request:
         # Start the netwok layer on a job as well
         self.communicator.network.start_job(self, self.communicator, type, participant, tag, data)
 
-    def lock(*args, **kwargs):
+    def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
         """
-        return self._m['lock'].lock(*args, **kwargs)
+        return self._m['lock'].release(*args, **kwargs)
 
-    def acquire(*args, **kwargs):
+    def acquire(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
         """
@@ -55,7 +56,7 @@ class Request:
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._m['status'] = 'cancelled'
-        Logger.debug("Cancelling a %s request" % self.type)
+        Logger().debug("Cancelling a %s request" % self.type)
         
 
     def wait(self):
@@ -91,8 +92,8 @@ class Request:
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
-        Logger.debug("Testing a %s request" % self.type)
+        Logger().debug("Testing a %s request" % self.type)
         return self._m['status'] == 'ready'
 
     def get_status(self):
-        return self._['status']
+        return self._m['status']
