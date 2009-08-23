@@ -62,8 +62,8 @@ class TCPCommunicationHandler(CommunicationHandler):
 
 class TCPNetwork(Network):
 
-    def __init__(self, single_communication_thread=False):
-        super(TCPNetwork, self).__init__(single_communication_thread=False, TCPCommunicationHandler)
+    def __init__(self, options):
+        super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
 
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
@@ -71,6 +71,9 @@ class TCPNetwork(Network):
         socket.listen(5)
         self.socket = socket
         logger = Logger().debug("Network started on port %s" % port_no)
+
+        # Do the initial handshaking with the other processes
+        self.handshake(options.mpi_conn_host, options.mpi_conn_port, int(options.rank))
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -80,9 +83,7 @@ class TCPNetwork(Network):
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket. 
         """
-        logger = Logger()
-
-        logger.debug("Communicating ports and hostname to mpirun")
+        Logger().debug("handshake: Communicating ports and hostname to mpirun")
         
         # Packing the data
         data = pickle.dumps( (self.hostname, self.port, internal_rank ) )
@@ -97,14 +98,18 @@ class TCPNetwork(Network):
         # Receiving data about the communicator
         all_procs = s_conn.recv(1024)
         all_procs = pickle.loads( all_procs )
-        logger.debug("Received information for all processes (%d)" % len(all_procs))
+        logger.debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
-        
-        logger.debug("Shaking done")
-        
-        return all_procs
 
+        self.all_procs = {}
+        for (rank, host, port) in all_procs:
+            self.all_procs[rank] = {'host' : host, 'port' : port }
+        
     def finalize(self):
+        # Call the finalize in the parent class. This will handle
+        # proper shutdown of the communication threads (in/out).
+        super(self, TCPNetwork).finalize()
+
         self.socket.close()
         logger = Logger().debug("The TCP network is closed")
 

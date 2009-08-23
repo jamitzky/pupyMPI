@@ -28,10 +28,7 @@ class Communicator:
         self.request_queue = {}
     
     def build_world(self, all_procs):
-        logger = Logger()
-        for (hostname, port_no, rank) in all_procs:
-            self.members[ rank ] = (hostname, port_no)
-            logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
+        self.members = all_procs
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
