@@ -58,8 +58,33 @@ class TCPCommunicationHandler(CommunicationHandler):
     the already finished TCP jobs to find a mathing one. In this case a recv()
     call might return almost without blocking.
     """
-    pass
 
+    def __init__(self, *args, **kwargs):
+        Logger().debug("TCPCommunication handler initialized")
+        super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
+
+        # Add two TCP specific lists. Read and write sockets
+        self.sockets_in = []
+        self.sockets_out = []
+
+    def add_out_job(self, job):
+        super(TCPCommunicationHandler, self).add_out_job(job)
+        Logger().debug("Adding outgoing job")
+
+        # This is a sending operation. We should create a socket 
+        # for the job, so we can selet from it later. 
+        # FIXME
+
+    def add_in_job(self, job):
+        Logger().debug("Adding incomming job")
+        super(TCPCommunicationHandler, self).add_in_job(job)
+
+        if job['socket']:
+            self.sockets_in.append(job['socket'])
+
+    def run(self):
+        Logger().debug("Starting select loop in TCPCommunicatorHandler")
+        
 class TCPNetwork(Network):
 
     def __init__(self, options):
@@ -73,6 +98,12 @@ class TCPNetwork(Network):
 
         # Do the initial handshaking with the other processes
         self.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
+
+    def set_mpi_world(self, MPI_COMM_WORLD):
+        self.MPI_COMM_WORLD = MPI_COMM_WORLD
+
+        # Manually add the daemon socket on the right thread.
+        self.start_job(None, MPI_COMM_WORLD, "daemon", None, None, None, self.socket)
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -103,6 +134,32 @@ class TCPNetwork(Network):
         self.all_procs = {}
         for (rank, host, port) in all_procs:
             self.all_procs[rank] = {'host' : host, 'port' : port }
+
+    def start_job(self, request, communicator, type, participant, tag, data, socket=None):
+        """
+        Used to create a specific job structure for the TCP layer. This involves setting
+        up an initial job structure and passing it to the correct thread. 
+
+        The job structure is initialized without a socket. If it's a send request a socket
+        will be created by the outgoing thread. If it's a receive request we'll wait for the
+        daemon socket to get an accept and get a socket from there. 
+
+        FIXME: Do we create a job structure at all for receiving requests? There are already
+        a request object. Why not just create it when we make the accept on the daemon socket
+        and then match it on the pending requests later on?
+        """
+        Logger().debug("Starting a %s network job with tag %s" % (type, tag))
+
+        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request}
+        if participant:
+            job['participant'] = communicator.members[participant]
+
+        Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
+
+        if type == "send":
+            self.t_out.add_out_job( job )
+        elif type == "daemon":
+            self.t_in.add_in_job( job )
         
     def finalize(self):
         # Call the finalize in the parent class. This will handle
