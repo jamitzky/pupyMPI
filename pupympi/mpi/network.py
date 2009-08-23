@@ -33,6 +33,11 @@ class Network(object):
 
         self.t_in.start()
 
+    def get_received_data(self, participant, tag, communicator):
+        data = self.t_in.get_received_data(participant, tag, communicator)
+        if data:
+            return data['data']
+
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
