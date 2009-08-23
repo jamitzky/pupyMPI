@@ -150,8 +150,8 @@ class TCPNetwork(Network):
         s_conn.close()
 
         self.all_procs = {}
-        for (rank, host, port) in all_procs:
-            self.all_procs[rank] = {'host' : host, 'port' : port }
+        for (host, port, rank) in all_procs:
+            self.all_procs[rank] = {'host' : host, 'port' : port, 'rank' : rank}
 
     def start_job(self, request, communicator, type, participant, tag, data, socket=None):
         """
