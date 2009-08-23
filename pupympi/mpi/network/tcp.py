@@ -1,6 +1,6 @@
 import mpi, time, socket, threading, random
 from mpi.logger import Logger
-from mpi.network import Network, CommunicationHandler
+from mpi.network import AbstractNetwork, AbstractCommunicationHandler
 from threading import Thread
 import select
 
@@ -43,7 +43,7 @@ def get_socket(range=(10000, 30000)):
     logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
-class TCPCommunicationHandler(CommunicationHandler):
+class TCPCommunicationHandler(AbstractCommunicationHandler):
     """
     This is the TCP implementation of the main CommunicationHandler. There
     will be one or two threads of this class.
@@ -174,7 +174,7 @@ class TCPCommunicationHandler(CommunicationHandler):
             except socket.error, e:
                 Logger().warning("Got an socket error in the TCPCommunicationHandler select call: %s" % e.message)
         
-class TCPNetwork(Network):
+class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)

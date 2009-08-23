@@ -8,7 +8,7 @@ import sys, getopt, time
 from mpi.communicator import Communicator
 from mpi.communicator import Communicator
 from mpi.logger import Logger
-from mpi.tcp import TCPNetwork as Network
+from mpi.network.tcp import TCPNetwork as Network
 
 def flush_all():
     logger = Logger()

@@ -2,7 +2,7 @@ import threading
 from threading import Thread
 from mpi.logger import Logger
 
-class Network(object):
+class AbstractNetwork(object):
 
     def _not_impl(self):
         raise NotImplementedError("Don't use the Network class directly. Please use a inherited class")
@@ -48,7 +48,7 @@ class Network(object):
         if not self.options.single_communication_thread:
             self.t_out.finalize()
 
-class CommunicationHandler(Thread):
+class AbstractCommunicationHandler(Thread):
     def __init__(self, incomming, outgoing):
         Thread.__init__(self)
         self.incomming = incomming 
