@@ -8,11 +8,14 @@ class Communicator:
     """
     This class represents a communicator.
     """
-    def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
         self._rank = rank
         self._size = size
         self.name = name
         self.members = {}
+        self.network = network
+
+
         self.attr = {}
         if name == "MPI_COMM_WORLD":
             self.attr = {   "MPI_TAG_UB": 2**30, \
@@ -20,14 +23,15 @@ class Communicator:
                             "MPI_IO": rank, \
                             "MPI_WTIME_IS_GLOBAL": False
                         }
-        self.request_queue = []
+
+        # Addind locks and initial information about the request queue
+        self.current_request_id_lock = threading.Lock()
         self.request_queue_lock = threading.Lock()
+        self.current_request_id = 0
+        self.request_queue = {}
     
     def build_world(self, all_procs):
-        logger = Logger()
-        for (hostname, port_no, rank) in all_procs:
-            self.members[ rank ] = (hostname, port_no)
-            logger.debug("Added proc-%d with info (%s,%s) to the world communicator" % (rank, hostname, port_no))
+        self.members = all_procs
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
@@ -42,8 +46,79 @@ class Communicator:
         the finished tasks for this communicator. We can then update the 
         request status.
         """
-        Logger().debug("Update by the mpi thread")
-        pass
+        logger = Logger()
+        logger.debug("Update by the mpi thread in communicator: %s" % self.name)
+
+        # Loook through all the request objects to see if there is anything we can do here
+        for request in self.request_queue.values():
+            # We will skip requests objects that are not possible to
+            # acquire a lock on right away. 
+            if not request.acquire(False):
+                continue
+
+            status = request.get_status()
+
+            # Just switch on the different status something can have
+            if status == 'cancelled':
+                # We remove the cancelled request, but I think we might need to
+                # cache it. What if there is a subsequent isend/irecv starting 
+                # receiving the data ment for this one. (the data might already
+                # be here)
+                self.request_remove( request )
+                Logger().info("Removing cancelled request")
+
+            elif status == 'ready':
+                # Ready means that we're waiting for the user to do something about
+                # it. We can't do anything.
+                continue
+
+            elif status == 'finished':
+                # All done, so it should be safe to remove. We're seperating this
+                # request from the cancelled so it's easier to make different in 
+                # the future
+                self.request_remove( request )
+                Logger().info("Removing finished request")
+        
+            elif status == 'new':
+                if request.type == "receive":
+                    # We ask the network layer if there are any messages from 
+                    # our recipient, with our data in our communicator. If so
+                    # we update the request object so the wait() can finish. 
+                    data = self.network.get_received_data(request.participant, request.tag, self)
+                    if data:
+                        Logger().info("Found data from the nework ready to update a request object")
+                        request.update(status='ready', data=data, lock=False)
+            else:
+                logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
+
+            # Release the lock after we're done
+            request.release()
+
+    def request_remove(self, request_obj):
+        self.request_queue_lock.acquire()
+        del self.request_queue[request_obj.queue_idx]
+        self.request_queue_lock.release()
+
+    def request_add(self, request_obj):
+        """
+        Add the request object to a queue so we can get a hold of it later.
+        Returns the lookup idx for later use.
+        """
+        logger = Logger()
+        logger.debug("Adding request object to the request queue")
+        self.current_request_id_lock.acquire()
+        self.current_request_id += 1
+        idx = self.current_request_id
+        self.current_request_id_lock.release()
+
+        # Set the id on the request object so we can read it directly later
+        request_obj.queue_idx = idx
+
+        self.request_queue_lock.acquire()
+        self.request_queue[idx] = request_obj
+        self.request_queue_lock.release()
+        logger.debug("Added request object to the queue with index %s. There are now %d items in the queue" % (idx, len(self.request_queue)))
+        return idx
 
     def have_rank(self, rank):
         return rank in self.members
@@ -69,36 +144,26 @@ class Communicator:
     def irecv(self, sender, tag):
         # Check the destination exists
         if not self.have_rank(sender):
-            error_str = "No process with rank %d in communicator %s. " % (sender, self.name)
-            raise MPIBadAddressException(error_str)
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
         # Create a receive request object and return
         handle = Request("receive", self, sender, tag)
 
         # Add to the queue
-        self.request_queue_lock.acquire()
-        self.request_queue.append(handle)
-        self.request_queue_lock.release()
+        self.request_add(handle)
         return handle
 
     def isend(self, destination_rank, content, tag):
         logger = Logger()
         # Check the destination exists
         if not self.have_rank(destination_rank):
-            raise MPIBadAddressException("Not process with rank %d in communicator %s. " % (destination, comm.name))
+            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Create a receive request object and return
         handle = Request("send", self, destination_rank, tag, data=content)
-        logger.debug("isend: RequestObject created")
 
         # Add to the queue
-        self.request_queue_lock.acquire()
-        logger.debug("isend: Queue acquired")
-        self.request_queue.append(handle)
-        logger.debug("isend: Queue altered")
-        self.request_queue_lock.release()
-        logger.debug("isend: Queue released")
-
+        self.request_add(handle)
         return handle
 
     # TODO: may want to drop this and simply allow users access to the underlying dict?
@@ -345,13 +410,15 @@ class Communicator:
         pass
     
     def start(self, arg):
-        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
-        # FIXME        
+        # TODO The argument, request, is a handle returned by one of the
+        # previous five  calls. The ass. request should be inactive. The
+        # request becomes active once the call is made.
         pass
     
     def startall(self, arg):
-        # TODO The argument, request, is a handle returned by one of the previous ﬁve calls. The associated request should be inactive. The request becomes active once the call is made.
-        # FIXME        
+        # TODO The argument, request, is a handle returned by one of the
+        # previous five  calls. The ass. request should be inactive. The
+        # request becomes active once the call is made.
         pass
         
     def mname(self, arg):
