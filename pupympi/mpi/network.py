@@ -35,9 +35,13 @@ class Network(object):
 
     def finalize(self):
         """
-        FIXME: We should handle proper shutdown of the threads
+        Forwarding the finalize call to the threads. Look at the 
+        CommunicationHandler.finalize for a deeper descriptio of
+        the shutdown procedure. 
         """
-        pass
+        self.t_in.finalize()
+        if not self.options.single_communication_thread:
+            self.t_out.finalize()
 
 class CommunicationHandler(Thread):
     def __init__(self, incomming, outgoing):
@@ -45,8 +49,31 @@ class CommunicationHandler(Thread):
         self.incomming = incomming 
         self.outgoing = outgoing
 
+        self.shutdown_lock = threading.Lock()
+        self.shutdown_lock.acquire()
+
     def add_in_job(self, job):
         self.incomming.append(job)
 
     def add_out_job(self, job):
         self.outgoing.append(job)
+
+    def shutdown_ready(self):
+        acquired = self.shutdown_lock.acquire(False)
+        if acquired:
+            self.shutdown_lock.release()
+
+        Logger().debug("CommunicationHandler asked for shutdown status: %s" % acquired)
+        return acquired
+
+    def finalize(self):
+        """
+        When each thread starts a shutdown lock is acquired. As long as this
+        lock is taken the thread can't shut down. So when finalized is called
+        we release the lock. 
+
+        This mean that the shutdown_ready() funtion can acquire it. This is used
+        in the main run loop and allows the thread to break out of the while True
+        loop. 
+        """
+        self.shutdown_lock.release()

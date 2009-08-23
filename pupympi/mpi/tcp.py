@@ -2,6 +2,7 @@ import mpi, time, socket, threading, random
 from mpi.logger import Logger
 from mpi.network import Network, CommunicationHandler
 from threading import Thread
+import select
 
 try:
     import cPickle as pickle
@@ -84,6 +85,23 @@ class TCPCommunicationHandler(CommunicationHandler):
 
     def run(self):
         Logger().debug("Starting select loop in TCPCommunicatorHandler")
+
+        # Starting the select on the sockets. We're setting a timeout
+        # so we can break and test if we should break ouf of the thread
+        # if somebody have called finalize. 
+        it = 0
+        while True:
+            try:
+                if super(TCPCommunicationHandler, self).shutdown_ready():
+                    break
+
+                it += 1
+                (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
+                Logger().debug("Iteration %d in TCPCommunicationHandler. Selected %d in-sockets and %d out-sockets" % (it, len(in_list), len(out_list)))
+            except select.error:
+                Logger().warning("Got an select error in the TCPCommunicationHandler select call")
+            except socket.error:
+                Logger().warning("Got an socket error in the TCPCommunicationHandler select call")
         
 class TCPNetwork(Network):
 
