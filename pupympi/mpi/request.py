@@ -34,6 +34,13 @@ class Request:
         # Start the netwok layer on a job as well
         self.communicator.network.start_job(self, self.communicator, type, participant, tag, data)
 
+    def update(self, status=None):
+        if status:
+            self.acquire()
+            self._m['status'] = status
+            self.release()
+            Logger().debug("%s request objects updated to status %s" % (self.type, self._m['status']))
+
     def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
@@ -73,7 +80,7 @@ class Request:
         FIXME: This should properly be a bit more thread safe. Should we add a lock to 
                each request object and lock it when we look at it?
         """
-        Logger().debug("Starting a %s wait" % self.type)
+        Logger().info("Starting a %s wait" % self.type)
         while not self.test():
             time.sleep(1)
 
@@ -85,7 +92,7 @@ class Request:
         if self.type == 'receive':
             return self.data
 
-        Logger().debug("Ending a %s wait" % self.type)
+        Logger().info("Ending a %s wait" % self.type)
 
     def test(self):
         """

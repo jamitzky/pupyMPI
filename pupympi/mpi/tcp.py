@@ -68,13 +68,25 @@ class TCPCommunicationHandler(CommunicationHandler):
         self.sockets_in = []
         self.sockets_out = []
 
+        self.socket_to_job = {}
+
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
         Logger().debug("Adding outgoing job")
 
         # This is a sending operation. We should create a socket 
         # for the job, so we can selet from it later. 
-        # FIXME
+        receiver = ( job['participant']['host'], job['participant']['port'],)
+        if not job['socket']:
+            # Create a client socket and connect to the other end
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect( receiver )
+            self.sockets_out.append(client_socket)
+            job['socket'] = client_socket
+        job['status'] = 'ready'
+
+        # Tag the socket with a job so we can find it again
+        self.socket_to_job[ job['socket'] ] = job
 
     def add_in_job(self, job):
         Logger().debug("Adding incomming job")
@@ -82,6 +94,12 @@ class TCPCommunicationHandler(CommunicationHandler):
 
         if job['socket']:
             self.sockets_in.append(job['socket'])
+
+    def job_by_socket(self, socket):
+        try:
+            return self.socket_to_job[ socket ]
+        except KeyError:
+            Logger().debug("No job was found by the socket")
 
     def run(self):
         Logger().debug("Starting select loop in TCPCommunicatorHandler")
@@ -97,7 +115,25 @@ class TCPCommunicationHandler(CommunicationHandler):
 
                 it += 1
                 (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
-                Logger().debug("Iteration %d in TCPCommunicationHandler. Selected %d in-sockets and %d out-sockets" % (it, len(in_list), len(out_list)))
+                Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
+
+                # We handle read operations first
+
+                # We handle write operations second (for no reason).
+                for client_socket in out_list:
+                    job = self.job_by_socket(client_socket)
+                    if job['status'] == 'ready':
+                        # Send the data to the receiver. This should probably be rewritten so it 
+                        # pickles the clean data and sends the tag and data-lengths, update the job
+                        # and wait for the answer to arive on the reading socket. 
+                        data = {'data' : job['data'], 'tag' : job['tag'] }
+
+                        job['socket'].send( pickle.dumps(data) )
+                        Logger().info("Sending data on the socket. Going to update the requst object next")
+
+                        job['request'].update(status='ready')
+                        job['status'] = 'finished'
+
             except select.error:
                 Logger().warning("Got an select error in the TCPCommunicationHandler select call")
             except socket.error:
@@ -168,7 +204,7 @@ class TCPNetwork(Network):
         """
         Logger().debug("Starting a %s network job with tag %s" % (type, tag))
 
-        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request}
+        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new'}
         if participant:
             job['participant'] = communicator.members[participant]
 
