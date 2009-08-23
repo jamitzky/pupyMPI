@@ -20,18 +20,17 @@ class Network(object):
         # Defining some "queues", just simple dicts for now
         self.incomming = {}
         self.outgoing = {}
+        self.options = options
 
         if options.single_communication_thread:
-            t = CommunicationHandler(self.incomming, self.outgoing)
-            threads = [t, ]
+            self.t_in = CommunicationHandler(self.incomming, self.outgoing)
+            self.t_out = self.t_in
         else:
-            t_in = CommunicationHandler(self.incomming, None)
-            t_out = CommunicationHandler(None, self.outgoing)
-            
-            threads = [t_in, t_out]
+            self.t_in = CommunicationHandler(self.incomming, None)
+            self.t_out = CommunicationHandler(None, self.outgoing)
+            self.t_out.start()
 
-        [t.start() for t in threads]
-        self.threads = threads
+        self.t_in.start()
 
     def finalize(self):
         """
