@@ -8,7 +8,7 @@ import sys, getopt, time
 from mpi.communicator import Communicator
 from mpi.communicator import Communicator
 from mpi.logger import Logger
-from mpi.tcp import TCPNetwork as Network
+from mpi.network.tcp import TCPNetwork as Network
 
 def flush_all():
     logger = Logger()
@@ -58,6 +58,7 @@ class MPI(threading.Thread):
         parser.add_option('--network-type', dest='network_type')
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
+        parser.add_option('--single-communication-thread', dest='single_communication_thread')
 
         options, args = parser.parse_args()
     
@@ -72,7 +73,6 @@ class MPI(threading.Thread):
         # This can be moved out of there
         while True:
             if not self.shutdown_lock.acquire(False):
-                print "Breaking"
                 self.shutdown_lock.release()
                 break
             self.shutdown_lock.release()
@@ -87,28 +87,36 @@ class MPI(threading.Thread):
             time.sleep(1)
 
     def startup(self, options, args): # {{{1
-        print "Staring the MPI thread"
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
-        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self)
+
+        # Starting the network. This is probably a TCP network, but it can be 
+        # replaced pretty easily if we want to. 
+        self.network = Network(options)
+
+        # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
+        # a rank and size. The members are filled out after the network is 
+        # initialized.
+        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network)
         self.communicators = []
         self.communicators.append( self.MPI_COMM_WORLD )
 
-        logger.debug("trying to start network")
-        self.network = Network()
-        self.network.run()
-        logger.debug("Network started")
+        # Tell the communicator to build it "world" of the results in the network
+        # initialization. All network types will create a variable call all_procs
+        # containing nework specific information for each specific rank. 
+        self.MPI_COMM_WORLD.build_world( self.network.all_procs )
 
-        all_procs = self.network.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
-        self.MPI_COMM_WORLD.build_world( all_procs )
-        logger.debug("Communicator started")
+        # Tell the network about the global MPI_COMM_WORLD, and let it start to 
+        # listen on the correcsponding network channels
+        self.network.set_mpi_world( self.MPI_COMM_WORLD )
 
+        # Change the contents of sys.argv runtime, so the user processes 
+        # can't see all the mpi specific junk parameters we start with.
         user_options =[sys.argv[0], ] 
         user_options.append(sys.argv[sys.argv.index("--")+1:])
-
         sys.argv = user_options
 
         # Set a static attribute on the class so we know it's initialised.
