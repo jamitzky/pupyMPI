@@ -69,6 +69,28 @@ class TCPCommunicationHandler(CommunicationHandler):
         self.sockets_out = []
 
         self.socket_to_job = {}
+        self.received_data = {}
+
+    def add_received_data(self, data):
+        """
+        Saves received data in a structure organised by tag (later
+        also communicator) so it's easy to find.
+        """
+        Logger().info("Adding recived data with tag %s" % data['tag'])
+        tag = data['tag']
+        if tag not in self.received_data:
+            self.received_data[tag] = []
+
+        self.received_data[tag].append(data)
+
+    def get_received_data(self, participant, tag, communicator):
+        Logger().info("Asking about data with tag %s" % tag)
+        # FIXME: Handle the tag and participant
+        if tag in self.received_data:
+            try:
+                return self.received_data[tag].pop(0)
+            except IndexError:
+                pass
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
@@ -118,6 +140,19 @@ class TCPCommunicationHandler(CommunicationHandler):
                 Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
 
                 # We handle read operations first
+                for read_socket in in_list:
+                    (conn, sender_address) = read_socket.accept()
+
+                    # Fixme. This should be done in a two loop way
+                    data = conn.recv(4096)
+
+                    # Unpickle the data so we can understand it
+                    data = pickle.loads(data)
+
+                    # Save the data in an internal structure so we can find it again. 
+                    # FIXME: We should add the communicator id, name or whatever. Otherwise
+                    # messages to different communicators might overlap
+                    self.add_received_data(data)
 
                 # We handle write operations second (for no reason).
                 for client_socket in out_list:
@@ -134,10 +169,10 @@ class TCPCommunicationHandler(CommunicationHandler):
                         job['request'].update(status='ready')
                         job['status'] = 'finished'
 
-            except select.error:
-                Logger().warning("Got an select error in the TCPCommunicationHandler select call")
-            except socket.error:
-                Logger().warning("Got an socket error in the TCPCommunicationHandler select call")
+            except select.error, e:
+                Logger().warning("Got an select error in the TCPCommunicationHandler select call: %s" % e.message)
+            except socket.error, e:
+                Logger().warning("Got an socket error in the TCPCommunicationHandler select call: %s" % e.message)
         
 class TCPNetwork(Network):
 
@@ -205,7 +240,8 @@ class TCPNetwork(Network):
         Logger().debug("Starting a %s network job with tag %s" % (type, tag))
 
         job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new'}
-        if participant:
+
+        if participant is not None:
             job['participant'] = communicator.members[participant]
 
         Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
@@ -214,7 +250,7 @@ class TCPNetwork(Network):
             self.t_out.add_out_job( job )
         elif type == "daemon":
             self.t_in.add_in_job( job )
-        
+
     def finalize(self):
         # Call the finalize in the parent class. This will handle
         # proper shutdown of the communication threads (in/out).

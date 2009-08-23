@@ -80,9 +80,14 @@ class Communicator:
                 Logger().info("Removing finished request")
         
             elif status == 'new':
-                # This is where we hand off data to the network layer
-                # FIXME
-                pass
+                if request.type == "receive":
+                    # We ask the network layer if there are any messages from 
+                    # our recipient, with our data in our communicator. If so
+                    # we update the request object so the wait() can finish. 
+                    data = self.network.get_received_data(request.participant, request.tag, self)
+                    if data:
+                        Logger().info("Found data from the nework ready to update a request object")
+                        request.update(status='ready', data=data, lock=False)
             else:
                 logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
 

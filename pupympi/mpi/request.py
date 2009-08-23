@@ -29,17 +29,23 @@ class Request:
         # acquire function on this class directly so the variabel stays private
         self._m['lock'] = threading.Lock()
 
-        Logger().debug("Request object created for communicator %s, tag %s and type %s" % (self.communicator.name, self.tag, self.type))
+        Logger().debug("Request object created for communicator %s, tag %s and type %s and participant %s" % (self.communicator.name, self.tag, self.type, self.participant))
 
         # Start the netwok layer on a job as well
-        self.communicator.network.start_job(self, self.communicator, type, participant, tag, data)
+        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data)
 
-    def update(self, status=None):
+    def update(self, status=None, data=None, lock=True):
         if status:
-            self.acquire()
+            if lock:
+                self.acquire()
             self._m['status'] = status
-            self.release()
-            Logger().debug("%s request objects updated to status %s" % (self.type, self._m['status']))
+
+            if data:
+                self.data = data
+
+            if lock:
+                self.release()
+            Logger().info("%s request objects updated to status %s" % (self.type, self._m['status']))
 
     def release(self, *args, **kwargs):
         """
