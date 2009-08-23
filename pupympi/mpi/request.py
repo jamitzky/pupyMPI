@@ -30,6 +30,9 @@ class Request:
 
         Logger().debug("Request object created for communicator %s, tag %s and type %s" % (self.communicator.name, self.tag, self.type))
 
+        # Start the netwok layer on a job as well
+        self.communicator.network.start_job(self, self.communicator, type, participant, tag, data)
+
     def lock(*args, **kwargs):
         """
         Just forwarding method call to the internal lock

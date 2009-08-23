@@ -8,11 +8,14 @@ class Communicator:
     """
     This class represents a communicator.
     """
-    def __init__(self, rank, size, mpi_instance, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
         self._rank = rank
         self._size = size
         self.name = name
         self.members = {}
+        self.network = network
+
+
         self.attr = {}
         if name == "MPI_COMM_WORLD":
             self.attr = {   "MPI_TAG_UB": 2**30, \
