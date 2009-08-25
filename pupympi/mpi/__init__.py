@@ -22,7 +22,7 @@ def flush_all():
 
 class MPI(threading.Thread):
     """
-    This is the main class that contains most of the public API. Initializing 
+    This is the main class containing most of the public API. Initializing 
     the MPI system is done by creating an instance of this class. Through a
     MPI instance a program can interact with other processes through different
     communicators. 
