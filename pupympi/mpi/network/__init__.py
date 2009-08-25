@@ -22,21 +22,20 @@ class AbstractNetwork(object):
         self.incomming = []
         self.outgoing = []
         self.options = options
+        rank = options.rank
 
         if options.single_communication_thread:
-            self.t_in = CommunicationHandler(self.incomming, self.outgoing)
+            self.t_in = CommunicationHandler(rank, self.incomming, self.outgoing)
             self.t_out = self.t_in
         else:
-            self.t_in = CommunicationHandler(self.incomming, None)
-            self.t_out = CommunicationHandler(None, self.outgoing)
+            self.t_in = CommunicationHandler(rank, self.incomming, None)
+            self.t_out = CommunicationHandler(rank, None, self.outgoing)
             self.t_out.start()
 
         self.t_in.start()
 
     def get_received_data(self, participant, tag, communicator):
-        data = self.t_in.get_received_data(participant, tag, communicator)
-        if data:
-            return data['data']
+        return self.t_in.get_received_data(participant, tag, communicator)
 
     def finalize(self):
         """
@@ -49,10 +48,11 @@ class AbstractNetwork(object):
             self.t_out.finalize()
 
 class AbstractCommunicationHandler(Thread):
-    def __init__(self, incomming, outgoing):
+    def __init__(self, rank, incomming, outgoing):
         Thread.__init__(self)
         self.incomming = incomming 
         self.outgoing = outgoing
+        self.rank = rank
 
         self.shutdown_lock = threading.Lock()
         self.shutdown_lock.acquire()

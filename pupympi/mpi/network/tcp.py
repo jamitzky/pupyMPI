@@ -43,23 +43,30 @@ def structured_read(socket_connection):
     tag = sender = None
     data = ''
 
+    Logger().debug("Starting receive first loop")
+
     while not header_unpacked:
         data += socket_connection.recv(HEADER_SIZE)
 
         if len(data) > HEADER_SIZE and not header_unpacked:
-            tag, sender, msg_size = struct.unpack("lll", data[:HEADER_SIZE)
+            sender, tag, msg_size = struct.unpack("lll", data[:HEADER_SIZE])
             header_unpacked = True
+
     
     # receive the rest of the data 
     total_msg_size = msg_size + HEADER_SIZE
     recv_size = msg_size
+
+    Logger().debug("Starting receive second loop with total_msg_size(%d) and recv_size(%d)" %(total_msg_size, recv_size))
+
     while len(data) < total_msg_size:
         recv_size = total_msg_size - len(data)
         data += socket_connection.recv(recv_size)
     
     # unpacking the data
-    picked_data = struct.unpack("s", data[HEADER_SIZE:])
-    data = pickle.loads(picked_data)
+    data = pickle.loads(data[HEADER_SIZE:])
+
+    Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
     return tag, sender, data
 
@@ -114,25 +121,23 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     call might return almost without blocking.
     """
 
-    def __init__(self, options, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         Logger().debug("TCPCommunication handler initialized")
-        super(TCPCommunicationHandler, self).__init__(options, *args, **kwargs)
+        super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
 
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
         self.sockets_out = []
-        self.rank = options.rank
 
         self.socket_to_job = {}
         self.received_data = {}
 
-    def add_received_data(self, data):
+    def add_received_data(self, tag, data):
         """
         Saves received data in a structure organised by tag (later
         also communicator) so it's easy to find.
         """
-        Logger().info("Adding recived data with tag %s" % data['tag'])
-        tag = data['tag']
+        Logger().info("Adding recived data with tag %s" % tag)
         if tag not in self.received_data:
             self.received_data[tag] = []
 
@@ -204,7 +209,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                     # Save the data in an internal structure so we can find it again. 
                     # FIXME: We should add the communicator id, name or whatever. Otherwise
                     # messages to different communicators might overlap
-                    self.add_received_data(data)
+                    self.add_received_data(tag, data)
 
                 # We handle write operations second (for no reason).
                 for client_socket in out_list:
@@ -214,7 +219,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
                         data = pickle.dumps(job['data'])
-                        header = struct.pack("lll", self.rank, job['tag'], len(bin_data))
+                        header = struct.pack("lll", self.rank, job['tag'], len(data))
 
                         job['socket'].send( header + data )
                         Logger().info("Sending data on the socket. Going to update the requst object next")
