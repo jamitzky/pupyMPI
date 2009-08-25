@@ -1,4 +1,4 @@
-__version__ = 0.01
+__version__ = 0.01 # It bumps the version or else it gets the hose again!
 
 
 from optparse import OptionParser, OptionGroup
@@ -6,11 +6,13 @@ import threading
 import sys, getopt, time
 
 from mpi.communicator import Communicator
-from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
 
 def flush_all():
+    """
+    Make sure all pipes are flushed
+    """
     logger = Logger()
 
     for input in (sys.stdout, sys.stderr):
