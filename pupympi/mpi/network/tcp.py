@@ -1,13 +1,67 @@
-import mpi, time, socket, threading, random
+import mpi, time, socket, threading, random, select, struct
 from mpi.logger import Logger
 from mpi.network import AbstractNetwork, AbstractCommunicationHandler
 from threading import Thread
-import select
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+def structured_read(socket_connection):
+    """
+    Read an entire message from a socket connection
+    and returns the tag, sender rank and message. 
+    
+    The stucture of all the MPI message are contains
+    of a fixed size header and a veriable length message.
+    
+    The header has 3 fields:
+        sender      : integer
+        tag         : integer
+        msg_size    : integer
+
+    The method is constructued of two loop. The first loop
+    readys until is have received the entire header. The
+    contents of the header is then unpacked. The unpacked
+    msg_size is used to receive the rest of the message. 
+
+    The size of the header is 12 bytes according to this
+    python code:
+
+    >>> import struct
+    >>> struct.calcsize("lll")
+    12
+
+    Which also means that we're packing data as longs, so 
+    we have room for a lot of data in the message. 
+    """
+    HEADER_SIZE = 12
+    header_unpacked = False
+
+    # The end variables we're gonna return
+    tag = sender = None
+    data = ''
+
+    while not header_unpacked:
+        data += socket_connection.recv(HEADER_SIZE)
+
+        if len(data) > HEADER_SIZE and not header_unpacked:
+            tag, sender, msg_size = struct.unpack("lll", data[:HEADER_SIZE)
+            header_unpacked = True
+    
+    # receive the rest of the data 
+    total_msg_size = msg_size + HEADER_SIZE
+    recv_size = msg_size
+    while len(data) < total_msg_size:
+        recv_size = total_msg_size - len(data)
+        data += socket_connection.recv(recv_size)
+    
+    # unpacking the data
+    picked_data = struct.unpack("s", data[HEADER_SIZE:])
+    data = pickle.loads(picked_data)
+
+    return tag, sender, data
 
 def get_socket(range=(10000, 30000)):
     """
@@ -144,10 +198,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                     (conn, sender_address) = read_socket.accept()
 
                     # Fixme. This should be done in a two loop way
-                    data = conn.recv(4096)
-
-                    # Unpickle the data so we can understand it
-                    data = pickle.loads(data)
+                    tag, sender, data = structured_read(conn)
 
                     # Save the data in an internal structure so we can find it again. 
                     # FIXME: We should add the communicator id, name or whatever. Otherwise
