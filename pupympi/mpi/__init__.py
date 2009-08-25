@@ -37,9 +37,10 @@ class MPI(threading.Thread):
     @classmethod
     def initialize(cls): # {{{1
         """
-        Initializes the MPI environment. This process will give each process 
-        the rank and size in the MPI_COMM_WORLD communicator. This includes the
-        rank and size of this, which and be read just after startup::
+        Initializes the MPI environment. This will give each process a separate
+        rank in the MPI_COMM_WORLD communicator along with the total number of
+        processes in the communicator. Both attributes can be read just after
+        startup::
 
             from mpi import MPI
 
@@ -81,7 +82,7 @@ class MPI(threading.Thread):
 
             # Continue with the stuff
             for comm in self.communicators:
-                comm.update()
+                comm.update()                
             
             # Trying to flush pipes
             flush_all()
@@ -100,15 +101,15 @@ class MPI(threading.Thread):
         self.network = Network(options)
 
         # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
-        # a rank and size. The members are filled out after the network is 
-        # initialized.
+        # the rank of the process that holds it and size.
+        # The members are filled out after the network is initialized.
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network)
         self.communicators = []
         self.communicators.append( self.MPI_COMM_WORLD )
 
-        # Tell the communicator to build it "world" of the results in the network
-        # initialization. All network types will create a variable call all_procs
-        # containing nework specific information for each specific rank. 
+        # Tell the communicator to build it's "world" from the results of the network
+        # initialization. All network types will create a variable called all_procs
+        # containing network specific information for all ranks.
         self.MPI_COMM_WORLD.build_world( self.network.all_procs )
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
@@ -133,7 +134,9 @@ class MPI(threading.Thread):
 
         FIXME: Should be manully try to kill some threads?
         """
+        # Wait for shutdown to be signalled
         self.shutdown_lock.acquire()
+        # Shutdown the network
         self.network.finalize()
         Logger().debug("Network finalized")
 
@@ -154,7 +157,7 @@ class MPI(threading.Thread):
             status = MPI.initialized()  # status will now be True
 
         Please, if you're thinking of using this method, you might
-        be down the wrong track. Don't write ugly code. 
+        be down the wrong track. Don't bend the Python like Bromer does. 
         """
         return getattr(cls, '_initialized', False)
         
@@ -186,7 +189,7 @@ class MPI(threading.Thread):
         """
         FIXME
         """
-        Logger().warn("Non-Implemented method 'comm_split' called.")
+        Logger().warn("Non-Implemented method 'comm_dup' called.")
         
     def comm_compare(self, communicator1, communicator2):
         """

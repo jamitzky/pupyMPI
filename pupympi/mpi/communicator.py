@@ -23,7 +23,7 @@ class Communicator:
                             "MPI_WTIME_IS_GLOBAL": False
                         }
 
-        # Addind locks and initial information about the request queue
+        # Adding locks and initial information about the request queue
         self.current_request_id_lock = threading.Lock()
         self.request_queue_lock = threading.Lock()
         self.current_request_id = 0
