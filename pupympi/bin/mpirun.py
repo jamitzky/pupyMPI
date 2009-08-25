@@ -51,22 +51,34 @@ def parse_options():
     return options, args, user_options
 
 def io_forwarder(list):
+    """
+    Take a list of processes and relay from their stdout and stderr pipes.
+    
+    This function continually listens on out and error pipes from all started    
+    processes and relays the output to the stdout of the calling process.
+    During shutdown a final run through of all the pipes is done to print any
+    remaining data.
+    """
     logger = Logger()
 
-    pipes = [p.stderr for p in list]
-    pipes.extend( [p.stdout for p in list] )
-    pipes = filter(lambda x: x is not None, pipes)
+    pipes = [p.stderr for p in list] # Put all stderr pipes in list
+    pipes.extend( [p.stdout for p in list] ) # Put all stdout pipes in list
+    pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
     logger.debug("Starting the IO forwarder")
-
+    
+    # Main loop, select, output, check for shutdown - repeat
     while True:
+        # Any pipes ready with output?
         readlist, _, _ =  select.select(pipes, [], [], 0.5)
-
+        
+        # Output anything that we may have found
         for fh in readlist:
             content = fh.readlines()
             for line in content:
                 print >> sys.stdout, line.strip()
-    
+        
+        # Check if shutdown is in progress    
         if shutdown_lock.acquire(False):
             logger.debug("IO forwarder got the lock!.. breaking")
             shutdown_lock.release()
@@ -76,7 +88,7 @@ def io_forwarder(list):
 
         time.sleep(1)
 
-    # Go through the pipes manuall to see if there is anything
+    # Go through the pipes manually to see if there is anything
     for pipe in pipes:
         while True:
             line = pipe.read()
@@ -88,7 +100,7 @@ def io_forwarder(list):
     logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
-    options, args, user_options = parse_options()
+    options, args, user_options = parse_options() # Get options from cli
     executeable = args[0]
 
     # Start the logger
@@ -102,18 +114,19 @@ if __name__ == "__main__":
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts, options.np,"rr") # NOTE: This call should get scheduling option from args to replace "rr" parameter
-
-    s, mpi_run_hostname, mpi_run_port = get_socket()
-            
+    mappedHosts = map_hostfile(hosts, options.np,"rr") # TODO: This call should get scheduling option from args to replace "rr" parameter
+    
+    s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
     logger.debug("Socket bound to port %d" % mpi_run_port)
 
+    # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
     remote_start = getattr(processloaders, options.startup_method)
 
+    # List of process objects (instances of subprocess.Popen class)
     process_list = []
 
-    # Start a process for each rank on associated host. 
+    # Start a process for each rank on the host 
     for (host, rank, port) in mappedHosts:
         port = port+rank
 
@@ -121,64 +134,76 @@ if __name__ == "__main__":
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), executeable)
         
+        # Mimic our cli call structure also for remotely started processes
         run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
                 "--verbosity=%d" % options.verbosity] 
         
+        # Special options
+        # TODO: This could be done nicer, no need for spec ops
         if options.quiet:
             run_options.append('--quiet')
-
         if options.debug:
             run_options.append('--debug')
-
         run_options.append('--log-file=%s' % options.logfile)
 
-        # Adding user options. Gnu style says this must be after --
+        # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
         run_options.extend( user_options )
-
+        
+        # Now start the process and keep track of it
         p = remote_start(host, run_options)
         process_list.append(p)
             
         logger.debug("Process with rank %d started" % rank)
 
-    # Start a thread to handle io forwarding
-    shutdown_lock = threading.Lock()
-    shutdown_lock.acquire()
+    # NOTE: Why is this not started before the remote processes?
+    # Start a thread to handle io forwarding from processes
+    shutdown_lock = threading.Lock() # lock used to signal shutdown
+    shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
     t = threading.Thread(target=io_forwarder, args=(process_list,))
     t.start()
         
-    # Listing for (rank, host, port) from all the procs.
+    # Listing of (rank, host, port) for all the processes
     all_procs = []
+    # Listing of socket connections to all the processes
     sender_conns = []
 
     logger.debug("Waiting for %d processes" % options.np)
 
-    for i in range(options.np):
+    # Recieve listings from newly started proccesses phoning in
+    # TODO: This initial communication should be more robust
+    # - if procs die before contacting mother, we hang
+    # - if procs don't send complete info in first attempt we go haywire
+    # - if mother is contacted on port from anyone but the proper processes we could hang or miss a process
+    for i in range(options.np):        
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
-        # Recieve listings from newly started proccesses phoning in
+                
         data = pickle.loads(sender_conn.recv(4096))
-        all_procs.append( data )
+        all_procs.append( data ) # add (rank,host,port) for process to the listing
         logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
 
     logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections
+    # TODO: This initial communication should also be more robust
+    # - if a proc does not recieve proper info all bets are off
+    # - if a proc is not there to recieve we hang (at what timeout?)
     for conn in sender_conns:
-        conn.send( pickle.dumps( all_procs ))
-    
-    # Close all the connections
+        conn.send( pickle.dumps( all_procs ))    
+    # Close all the connections used for system setup
     [ c.close for c in sender_conns ]
-
     # Close own "server" socket
     s.close()
     
-    # Check status on all children
+    # Wait for all started processes to die
     wait_for_shutdown(process_list)
+    # Signal shutdown to io_gather thread
     shutdown_lock.release()
-
+    
+    # Wait for it... wait for it...
     t.join()
     logger.debug("IO forward thread joined")
