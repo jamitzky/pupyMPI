@@ -114,13 +114,14 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     call might return almost without blocking.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, options, *args, **kwargs):
         Logger().debug("TCPCommunication handler initialized")
-        super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
+        super(TCPCommunicationHandler, self).__init__(options, *args, **kwargs)
 
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
         self.sockets_out = []
+        self.rank = options.rank
 
         self.socket_to_job = {}
         self.received_data = {}
@@ -212,9 +213,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # Send the data to the receiver. This should probably be rewritten so it 
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
-                        data = {'data' : job['data'], 'tag' : job['tag'] }
+                        data = pickle.dumps(job['data'])
+                        header = struct.pack("lll", self.rank, job['tag'], len(bin_data))
 
-                        job['socket'].send( pickle.dumps(data) )
+                        job['socket'].send( header + data )
                         Logger().info("Sending data on the socket. Going to update the requst object next")
 
                         job['request'].update(status='ready')
