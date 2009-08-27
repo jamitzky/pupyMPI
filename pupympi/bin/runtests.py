@@ -42,19 +42,19 @@ class RunTest(Thread):
 
     def run(self):
         self.start = time.time()
-        while time.time() < (self.start + TEST_MAX_RUNTIME): # hax: wait for max 10'ish seconds
-            if self.process.poll() is not None:
+        while time.time() < (self.start + TEST_MAX_RUNTIME): # HACK: Limit execution time
+            if self.process.poll() is not None: # Has the process stopped running?
                 break
             time.sleep(TEST_EXECUTION_TIME_GRANULARITY)
 
         self.executiontime = time.time() - self.start 
         #print "Time to kill ",str(self.process)
-        if self.process.poll() is None:
+        if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            self.process.terminate()
+            self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
-                self.process.kill()
+                self.process.kill() # SIGTERM did not do it, now we SIGKILL
             
         #print self.process.communicate()
         self.returncode = self.process.returncode
@@ -99,6 +99,7 @@ def run_tests(test_files):
         threadlist.append(t)
         t.start()
         t.join() # run sequentially until issue #19 is fixed
+        # TODO: Issue 19 is resolved, try fixing the above
 
     # for t in threadlist:
     #    t.join()
