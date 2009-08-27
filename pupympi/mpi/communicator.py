@@ -1,4 +1,3 @@
-# Fred dabbling in communication
 from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
 import threading
@@ -6,7 +5,7 @@ from mpi.request import Request
 
 class Communicator:
     """
-    This class represents a communicator.
+    This class represents an MPI communicator.
     """
     def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
         self._rank = rank
@@ -24,7 +23,7 @@ class Communicator:
                             "MPI_WTIME_IS_GLOBAL": False
                         }
 
-        # Addind locks and initial information about the request queue
+        # Adding locks and initial information about the request queue
         self.current_request_id_lock = threading.Lock()
         self.request_queue_lock = threading.Lock()
         self.current_request_id = 0

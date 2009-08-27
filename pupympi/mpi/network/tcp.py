@@ -1,13 +1,74 @@
-import mpi, time, socket, threading, random
+import mpi, time, socket, threading, random, select, struct
 from mpi.logger import Logger
 from mpi.network import AbstractNetwork, AbstractCommunicationHandler
 from threading import Thread
-import select
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+def structured_read(socket_connection):
+    """
+    Read an entire message from a socket connection
+    and returns the tag, sender rank and message. 
+    
+    The stucture of all the MPI message are contains
+    of a fixed size header and a veriable length message.
+    
+    The header has 3 fields:
+        sender      : integer
+        tag         : integer
+        msg_size    : integer
+
+    The method is constructued of two loop. The first loop
+    readys until is have received the entire header. The
+    contents of the header is then unpacked. The unpacked
+    msg_size is used to receive the rest of the message. 
+
+    The size of the header is 12 bytes according to this
+    python code:
+
+    >>> import struct
+    >>> struct.calcsize("lll")
+    12
+
+    Which also means that we're packing data as longs, so 
+    we have room for a lot of data in the message. 
+    """
+    HEADER_SIZE = 12
+    header_unpacked = False
+
+    # The end variables we're gonna return
+    tag = sender = None
+    data = ''
+
+    Logger().debug("Starting receive first loop")
+
+    while not header_unpacked:
+        data += socket_connection.recv(HEADER_SIZE)
+
+        if len(data) > HEADER_SIZE and not header_unpacked:
+            sender, tag, msg_size = struct.unpack("lll", data[:HEADER_SIZE])
+            header_unpacked = True
+
+    
+    # receive the rest of the data 
+    total_msg_size = msg_size + HEADER_SIZE
+    recv_size = msg_size
+
+    Logger().debug("Starting receive second loop with total_msg_size(%d) and recv_size(%d)" %(total_msg_size, recv_size))
+
+    while len(data) < total_msg_size:
+        recv_size = total_msg_size - len(data)
+        data += socket_connection.recv(recv_size)
+    
+    # unpacking the data
+    data = pickle.loads(data[HEADER_SIZE:])
+
+    Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
+
+    return tag, sender, data
 
 def get_socket(range=(10000, 30000)):
     """
@@ -71,13 +132,12 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.socket_to_job = {}
         self.received_data = {}
 
-    def add_received_data(self, data):
+    def add_received_data(self, tag, data):
         """
         Saves received data in a structure organised by tag (later
         also communicator) so it's easy to find.
         """
-        Logger().info("Adding recived data with tag %s" % data['tag'])
-        tag = data['tag']
+        Logger().info("Adding recived data with tag %s" % tag)
         if tag not in self.received_data:
             self.received_data[tag] = []
 
@@ -144,15 +204,12 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                     (conn, sender_address) = read_socket.accept()
 
                     # Fixme. This should be done in a two loop way
-                    data = conn.recv(4096)
-
-                    # Unpickle the data so we can understand it
-                    data = pickle.loads(data)
+                    tag, sender, data = structured_read(conn)
 
                     # Save the data in an internal structure so we can find it again. 
                     # FIXME: We should add the communicator id, name or whatever. Otherwise
                     # messages to different communicators might overlap
-                    self.add_received_data(data)
+                    self.add_received_data(tag, data)
 
                 # We handle write operations second (for no reason).
                 for client_socket in out_list:
@@ -161,9 +218,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # Send the data to the receiver. This should probably be rewritten so it 
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
-                        data = {'data' : job['data'], 'tag' : job['tag'] }
+                        data = pickle.dumps(job['data'])
+                        header = struct.pack("lll", self.rank, job['tag'], len(data))
 
-                        job['socket'].send( pickle.dumps(data) )
+                        job['socket'].send( header + data )
                         Logger().info("Sending data on the socket. Going to update the requst object next")
 
                         job['request'].update(status='ready')
