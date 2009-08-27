@@ -40,7 +40,7 @@ class AbstractNetwork(object):
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
-        CommunicationHandler.finalize for a deeper descriptio of
+        CommunicationHandler.finalize for a deeper description of
         the shutdown procedure. 
         """
         self.t_in.finalize()

@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.5
 import sys, os, socket
 from optparse import OptionParser, OptionGroup
 import select, time
@@ -200,6 +199,7 @@ if __name__ == "__main__":
     s.close()
     
     # Wait for all started processes to die
+    # NOTE: This seems redundant, see comment in processloaders.py
     wait_for_shutdown(process_list)
     # Signal shutdown to io_gather thread
     shutdown_lock.release()

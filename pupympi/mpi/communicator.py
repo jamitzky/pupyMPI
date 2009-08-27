@@ -69,7 +69,11 @@ class Communicator:
             elif status == 'ready':
                 # Ready means that we're waiting for the user to do something about
                 # it. We can't do anything.
-                continue
+                # continue
+                # NOTE: I substituted continue for pass
+                # because we need to release the request.lock here also
+                # - Fred
+                pass
 
             elif status == 'finished':
                 # All done, so it should be safe to remove. We're seperating this
@@ -105,6 +109,8 @@ class Communicator:
         """
         logger = Logger()
         logger.debug("Adding request object to the request queue")
+        
+        # Get a unique request object id
         self.current_request_id_lock.acquire()
         self.current_request_id += 1
         idx = self.current_request_id
@@ -112,7 +118,8 @@ class Communicator:
 
         # Set the id on the request object so we can read it directly later
         request_obj.queue_idx = idx
-
+        
+        # Put request in queue
         self.request_queue_lock.acquire()
         self.request_queue[idx] = request_obj
         self.request_queue_lock.release()

@@ -13,16 +13,16 @@ def structured_read(socket_connection):
     Read an entire message from a socket connection
     and returns the tag, sender rank and message. 
     
-    The stucture of all the MPI message are contains
-    of a fixed size header and a veriable length message.
+    The stucture of all the MPI message consists
+    of a fixed size header and a variable length message.
     
     The header has 3 fields:
         sender      : integer
         tag         : integer
         msg_size    : integer
 
-    The method is constructued of two loop. The first loop
-    readys until is have received the entire header. The
+    The method is constructed of two loops. The first loop
+    readys until we have received the entire header. The
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
 
@@ -47,7 +47,12 @@ def structured_read(socket_connection):
 
     while not header_unpacked:
         data += socket_connection.recv(HEADER_SIZE)
-
+        
+        # NOTE:
+        # on my list of dumb-ass questions why the tagged on "not header_unpacked"?
+        # it can only be set to true inside the if-statement so the check seems
+        # superflous
+        # - Fred
         if len(data) > HEADER_SIZE and not header_unpacked:
             sender, tag, msg_size = struct.unpack("lll", data[:HEADER_SIZE])
             header_unpacked = True
@@ -73,7 +78,7 @@ def structured_read(socket_connection):
 def get_socket(range=(10000, 30000)):
     """
     A simple helper method for creating a socket,
-    binding it to a fee port. 
+    binding it to a random free port within the specified range. 
     """
     logger = Logger()
     used = []
@@ -99,7 +104,7 @@ def get_socket(range=(10000, 30000)):
         except socket.error, e:
             raise e
             logger.debug("get_socket: Permission error on port %d" % port_no)
-            used.append( port_no )
+            used.append( port_no ) # Mark socket as used (or no good or whatever)
 
     logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
@@ -110,14 +115,14 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     will be one or two threads of this class.
 
     The main purpose of this class is to select on a read and writelist and
-    and handle incomming / outgoing requests. 
+    and handle incoming / outgoing requests. 
 
     Whenever some job is completed the request object matching the job will
     be updated. 
 
     We also keep an internal queue of the jobs not mathing a request object 
-    yet. Whenever a new request objects comes into the queue we look through
-    the already finished TCP jobs to find a mathing one. In this case a recv()
+    yet. Whenever a new request object comes into the queue we look through
+    the already finished TCP jobs to find a matching one. In this case a recv()
     call might return almost without blocking.
     """
 
@@ -157,7 +162,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         Logger().debug("Adding outgoing job")
 
         # This is a sending operation. We should create a socket 
-        # for the job, so we can selet from it later. 
+        # for the job, so we can select from it later. 
         receiver = ( job['participant']['host'], job['participant']['port'],)
         if not job['socket']:
             # Create a client socket and connect to the other end
@@ -187,7 +192,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         Logger().debug("Starting select loop in TCPCommunicatorHandler")
 
         # Starting the select on the sockets. We're setting a timeout
-        # so we can break and test if we should break ouf of the thread
+        # so we can break and test if we should break out of the thread
         # if somebody have called finalize. 
         it = 0
         while True:
@@ -222,7 +227,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         header = struct.pack("lll", self.rank, job['tag'], len(data))
 
                         job['socket'].send( header + data )
-                        Logger().info("Sending data on the socket. Going to update the requst object next")
+                        Logger().info("Sending data on the socket. Going to update the request object next")
 
                         job['request'].update(status='ready')
                         job['status'] = 'finished'
