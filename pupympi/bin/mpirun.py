@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python2.6
 import sys, os, socket
 from optparse import OptionParser, OptionGroup
 import select, time
@@ -79,9 +79,9 @@ def io_forwarder(list):
                 print >> sys.stdout, line.strip()
         
         # Check if shutdown is in progress    
-        if shutdown_lock.acquire(False):
+        if io_shutdown_lock.acquire(False):
             logger.debug("IO forwarder got the lock!.. breaking")
-            shutdown_lock.release()
+            io_shutdown_lock.release()
             break
         else:
             logger.debug("IO forwarder could not get the lock")
@@ -161,8 +161,8 @@ if __name__ == "__main__":
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
-    shutdown_lock = threading.Lock() # lock used to signal shutdown
-    shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
+    io_shutdown_lock = threading.Lock() # lock used to signal shutdown
+    io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
     t = threading.Thread(target=io_forwarder, args=(process_list,))
     t.start()
         
@@ -200,10 +200,11 @@ if __name__ == "__main__":
     s.close()
     
     # Wait for all started processes to die
+    # NOTE: This seems redundant, see comment in processloaders.py
     wait_for_shutdown(process_list)
-    # Signal shutdown to io_gather thread
-    shutdown_lock.release()
+    # Signal shutdown to io_forwarder thread
+    io_shutdown_lock.release()
     
-    # Wait for it... wait for it...
+    # Wait for the IO_forwarder thread to stop
     t.join()
     logger.debug("IO forward thread joined")

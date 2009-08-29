@@ -19,22 +19,25 @@ class Request:
         # 'new' ->       The object is newly created. If this is send the lower layer can start to 
         #                do stuff with the data
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
-        # 'ready'     -> Means we have the data (in receive) or picked the data (send) and can
+        # 'ready'     -> Means we have the data (in receive) or pickled the data (send) and can
         #                safely return from a test or wait call.
         self._m = {'status' : 'new' }
 
         # Start a lock for this request object. The lock should be taken
         # whenever we change the content. It should be legal to read 
         # information without locking (like test()). We implement the release() and
-        # acquire function on this class directly so the variabel stays private
+        # acquire function on this class directly so the variable stays private
         self._m['lock'] = threading.Lock()
 
         Logger().debug("Request object created for communicator %s, tag %s and type %s and participant %s" % (self.communicator.name, self.tag, self.type, self.participant))
 
-        # Start the netwok layer on a job as well
+        # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data)
 
     def update(self, status=None, data=None, lock=True):
+        """
+        Update the status of a request
+        """
         if status:
             if lock:
                 self.acquire()
@@ -80,10 +83,10 @@ class Request:
 
         When waiting for a receive, the data will be returned to the calling function.
 
-        On successfull completing the ressources occupied by this request object will
+        On successfull completion the ressources occupied by this request object will
         be garbage collected.
 
-        FIXME: This should properly be a bit more thread safe. Should we add a lock to 
+        FIXME: This should probably be a bit more thread safe. Should we add a lock to 
                each request object and lock it when we look at it?
         """
         Logger().info("Starting a %s wait" % self.type)
