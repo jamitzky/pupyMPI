@@ -60,31 +60,3 @@ def wait_for_shutdown(process_list):
                 logger.debug("A process exited with return code %d." % (returncode))
 
         time.sleep(1)
-
-#def wait_for_shutdown(process_list):
-#    """
-#    Go through list of processes and make sure they all have terminated
-#    
-#    NOTE: This function does not currently make sense to me. We go through all the
-#    processes in the list and remove them if they are still running (poll() = None)
-#    or if they have exited correctly (poll() = 0) but not if they returned status != 0
-#    (which should be error).
-#    Then we sleep and poll the erroneous ones again?
-#    This does not make sense, if Chewbacca lives on Endor you must acquit!
-#    """
-#    logger = Logger()
-#    while process_list:
-#        for p in process_list:
-#            returncode = p.poll()
-#            logger.debug("Got return code: %s" % returncode)
-#
-#            if returncode is None: # still alive
-#                logger.debug("Process was None, so it was just removed from the process list")
-#                process_list.remove( p )
-#            elif returncode == 0: # exited correctly
-#                logger.debug("Process exited with a status of 0.")
-#                process_list.remove( p )
-#            else: # error
-#                logger.debug("Process exited with status: %d" % returncode)
-#
-#        time.sleep(1)
