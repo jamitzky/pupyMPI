@@ -69,24 +69,31 @@ def io_forwarder(list):
     
     # Main loop, select, output, check for shutdown - repeat
     while True:
-        # Any pipes ready with output?
-        readlist, _, _ =  select.select(pipes, [], [], 0.5)
         
-        # Output anything that we may have found
-        for fh in readlist:
-            content = fh.readlines()
-            for line in content:
-                print >> sys.stdout, line.strip()
-        
-        # Check if shutdown is in progress    
-        if io_shutdown_lock.acquire(False):
-            logger.debug("IO forwarder got the lock!.. breaking")
-            io_shutdown_lock.release()
+        try:
+        # Trying to get stuck processes to accept Ctrl+C and DIE!
+            # Any pipes ready with output?
+            readlist, _, _ =  select.select(pipes, [], [], 0.5)
+            
+            # Output anything that we may have found
+            for fh in readlist:
+                content = fh.readlines()
+                for line in content:
+                    print >> sys.stdout, line.strip()
+            
+            # Check if shutdown is in progress    
+            if io_shutdown_lock.acquire(False):
+                logger.debug("IO forwarder got the lock!.. breaking")
+                io_shutdown_lock.release()
+                break
+            else:
+                logger.debug("IO forwarder could not get the lock")
+    
+            time.sleep(1)
+        except KeyboardInterrupt:
+            logger.debug("IO forwarder was manually interrupted")
             break
-        else:
-            logger.debug("IO forwarder could not get the lock")
-
-        time.sleep(1)
+        
 
     # Go through the pipes manually to see if there is anything
     for pipe in pipes:
