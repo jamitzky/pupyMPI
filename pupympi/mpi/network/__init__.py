@@ -68,7 +68,7 @@ class AbstractCommunicationHandler(Thread):
         if acquired:
             self.shutdown_lock.release()
 
-        Logger().debug("CommunicationHandler asked for shutdown status: %s" % acquired)
+        #Logger().debug("CommunicationHandler asked for shutdown status: %s" % acquired)
         return acquired
 
     def finalize(self):

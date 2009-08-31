@@ -48,10 +48,11 @@ def wait_for_shutdown(process_list):
     while process_list:
         for p in process_list:
             returncode = p.poll()
-            logger.debug("Got return code: %s" % returncode)
+            #logger.debug("Got return code: %s" % returncode)
 
             if returncode is None: # still alive
-                logger.debug("A process reports still alive")
+                #logger.debug("A process reports still alive")
+                pass
             elif returncode == 0: # exited correctly
                 logger.debug("A process exited with a status of 0.")
                 process_list.remove( p )

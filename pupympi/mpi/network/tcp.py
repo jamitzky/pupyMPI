@@ -202,7 +202,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
                 it += 1
                 (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
-                Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
+                
+                #Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
+                if it < 3 or (it < 100 and it % 10 == 0) or (it % 1000 == 0):
+                    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
 
                 # We handle read operations first
                 for read_socket in in_list:
