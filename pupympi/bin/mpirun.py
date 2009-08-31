@@ -65,7 +65,7 @@ def io_forwarder(list):
     pipes.extend( [p.stdout for p in list] ) # Put all stdout pipes in list
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
-    logger.debug("Starting the IO forwarder")
+    #logger.debug("Starting the IO forwarder")
     
     # Main loop, select, output, check for shutdown - repeat
     while True:
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     
     s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
-    logger.debug("Socket bound to port %d" % mpi_run_port)
+    #logger.debug("Socket bound to port %d" % mpi_run_port)
 
     # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
     remote_start = getattr(processloaders, options.startup_method)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         p = remote_start(host, run_options)
         process_list.append(p)
             
-        logger.debug("Process with rank %d started" % rank)
+        #logger.debug("Process with rank %d started" % rank)
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
@@ -184,7 +184,7 @@ if __name__ == "__main__":
                 
         data = pickle.loads(sender_conn.recv(4096))
         all_procs.append( data ) # add (rank,host,port) for process to the listing
-        logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
+        #logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
 
     logger.debug("Received information for all %d processes" % options.np)
     
