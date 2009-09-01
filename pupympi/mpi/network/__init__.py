@@ -63,6 +63,11 @@ class AbstractCommunicationHandler(Thread):
     def add_out_job(self, job):
         self.outgoing.append(job)
 
+    def callback(self, job, *args, **kwargs):
+        if job['callbacks'] and getattr(job['callbacks'], '__iter___', False):
+            for callback in job['callbacks']:
+                callback(*args, **kwargs)
+
     def shutdown_ready(self):
         acquired = self.shutdown_lock.acquire(False)
         if acquired:

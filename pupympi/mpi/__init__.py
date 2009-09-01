@@ -1,9 +1,7 @@
 __version__ = 0.01 # It bumps the version or else it gets the hose again!
 
-
 from optparse import OptionParser, OptionGroup
-import threading
-import sys, getopt, time
+import threading, sys, getopt, time
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger

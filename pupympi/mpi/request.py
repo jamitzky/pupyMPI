@@ -31,8 +31,13 @@ class Request:
 
         Logger().debug("Request object created for communicator %s, tag %s and type %s and participant %s" % (self.communicator.name, self.tag, self.type, self.participant))
 
+        callbacks = [ self.network_callback, ]
+
         # Start the network layer on a job as well
-        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data)
+        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
+
+    def network_callback(self, *args, **kwargs):
+        Logger().debug("Network callback in request called")
 
     def update(self, status=None, data=None, lock=True):
         """

@@ -230,9 +230,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         header = struct.pack("lll", self.rank, job['tag'], len(data))
 
                         job['socket'].send( header + data )
-                        Logger().info("Sending data on the socket. Going to update the request object next")
+                        Logger().info("Sending data on the socket. Going to call the callbacks")
 
-                        job['request'].update(status='ready')
+                        # Trigger the callbacks. 
+                        self.callback(job, status='ready')
                         job['status'] = 'finished'
 
             except select.error, e:
@@ -290,7 +291,7 @@ class TCPNetwork(AbstractNetwork):
         for (host, port, rank) in all_procs:
             self.all_procs[rank] = {'host' : host, 'port' : port, 'rank' : rank}
 
-    def start_job(self, request, communicator, type, participant, tag, data, socket=None):
+    def start_job(self, request, communicator, type, participant, tag, data, socket=None, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
         up an initial job structure and passing it to the correct thread. 
