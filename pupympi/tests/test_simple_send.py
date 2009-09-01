@@ -1,9 +1,9 @@
 #!/usr/bin/env python2.6
 
-# Simple pupympi program to test basic immediate send to blocking recieve
+# Simple pupympi program to test basic immediate send to immediate recieve
 # This test is meant to be run with only two processes
 
-# first rank 0 isends timestamp to rank 1 who is a very slow reciever so rank 0 should quit early
+# first rank 0 isends message to rank 1 
 
 import time
 from mpi import MPI
@@ -15,7 +15,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 
 neighbour = (rank + 1) % size # Communicate with own rank + 1
-content = "This message was Isent"
+content = "This message was what I sent (isend)"
 
 DUMMY_TAG = 1
 
@@ -31,14 +31,11 @@ if rank == 0:
 
     
 else: # rank == 1
-    # Waaaaait for it...
-    time.sleep(4)
     
     # Recieve
     print "YAWN, rank: %d recieving from %d" % (rank,neighbour)
-    recieved = mpi.MPI_COMM_WORLD.recv(neighbour,DUMMY_TAG)    
-    #request = mpi.MPI_COMM_WORLD.irecv(neighbour,DUMMY_TAG)    
-    #recieved = request.wait()
+    request = mpi.MPI_COMM_WORLD.irecv(neighbour,DUMMY_TAG)    
+    recieved = request.wait()
     print "Rank: %d RECIEVED %s" % (rank,recieved)
 
 

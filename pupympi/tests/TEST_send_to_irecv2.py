@@ -3,9 +3,9 @@
 # Simple pupympi program to test basic blocking send to immediate recieve
 # This test is meant to be run with only two processes
 
-# rank 0 sends message1 and then message2 to rank 1 who first tries to recive
-# message2 (based on tag) and then message1
-# since message one was (blocking) sent first it should be the first message recieved
+# Rank 0 sends message2 and then message1 to rank 1 who first tries to recive
+# message1 (based on tag) and then message2
+# That is message1 should be recieved first then message2
 
 import time
 from mpi import MPI
@@ -27,8 +27,8 @@ ANOTHER_TAG = 2
 if rank == 0:
     # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
-    request = mpi.MPI_COMM_WORLD.send(neighbour,content1,DUMMY_TAG)    
-    request = mpi.MPI_COMM_WORLD.send(neighbour,content2,ANOTHER_TAG)    
+    request = mpi.MPI_COMM_WORLD.send(neighbour,content2,DUMMY_TAG)    
+    request = mpi.MPI_COMM_WORLD.send(neighbour,content1,ANOTHER_TAG)    
     print "Rank: %d ALL DONE" % (rank)
 
     
