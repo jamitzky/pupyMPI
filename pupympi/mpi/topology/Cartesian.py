@@ -91,7 +91,7 @@ class Cartesian(BaseTopology):
         return normcoords
         
     # MPI Cartesian functions
-    def MPI_Topo_test():
+    def MPI_Topo_test(self):
         """Return type of topology"""
         return MPI_CARTESIAN
                 

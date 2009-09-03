@@ -9,10 +9,10 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 # Define exception class
 class MPIException(Exception): 
-    """Custom exception for Topologies"""
+    """Custom exception for pupyMPI"""
     pass
     
-class MPIException(Exception): 
+class MPITopologyException(Exception): 
     """Custom exception for Topologies"""
     pass
 
