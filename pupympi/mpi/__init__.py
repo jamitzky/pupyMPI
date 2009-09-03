@@ -68,7 +68,12 @@ class MPI(threading.Thread):
         mpi = MPI()
         mpi.shutdown_lock = threading.Lock()
         mpi.shutdown_lock.acquire()
-        mpi.startup(options, args)
+        try:
+            mpi.startup(options, args)
+        except:
+            print "Horrible failure in MPI startup, bailing out!"
+            sys.exit(200)
+        mpi.daemon = True
         mpi.start()
         return mpi
     # }}}1
@@ -97,6 +102,7 @@ class MPI(threading.Thread):
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
+        logger.debug("Currently active threads: %d. This is daemon? %s" % (threading.activeCount(), "NOT IMPLEMENTED"))
 
         # Starting the network. This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
