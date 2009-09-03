@@ -138,10 +138,10 @@ class Communicator:
         return self.comm_group.members[rank]
     
     def rank(self):
-        return self.comm_group.rank
+        return self.comm_group.rank()
 
     def size(self):
-        return self.comm_group.size
+        return self.comm_group.size()
         
     def group(self):
         """
