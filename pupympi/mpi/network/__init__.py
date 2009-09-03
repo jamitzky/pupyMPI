@@ -23,7 +23,7 @@ class AbstractNetwork(object):
         self.outgoing = []
         self.options = options
         rank = options.rank
-
+        
         if options.single_communication_thread:
             self.t_in = CommunicationHandler(rank, self.incomming, self.outgoing)
             self.t_out = self.t_in
@@ -33,9 +33,24 @@ class AbstractNetwork(object):
             self.t_out.start()
 
         self.t_in.start()
+        
+    def register_callback(self, callback_type, callback):
+        """
+        Adds a callback to the callback list for the specific
+        type ("send", "recv").
+        
+        Note that not all callbacks are registered through this
+        as most recv callbacks are added directly on the network
+        job
+        """
+        
+        if callback_type == "recv":
+            return self.t_in.register_callback(callback_type, callback)
+        elif callback_type == "send":
+            return self.t_out.register_callback(callback_type, callback)
 
-    def get_received_data(self, participant, tag, communicator):
-        return self.t_in.get_received_data(participant, tag, communicator)
+        Logger().warning("Tried to register network callback with invalid type: %s" % callback_type)
+        return False
 
     def finalize(self):
         """
@@ -57,6 +72,11 @@ class AbstractCommunicationHandler(Thread):
         self.shutdown_lock = threading.Lock()
         self.shutdown_lock.acquire()
 
+        self.callbacks = { 'send' : [], 'recv' : [] } 
+
+    def register_callback(self, callback_type, callback):
+        self.callbacks[callback_type].append(callback)
+        
     def add_in_job(self, job):
         self.incomming.append(job)
 
@@ -64,9 +84,13 @@ class AbstractCommunicationHandler(Thread):
         self.outgoing.append(job)
 
     def callback(self, job, *args, **kwargs):
-        if job['callbacks'] and getattr(job['callbacks'], '__iter___', False):
-            for callback in job['callbacks']:
-                callback(*args, **kwargs)
+        callbacks = job.get('callbacks', [])
+        for callback in callbacks:
+            callback(*args, **kwargs)
+                
+        # Look for generic callbacks
+        for callback in self.callbacks[job['type']]:
+            callback(*args, **kwargs)
 
     def shutdown_ready(self):
         acquired = self.shutdown_lock.acquire(False)
