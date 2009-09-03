@@ -66,7 +66,10 @@ class Group:
     def incl(self, required_members):
         """
         creates a group from listed members of an existing group
+        required_members = list of new members
         """
+        newlist = [p for p in self.members if p.rank in required_members]
+        newGroup = Group()
         Logger().warn("Non-Implemented method 'group.incl' called.")
         
     def excl(self, excluded_members):
