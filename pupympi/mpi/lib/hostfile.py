@@ -13,7 +13,7 @@ def parse_hostfile(hostfile): # {{{1
     hosts = []
     
     if not hostfile:
-        logger.info("No hostfile specified - going with lousy defaults!")
+        logger.info("No hostfile specified - all processes will run on default machines (typically localhost)")
         # If no hostfile is specified, default is localhost with default parameters
         hosts = [("localhost",defaults)]
     else:
@@ -76,7 +76,7 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
         pass
     elif maxCPUs >= np: # Overmapping is needed
         if overmapping: # Overmapping allowed?
-            logger.info("gonna overmap")
+            logger.info("Insufficient hosts - overmapping processes.")
         else: # Overmapping needed but not allowed
             logger.info("Number of processes exceeds the total CPUs and overmapping is not allowed")
             return []
