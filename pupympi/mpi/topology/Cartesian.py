@@ -11,9 +11,7 @@ import unittest
 from operator import mul
 from BaseTopology import BaseTopology
 from BaseTopology import MPI_CARTESIAN
-
-class MPITopologyException(Exception):
-    pass
+from mpi.exceptions import MPITopologyException
 
 class Logger(object):
     """docstring for logger"""

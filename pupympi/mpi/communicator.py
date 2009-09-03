@@ -2,6 +2,7 @@ from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
+from mpi.group import Group
 
 class Communicator:
     """
@@ -13,7 +14,7 @@ class Communicator:
         self.name = name
         self.members = {}
         self.network = network
-
+        self.group = Group(rank)
 
         self.attr = {}
         if name == "MPI_COMM_WORLD":
@@ -31,6 +32,7 @@ class Communicator:
     
     def build_world(self, all_procs):
         self.members = all_procs
+        self.group.members = all_procs
 
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.size)
@@ -140,6 +142,12 @@ class Communicator:
 
     def size(self):
         return self._size
+        
+    def cgroup(self):
+        """
+        returns the group associated with a communicator 
+        """
+        return self.group
 
     def get_name(self):
         return self.name
