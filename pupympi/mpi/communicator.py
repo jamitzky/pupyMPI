@@ -2,18 +2,19 @@ from mpi.exceptions import MPINoSuchRankException
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
+from mpi.group import Group
 
 class Communicator:
     """
     This class represents an MPI communicator.
     """
     def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
-        self._rank = rank
-        self._size = size
+        #self._rank = rank
+        #self._size = size
         self.name = name
-        self.members = {}
+        #self.members = {}
         self.network = network
-
+        self.comm_group = Group(rank)
 
         self.attr = {}
         if name == "MPI_COMM_WORLD":
@@ -31,9 +32,10 @@ class Communicator:
     
     def build_world(self, all_procs):
         self.members = all_procs
+        self.comm_group.members = all_procs
 
     def __repr__(self):
-        return "<Communicator %s with %d members>" % (self.name, self.size)
+        return "<Communicator %s with %d members>" % (self.name, self.comm_group.size)
 
     def update(self):
         """
@@ -127,19 +129,25 @@ class Communicator:
         return idx
 
     def have_rank(self, rank):
-        return rank in self.members
+        return rank in self.comm_group.members
     
     def get_network_details(self, rank):
         if not self.have_rank(rank):
             raise MPINoSuchRankException()
 
-        return self.members[rank]
+        return self.comm_group.members[rank]
     
     def rank(self):
-        return self._rank
+        return self.comm_group.rank
 
     def size(self):
-        return self._size
+        return self.comm_group.size
+        
+    def group(self):
+        """
+        returns the group associated with a communicator 
+        """
+        return self.comm_group
 
     def get_name(self):
         return self.name
@@ -222,6 +230,7 @@ class Communicator:
     # MPI WAITANY, 46 
     # MPI WAITSOME, 49 
     # MPI WTICK, 201 
+    # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
 
 
     # Some wrapper methods
