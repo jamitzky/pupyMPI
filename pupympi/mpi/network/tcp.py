@@ -1,7 +1,7 @@
 import mpi, time, socket, threading, random, select, struct
 from mpi.logger import Logger
 from mpi.network import AbstractNetwork, AbstractCommunicationHandler
-from threading import Thread
+from threading import Thread, activeCount
 
 try:
     import cPickle as pickle
@@ -205,7 +205,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 
                 #Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
                 if it < 3 or (it < 100 and it % 10 == 0) or (it % 1000 == 0):
-                    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
+                    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets. Threads active %s" % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list), activeCount()))
 
                 # We handle read operations first
                 for read_socket in in_list:
@@ -249,7 +249,8 @@ class TCPNetwork(AbstractNetwork):
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-        Logger().debug("Network started on port %s" % port_no)
+        Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
+        
 
         # Do the initial handshaking with the other processes
         self.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
