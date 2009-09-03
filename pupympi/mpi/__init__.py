@@ -76,27 +76,12 @@ class MPI(threading.Thread):
     def run(self):
         # This can be moved out of there
         while True:
-            """
-            FIXME:
-            I belive the conditions on this thing are inverted:
-            When invoked with the blocking argument set to false, do not block.
-            If a call without an argument would block, return false immediately;
-            otherwise, do the same thing as when called without arguments, and return true.
-            - http://docs.python.org/library/threading.html
-            ... so if we cant get the lock the acquire call returns False which the
-            not negates to true and thus the if statement is executed...
-            """
+
             # Check for shutdown
             if self.shutdown_lock.acquire(False):
                 self.shutdown_lock.release()
                 break
-            #self.shutdown_lock.release() # TODO: This should be superflous and possibly bad
-            """
-            The release() method should only be called in the locked state; it
-            changes the state to unlocked and returns immediately. If an attempt
-            is made to release an unlocked lock, a RuntimeError will be raised.
-            - http://docs.python.org/library/threading.html
-            """
+
             # Update request objects
             for comm in self.communicators:
                 comm.update()                
