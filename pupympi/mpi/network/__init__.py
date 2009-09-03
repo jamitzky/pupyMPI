@@ -30,8 +30,10 @@ class AbstractNetwork(object):
         else:
             self.t_in = CommunicationHandler(rank, self.incomming, None)
             self.t_out = CommunicationHandler(rank, None, self.outgoing)
+            self.t_out.daemon = True
             self.t_out.start()
 
+        self.t_in.daemon = True
         self.t_in.start()
 
     def get_received_data(self, participant, tag, communicator):

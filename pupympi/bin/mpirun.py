@@ -3,8 +3,8 @@ import sys, os
 from optparse import OptionParser, OptionGroup
 import select, time
 
-from mpi import processloaders 
-from mpi.processloaders import wait_for_shutdown 
+import processloaders 
+from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
 from mpi.network.tcp import get_socket
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
@@ -202,9 +202,9 @@ if __name__ == "__main__":
     # - if a proc is not there to recieve we hang (at what timeout?)
     for conn in sender_conns:
         conn.send( pickle.dumps( all_procs ))    
+        conn.close()
     # Close all the connections used for system setup
-    # FIXME "Statement seems to have no effect"?
-    [ c.close for c in sender_conns ]
+    #[ c.close() for c in sender_conns ]
     # Close own "server" socket
     s.close()
     
