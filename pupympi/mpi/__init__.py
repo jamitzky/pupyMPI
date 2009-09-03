@@ -67,6 +67,7 @@ class MPI(threading.Thread):
     
         mpi = MPI()
         mpi.shutdown_lock = threading.Lock()
+        mpi.shutdown_lock.acquire()
         mpi.startup(options, args)
         mpi.start()
         return mpi
@@ -86,10 +87,10 @@ class MPI(threading.Thread):
             not negates to true and thus the if statement is executed...
             """
             # Check for shutdown
-            if not self.shutdown_lock.acquire(False):
+            if self.shutdown_lock.acquire(False):
                 self.shutdown_lock.release()
                 break
-            self.shutdown_lock.release() # TODO: This should be superflous and possibly bad
+            #self.shutdown_lock.release() # TODO: This should be superflous and possibly bad
             """
             The release() method should only be called in the locked state; it
             changes the state to unlocked and returns immediately. If an attempt
@@ -151,7 +152,7 @@ class MPI(threading.Thread):
         FIXME: Should we manually try to kill some threads?
         """
         # Wait for shutdown to be signalled
-        self.shutdown_lock.acquire()
+        self.shutdown_lock.release()
         # Shutdown the network
         self.network.finalize()
         Logger().debug("Network finalized")

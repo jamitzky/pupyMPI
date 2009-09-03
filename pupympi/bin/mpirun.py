@@ -106,6 +106,9 @@ def io_forwarder(process_list):
 
 if __name__ == "__main__":
     options, args, user_options = parse_options() # Get options from cli
+    if args is None: # TODO hack-handle no options
+        print "Please use --help for help with options"
+        sys.exit()
     executeable = args[0]
 
     # Start the logger
@@ -114,8 +117,8 @@ if __name__ == "__main__":
     # Parse the hostfile.
     try:
         hosts = parse_hostfile(options.hostfile)
-    except IOError:
-        logger.error("Something bad happended when we tried to read the hostfile. ")
+    except IOError,ex:
+        logger.error("Something bad happended when we tried to read the hostfile: ",ex)
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
