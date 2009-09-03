@@ -12,7 +12,7 @@ class AbstractNetwork(object):
     recv = _not_impl
     irecv = _not_impl
     initialize = _not_impl
-    finalize = _not_impl
+    var_finalize = _not_impl
     start_job = _not_impl
 
     def __init__(self, CommunicationHandler, options):
