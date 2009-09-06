@@ -30,15 +30,15 @@ def get_header_format():
     """
     format_32 = "lllll"
     bit_multiplier = struct.calcsize("l") / 4
-    padbytes = (bit_multiplier-1)*(struct.calcsize(format)/bit_multiplier)
+    padbytes = (bit_multiplier-1)*(struct.calcsize(format_32)/bit_multiplier)
     format = format_32 + "x"*padbytes
     return (format, struct.calcsize(format) )
     
 def unpack_header(data):
-    format, _ = get_header_format()
+    format, header_size = get_header_format()
     return struct.unpack(format, data[:header_size])
     
-def pack_header( *args ):
+def pack_header(*args):
     format, _ = get_header_format()
     return struct.pack(format, *args)
 
@@ -227,10 +227,9 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # and wait for the answer to arive on the reading socket. 
                         data = pickle.dumps(job['data'])
                         
-                        # Insert these header information 
-                        communicator = None
-                        recv_type = None
-                        header = pack_header( self.rank, job['tag'], len(data), communicator, recv_type )
+                        # FIXME: Insert these header information 
+                        recv_type = 42
+                        header = pack_header( self.rank, job['tag'], len(data), job['communicator'].id, recv_type )
 
                         job['socket'].send( header + data )
                         Logger().info("Sending data on the socket. Going to call the callbacks")
@@ -310,7 +309,7 @@ class TCPNetwork(AbstractNetwork):
         """
         Logger().info("Starting a %s network job with tag %s and %d callbacks" % (type, tag, len(callbacks)))
 
-        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks}
+        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator}
 
         if participant is not None:
             job['participant'] = communicator.members[participant]

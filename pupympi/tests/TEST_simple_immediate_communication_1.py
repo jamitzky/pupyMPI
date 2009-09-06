@@ -16,10 +16,12 @@ size = mpi.MPI_COMM_WORLD.size()
 neighbour = (rank + 1) % size # Send to own rank + 1
 content = "Message from rank %d" % (rank)
 
+DUMMY_TAG = 1
+
 if rank == 0:
     # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
-    request = mpi.MPI_COMM_WORLD.isend(neighbour,content,"Dummy tag here")
+    request = mpi.MPI_COMM_WORLD.isend(neighbour,content,DUMMY_TAG)
     request.wait()
     
     print "Rank: %d DONE" % (rank)
@@ -32,7 +34,7 @@ else: # rank == 1
     
     # Recieve
     print "Yawn, rank: %d recieving from %d" % (rank,neighbour)
-    request = mpi.MPI_COMM_WORLD.irecv(neighbour,"Dummy tag here")    
+    request = mpi.MPI_COMM_WORLD.irecv(neighbour,DUMMY_TAG)    
     recieved = request.wait()
     print "Rank: %d recieved %s" % (rank,recieved)
 
