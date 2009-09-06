@@ -1,27 +1,12 @@
 __version__ = 0.01 # It bumps the version or else it gets the hose again!
 
-
 from optparse import OptionParser, OptionGroup
-import threading
-import sys, getopt, time
+import threading, sys, getopt, time
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
 from mpi.group import Group 
-
-def flush_all():
-    """
-    Make sure all pipes are flushed
-    """
-    logger = Logger()
-
-    for input in (sys.stdout, sys.stderr):
-        try:
-            input.flush()
-            logger.debug("%s flushed" % input.name)
-        except ValueError():
-            logger.debug("Error in flushing %s" % input.name)
 
 class MPI(threading.Thread):
     """
@@ -85,15 +70,20 @@ class MPI(threading.Thread):
                 break
 
             # Update request objects
-            for comm in self.communicators:
+            for comm in self.communicators.values():
                 comm.update()                
             
-            # Trying to flush pipes
-            flush_all()
-
             time.sleep(1)
 
+    def recv_callback(self, *args, **kwargs):
+        Logger().debug("MPI layer recv_callback called")
+        
+        if "communicator" in kwargs:
+            self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
+        
     def startup(self, options, args): # {{{1
+        # FIXME: This should be moved to the __init__ method
+        
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
@@ -112,12 +102,16 @@ class MPI(threading.Thread):
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, world_Group)
-        self.communicators = []
-        self.communicators.append( self.MPI_COMM_WORLD )
+        self.communicators = {}
+        self.communicators[1] = self.MPI_COMM_WORLD
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
         self.network.set_mpi_world( self.MPI_COMM_WORLD )
+        
+        # Set the default receive callback for handling those 
+        # receives. 
+        self.network.register_callback("recv", self.recv_callback)
 
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.
@@ -142,10 +136,7 @@ class MPI(threading.Thread):
         # Shutdown the network
         self.network.finalize()
         Logger().debug("Network finalized")
-
-        # Trying to flush pipes
-        flush_all()
-
+        
     @classmethod
     def initialized(cls):
         """

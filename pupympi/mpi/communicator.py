@@ -8,10 +8,11 @@ class Communicator:
     """
     This class represents an MPI communicator.
     """
-    def __init__(self, rank, size, network, group, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, network, group, id=1, name="MPI_COMM_WORLD"):
         self.name = name
         self.network = network
         self.comm_group = group
+        self.id = id
 
         self.attr = {}
         if name == "MPI_COMM_WORLD": # FIXME Move to build_world
@@ -26,6 +27,30 @@ class Communicator:
         self.request_queue_lock = threading.Lock()
         self.current_request_id = 0
         self.request_queue = {}
+        
+        self.unhandled_receives = {}
+        
+    def pop_unhandled_message(self, participant, tag):
+        try:
+            package = self.unhandled_receives[tag][participant].pop(0)
+            return package
+        except IndexError:
+            pass
+        
+    def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
+        # Look for a request object right now. Otherwise we just put it on the queue and let the
+        # update handler do it.
+        
+        # Put it on unhandled requests
+        if tag not in self.unhandled_receives:
+            self.unhandled_receives[tag] = {}
+            
+        if not sender in self.unhandled_receives[tag]:
+            self.unhandled_receives[tag][sender] = []
+
+        self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
+        
+        Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
     
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.comm_group.size)
@@ -41,7 +66,7 @@ class Communicator:
         request status.
         """
         logger = Logger()
-        logger.debug("Update by the mpi thread in communicator: %s" % self.name)
+        #logger.debug("Update by the mpi thread in communicator: %s" % self.name)
 
         # Loook through all the request objects to see if there is anything we can do here
         for request in self.request_queue.values():
@@ -78,14 +103,10 @@ class Communicator:
                 Logger().info("Removing finished request")
         
             elif status == 'new':
-                if request.type == "receive":
-                    # We ask the network layer if there are any messages from 
-                    # our recipient, with our data in our communicator. If so
-                    # we update the request object so the wait() can finish. 
-                    data = self.network.get_received_data(request.participant, request.tag, self)
-                    if data:
-                        Logger().info("Found data from the nework ready to update a request object")
-                        request.update(status='ready', data=data, lock=False)
+                package = self.pop_unhandled_message(request.participant, request.tag)
+                if package:
+                    request.network_callback(lock=False, status='ready', data=package['data'])
+
             else:
                 logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
 
@@ -154,7 +175,7 @@ class Communicator:
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
         # Create a receive request object and return
-        handle = Request("receive", self, sender, tag)
+        handle = Request("recv", self, sender, tag)
 
         # Add to the queue
         self.request_add(handle)
