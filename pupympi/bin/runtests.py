@@ -113,15 +113,15 @@ class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-global remote_python
 remote_python = "python"
 
 def main(argv=None):
+    global remote_python
     if argv is None:
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output=","remote-python"])
+            opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output=","remote-python="])
         except getopt.error, msg:
             raise Usage(msg)
     
@@ -134,7 +134,7 @@ def main(argv=None):
             if option in ("-o", "--output"):
                 output = value
             if option in ("-r", "--remote-python"):
-                print "Remote python path now = ",value
+                #print "Remote python path now = ",value
                 remote_python = value
     
     except Usage, err:
