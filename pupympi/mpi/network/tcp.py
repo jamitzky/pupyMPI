@@ -7,6 +7,40 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    
+def get_header_format():
+    """
+    Return the format and size of the header format. We're 
+    using the format for a 32bit architecture as a basis. By
+    finding the multiplier we can determine the number of
+    padding bytes. Ie.
+    
+    x64: 
+        bit_multiplier = 2    # As a long takes but 8 bytes
+        padbytes = (2-1)*(5*8/2) => 20. Ie. we'll but 20 
+                        pad bytes in there which will double
+                        the data as expected by doubling the
+                        the bitsize
+    x128:
+         bit_multiplier = 4
+         padbytes = (4-1)*(5*16/4) => 60. Ie. we'll but 60 
+                        pad bytes in there which will x4
+                        the data as expected by x4 the
+                        the bitsize
+    """
+    format_32 = "lllll"
+    bit_multiplier = struct.calcsize("l") / 4
+    padbytes = (bit_multiplier-1)*(struct.calcsize(format)/bit_multiplier)
+    format = format_32 + "x"*padbytes
+    return (format, struct.calcsize(format) )
+    
+def unpack_header(data):
+    format, _ = get_header_format()
+    return struct.unpack(format, data[:header_size])
+    
+def pack_header( *args ):
+    format, _ = get_header_format()
+    return struct.pack(format, *args)
 
 def structured_read(socket_connection):
     """
@@ -16,27 +50,19 @@ def structured_read(socket_connection):
     The stucture of all the MPI message consists
     of a fixed size header and a variable length message.
     
-    The header has 3 fields:
-        sender      : integer
-        tag         : integer
-        msg_size    : integer
+    The header has these fields:
+        sender       : integer
+        tag          : integer
+        msg_size     : integer
+        communicator : integer
+        type         : integer
 
     The method is constructed of two loops. The first loop
     readys until we have received the entire header. The
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
-
-    The size of the header is 12 bytes according to this
-    python code:
-
-    >>> import struct
-    >>> struct.calcsize("lll")
-    12
-
-    Which also means that we're packing data as longs, so 
-    we have room for a lot of data in the message. 
     """
-    HEADER_SIZE = 12
+    _, header_size = get_header_format()
     header_unpacked = False
 
     # The end variables we're gonna return
@@ -46,20 +72,19 @@ def structured_read(socket_connection):
     Logger().debug("Starting receive first loop")
 
     while not header_unpacked:
-        data += socket_connection.recv(HEADER_SIZE)
+        data += socket_connection.recv(header_size)
         
         # NOTE:
         # on my list of dumb-ass questions why the tagged on "not header_unpacked"?
         # it can only be set to true inside the if-statement so the check seems
         # superflous
         # - Fred
-        if len(data) > HEADER_SIZE and not header_unpacked:
-            sender, tag, msg_size = struct.unpack("lll", data[:HEADER_SIZE])
+        if len(data) > header_size and not header_unpacked:
+            sender, tag, msg_size, communicator, recv_type = unpack_header(data)
             header_unpacked = True
-
     
     # receive the rest of the data 
-    total_msg_size = msg_size + HEADER_SIZE
+    total_msg_size = msg_size + header_size
     recv_size = msg_size
 
     Logger().debug("Starting receive second loop with total_msg_size(%d) and recv_size(%d)" %(total_msg_size, recv_size))
@@ -69,11 +94,11 @@ def structured_read(socket_connection):
         data += socket_connection.recv(recv_size)
     
     # unpacking the data
-    data = pickle.loads(data[HEADER_SIZE:])
+    data = pickle.loads(data[header_size:])
 
     Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
-    return tag, sender, data
+    return tag, sender, communicator, recv_type, data
 
 def get_socket(range=(10000, 30000)):
     """
@@ -135,27 +160,6 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.sockets_out = []
 
         self.socket_to_job = {}
-        self.received_data = {}
-
-    def add_received_data(self, tag, data):
-        """
-        Saves received data in a structure organised by tag (later
-        also communicator) so it's easy to find.
-        """
-        Logger().info("Adding recived data with tag %s" % tag)
-        if tag not in self.received_data:
-            self.received_data[tag] = []
-
-        self.received_data[tag].append(data)
-
-    def get_received_data(self, participant, tag, communicator):
-        Logger().info("Asking about data with tag %s" % tag)
-        # FIXME: Handle the tag and participant
-        if tag in self.received_data:
-            try:
-                return self.received_data[tag].pop(0)
-            except IndexError:
-                pass
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
@@ -211,13 +215,8 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 for read_socket in in_list:
                     (conn, sender_address) = read_socket.accept()
 
-                    # Fixme. This should be done in a two loop way
-                    tag, sender, data = structured_read(conn)
-
-                    # Save the data in an internal structure so we can find it again. 
-                    # FIXME: We should add the communicator id, name or whatever. Otherwise
-                    # messages to different communicators might overlap
-                    self.add_received_data(tag, data)
+                    tag, sender, communicator, recv_type, data = structured_read(conn)
+                    self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
 
                 # We handle write operations second (for no reason).
                 for client_socket in out_list:
@@ -227,12 +226,17 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
                         data = pickle.dumps(job['data'])
-                        header = struct.pack("lll", self.rank, job['tag'], len(data))
+                        
+                        # Insert these header information 
+                        communicator = None
+                        recv_type = None
+                        header = pack_header( self.rank, job['tag'], len(data), communicator, recv_type )
 
                         job['socket'].send( header + data )
-                        Logger().info("Sending data on the socket. Going to update the request object next")
+                        Logger().info("Sending data on the socket. Going to call the callbacks")
 
-                        job['request'].update(status='ready')
+                        # Trigger the callbacks. 
+                        self.callback(job, status='ready')
                         job['status'] = 'finished'
 
             except select.error, e:
@@ -291,7 +295,7 @@ class TCPNetwork(AbstractNetwork):
         for (host, port, rank) in all_procs:
             self.all_procs[rank] = {'host' : host, 'port' : port, 'rank' : rank}
 
-    def start_job(self, request, communicator, type, participant, tag, data, socket=None):
+    def start_job(self, request, communicator, type, participant, tag, data, socket=None, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
         up an initial job structure and passing it to the correct thread. 
@@ -304,9 +308,9 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().debug("Starting a %s network job with tag %s" % (type, tag))
+        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (type, tag, len(callbacks)))
 
-        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new'}
+        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks}
 
         if participant is not None:
             job['participant'] = communicator.members[participant]

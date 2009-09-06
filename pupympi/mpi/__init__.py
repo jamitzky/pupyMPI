@@ -1,26 +1,11 @@
 __version__ = 0.01 # It bumps the version or else it gets the hose again!
 
-
 from optparse import OptionParser, OptionGroup
-import threading
-import sys, getopt, time
+import threading, sys, getopt, time
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
-
-def flush_all():
-    """
-    Make sure all pipes are flushed
-    """
-    logger = Logger()
-
-    for input in (sys.stdout, sys.stderr):
-        try:
-            input.flush()
-            logger.debug("%s flushed" % input.name)
-        except ValueError():
-            logger.debug("Error in flushing %s" % input.name)
 
 class MPI(threading.Thread):
     """
@@ -87,12 +72,15 @@ class MPI(threading.Thread):
             for comm in self.communicators:
                 comm.update()                
             
-            # Trying to flush pipes
-            flush_all()
-
             time.sleep(1)
 
+    def recv_callback(self, *args, **kwargs):
+        # self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
+        Logger().debug("MPI layer recv_callback called")
+        
     def startup(self, options, args): # {{{1
+        # FIXME: This should be moved to the __init__ method
+        
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
         # Let the communication handle start up if it need to.
@@ -119,6 +107,10 @@ class MPI(threading.Thread):
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
         self.network.set_mpi_world( self.MPI_COMM_WORLD )
+        
+        # Set the default receive callback for handling those 
+        # receives. 
+        self.network.register_callback("recv", self.recv_callback)
 
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.
