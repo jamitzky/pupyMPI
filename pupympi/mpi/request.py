@@ -36,10 +36,11 @@ class Request:
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
 
-    def network_callback(self, *args, **kwargs):
+    def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
 
-        self.acquire()
+        if lock:
+            self.acquire()
 
         if "status" in kwargs:
             Logger().info("Updating status in request from %s to %s" % (self._m["status"], kwargs["status"]))
@@ -48,8 +49,9 @@ class Request:
         if "data" in kwargs:
             Logger().info("Adding data to request object")
             self.data = kwargs["data"]
-
-        self.release()
+            
+        if lock:
+            self.release()
 
     def release(self, *args, **kwargs):
         """
