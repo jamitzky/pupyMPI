@@ -35,9 +35,17 @@ class Communicator:
         
     def pop_unhandled_message(self, participant, tag):
         try:
-            return self.unhandled_receives[tag][participant].pop(1)
-        except:
-            return None
+            packages = self.unhandled_receives[tag][participant]
+            print "="*50
+            print packages
+            print "-"*50
+            pacakge = packages.pop(1)
+            print package
+            print "="*50
+            return package
+        except IndexError:
+            Logger().warning("Got the index error")
+            pass
         
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
         # Look for a request object right now. Otherwise we just put it on the queue and let the
@@ -51,6 +59,8 @@ class Communicator:
             self.unhandled_receives[tag][sender] = []
 
         self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
+        
+        Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
     
     def build_world(self, all_procs):
         self.members = all_procs
