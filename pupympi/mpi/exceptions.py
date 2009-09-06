@@ -18,3 +18,6 @@ class MPITopologyException(Exception):
 
 class MPINoSuchRankException(MPIException):
     pass
+
+class MPIInvalidTagException(MPIException):
+    pass

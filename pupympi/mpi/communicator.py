@@ -1,4 +1,4 @@
-from mpi.exceptions import MPINoSuchRankException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
@@ -174,6 +174,9 @@ class Communicator:
         if not self.have_rank(sender):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
+
         # Create a receive request object and return
         handle = Request("recv", self, sender, tag)
 
@@ -186,6 +189,9 @@ class Communicator:
         # Check the destination exists
         if not self.have_rank(destination_rank):
             raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
 
         # Create a receive request object and return
         handle = Request("send", self, destination_rank, tag, data=content)
