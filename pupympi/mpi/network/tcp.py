@@ -8,6 +8,9 @@ try:
 except ImportError:
     import pickle
 
+HEADER_FORMAT = 'lll'
+
+
 def structured_read(socket_connection):
     """
     Read an entire message from a socket connection
@@ -26,17 +29,23 @@ def structured_read(socket_connection):
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
 
-    The size of the header is 12 bytes according to this
+    The size of the header is 12/24 bytes according to this
     python code:
 
+    >>> # I'm a 32 bit arch
     >>> import struct
     >>> struct.calcsize("lll")
     12
 
+    >>> # I'm a 64 bit arch
+    >>> import struct
+    >>> struct.calcsize("lll")
+    24
+
     Which also means that we're packing data as longs, so 
     we have room for a lot of data in the message. 
     """
-    HEADER_SIZE = 12
+    HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
     header_unpacked = False
 
     # The end variables we're gonna return
@@ -54,9 +63,8 @@ def structured_read(socket_connection):
         # superflous
         # - Fred
         if len(data) > HEADER_SIZE and not header_unpacked:
-            sender, tag, msg_size = struct.unpack("lll", data[:HEADER_SIZE])
+            sender, tag, msg_size = struct.unpack(HEADER_FORMAT, data[:HEADER_SIZE])
             header_unpacked = True
-
     
     # receive the rest of the data 
     total_msg_size = msg_size + HEADER_SIZE
@@ -139,23 +147,16 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
     def add_received_data(self, tag, data):
         """
-        Saves received data in a structure organised by tag (later
-        also communicator) so it's easy to find.
+        The network lawer have finished the reading of some data. This
+        might be well before we have started any local read job in the
+        user code, so we can't always put it into the proper request place.
+        
+        Instead we're using a simple callback methodoly where code can 
+        add a callback to this thread and have them executed when some
+        action happens
         """
-        Logger().info("Adding recived data with tag %s" % tag)
-        if tag not in self.received_data:
-            self.received_data[tag] = []
-
-        self.received_data[tag].append(data)
-
-    def get_received_data(self, participant, tag, communicator):
-        Logger().info("Asking about data with tag %s" % tag)
-        # FIXME: Handle the tag and participant
-        if tag in self.received_data:
-            try:
-                return self.received_data[tag].pop(0)
-            except IndexError:
-                pass
+        pass
+        # FIXME
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
@@ -230,9 +231,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         header = struct.pack("lll", self.rank, job['tag'], len(data))
 
                         job['socket'].send( header + data )
-                        Logger().info("Sending data on the socket. Going to update the request object next")
+                        Logger().info("Sending data on the socket. Going to call the callbacks")
 
-                        job['request'].update(status='ready')
+                        # Trigger the callbacks. 
+                        self.callback(job, status='ready')
                         job['status'] = 'finished'
 
             except select.error, e:
@@ -291,7 +293,7 @@ class TCPNetwork(AbstractNetwork):
         for (host, port, rank) in all_procs:
             self.all_procs[rank] = {'host' : host, 'port' : port, 'rank' : rank}
 
-    def start_job(self, request, communicator, type, participant, tag, data, socket=None):
+    def start_job(self, request, communicator, type, participant, tag, data, socket=None, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
         up an initial job structure and passing it to the correct thread. 
@@ -304,9 +306,9 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().debug("Starting a %s network job with tag %s" % (type, tag))
+        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (type, tag, len(callbacks)))
 
-        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new'}
+        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks}
 
         if participant is not None:
             job['participant'] = communicator.members[participant]
