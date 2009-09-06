@@ -312,7 +312,7 @@ class TCPNetwork(AbstractNetwork):
         job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator}
 
         if participant is not None:
-            job['participant'] = communicator.members[participant]
+            job['participant'] = communicator.comm_group.members[participant]
 
         Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
