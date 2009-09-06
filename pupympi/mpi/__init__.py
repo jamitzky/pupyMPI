@@ -53,11 +53,7 @@ class MPI(threading.Thread):
         mpi = MPI()
         mpi.shutdown_lock = threading.Lock()
         mpi.shutdown_lock.acquire()
-        try:
-            mpi.startup(options, args)
-        except:
-            print "Horrible failure in MPI startup, bailing out!"
-            sys.exit(200)
+        mpi.startup(options, args)
         mpi.daemon = True
         mpi.start()
         return mpi

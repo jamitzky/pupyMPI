@@ -26,7 +26,7 @@ LOG_VERBOSITY = 3
 
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
-    cmd = "bin/mpirun.py -q -c RUN_COUNT -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "bin/mpirun.py -q -c RUN_COUNT --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     def __init__(self, test, primary_log):
         Thread.__init__(self)
         self.test = test
@@ -36,6 +36,7 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
+        self.cmd = self.cmd.replace("REMOTE_PYTHON", remote_python)
         print "About to launch ",self.cmd
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
         self.killed = False
@@ -80,7 +81,7 @@ def combine_logs(logfile_prefix):
     for log in sorted([f for f in os.listdir(".") if f.startswith(logfile_prefix+"_")]):
         counter += 1
         lf = open(log, "r")
-        combined.write("LOG DETAILS FOR %s\n------------------------------------------------" % log)
+        combined.write("LOG DETAILS FOR %s\n------------------------------------------------\n" % log)
         lines = lf.readlines()
         #print "About to write %s lines to %s" % (len(lines), combined)
         combined.writelines(lines)
@@ -112,12 +113,15 @@ class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
 
+remote_python = "python"
+
 def main(argv=None):
+    global remote_python
     if argv is None:
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output="])
+            opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output=","remote-python="])
         except getopt.error, msg:
             raise Usage(msg)
     
@@ -129,6 +133,9 @@ def main(argv=None):
                 raise Usage(help_message)
             if option in ("-o", "--output"):
                 output = value
+            if option in ("-r", "--remote-python"):
+                #print "Remote python path now = ",value
+                remote_python = value
     
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
