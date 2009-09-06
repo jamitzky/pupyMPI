@@ -11,9 +11,7 @@ import unittest
 from operator import mul
 from BaseTopology import BaseTopology
 from BaseTopology import MPI_CARTESIAN
-
-class MPITopologyException(Exception):
-    pass
+from mpi.exceptions import MPITopologyException
 
 class Logger(object):
     """docstring for logger"""
@@ -93,7 +91,7 @@ class Cartesian(BaseTopology):
         return normcoords
         
     # MPI Cartesian functions
-    def MPI_Topo_test():
+    def MPI_Topo_test(self):
         """Return type of topology"""
         return MPI_CARTESIAN
                 

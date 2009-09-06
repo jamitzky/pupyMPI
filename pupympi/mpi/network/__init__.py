@@ -12,7 +12,7 @@ class AbstractNetwork(object):
     recv = _not_impl
     irecv = _not_impl
     initialize = _not_impl
-    finalize = _not_impl
+    var_finalize = _not_impl # NOTE previous name finalize taken by finalize()
     start_job = _not_impl
 
     def __init__(self, CommunicationHandler, options):
@@ -30,8 +30,10 @@ class AbstractNetwork(object):
         else:
             self.t_in = CommunicationHandler(rank, self.incomming, None)
             self.t_out = CommunicationHandler(rank, None, self.outgoing)
+            self.t_out.daemon = True
             self.t_out.start()
 
+        self.t_in.daemon = True
         self.t_in.start()
         
     def register_callback(self, callback_type, callback):

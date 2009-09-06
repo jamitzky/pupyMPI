@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.6
-import sys, os, socket
+import sys, os
 from optparse import OptionParser, OptionGroup
 import select, time
 
-from mpi import processloaders 
-from mpi.processloaders import wait_for_shutdown 
+import processloaders 
+from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
 from mpi.network.tcp import get_socket
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
@@ -42,7 +42,6 @@ def parse_options():
         parser.error("options --debug and -quiet are mutually exclusive")
 
     # Trying to find user args
-    import sys
     try:
         user_options = sys.argv[sys.argv.index("--")+1:]
     except ValueError:
@@ -50,7 +49,7 @@ def parse_options():
 
     return options, args, user_options
 
-def io_forwarder(list):
+def io_forwarder(process_list):
     """
     Take a list of processes and relay from their stdout and stderr pipes.
     
@@ -59,10 +58,9 @@ def io_forwarder(list):
     During shutdown a final run through of all the pipes is done to print any
     remaining data.
     """
-    logger = Logger()
 
-    pipes = [p.stderr for p in list] # Put all stderr pipes in list
-    pipes.extend( [p.stdout for p in list] ) # Put all stdout pipes in list
+    pipes = [p.stderr for p in process_list] # Put all stderr pipes in process_list
+    pipes.extend( [p.stdout for p in process_list] ) # Put all stdout pipes in process_list
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
     #logger.debug("Starting the IO forwarder")
@@ -108,6 +106,9 @@ def io_forwarder(list):
 
 if __name__ == "__main__":
     options, args, user_options = parse_options() # Get options from cli
+    if args is None: # TODO hack-handle no options
+        print "Please use --help for help with options"
+        sys.exit()
     executeable = args[0]
 
     # Start the logger
@@ -116,8 +117,8 @@ if __name__ == "__main__":
     # Parse the hostfile.
     try:
         hosts = parse_hostfile(options.hostfile)
-    except IOError:
-        logger.error("Something bad happended when we tried to read the hostfile. ")
+    except IOError,ex:
+        logger.error("Something bad happended when we tried to read the hostfile: ",ex)
         sys.exit()
     
     # Map processes/ranks to hosts/CPUs
@@ -201,8 +202,9 @@ if __name__ == "__main__":
     # - if a proc is not there to recieve we hang (at what timeout?)
     for conn in sender_conns:
         conn.send( pickle.dumps( all_procs ))    
+        conn.close()
     # Close all the connections used for system setup
-    [ c.close for c in sender_conns ]
+    #[ c.close() for c in sender_conns ]
     # Close own "server" socket
     s.close()
     

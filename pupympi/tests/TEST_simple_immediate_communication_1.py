@@ -28,7 +28,7 @@ if rank == 0:
 else: # rank == 1
     # TOFIX: This sleep actually deadlocks the program - it shouldn't
     # Waaaaait for it...
-    time.sleep(4)
+    #time.sleep(4)
     
     # Recieve
     print "Yawn, rank: %d recieving from %d" % (rank,neighbour)

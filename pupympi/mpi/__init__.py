@@ -52,7 +52,13 @@ class MPI(threading.Thread):
     
         mpi = MPI()
         mpi.shutdown_lock = threading.Lock()
-        mpi.startup(options, args)
+        mpi.shutdown_lock.acquire()
+        try:
+            mpi.startup(options, args)
+        except:
+            print "Horrible failure in MPI startup, bailing out!"
+            sys.exit(200)
+        mpi.daemon = True
         mpi.start()
         return mpi
     # }}}1
@@ -60,27 +66,12 @@ class MPI(threading.Thread):
     def run(self):
         # This can be moved out of there
         while True:
-            """
-            FIXME:
-            I belive the conditions on this thing are inverted:
-            When invoked with the blocking argument set to false, do not block.
-            If a call without an argument would block, return false immediately;
-            otherwise, do the same thing as when called without arguments, and return true.
-            - http://docs.python.org/library/threading.html
-            ... so if we cant get the lock the acquire call returns False which the
-            not negates to true and thus the if statement is executed...
-            """
+
             # Check for shutdown
-            if not self.shutdown_lock.acquire(False):
+            if self.shutdown_lock.acquire(False):
                 self.shutdown_lock.release()
                 break
-            self.shutdown_lock.release() # TODO: This should be superflous and possibly bad
-            """
-            The release() method should only be called in the locked state; it
-            changes the state to unlocked and returns immediately. If an attempt
-            is made to release an unlocked lock, a RuntimeError will be raised.
-            - http://docs.python.org/library/threading.html
-            """
+
             # Update request objects
             for comm in self.communicators:
                 comm.update()                
@@ -98,6 +89,7 @@ class MPI(threading.Thread):
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
+        logger.debug("Currently active threads: %d. This is daemon? %s" % (threading.activeCount(), "NOT IMPLEMENTED"))
 
         # Starting the network. This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
@@ -142,7 +134,7 @@ class MPI(threading.Thread):
         FIXME: Should we manually try to kill some threads?
         """
         # Wait for shutdown to be signalled
-        self.shutdown_lock.acquire()
+        self.shutdown_lock.release()
         # Shutdown the network
         self.network.finalize()
         Logger().debug("Network finalized")
@@ -169,13 +161,19 @@ class MPI(threading.Thread):
         return getattr(cls, '_initialized', False)
         
     #### Communicator creation, deletion
-    def comm_create(self, arg):
+    def comm_create(self, group, arg):
         """
         This function creates a new communicator newcomm with communication group defined by group and a new context. No cached information propagates from comm to newcomm. The function returns MPI_COMM_NULL (None) to processes that are not in group. The call is erroneous if not all group arguments have the same value, or if group is not a subset of the group associated with comm. Note that the call is to be executed by all processes in comm, even if they do not belong to the new group. This call applies only to intra-communicators. 
+        [ IN comm] communicator (handle)
+        [ IN group] Group, which is a subset of the group of comm (handle)
+        [ OUT newcomm] new communicator (handle)
         
         http://www.mpi-forum.org/docs/mpi-11-html/node102.html
+        
+        This call is currently implemented locally only.
         """
         Logger().warn("Non-Implemented method 'comm_create' called.")
+        
 
     def comm_free(self, existing_communicator):
         """
