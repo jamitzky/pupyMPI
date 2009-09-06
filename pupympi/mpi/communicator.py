@@ -35,16 +35,9 @@ class Communicator:
         
     def pop_unhandled_message(self, participant, tag):
         try:
-            packages = self.unhandled_receives[tag][participant]
-            print "="*50
-            print packages
-            print "-"*50
-            pacakge = packages.pop(1)
-            print package
-            print "="*50
+            package = self.unhandled_receives[tag][participant].pop(0)
             return package
         except IndexError:
-            Logger().warning("Got the index error")
             pass
         
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
@@ -119,7 +112,7 @@ class Communicator:
             elif status == 'new':
                 package = self.pop_unhandled_message(request.participant, request.tag)
                 if package:
-                    request.network_callback(status='ready', data=package['data'])
+                    request.network_callback(lock=False, status='ready', data=package['data'])
 
             else:
                 logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
