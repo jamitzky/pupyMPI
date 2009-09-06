@@ -69,6 +69,7 @@ class Group:
         required_members = list of new members
         """
         newlist = [p for p in self.members if p.rank in required_members]
+        my_current_rank = self.rank
         newGroup = Group()
         Logger().warn("Non-Implemented method 'group.incl' called.")
         
