@@ -70,8 +70,8 @@ class Group:
         """
         Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
         new_members = {}
-        new_rank = -1
-        counter = 0
+        new_rank = -1 # 'my' new rank
+        counter = 0 # new rank for each process as they are added to new group
         for p in self.members:
             if p not in required_members:
                 continue
@@ -94,8 +94,8 @@ class Group:
         """
         Logger().debug("Called group.excl (me %s), self.members = %s, excluded_members %s" % (self.rank(), self.members, excluded_members))
         new_members = {}
-        new_rank = -1
-        counter = 0
+        new_rank = -1 # 'my' new rank
+        counter = 0 # new rank for each process as they are added to new group
         for p in self.members:
             if p in excluded_members:
                 continue
