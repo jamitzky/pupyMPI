@@ -5,7 +5,7 @@ import threading, time
 class Request:
 
     def __init__(self, type, communicator, participant, tag, data=None):
-        if type not in ('send','receive'):
+        if type not in ('send','recv'):
             raise MPIException("Invalid type in request creation. This should never happen. ")
 
         self.type = type
@@ -31,24 +31,27 @@ class Request:
 
         Logger().debug("Request object created for communicator %s, tag %s and type %s and participant %s" % (self.communicator.name, self.tag, self.type, self.participant))
 
+        callbacks = [ self.network_callback, ]
+
         # Start the network layer on a job as well
-        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data)
+        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
 
-    def update(self, status=None, data=None, lock=True):
-        """
-        Update the status of a request
-        """
-        if status:
-            if lock:
-                self.acquire()
-            self._m['status'] = status
+    def network_callback(self, lock=True, *args, **kwargs):
+        Logger().debug("Network callback in request called")
 
-            if data:
-                self.data = data
+        if lock:
+            self.acquire()
 
-            if lock:
-                self.release()
-            Logger().info("%s request objects updated to status %s" % (self.type, self._m['status']))
+        if "status" in kwargs:
+            Logger().info("Updating status in request from %s to %s" % (self._m["status"], kwargs["status"]))
+            self._m["status"] = kwargs["status"]
+            
+        if "data" in kwargs:
+            Logger().info("Adding data to request object")
+            self.data = kwargs["data"]
+            
+        if lock:
+            self.release()
 
     def release(self, *args, **kwargs):
         """
@@ -98,7 +101,7 @@ class Request:
         self._m['status'] = 'finished'
 
         # Return none or the data
-        if self.type == 'receive':
+        if self.type == 'recv':
             return self.data
 
         Logger().info("Ending a %s wait" % self.type)
