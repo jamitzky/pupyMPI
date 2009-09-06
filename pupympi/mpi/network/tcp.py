@@ -7,9 +7,35 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    
+def get_header_format():
+    """
+    Investigate if we have a 32 or 64 bit arch and
+    set the headerformat accordingly. We return the
+    header format and the arch.
+    """
+    format = "lllll"
+    if struct.calcsize("l") == 8:
+        return ("x64", format, struct.calcsize(format) )
+    else:
+        # Double the format
+        format += format
+        return ("x32", format, struct.calcsize(format) )
+    
+def unpack_header(data):
+    arch, format, _ = get_header_format()
+    if arch == "x64":
+        return struct.unpack(format, data[:header_size])
+    else:
+        return struct.unpack(format, data[:header_size])[:5]
+    
+def pack_header( *args ):
+    arch, format, _ = get_header_format()
+    if arch == "x32":
+        # Ugly. Packing extra data in the header so we can cope with a 64 arch
+        args = args + tuple( [0 for x in range(len(format)/2) ])
 
-HEADER_FORMAT = 'lll'
-
+    return struct.pack(format, *args)
 
 def structured_read(socket_connection):
     """
@@ -19,33 +45,21 @@ def structured_read(socket_connection):
     The stucture of all the MPI message consists
     of a fixed size header and a variable length message.
     
-    The header has 3 fields:
-        sender      : integer
-        tag         : integer
-        msg_size    : integer
+    The header has these fields:
+        sender       : integer
+        tag          : integer
+        msg_size     : integer
+        communicator : integer
+        type         : integer
 
     The method is constructed of two loops. The first loop
     readys until we have received the entire header. The
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
-
-    The size of the header is 12/24 bytes according to this
-    python code:
-
-    >>> # I'm a 32 bit arch
-    >>> import struct
-    >>> struct.calcsize("lll")
-    12
-
-    >>> # I'm a 64 bit arch
-    >>> import struct
-    >>> struct.calcsize("lll")
-    24
-
-    Which also means that we're packing data as longs, so 
-    we have room for a lot of data in the message. 
+    
+    NB: We handle only 32-bit and 64 architures
     """
-    HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
+    _, _, header_size = get_header_format()
     header_unpacked = False
 
     # The end variables we're gonna return
@@ -55,19 +69,19 @@ def structured_read(socket_connection):
     Logger().debug("Starting receive first loop")
 
     while not header_unpacked:
-        data += socket_connection.recv(HEADER_SIZE)
+        data += socket_connection.recv(header_size)
         
         # NOTE:
         # on my list of dumb-ass questions why the tagged on "not header_unpacked"?
         # it can only be set to true inside the if-statement so the check seems
         # superflous
         # - Fred
-        if len(data) > HEADER_SIZE and not header_unpacked:
-            sender, tag, msg_size = struct.unpack(HEADER_FORMAT, data[:HEADER_SIZE])
+        if len(data) > header_size and not header_unpacked:
+            sender, tag, msg_size, communicator, recv_type = unpack_header(data)
             header_unpacked = True
     
     # receive the rest of the data 
-    total_msg_size = msg_size + HEADER_SIZE
+    total_msg_size = msg_size + header_size
     recv_size = msg_size
 
     Logger().debug("Starting receive second loop with total_msg_size(%d) and recv_size(%d)" %(total_msg_size, recv_size))
@@ -77,7 +91,7 @@ def structured_read(socket_connection):
         data += socket_connection.recv(recv_size)
     
     # unpacking the data
-    data = pickle.loads(data[HEADER_SIZE:])
+    data = pickle.loads(data[header_size:])
 
     Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
@@ -228,7 +242,11 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
                         data = pickle.dumps(job['data'])
-                        header = struct.pack("lll", self.rank, job['tag'], len(data))
+                        
+                        # Insert these header information 
+                        communicator = None
+                        recv_type = None
+                        header = pack_header( self.rank, job['tag'], len(data), communicator, recv_type )
 
                         job['socket'].send( header + data )
                         Logger().info("Sending data on the socket. Going to call the callbacks")
