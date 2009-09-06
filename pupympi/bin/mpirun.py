@@ -32,6 +32,7 @@ def parse_options():
 
     parser_adv_group = OptionGroup(parser, "Advanced options", 
             "Be carefull. You could actually to strange things here. OMG Ponies!")
+    parser_adv_group.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to Python 2.6 on remote hosts.')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser.add_option_group( parser_adv_group )
@@ -143,7 +144,7 @@ if __name__ == "__main__":
             executeable = os.path.join( os.getcwd(), executeable)
         
         # Mimic our cli call structure also for remotely started processes
-        run_options = ["python", "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+        run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 

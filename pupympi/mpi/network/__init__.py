@@ -31,8 +31,10 @@ class AbstractNetwork(object):
             self.t_in = CommunicationHandler(rank, self.incomming, None)
             self.t_out = CommunicationHandler(rank, None, self.outgoing)
             self.t_out.daemon = True
+            self.t_out.name = "t_out"
             self.t_out.start()
 
+        self.t_in.name = "t_in"
         self.t_in.daemon = True
         self.t_in.start()
 
