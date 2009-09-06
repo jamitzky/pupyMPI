@@ -10,27 +10,36 @@ except ImportError:
     
 def get_header_format():
     """
-    Investigate if we have a 32 or 64 bit arch and
-    set the headerformat accordingly. We return the
-    header format and the arch.
+    Return the format and size of the header format. We're 
+    using the format for a 32bit architecture as a basis. By
+    finding the multiplier we can determine the number of
+    padding bytes. Ie.
+    
+    x64: 
+        bit_multiplier = 2    # As a long takes but 8 bytes
+        padbytes = (2-1)*(5*8/2) => 20. Ie. we'll but 20 
+                        pad bytes in there which will double
+                        the data as expected by doubling the
+                        the bitsize
+    x128:
+         bit_multiplier = 4
+         padbytes = (4-1)*(5*16/4) => 60. Ie. we'll but 60 
+                        pad bytes in there which will x4
+                        the data as expected by x4 the
+                        the bitsize
     """
-    format = "lllll"
-    if struct.calcsize("l") == 8:
-        return ("x64", format, struct.calcsize(format) )
-    else:
-        # Adding a number of pad bytes. 
-        format += "x" * struct.calcsize(format)
-        return ("x32", format, struct.calcsize(format) )
+    format_32 = "lllll"
+    bit_multiplier = struct.calcsize("l") / 4
+    padbytes = (bit_multiplier-1)*(struct.calcsize(format)/bit_multiplier)
+    format = format_32 + "x"*padbytes
+    return (format, struct.calcsize(format) )
     
 def unpack_header(data):
-    arch, format, _ = get_header_format()
-    if arch == "x64":
-        return struct.unpack(format, data[:header_size])
-    else:
-        return struct.unpack(format, data[:header_size])[:5]
+    format, _ = get_header_format()
+    return struct.unpack(format, data[:header_size])
     
 def pack_header( *args ):
-    arch, format, _ = get_header_format()
+    format, _ = get_header_format()
     return struct.pack(format, *args)
 
 def structured_read(socket_connection):
@@ -52,10 +61,8 @@ def structured_read(socket_connection):
     readys until we have received the entire header. The
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
-    
-    NB: We handle only 32-bit and 64 architures
     """
-    _, _, header_size = get_header_format()
+    _, header_size = get_header_format()
     header_unpacked = False
 
     # The end variables we're gonna return
