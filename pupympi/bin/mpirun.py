@@ -41,6 +41,9 @@ def parse_options():
 
     if options.debug and options.quiet:
         parser.error("options --debug and -quiet are mutually exclusive")
+        
+    if len(args) != 1:
+        parser.error("There should only be one argument to mpirun. The program to execute")
 
     # Trying to find user args
     try:
