@@ -8,6 +8,7 @@ import sys, getopt, time
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
+from mpi.group import Group 
 
 def flush_all():
     """
@@ -103,18 +104,17 @@ class MPI(threading.Thread):
         # Starting the network. This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
         self.network = Network(options)
+        
+        # Create the initial global Group, and assign the network all_procs as members
+        world_Group = Group(options.rank)
+        world_Group.members = self.network.all_procs
 
         # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
-        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network)
+        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, world_Group)
         self.communicators = []
         self.communicators.append( self.MPI_COMM_WORLD )
-
-        # Tell the communicator to build it's "world" from the results of the network
-        # initialization. All network types will create a variable called all_procs
-        # containing network specific information for all ranks.
-        self.MPI_COMM_WORLD.build_world( self.network.all_procs )
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels

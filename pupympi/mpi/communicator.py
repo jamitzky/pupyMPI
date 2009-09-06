@@ -8,16 +8,13 @@ class Communicator:
     """
     This class represents an MPI communicator.
     """
-    def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
-        #self._rank = rank
-        #self._size = size
+    def __init__(self, rank, size, network, group, name="MPI_COMM_WORLD"):
         self.name = name
-        #self.members = {}
         self.network = network
-        self.comm_group = Group(rank)
+        self.comm_group = group
 
         self.attr = {}
-        if name == "MPI_COMM_WORLD":
+        if name == "MPI_COMM_WORLD": # FIXME Move to build_world
             self.attr = {   "MPI_TAG_UB": 2**30, \
                             "MPI_HOST": "TODO", \
                             "MPI_IO": rank, \
@@ -30,10 +27,6 @@ class Communicator:
         self.current_request_id = 0
         self.request_queue = {}
     
-    def build_world(self, all_procs):
-        self.members = all_procs
-        self.comm_group.members = all_procs
-
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.comm_group.size)
 

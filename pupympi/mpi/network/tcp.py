@@ -282,14 +282,14 @@ class TCPNetwork(AbstractNetwork):
         s_conn.send(data)
         
         # Receiving data about the communicator
-        all_procs = s_conn.recv(1024)
+        all_procs = s_conn.recv(1024) # FIXME Communicator handshake payload fixed at 1024 bytes!!
         all_procs = pickle.loads( all_procs )
         Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
 
         self.all_procs = {}
-        for (host, port, rank) in all_procs:
-            self.all_procs[rank] = {'host' : host, 'port' : port, 'rank' : rank}
+        for (host, port, global_rank) in all_procs:
+            self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
     def start_job(self, request, communicator, type, participant, tag, data, socket=None):
         """
