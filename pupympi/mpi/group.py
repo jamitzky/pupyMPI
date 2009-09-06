@@ -65,8 +65,8 @@ class Group:
         
     def incl(self, required_members):
         """
-        creates a group from listed members of an existing group
-        required_members = list of new members
+        creates a new group from members of an existing group
+        required_members = list of ranks from existing group to include in new group, also determines the order in which they will rank in the new group
         """
         Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
         new_members = {}
