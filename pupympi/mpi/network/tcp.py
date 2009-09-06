@@ -18,8 +18,8 @@ def get_header_format():
     if struct.calcsize("l") == 8:
         return ("x64", format, struct.calcsize(format) )
     else:
-        # Double the format
-        format += format
+        # Adding a number of pad bytes. 
+        format += "x" * struct.calcsize(format)
         return ("x32", format, struct.calcsize(format) )
     
 def unpack_header(data):
@@ -31,10 +31,6 @@ def unpack_header(data):
     
 def pack_header( *args ):
     arch, format, _ = get_header_format()
-    if arch == "x32":
-        # Ugly. Packing extra data in the header so we can cope with a 64 arch
-        args = args + tuple( [0 for x in range(len(format)/2) ])
-
     return struct.pack(format, *args)
 
 def structured_read(socket_connection):
