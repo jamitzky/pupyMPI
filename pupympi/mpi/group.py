@@ -22,7 +22,7 @@ class Group:
         self.my_rank = my_rank
         
     def __repr__(self):
-        return "<Group %s members: %s>" % (len(self.members), self.members)
+        return "<Group: %s members: %s>" % (len(self.members), self.members)
 
     def size(self):
         """
@@ -68,16 +68,49 @@ class Group:
         creates a group from listed members of an existing group
         required_members = list of new members
         """
-        newlist = [p for p in self.members if p.rank in required_members]
-        newGroup = Group()
-        Logger().warn("Non-Implemented method 'group.incl' called.")
+        Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
+        new_members = {}
+        new_rank = -1 # 'my' new rank
+        counter = 0 # new rank for each process as they are added to new group
+        for p in self.members:
+            if p not in required_members:
+                continue
+                
+            new_members[counter] = self.members[p]
+            if p == self.rank():
+                new_rank = counter
+            counter += 1
+        
+        if new_rank is -1:
+            return None
+
+        new_group = Group(new_rank)
+        new_group.members = new_members
+        return new_group
         
     def excl(self, excluded_members):
         """
         creates a group excluding listed members of an existing group
         """
-        Logger().warn("Non-Implemented method 'group.excl' called.")
+        Logger().debug("Called group.excl (me %s), self.members = %s, excluded_members %s" % (self.rank(), self.members, excluded_members))
+        new_members = {}
+        new_rank = -1 # 'my' new rank
+        counter = 0 # new rank for each process as they are added to new group
+        for p in self.members:
+            if p in excluded_members:
+                continue
+                
+            new_members[counter] = self.members[p]
+            if p == self.rank():
+                new_rank = counter
+            counter += 1
         
+        if new_rank is -1:
+            return None
+
+        new_group = Group(new_rank)
+        new_group.members = new_members
+        return new_group        
     def range_incl(self, arg):
         # FIXME decide if to implement
         pass
