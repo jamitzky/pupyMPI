@@ -98,7 +98,7 @@ def structured_read(socket_connection):
 
     Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
-    return tag, sender, data
+    return tag, sender, communicator, recv_type, data
 
 def get_socket(range=(10000, 30000)):
     """
@@ -160,20 +160,6 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.sockets_out = []
 
         self.socket_to_job = {}
-        self.received_data = {}
-
-    def add_received_data(self, tag, data):
-        """
-        The network lawer have finished the reading of some data. This
-        might be well before we have started any local read job in the
-        user code, so we can't always put it into the proper request place.
-        
-        Instead we're using a simple callback methodoly where code can 
-        add a callback to this thread and have them executed when some
-        action happens
-        """
-        pass
-        # FIXME
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
@@ -229,13 +215,8 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 for read_socket in in_list:
                     (conn, sender_address) = read_socket.accept()
 
-                    # Fixme. This should be done in a two loop way
-                    tag, sender, data = structured_read(conn)
-
-                    # Save the data in an internal structure so we can find it again. 
-                    # FIXME: We should add the communicator id, name or whatever. Otherwise
-                    # messages to different communicators might overlap
-                    self.add_received_data(tag, data)
+                    tag, sender, communicator, recv_type, data = structured_read(conn)
+                    self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
 
                 # We handle write operations second (for no reason).
                 for client_socket in out_list:

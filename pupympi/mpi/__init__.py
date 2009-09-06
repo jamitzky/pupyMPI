@@ -79,8 +79,9 @@ class MPI(threading.Thread):
             time.sleep(1)
 
     def recv_callback(self, *args, **kwargs):
+        # self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
         Logger().debug("MPI layer recv_callback called")
-
+        
     def startup(self, options, args): # {{{1
         # FIXME: This should be moved to the __init__ method
         
