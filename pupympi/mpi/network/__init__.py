@@ -85,13 +85,15 @@ class AbstractCommunicationHandler(Thread):
     def add_out_job(self, job):
         self.outgoing.append(job)
 
-    def callback(self, job, *args, **kwargs):
-        callbacks = job.get('callbacks', [])
-        for callback in callbacks:
-            callback(*args, **kwargs)
+    def callback(self, job=None, callback_type=None, *args, **kwargs):
+        if job:
+            callbacks = job.get('callbacks', [])
+            callback_type = job['type']
+            for callback in callbacks:
+                callback(*args, **kwargs)
                 
         # Look for generic callbacks
-        for callback in self.callbacks[job['type']]:
+        for callback in self.callbacks[callback_type]:
             callback(*args, **kwargs)
 
     def shutdown_ready(self):
