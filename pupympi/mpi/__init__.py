@@ -99,7 +99,6 @@ class MPI(threading.Thread):
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
-        logger.debug("Currently active threads: %d. This is daemon? %s" % (threading.activeCount(), "NOT IMPLEMENTED"))
 
         # Starting the network. This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
