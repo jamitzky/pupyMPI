@@ -8,13 +8,14 @@ class Communicator:
     """
     This class represents an MPI communicator.
     """
-    def __init__(self, rank, size, network, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, network, name="MPI_COMM_WORLD", id=1):
         #self._rank = rank
         #self._size = size
         self.name = name
         #self.members = {}
         self.network = network
         self.comm_group = Group(rank)
+        self.id = id
 
         self.attr = {}
         if name == "MPI_COMM_WORLD":
@@ -29,6 +30,27 @@ class Communicator:
         self.request_queue_lock = threading.Lock()
         self.current_request_id = 0
         self.request_queue = {}
+        
+        self.unhandled_receives = {}
+        
+    def pop_unhandled_message(self, participant, tag):
+        try:
+            return self.unhandled_receives[tag][participant].pop(1)
+        except:
+            return None
+        
+    def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
+        # Look for a request object right now. Otherwise we just put it on the queue and let the
+        # update handler do it.
+        
+        # Put it on unhandled requests
+        if tag not in self.unhandled_receives:
+            self.unhandled_receives[tag] = {}
+            
+        if not sender in self.unhandled_receives[tag]:
+            self.unhandled_receives[tag][sender] = []
+
+        self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
     
     def build_world(self, all_procs):
         self.members = all_procs
@@ -85,7 +107,10 @@ class Communicator:
                 Logger().info("Removing finished request")
         
             elif status == 'new':
-                pass
+                package = self.pop_unhandled_message(request.participant, request.tag)
+                if package:
+                    request.network_callback(status='ready', data=package['data'])
+
             else:
                 logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
 

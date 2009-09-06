@@ -69,14 +69,16 @@ class MPI(threading.Thread):
                 break
 
             # Update request objects
-            for comm in self.communicators:
+            for comm in self.communicators.values():
                 comm.update()                
             
             time.sleep(1)
 
     def recv_callback(self, *args, **kwargs):
-        # self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
         Logger().debug("MPI layer recv_callback called")
+        
+        if "communicator" in kwargs:
+            self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
         
     def startup(self, options, args): # {{{1
         # FIXME: This should be moved to the __init__ method
@@ -95,9 +97,9 @@ class MPI(threading.Thread):
         # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
-        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network)
-        self.communicators = []
-        self.communicators.append( self.MPI_COMM_WORLD )
+        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, id=1)
+        self.communicators = {}
+        self.communicators[1] = self.MPI_COMM_WORLD
 
         # Tell the communicator to build it's "world" from the results of the network
         # initialization. All network types will create a variable called all_procs
@@ -135,10 +137,7 @@ class MPI(threading.Thread):
         # Shutdown the network
         self.network.finalize()
         Logger().debug("Network finalized")
-
-        # Trying to flush pipes
-        flush_all()
-
+        
     @classmethod
     def initialized(cls):
         """
