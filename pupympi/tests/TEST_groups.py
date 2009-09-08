@@ -9,7 +9,7 @@ class TestException(Exception):
 
 print "before init"
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 
 # we expect the group of MPI_COMM_WORLD to match with the communicator itself
