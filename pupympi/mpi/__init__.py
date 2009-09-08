@@ -2,13 +2,14 @@ __version__ = 0.01 # It bumps the version or else it gets the hose again!
 
 from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time
+from threading import Thread
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
 from mpi.group import Group 
 
-class MPI(threading.Thread):
+class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
     the MPI system is done by creating an instance of this class. Through a
@@ -20,8 +21,9 @@ class MPI(threading.Thread):
     pattern. 
     """
 
-    @classmethod
-    def initialize(cls): # {{{1
+    def __init__(self):
+        Thread.__init__(self)
+
         """
         Initializes the MPI environment. This will give each process a separate
         rank in the MPI_COMM_WORLD communicator along with the total number of
@@ -51,38 +53,8 @@ class MPI(threading.Thread):
 
         options, args = parser.parse_args()
     
-        mpi = MPI()
-        mpi.shutdown_lock = threading.Lock()
-        mpi.shutdown_lock.acquire()
-        mpi.startup(options, args)
-        mpi.daemon = True
-        mpi.start()
-        return mpi
-    # }}}1
-
-    def run(self):
-        # This can be moved out of there
-        while True:
-
-            # Check for shutdown
-            if self.shutdown_lock.acquire(False):
-                self.shutdown_lock.release()
-                break
-
-            # Update request objects
-            for comm in self.communicators.values():
-                comm.update()                
-            
-            time.sleep(1)
-
-    def recv_callback(self, *args, **kwargs):
-        Logger().debug("MPI layer recv_callback called")
-        
-        if "communicator" in kwargs:
-            self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
-        
-    def startup(self, options, args): # {{{1
-        # FIXME: This should be moved to the __init__ method
+        self.shutdown_lock = threading.Lock()
+        self.shutdown_lock.acquire()
         
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
@@ -122,8 +94,31 @@ class MPI(threading.Thread):
         # Set a static attribute on the class so we know it's initialised.
         self.__class__._initialized = True
         logger.debug("Set the MPI environment to initialised")
-    # }}}1
 
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        # This can be moved out of there
+        while True:
+
+            # Check for shutdown
+            if self.shutdown_lock.acquire(False):
+                self.shutdown_lock.release()
+                break
+
+            # Update request objects
+            for comm in self.communicators.values():
+                comm.update()                
+            
+            time.sleep(1)
+
+    def recv_callback(self, *args, **kwargs):
+        Logger().debug("MPI layer recv_callback called")
+        
+        if "communicator" in kwargs:
+            self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
+        
     def finalize(self):
         """
         This method cleans up after a MPI run. Closes filehandles, 

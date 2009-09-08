@@ -5,7 +5,7 @@ import time
 
 print "before init"
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
