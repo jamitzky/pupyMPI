@@ -34,7 +34,7 @@ class Communicator:
         try:
             package = self.unhandled_receives[tag][participant].pop(0)
             return package
-        except IndexError:
+        except (IndexError, KeyError):
             pass
         
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
