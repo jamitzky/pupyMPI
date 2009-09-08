@@ -23,6 +23,10 @@ class Group:
         
     def __repr__(self):
         return "<Group: %s members: %s>" % (len(self.members), self.members)
+        
+    def is_empty(self):
+        # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
+        return size() == 0
 
     def size(self):
         """
@@ -68,22 +72,22 @@ class Group:
         creates a group from listed members of an existing group
         required_members = list of new members
         """
+        # TODO Incl/excl very simply implemented, could probably be more pythonic.
         Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
         new_members = {}
         new_rank = -1 # 'my' new rank
         counter = 0 # new rank for each process as they are added to new group
-        for p in self.members:
-            if p not in required_members:
-                continue
-                
+        
+        for p in required_members:                
             new_members[counter] = self.members[p]
             if p == self.rank():
                 new_rank = counter
             counter += 1
         
-        if new_rank is -1:
-            return None
-
+        # its allowed not to be a member of the group
+        # if new_rank is -1:
+        #            return None
+       
         new_group = Group(new_rank)
         new_group.members = new_members
         return new_group
@@ -105,8 +109,9 @@ class Group:
                 new_rank = counter
             counter += 1
         
-        if new_rank is -1:
-            return None
+        # its allowed not to be a member of the group
+        # if new_rank is -1:
+        #            return None
 
         new_group = Group(new_rank)
         new_group.members = new_members
