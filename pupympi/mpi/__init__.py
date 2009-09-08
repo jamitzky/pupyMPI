@@ -156,7 +156,7 @@ class MPI(threading.Thread):
         return getattr(cls, '_initialized', False)
         
     #### Communicator creation, deletion
-    def comm_create(self, group, arg):
+    def comm_create(self, group):
         """
         This function creates a new communicator newcomm with communication group defined by group and a new context. No cached information propagates from comm to newcomm. The function returns MPI_COMM_NULL (None) to processes that are not in group. The call is erroneous if not all group arguments have the same value, or if group is not a subset of the group associated with comm. Note that the call is to be executed by all processes in comm, even if they do not belong to the new group. This call applies only to intra-communicators. 
         [ IN comm] communicator (handle)
