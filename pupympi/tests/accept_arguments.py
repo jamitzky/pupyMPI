@@ -2,7 +2,7 @@
 
 from mpi import MPI
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 import sys
 print sys.argv

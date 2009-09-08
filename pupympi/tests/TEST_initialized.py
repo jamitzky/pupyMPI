@@ -5,7 +5,7 @@ from mpi import MPI
 
 assert not MPI.initialized(), "The mpi environment was initialized before starting mpi.. wrong"
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 assert MPI.initialized(), "The mpi environment was not initialized after starting mpi.. wrong"
 
