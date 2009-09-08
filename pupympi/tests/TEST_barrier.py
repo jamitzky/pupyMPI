@@ -5,7 +5,7 @@
 from mpi import MPI
 from sys import stderr
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 rank = mpi.MPI_COMM_WORLD.rank()
 

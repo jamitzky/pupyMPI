@@ -5,7 +5,7 @@
 from sys import stderr
 from mpi import MPI
 
-mpi = MPI.initialize()
+mpi = MPI()
 
 
 print "There can be only one."
