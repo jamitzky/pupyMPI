@@ -53,11 +53,13 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            print "Failed"
+            print "Killed"
             self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
+        elif self.process.returncode is not 0:
+            print "Failed"
         else:
             print "OK"  
         #print self.process.communicate()

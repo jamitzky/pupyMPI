@@ -45,6 +45,7 @@ def wait_for_shutdown(process_list):
     Go through list of processes and make sure they all have terminated
     """
     logger = Logger()
+    exit_codes = []
     while process_list:
         for p in process_list:
             returncode = p.poll()
@@ -55,9 +56,12 @@ def wait_for_shutdown(process_list):
                 pass
             elif returncode == 0: # exited correctly
                 logger.debug("A process exited with a status of 0. And we have %i left." % ( len(process_list)-1))
+                exit_codes += [returncode]
                 process_list.remove( p )
             else: # error code
+                exit_codes += [returncode]
                 process_list.remove( p )
                 logger.debug("A process exited with return code %d. And we have %i left." % (returncode, len(process_list)-1 ))
 
         time.sleep(1)
+    return exit_codes

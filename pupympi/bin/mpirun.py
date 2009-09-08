@@ -214,10 +214,14 @@ if __name__ == "__main__":
     
     # Wait for all started processes to die
     # NOTE: This seems redundant, see comment in processloaders.py
-    wait_for_shutdown(process_list)
+    exit_codes = wait_for_shutdown(process_list)
+    any_failures = sum(exit_codes) is not 0
+    if any_failures:
+        logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
     # Signal shutdown to io_forwarder thread
     io_shutdown_lock.release()
     
     # Wait for the IO_forwarder thread to stop
     t.join()
     logger.debug("IO forward thread joined")
+    sys.exit(1 if any_failures else 0)
