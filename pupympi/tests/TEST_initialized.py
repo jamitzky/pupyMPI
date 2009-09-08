@@ -6,7 +6,7 @@ from mpi import MPI
 assert not MPI.initialized(), "The mpi environment was initialized before starting mpi.. wrong"
 
 mpi = MPI()
-
+time.sleep(10)
 assert MPI.initialized(), "The mpi environment was not initialized after starting mpi.. wrong"
 
 # Close the sockets down nicely

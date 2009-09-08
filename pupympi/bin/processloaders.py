@@ -40,6 +40,9 @@ def popen(host, arguments):
     else:
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
 
+def terminate_children():
+    sys.exit()
+
 def wait_for_shutdown(process_list):
     """
     Go through list of processes and make sure they all have terminated
