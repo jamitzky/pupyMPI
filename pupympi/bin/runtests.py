@@ -37,7 +37,8 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("REMOTE_PYTHON", remote_python)
-        print "About to launch ",self.cmd
+        sys.stdout.write( "Launching %s: " % self.cmd)
+        sys.stdout.flush() # because python sucks
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
         self.killed = False
 
@@ -52,11 +53,13 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
+            print "Failed"
             self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
-            
+        else:
+            print "OK"  
         #print self.process.communicate()
         self.returncode = self.process.returncode
 
