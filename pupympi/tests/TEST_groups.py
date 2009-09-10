@@ -29,7 +29,8 @@ assert newG is not None
 print "Incl group %s." % newG
 
 newG = cwG.excl([rank])
-assert newG is None
+assert newG is not None
+assert newG.rank() == -1
 
 newG = cwG.excl([0 if rank is 1 else 1])
 assert newG is not None
