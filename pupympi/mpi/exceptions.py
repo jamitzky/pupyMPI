@@ -21,3 +21,6 @@ class MPINoSuchRankException(MPIException):
 
 class MPIInvalidTagException(MPIException):
     pass
+
+class MPICommunicatorGroupNotSubsetOf(MPIException):
+    pass
