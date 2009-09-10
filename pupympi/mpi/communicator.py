@@ -224,7 +224,25 @@ class Communicator:
 
         This call is currently implemented locally only.
         """
-        Logger().warn("Non-Implemented method 'comm_create' called.")
+        logger = Logger()
+        # check if group is a subset of this communicators' group
+        for potential_new_member in group.members():
+            if potential_new_member not in self.members():
+                raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
+
+        # check that i am member of group
+        if group.rank() is -1:
+            return None # FIXME this is too early (see req. above that all processes participate)
+
+            
+
+        # Create a receive request object and return
+        handle = Request("broadcast", self, destination_rank, tag, data=content)
+
+        # Add to the queue
+        self.request_add(handle)
+        return handle
+
 
 
     def comm_free(self, existing_communicator):
