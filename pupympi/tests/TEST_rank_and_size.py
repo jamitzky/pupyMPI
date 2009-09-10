@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.6
 
-# Simple pupympi program to test startup of processes and assigning/reporting of ranks
+# Simple pupympi program to test assigning/reporting of ranks and reporting of size
 
 from sys import stderr
 from mpi import MPI
