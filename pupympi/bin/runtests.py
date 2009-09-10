@@ -24,6 +24,18 @@ TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process i
 TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take.
 LOG_VERBOSITY = 3
 
+
+HEADER = '\033[95m'
+OKBLACK ='\033[30m'
+OKOFFWHITE = '\033[90m'
+OKRED = '\033[31m'
+OKBLUE = '\033[94m'
+OKGREEN = '\033[92m'
+WARNING = '\033[93m'
+FAIL = '\033[91m'
+ENDC = '\033[0m'
+
+
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
     cmd = "bin/mpirun.py -q -c RUN_COUNT --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
@@ -53,11 +65,13 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            print "Failed"
+            print "Timed out"
             self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
+        elif self.process.returncode is not 0:
+            print OKRED + "Failed" + ENDC
         else:
             print "OK"  
         #print self.process.communicate()
@@ -66,15 +80,27 @@ class RunTest(Thread):
 def get_testnames():
     return sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
     
+def _status_str(ret):
+    if ret == 0:
+        return "ok"
+    elif ret == -9 or ret == -15:
+        return "Timed out"
+    else:
+        return OKRED + "FAILURE: " + str(ret) + ENDC
+        
 def format_output(threads):
     total_time = 0
+    odd = False
     print "TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE"
     print "-----------------------------------------------------------------------------------------------------------"
     for thread in threads:
         total_time += thread.executiontime
-        print "%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, round(thread.executiontime, 1), \
-                                            thread.killed, \
-                                            "%s (%s)" % ("OK" if thread.returncode == 0 else "FAILURE", thread.returncode))
+        print "%s%-45s\t\t%s\t\t%s\t\t%s%s" % (OKOFFWHITE if odd else OKBLACK, \
+                                            thread.test, round(thread.executiontime, 1), \
+                                            "KILLED" if thread.killed else "no", \
+                                            _status_str(thread.returncode),
+                                            ENDC)
+        odd = True if odd == False else False
         
     print "\nTotal execution time: %ss" % (round(total_time, 1))
 
