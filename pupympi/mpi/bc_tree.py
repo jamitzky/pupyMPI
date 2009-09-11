@@ -37,7 +37,6 @@ def generate_tree( node_list ):
 
     return root
 
-
 def dot_plot_graph( node ):
     def inner_plot(node):
         rank = node['rank']
@@ -55,6 +54,6 @@ def dot_plot_graph( node ):
 
 
 if __name__ == '__main__':
-    tree = generate_tree( range(10) )
+    tree = generate_tree( range(20) )
     
     dot_plot_graph( tree )
