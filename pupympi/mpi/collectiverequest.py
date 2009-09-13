@@ -12,7 +12,8 @@ class CollectiveRequest:
         self.communicator = communicator
         self.participants = participants
         self.tag = tag # TODO determine if this is needed for collective ops
-        self.data = data
+        self.outbound = data
+        self.inbound = {}
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -31,12 +32,13 @@ class CollectiveRequest:
         # acquire function on this class directly so the variable stays private
         self._m['lock'] = threading.Lock()
 
-        Logger().debug("Request object created for communicator %s, tag %s and type %s and participants %s" % (self.communicator.name, self.tag, self.type, self.participants))
+        Logger().debug("CollectiveRequest object created for communicator %s, tag %s and type %s and participants %s" % (self.communicator.name, self.tag, self.type, self.participants))
 
         callbacks = [ self.network_callback, ]
 
         # Start the network layer on a job as well
-        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
+        raise MPIException("Not implemented")
+        #self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
@@ -45,12 +47,12 @@ class CollectiveRequest:
             self.acquire()
 
         if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s" % (self._m["status"], kwargs["status"]))
+            Logger().info("Updating status in request from %s to %s based on data from %s" % (self._m["status"], kwargs["status"],kwargs["rank"]))
             self._m["status"] = kwargs["status"]
             
         if "data" in kwargs:
-            Logger().info("Adding data to request object")
-            self.data = kwargs["data"]
+            Logger().info("Adding data to request object from rank %s" % (kwargs["rank"]))
+            self.inbound[kwargs["rank"]] = kwargs["data"]
             
         if lock:
             self.release()
@@ -80,41 +82,7 @@ class CollectiveRequest:
         Logger().debug("Cancelling a %s request" % self.type)
         
 
-    def wait(self):
-        """
-        Blocks until the request data can be garbage collected. This method can be used
-        to create stable methods limiting the memory usage by not creating new send
-        requests before the ressources for the current one has been removed.
-
-        When waiting for a receive, the data will be returned to the calling function.
-
-        On successfull completion the ressources occupied by this request object will
-        be garbage collected.
-
-        FIXME: This should probably be a bit more thread safe. Should we add a lock to 
-               each request object and lock it when we look at it?
-        """
-        Logger().info("Starting a %s wait" % self.type)
-        while not self.test():
-            time.sleep(1)
-
-        # We're done at this point. Set the request to be completed so it can be removed
-        # later.
-        self._m['status'] = 'finished'
-
-        # Return none or the data
-        if self.type == 'recv':
-            return self.data
-
-        Logger().info("Ending a %s wait" % self.type)
-
-    def test(self):
-        """
-        A non-blocking check to see if the request is ready to complete. If true a 
-        following wait() should return very fast.
-        """
-        Logger().debug("Testing a %s request" % self.type)
-        return self._m['status'] == 'ready'
+    # FIXME Deleted test and wait until we know if they'll be needed (copy from Request then)
 
     def get_status(self):
         return self._m['status']

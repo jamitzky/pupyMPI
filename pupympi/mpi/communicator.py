@@ -1,7 +1,8 @@
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
+from mpi.collectiverequest import CollectiveRequest
 from mpi.group import Group
 
 class Communicator:
@@ -226,18 +227,18 @@ class Communicator:
         """
         logger = Logger()
         # check if group is a subset of this communicators' group
-        for potential_new_member in group.members():
-            if potential_new_member not in self.members():
+        for potential_new_member in group.members:
+            if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
 
         # check that i am member of group
         if group.rank() is -1:
             return None # FIXME this is too early (see req. above that all processes participate)
 
-            
+        
 
         # Create a receive request object and return
-        handle = Request("broadcast", self, destination_rank, tag, data=content)
+        handle = CollectiveRequest("comm_create", self, [r for r in self.group().members], None, group)
 
         # Add to the queue
         self.request_add(handle)
