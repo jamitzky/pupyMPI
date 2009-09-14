@@ -8,6 +8,7 @@ from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
 from mpi.group import Group 
+from mpi.exceptions import MPIException
 
 class MPI(Thread):
     """
@@ -20,6 +21,15 @@ class MPI(Thread):
     instances will always yield 'the same' instance, much like a singleton design
     pattern. 
     """
+    
+    def version_check(self):
+        (major,minor,step,_,_) = sys.version_info
+        if major <= 2 and minor < 6:
+            Logger().error("pupyMPI requires Python 2.6 (you may have to kill processes manually)")
+            sys.exit(1)
+        elif major >= 2 and minor is not 6:
+            Logger().warn("pupyMPI is only certified to run on Python 2.6")
+
 
     def __init__(self):
         Thread.__init__(self)
@@ -39,6 +49,8 @@ class MPI(Thread):
             print "Proc %d of %d started" % (rank, size)
             
         """
+        
+        
         parser = OptionParser()
         parser.add_option('--rank', type='int')
         parser.add_option('--size', type='int')
@@ -61,6 +73,9 @@ class MPI(Thread):
         # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
+
+        # First check version
+        self.version_check()
 
         # Starting the network. This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
@@ -97,6 +112,8 @@ class MPI(Thread):
 
         self.daemon = True
         self.start()
+        
+        
 
     def run(self):
         # This can be moved out of there
