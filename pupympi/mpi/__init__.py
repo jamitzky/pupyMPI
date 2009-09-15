@@ -23,7 +23,7 @@ class MPI(Thread):
     """
     
     def version_check(self):
-        (major,minor,step,_,_) = sys.version_info
+        (major,minor,_,_,_) = sys.version_info
         if major <= 2 and minor < 6:
             Logger().error("pupyMPI requires Python 2.6 (you may have to kill processes manually)")
             sys.exit(1)
