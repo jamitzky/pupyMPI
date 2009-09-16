@@ -1,25 +1,38 @@
-.. pupympi documentation master file, created by
-   sphinx-quickstart on Thu Aug 13 18:29:34 2009.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
+**************************************
 Welcome to pupympi's documentation!
-===================================
+**************************************
 
-The first point of the agenda is to view the :ref:'api-documentation-start'.
-
-Contents:
+Table of contents
+-----------------------------------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 1
 
-   api
-   mpirun
+    Getting started <tut_getting_started>
+    Reference manual <api>
+    Running your program <mpirun>
+    Full table of contents <toc>
 
-Indices and tables
-==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+Getting started
+-------------------------
+There is a :ref:`getting started tutorial <getting-started>`. This should be very easy for people
+already familliar with standard MPI. It should serve as a usefull introduction
+to people with no experience with MPI. 
+
+Reference manual
+--------------------------
+Take a look at our :ref:`reference manual <api>`. And keep it under your pillow. 
+
+Running your program
+-------------------------
+Running your pupyMPI program is done through a
+startup program called mpirun.py. We also have
+some  :ref:`documentation for that <mpirun>`.
+
+If you're from DIKU you might have to run your
+prorams on the MiG. Luckily there are MiG
+environments predefined and a 
+:ref:`guide <diku-mig>` to use pupyMPI with MiG.
+
 

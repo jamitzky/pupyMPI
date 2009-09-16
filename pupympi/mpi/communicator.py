@@ -343,6 +343,9 @@ class Communicator:
         """
         This routine makes a "best attempt" to abort all tasks in the group of comm.
         http://www.mpi-forum.org/docs/mpi-11-html/node151.html
+        
+        .. code-block:: c
+        
             // Example C code
             #include <mpi.h>
             int main(int argc, char *argv[])

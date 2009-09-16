@@ -1,3 +1,5 @@
+.. _api: 
+
 The pupympi API documentation
 ===================================
 
@@ -18,14 +20,14 @@ The :mod:`mpi.request` Module
    :members: cancel, test, wait
 
 The :mod:`mpi.collectiverequest` Module
------------------------------
+-----------------------------------------
 
 .. module:: mpi.collectiverequest
 .. autoclass:: CollectiveRequest
    :members: cancel
 
 The :mod:`mpi.communicator` Module
------------------------------
+------------------------------------
 
 .. module:: mpi.communicator
 .. autoclass:: Communicator
