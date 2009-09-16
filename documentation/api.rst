@@ -8,7 +8,7 @@ The :class:`mpi` class
 -----------------------------
 .. module:: mpi
 .. autoclass:: MPI
-   :members: __init__, initialized, barrier, isend, send, wait, recv, irecv, finalize
+   :members: __init__, initialized, finalize
 
 The :mod:`mpi.request` Module
 -----------------------------
