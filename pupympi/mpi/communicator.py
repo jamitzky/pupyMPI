@@ -481,14 +481,6 @@ class Communicator:
         """
         Logger().warn("Non-Implemented method 'gatherv' called.")
         
-    # FIXME Defer/discuss whether to implement these (probes for incoming receives)
-    def probe(self, arg):
-        # TODO Document
-        pass
-    def iprobe(self, arg):
-        # TODO Document
-        pass
-        
     def reduce(self, arg):
         # FIXME
         pass
