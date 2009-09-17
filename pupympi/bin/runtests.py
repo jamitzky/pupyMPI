@@ -8,7 +8,7 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
 import sys
-import getopt
+from optparse import OptionParser, OptionGroup
 import subprocess
 import os
 from threading import Thread
@@ -19,10 +19,8 @@ Read the source, lazy bum.
 '''
 
 # settings
-RUN_COUNT = 2 # MPI processes started...tests can use no more than this number
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
 TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take.
-LOG_VERBOSITY = 3
 
 
 HEADER = '\033[95m'
@@ -38,17 +36,18 @@ ENDC = '\033[0m'
 
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
-    cmd = "bin/mpirun.py -q -c RUN_COUNT --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
-    def __init__(self, test, primary_log):
+    cmd = "bin/mpirun.py -q -c RUN_COUNT --startup-method=STARTUP_METHOD --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    def __init__(self, test, primary_log, options):
         Thread.__init__(self)
         self.test = test
         self.primary_log = primary_log
-        self.cmd = self.cmd.replace("RUN_COUNT", str(RUN_COUNT))
-        self.cmd = self.cmd.replace("LOG_VERBOSITY", str(LOG_VERBOSITY))
+        self.cmd = self.cmd.replace("RUN_COUNT", str(options.np))
+        self.cmd = self.cmd.replace("LOG_VERBOSITY", str(options.verbosity))
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
-        self.cmd = self.cmd.replace("REMOTE_PYTHON", remote_python)
+        self.cmd = self.cmd.replace("REMOTE_PYTHON", options.remote_python)
+        self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
         sys.stdout.write( "Launching %s: " % self.cmd)
         sys.stdout.flush() # because python sucks
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
@@ -121,11 +120,11 @@ def combine_logs(logfile_prefix):
     combined.close()        
     print "Combined %d log files into %s.log" % (counter, logfile_prefix)
 
-def run_tests(test_files):
+def run_tests(test_files, options):
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
     for test in test_files:
-        t = RunTest(test, logfile_prefix)
+        t = RunTest(test, logfile_prefix, options)
         threadlist.append(t)
         t.start()
         t.join() # run sequentially until issue #19 is fixed
@@ -142,36 +141,17 @@ class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-remote_python = "python"
+def main():
+    usage = 'usage: %prog [options]'
+    parser = OptionParser(usage=usage, version="Pupympi version 0.01 (dev)")
+    parser.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
+    parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
+    parser.add_option('-c', '--np', dest='np', default=4, type='int', help='The number of processes to start.')
+    parser.add_option('--remote-python', '-r', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
 
-def main(argv=None):
-    global remote_python
-    if argv is None:
-        argv = sys.argv
-    try:
-        try:
-            opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output=","remote-python="])
-        except getopt.error, msg:
-            raise Usage(msg)
-    
-        # option processing
-        for option, value in opts:
-            if option == "-v":
-                verbose = True
-            if option in ("-h", "--help"):
-                raise Usage(help_message)
-            if option in ("-o", "--output"):
-                output = value
-            if option in ("-r", "--remote-python"):
-                #print "Remote python path now = ",value
-                remote_python = value
-    
-    except Usage, err:
-        print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
-        print >> sys.stderr, "\t for help use --help"
-        return 2
+    options, args = parser.parse_args()
 
-    run_tests( get_testnames() )
+    run_tests( get_testnames(), options )
 
 if __name__ == "__main__":
     sys.exit(main())
