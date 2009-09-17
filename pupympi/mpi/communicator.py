@@ -328,6 +328,7 @@ class Communicator:
         processes who will print the message.
 
         .. highlight:: python
+
             from mpi import MPI
 
             mpi = MPI()
