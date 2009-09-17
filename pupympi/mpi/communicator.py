@@ -338,7 +338,7 @@ class Communicator:
 
             mpi.finalize()
 
-        For C methodoly see: 
+        For C methodology see: 
         http://www.mpi-forum.org/docs/mpi-11-html/node67.html
         """
         if self.rank() == root:
