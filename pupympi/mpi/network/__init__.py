@@ -95,7 +95,7 @@ class AbstractCommunicationHandler(Thread):
                 callback(*args, **kwargs)
                 
         # Look for generic callbacks
-        for callback in self.callbacks[callback_type]:
+        for callback in self.callbacks.get(callback_type,[]):
             callback(*args, **kwargs)
 
     def shutdown_ready(self):

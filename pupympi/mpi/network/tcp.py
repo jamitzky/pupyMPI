@@ -75,12 +75,7 @@ def structured_read(socket_connection):
     while not header_unpacked:
         data += socket_connection.recv(header_size)
         
-        # NOTE:
-        # on my list of dumb-ass questions why the tagged on "not header_unpacked"?
-        # it can only be set to true inside the if-statement so the check seems
-        # superflous
-        # - Fred
-        if len(data) > header_size and not header_unpacked:
+        if len(data) > header_size:
             sender, tag, msg_size, communicator, recv_type = unpack_header(data)
             header_unpacked = True
     
@@ -150,6 +145,12 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     yet. Whenever a new request object comes into the queue we look through
     the already finished TCP jobs to find a matching one. In this case a recv()
     call might return almost without blocking.
+
+    FIXME: Document the job structure. We need a clear overview of the fields,
+           their behaviour etc. Do this somewhere nice so it ends up in the
+           documentation. 
+
+    FIXME: Look at persistent socket behaviour. 
     """
 
     def __init__(self, *args, **kwargs):
@@ -208,7 +209,8 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 it += 1
                 (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
                 
-                #Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
+                # Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
+                # Fixme: Make general debugger stuff in the logger so the logger knows not to print everything
                 if it < 3 or (it < 100 and it % 10 == 0) or (it % 1000 == 0):
                     Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets." % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
 
@@ -236,6 +238,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         Logger().info("Sending data on the socket. Going to call the callbacks")
 
                         # Trigger the callbacks. 
+                        # FIXME: The callback should also include the sender / receiver of the data.
                         self.callback(job, status='ready')
                         job['status'] = 'finished'
 
@@ -247,6 +250,8 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
+        # FIXME: Should this socket be stared by the actual job? Otherwise it's the only
+        #        socket started before the job is created. 
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
@@ -303,9 +308,6 @@ class TCPNetwork(AbstractNetwork):
         tree.up()
         tree.down()
         
-        
-        
-
     def start_job(self, request, communicator, jobtype, participant, tag, data, socket=None, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
@@ -319,7 +321,7 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (type, tag, len(callbacks)))
+        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
 
         job = {'type' : jobtype, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
 
@@ -328,7 +330,7 @@ class TCPNetwork(AbstractNetwork):
 
         Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
-        if jobtype == "send":
+        if jobtype in ("bcast_send", "send"):
             self.t_out.add_out_job( job )
         elif jobtype == "world":
             self.t_in.add_in_job( job )
