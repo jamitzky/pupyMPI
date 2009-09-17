@@ -4,6 +4,7 @@ import threading
 from mpi.request import Request
 from mpi.collectiverequest import CollectiveRequest
 from mpi.group import Group
+from mpi import constants
 
 class Communicator:
     """
@@ -318,6 +319,35 @@ class Communicator:
     # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
 
+    def bcast(self, root, data=None):
+        """
+        Broadcast a message (data) from the process with rank <root>
+        to all other participants in the communicator. 
+
+        This examples shows howto broadcast from rank 3 to all other
+        processes who will print the message.
+
+        .. highlight:: python
+            mpi = MPI()
+            if mpi.rank() == 3:
+                mpi.MPI_COMM_WORLD.bcast(3, "Test message")
+            else:
+                message = mpi.MPI_COMM_WORLD.bcast(3)
+                print message
+
+        For C methodoly see: 
+        http://www.mpi-forum.org/docs/mpi-11-html/node67.html
+        """
+        if self.rank() == root:
+            # Start collective request
+            if not data:
+                raise MPIException("You need to specify data when you're the root of a broadcast")
+            CollectiveRequest("bcast", self, data)
+        else:
+            # Start regular receive with special type
+            # rember to return the data directly from
+            # this function. We're blocking.
+            return self.recv(root, constants.TAG_BCAST)
 
     # Some wrapper methods
     def send(self, destination, content, tag):
@@ -426,23 +456,6 @@ class Communicator:
         """
         
         Logger().warn("Non-Implemented method 'alltoallv' called.")
-        
-    def bcast(self, buffer, count, root):
-        """
-        INOUT buffer starting address of buffer (choice) 
-        IN count number of entries in buffer (integer) 
-        IN datatype data type of buffer (handle) 
-        IN root rank of broadcast root (integer) 
-        IN comm communicator (handle) 
-
-        MPI BCAST broadcasts a message from the process with rank root to all processes of 
-        the group, itself included. It is called by all members of group using the same arguments 
-        or comm, root. On return, the contents of root's communication buffer has been copied to all processes. 
-
-        http://www.mpi-forum.org/docs/mpi-11-html/node67.html
-        """
-    
-        Logger().warn("Non-Implemented method 'bcast' called.")
         
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """

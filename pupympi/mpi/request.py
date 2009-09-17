@@ -2,13 +2,35 @@ from mpi.exceptions import MPIException
 from mpi.logger import Logger
 import threading, time
 
-class Request:
+class BaseRequest(object):
+    def __init__(self):
+        self._m = {'status' : 'new' }
+        # Start a lock for this request object. The lock should be taken
+        # whenever we change the content. It should be legal to read 
+        # information without locking (like test()). We implement the release() and
+        # acquire function on this class directly so the variable stays private
+        self._m['lock'] = threading.Lock()
 
-    def __init__(self, type, communicator, participant, tag, data=None):
-        if type not in ('send','recv'):
-            raise MPIException("Invalid type in request creation. This should never happen. ")
+    def release(self, *args, **kwargs):
+        """
+        Just forwarding method call to the internal lock
+        """
+        return self._m['lock'].release(*args, **kwargs)
 
-        self.type = type
+    def acquire(self, *args, **kwargs):
+        """
+        Just forwarding method call to the internal lock
+        """
+        return self._m['lock'].acquire(*args, **kwargs)
+
+class Request(BaseRequest):
+
+    def __init__(self, request_type, communicator, participant, tag, data=None):
+        super(Request, self).__init__()
+        if request_type not in ('bcast_send', 'send','recv'):
+            raise MPIException("Invalid request_type in request creation. This should never happen. ")
+
+        self.request_type = request_type
         self.communicator = communicator
         self.participant = participant
         self.tag = tag
@@ -21,20 +43,13 @@ class Request:
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
         # 'ready'     -> Means we have the data (in receive) or pickled the data (send) and can
         #                safely return from a test or wait call.
-        self._m = {'status' : 'new' }
 
-        # Start a lock for this request object. The lock should be taken
-        # whenever we change the content. It should be legal to read 
-        # information without locking (like test()). We implement the release() and
-        # acquire function on this class directly so the variable stays private
-        self._m['lock'] = threading.Lock()
-
-        Logger().debug("Request object created for communicator %s, tag %s and type %s and participant %s" % (self.communicator.name, self.tag, self.type, self.participant))
+        Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
 
         callbacks = [ self.network_callback, ]
 
         # Start the network layer on a job as well
-        self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
+        self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
@@ -53,18 +68,6 @@ class Request:
         if lock:
             self.release()
 
-    def release(self, *args, **kwargs):
-        """
-        Just forwarding method call to the internal lock
-        """
-        return self._m['lock'].release(*args, **kwargs)
-
-    def acquire(self, *args, **kwargs):
-        """
-        Just forwarding method call to the internal lock
-        """
-        return self._m['lock'].acquire(*args, **kwargs)
-
     def cancel(self):
         """
         Cancel a request. This can be used to free memory, but the request must be redone
@@ -75,7 +78,7 @@ class Request:
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._m['status'] = 'cancelled'
-        Logger().debug("Cancelling a %s request" % self.type)
+        Logger().debug("Cancelling a %s request" % self.request_type)
         
 
     def wait(self):
@@ -92,7 +95,7 @@ class Request:
         FIXME: This should probably be a bit more thread safe. Should we add a lock to 
                each request object and lock it when we look at it?
         """
-        Logger().info("Starting a %s wait" % self.type)
+        Logger().info("Starting a %s wait" % self.request_type)
         while not self.test():
             time.sleep(1)
 
@@ -101,17 +104,17 @@ class Request:
         self._m['status'] = 'finished'
 
         # Return none or the data
-        if self.type == 'recv':
+        if self.request_type == 'recv':
             return self.data
 
-        Logger().info("Ending a %s wait" % self.type)
+        Logger().info("Ending a %s wait" % self.request_type)
 
     def test(self):
         """
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
-        Logger().debug("Testing a %s request" % self.type)
+        Logger().debug("Testing a %s request" % self.request_type)
         return self._m['status'] == 'ready'
 
     def get_status(self):

@@ -112,8 +112,6 @@ class MPI(Thread):
 
         self.daemon = True
         self.start()
-        
-        
 
     def run(self):
         # This can be moved out of there
