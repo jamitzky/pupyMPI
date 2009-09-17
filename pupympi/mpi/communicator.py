@@ -325,9 +325,7 @@ class Communicator:
         to all other participants in the communicator. 
 
         This examples shows howto broadcast from rank 3 to all other
-        processes who will print the message.
-
-        .. highlight:: python
+        processes who will print the message::
 
             from mpi import MPI
 
