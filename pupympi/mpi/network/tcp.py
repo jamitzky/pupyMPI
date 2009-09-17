@@ -2,6 +2,8 @@ import mpi, time, socket, threading, random, select, struct
 from mpi.logger import Logger
 from mpi.network import AbstractNetwork, AbstractCommunicationHandler
 from threading import Thread, activeCount
+from mpi.bc_tree import BroadCastTree
+
 
 try:
     import cPickle as pickle
@@ -58,7 +60,6 @@ def structured_read(socket_connection):
         type         : integer
 
     The method is constructed of two loops. The first loop
-    readys until we have received the entire header. The
     contents of the header is then unpacked. The unpacked
     msg_size is used to receive the rest of the message. 
     """
@@ -100,7 +101,7 @@ def structured_read(socket_connection):
 
     return tag, sender, communicator, recv_type, data
 
-def get_socket(range=(10000, 30000)):
+def get_socket(min=10000, max=30000):
     """
     A simple helper method for creating a socket,
     binding it to a random free port within the specified range. 
@@ -117,7 +118,7 @@ def get_socket(range=(10000, 30000)):
     logger.debug("get_socket: Starting loop with hostname %s" % hostname)
 
     while True:
-        port_no = int(random.uniform(*range))
+        port_no = random.randint(min, max) 
         if port_no in used:
             logger.debug("get_socket: Port %d is already in use %d" % port_no)
             continue
@@ -261,8 +262,8 @@ class TCPNetwork(AbstractNetwork):
     def set_mpi_world(self, MPI_COMM_WORLD):
         self.MPI_COMM_WORLD = MPI_COMM_WORLD
 
-        # Manually add the daemon socket on the right thread.
-        self.start_job(None, MPI_COMM_WORLD, "daemon", None, None, None, self.socket)
+        # Manually add a "always-on"/daemon socket on the right thread.
+        self.start_job(None, MPI_COMM_WORLD, "world", None, None, None, self.socket)
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -294,7 +295,18 @@ class TCPNetwork(AbstractNetwork):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
-    def start_job(self, request, communicator, type, participant, tag, data, socket=None, callbacks=[]):
+    def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
+        Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))
+        
+        job = {'type' : jobtype, 'data' : data, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': True}
+        tree = BroadCastTree(range(communicator.size()), communicator.rank())
+        tree.up()
+        tree.down()
+        
+        
+        
+
+    def start_job(self, request, communicator, jobtype, participant, tag, data, socket=None, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
         up an initial job structure and passing it to the correct thread. 
@@ -309,16 +321,16 @@ class TCPNetwork(AbstractNetwork):
         """
         Logger().info("Starting a %s network job with tag %s and %d callbacks" % (type, tag, len(callbacks)))
 
-        job = {'type' : type, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator}
+        job = {'type' : jobtype, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
 
         if participant is not None:
             job['participant'] = communicator.comm_group.members[participant]
 
         Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
-        if type == "send":
+        if jobtype == "send":
             self.t_out.add_out_job( job )
-        elif type == "daemon":
+        elif jobtype == "world":
             self.t_in.add_in_job( job )
 
     def finalize(self):
