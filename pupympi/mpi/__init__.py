@@ -1,4 +1,4 @@
-__version__ = 0.01 # It bumps the version or else it gets the hose again!
+__version__ = 0.02 # It bumps the version or else it gets the hose again!
 
 from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time

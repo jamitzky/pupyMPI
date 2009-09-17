@@ -1,7 +1,6 @@
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 import threading, time
-from mpi.bc_tree import BroadCastTree
 
 class CollectiveRequest:
 
@@ -40,9 +39,6 @@ class CollectiveRequest:
         # Start the network layer on a job as well
         raise MPIException("Not implemented")
         #self.communicator.network.start_job(self, self.communicator, type, self.participant, tag, data, callbacks=callbacks)
-        t = BroadCastTree(range(10), 4)
-        t.up()
-        t.down()
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
