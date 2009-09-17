@@ -328,12 +328,16 @@ class Communicator:
         processes who will print the message.
 
         .. highlight:: python
+            from mpi import MPI
+
             mpi = MPI()
-            if mpi.rank() == 3:
+            if mpi.MPI_COMM_WORLD.rank() == 3:
                 mpi.MPI_COMM_WORLD.bcast(3, "Test message")
             else:
                 message = mpi.MPI_COMM_WORLD.bcast(3)
                 print message
+
+            mpi.finalize()
 
         For C methodoly see: 
         http://www.mpi-forum.org/docs/mpi-11-html/node67.html
