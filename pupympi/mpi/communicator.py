@@ -327,7 +327,6 @@ class Communicator:
         This examples shows howto broadcast from rank 3 to all other
         processes who will print the message::
 
-        .. code-block:: python
             from mpi import MPI
 
             mpi = MPI()
