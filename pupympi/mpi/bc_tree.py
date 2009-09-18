@@ -7,15 +7,20 @@ import copy
 
 class BroadCastTree:
     
-    def __init__(self, nodes, rank):
+    def __init__(self, nodes, rank, root):
+        # Make sure the root is the first element in the list
+        # se use to generate the tree. 
         nodes.sort()
+        nodes.remove(root)
+        new_nodes = [root]
+        new_nodes.extend(nodes)
         self.nodes = nodes
         self.rank = rank
-        self.tree = self.generate_tree(copy.deepcopy(nodes))
+        self.tree = self.generate_tree(copy.deepcopy(new_nodes))
 
         self.up = self.find_up()
         self.down = self.find_down()
-        
+
     def find_up(self):
         """
         Iterate from the root and down to find the parent
