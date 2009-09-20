@@ -370,7 +370,22 @@ class Communicator:
 
     def barrier(self):
         """
-        document me
+        Blocks all the processes in the communicator until all have
+        reached this call. 
+
+        Example usage:
+        The following code will iterate 10 loops in sync by calling 
+        the barrier at the end of each loop::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            for i in range(10):
+                # Do some tedious calculation here
+                
+                mpi.MPI_COMM_WORLD.barrier()
+            mpi.finalize()
+
         """
         cr = CollectiveRequest("barrier", self)
         return cr.wait()
@@ -390,7 +405,7 @@ class Communicator:
         POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
         this communicator. 
 
-        NOTES: See the Tag page for rules about your custom tags.
+        NOTES: See the Tag page for rules about your custom tagse
         """
         return self.irecv(destination, tag).wait()
 
