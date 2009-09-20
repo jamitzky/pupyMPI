@@ -371,13 +371,32 @@ class Communicator:
         send early and do some computing while you wait for the send to 
         finish.
 
+        **Example**
+        Rank 0 sends "Hello world!" to rank 1. Rank 1 receives the message
+        and prints it::
+            
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 1
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+            else:
+                message = mpi.MPI_COMM_WORLD.recv(1, TAG)
+                print message
+
+        .. note::
+            The above program will only work if run with -c 2 parameter (see
+            :doc:`mpirun`). If invoked with more processes there will be size-2 
+            processes waiting for a message that will never come. 
+
         POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
         this communicator. 
 
-        SEE ALSO: the recv() call
+        **See also**: :func:`recv` and :func:`isend`
 
-        NOTES: See the Tag page for rules about your custom tagse
-        document me
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.isend(destination, content, tag).wait()
 
@@ -386,7 +405,7 @@ class Communicator:
         Blocks all the processes in the communicator until all have
         reached this call. 
 
-        Example usage:
+        **Example usage**:
         The following code will iterate 10 loops in sync by calling 
         the barrier at the end of each loop::
 
@@ -413,14 +432,16 @@ class Communicator:
         result. 
 
         This method will not return if the destination process never sends data
-        to this with the specified tag. 
+        to this with the specified tag. See :func:`send` documentation for full
+        working example. 
 
         POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
         this communicator. 
 
-        SEE ALSO: the send() call
+        **See also**: :func:`irecv` and :func:`send`
 
-        NOTES: See the Tag page for rules about your custom tagse
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.irecv(destination, tag).wait()
 
