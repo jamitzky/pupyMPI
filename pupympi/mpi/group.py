@@ -11,7 +11,7 @@ import sys
 import os
 import unittest
 from mpi.logger import Logger
-
+from mpi import constants
 
 class Group:
     """
@@ -24,15 +24,15 @@ class Group:
     def __repr__(self):
         return "<Group: %s members: %s>" % (len(self.members), self.members)
         
-    def is_empty(self):
-        # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
-        return size() == 0
-
     def size(self):
         """
         returns number of processes in group 
         """
         return len(self.members)
+
+    def is_empty(self):
+        # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
+        return self.size() == 0
 
     def rank(self):
         return self.my_rank
@@ -83,10 +83,10 @@ class Group:
             if p == self.rank():
                 new_rank = counter
             counter += 1
-        
-        # its allowed not to be a member of the group
-        # if new_rank is -1:
-        #            return None
+
+        if counter is 0:
+            Logger().debug("Empty group created")
+            return constants.MPI_GROUP_EMPTY
        
         new_group = Group(new_rank)
         new_group.members = new_members
@@ -109,9 +109,9 @@ class Group:
                 new_rank = counter
             counter += 1
         
-        # its allowed not to be a member of the group
-        # if new_rank is -1:
-        #            return None
+        if counter is 0:
+            Logger().debug("Empty group created")
+            return constants.MPI_GROUP_EMPTY
 
         new_group = Group(new_rank)
         new_group.members = new_members
