@@ -367,12 +367,9 @@ class Communicator:
             # Start collective request
             if not data:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
-            CollectiveRequest("bcast", self, data)
-        else:
-            # Start regular receive with special type
-            # rember to return the data directly from
-            # this function. We're blocking.
-            return self.recv(root, constants.TAG_BCAST)
+
+        cr = CollectiveRequest("bcast", self, data, root=root)
+        return cr.wait()
 
     # Some wrapper methods
     def send(self, destination, content, tag):

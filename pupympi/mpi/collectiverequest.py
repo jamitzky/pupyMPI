@@ -7,7 +7,7 @@ from mpi.logger import Logger
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, request_type, communicator, data=None):
+    def __init__(self, request_type, communicator, data=None, root=None):
         super(CollectiveRequest, self).__init__()
         if request_type not in ('bcast', 'comm_create','comm_free'): # TODO more needed here
             raise MPIException("Invalid type in collective request creation. This should never happen. ")
@@ -29,21 +29,40 @@ class CollectiveRequest(BaseRequest):
         Logger().debug("CollectiveRequest object created for communicator %s and type %s" % (self.communicator.name, self.request_type))
 
         if self.request_type == "bcast":
-            self.start_bcast(data)
+            self.start_bcast(root, data)
 
-    def start_bcast(self, data):
+    def start_bcast(self, root, data):
         """
         From the Communicator.bcast we are only invoking this call if we're
         the root of the bcast. So we find all the receipients and send the
         data to them
+
+        Under development: New version of bcast. Using a broad cast tree we'r
+        first waiting for data from the upper part of the broad cast tree. When
+        we get it (or if we're the root) we send it furhter down the tree. 
+
+        FIXME: This is not really an blocking operation. Should it be?
         """
+        # For a broad cast operation we need a broad cast tree with the 
+        # proper root element. 
+        tree = self.communicator.get_broadcast_tree(root=root)
+
+        # Wait for the element in the upper part of the tree. There will 
+        # only be 1 (or nothing).
+        for u in tree.up:
+            data = self.communicator.recv(u, constants.TAG_BCAST)
+
+        # Send the data through to the lower parts of the tree. There
+        # is an undefined number of children here. 
         request_objects = []
-        for participant in self.communicator.group().members.keys():
-            r = Request("bcast_send", self.communicator, participant, constants.TAG_BCAST, data) 
+        for d in tree.down:
+            r = Request("bcast_send", self.communicator, d, constants.TAG_BCAST, data)
             request_objects.append(r)
             self.communicator.request_add(r)
 
-        [r.wait() for r in request_objects]
+        [ r.wait() for r in request_objects ]
+
+        self.data = data
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
@@ -73,3 +92,12 @@ class CollectiveRequest(BaseRequest):
 
     def get_status(self):
         return self._m['status']
+
+    def wait(self):
+        """
+        Returns data if there are anything. This method should be rewritten to
+        handle stuff like locking, proper waiting for some signal that the
+        request is finished. 
+        """
+        return self.data
+        
