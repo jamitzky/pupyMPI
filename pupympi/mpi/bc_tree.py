@@ -7,25 +7,75 @@ import copy
 
 class BroadCastTree:
     
-    def __init__(self, nodes, rank):
+    def __init__(self, nodes, rank, root):
+        # Make sure the root is the first element in the list
+        # se use to generate the tree. 
         nodes.sort()
+        nodes.remove(root)
+        new_nodes = [root]
+        new_nodes.extend(nodes)
         self.nodes = nodes
         self.rank = rank
-        self.tree = self.generate_tree(copy.deepcopy(nodes))
-        
-    def up(self):
-        idx = self.nodes.index(self.rank) -1
-        if idx < 0: 
-            return []
-        
-        return [ self.nodes[ idx ] ]
-    
-    def down(self):
-        try:
-            return [ self.nodes[ self.nodes.index(self.rank) +1] ]
-        except:
-            return []
-    
+        self.tree = self.generate_tree(copy.deepcopy(new_nodes))
+
+        self.up = self.find_up()
+        self.down = self.find_down()
+
+    def find_up(self):
+        """
+        Iterate from the root and down to find the parent
+        of a node. As this is a tree we're limited to one
+        but implement it as a list anyway to make the 
+        broadcast algorithm more generic. 
+
+        How it works:
+
+        from mpi.bc_tree import BroadCastTree
+
+        # We have rank 0
+        tree = BroadCastTree(range(10), 0)
+
+        # This should give the empty list
+        tree.up
+
+        # We have rank 0
+        tree = BroadCastTree(range(10), 1)
+
+        # This should give the root as up
+        tree.up
+        """
+        def find(node, candidate):
+            result = []
+            if self.rank == node['rank']:
+                if candidate:
+                    return [candidate]
+            else:
+                for child in node['children']:
+                    result.extend(find(child, node))
+
+            return result
+            
+        return [x['rank'] for x in find(self.tree, None)]
+
+    def find_down(self):
+        """
+        Find all the children of a node. Pretty
+        basic so dosen't need as much docs as 
+        the find_up method. 
+        """
+        def find(node):
+            result = []
+            if self.rank == node['rank']:
+                return node['children']
+            else:
+                for child in node['children']:
+                    result.extend(find(child))
+
+            return result
+            
+        return [x['rank'] for x in find(self.tree)]
+
+
     def generate_tree(self, node_list ):
         def node_create(rank, iteration=0):
             return { 

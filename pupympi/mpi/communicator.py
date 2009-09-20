@@ -2,6 +2,7 @@ from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICo
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
+from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
 from mpi.group import Group
 from mpi import constants
@@ -31,6 +32,27 @@ class Communicator:
         self.request_queue = {}
         
         self.unhandled_receives = {}
+
+        # Setup a tree for this communicator. When this is done you can
+        # use the "up" and "down" attributes on the tree to send messages
+        # around. The standard tree is created with rank 0 as the root.
+        # Look at the inner "get_broadcast_tree" to see how you can get
+        # trees with different roots
+        self.get_broadcast_tree()
+
+    def get_broadcast_tree(self, root=0):
+        # Ensure we have the tree structure
+        if not getattr(self, "bc_trees", None):
+            self.bc_trees = {}
+
+        # Look for the root as key in the structure. If so we use this
+        # tree as it has been generated earlier. This makes the system
+        # act like a caching system, so we don't end up generating trees
+        # all the time.
+        if root not in self.bc_trees:
+            self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
+        
+        return self.bc_trees[root] 
         
     def pop_unhandled_message(self, participant, tag):
         try:
@@ -335,12 +357,9 @@ class Communicator:
             # Start collective request
             if not data:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
-            CollectiveRequest("bcast", self, data)
-        else:
-            # Start regular receive with special type
-            # rember to return the data directly from
-            # this function. We're blocking.
-            return self.recv(root, constants.TAG_BCAST)
+
+        cr = CollectiveRequest("bcast", self, data, root=root)
+        return cr.wait()
 
     # Some wrapper methods
     def send(self, destination, content, tag):
