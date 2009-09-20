@@ -33,6 +33,25 @@ WARNING = '\033[93m'
 FAIL = '\033[91m'
 ENDC = '\033[0m'
 
+def output_console(text, color = None, newline = True, block = "", output=True):
+    """Adds one block/line of output to console"""
+    out = ""
+    if color:
+        out += color
+    out += text
+    if color:
+        out += ENDC
+    if newline:
+        out += "\n\r"
+    if output:
+        sys.stdout.write(out)
+        sys.stdout.flush() 
+    return out
+    
+def output_latex(text, color = None, newline = True, block = ""):
+    """Adds one block/line of output as latex output"""
+    pass
+    
 
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
@@ -48,8 +67,7 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("REMOTE_PYTHON", options.remote_python)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
-        sys.stdout.write( "Launching %s: " % self.cmd)
-        sys.stdout.flush() # because python sucks
+        output_console( "Launching %s: " % self.cmd, newline=False)
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
         self.killed = False
 
@@ -64,15 +82,15 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            print "Timed out"
+            output_console( "Timed out" )
             self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
         elif self.process.returncode is not 0:
-            print OKRED + "Failed" + ENDC
+            output_console("Failed", OKRED)
         else:
-            print "OK"  
+            output_console("OK")  
         #print self.process.communicate()
         self.returncode = self.process.returncode
 
@@ -81,27 +99,27 @@ def get_testnames():
     
 def _status_str(ret):
     if ret == 0:
-        return "ok"
+        return output_console("ok", newline=False, output=False)
     elif ret == -9 or ret == -15:
-        return "Timed out"
+        return output_console("Timed Out", newline=False, output=False)
     else:
-        return OKRED + "FAILURE: " + str(ret) + ENDC
+        return output_console("FAIL: %s" % ret, color=OKRED,newline=False, output=False)
         
 def format_output(threads):
     total_time = 0
     odd = False
-    print "TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE"
-    print "-----------------------------------------------------------------------------------------------------------"
+    output_console("TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE") 
+    output_console( "-----------------------------------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
-        print "%s%-45s\t\t%s\t\t%s\t\t%s%s" % (OKOFFWHITE if odd else OKBLACK, \
-                                            thread.test, round(thread.executiontime, 1), \
-                                            "KILLED" if thread.killed else "no", \
-                                            _status_str(thread.returncode),
-                                            ENDC)
+        output_console("%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, \
+                                                    round(thread.executiontime, 1), \
+                                                    "KILLED" if thread.killed else "no", \
+                                                    _status_str(thread.returncode)),
+                                                    color=OKOFFWHITE if odd else OKBLACK)                                                    
         odd = True if odd == False else False
         
-    print "\nTotal execution time: %ss" % (round(total_time, 1))
+    output_console( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
 def combine_logs(logfile_prefix):
     combined = open(logfile_prefix+".log", "w")
