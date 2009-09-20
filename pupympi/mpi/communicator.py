@@ -1,4 +1,4 @@
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
 from mpi.logger import Logger
 import threading
 from mpi.request import Request
@@ -11,12 +11,13 @@ class Communicator:
     """
     This class represents an MPI communicator.
     """
-    def __init__(self, rank, size, network, group, id=1, name="MPI_COMM_WORLD"):
+    def __init__(self, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.name = name
         self.network = network
         self.comm_group = group
         self.id = id
-
+        self.MPI_COMM_WORLD = comm_root or self
+        
         self.attr = {}
         if name == "MPI_COMM_WORLD": # FIXME Move to build_world
             self.attr = {   "MPI_TAG_UB": 2**30, \
@@ -243,19 +244,36 @@ class Communicator:
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
+        
+        new_id = -1
+
+        if self.rank() == 0:
+            # send request to rank 0 of mpi_comm_world (if already rank 0 of mcw, just send the message anyway)
+            self.MPI_COMM_WORLD.send(self.MPI_COMM_WORLD.group().members[0], None, constants.TAG_COMM_CREATE)
+            new_id = self.MPI_COMM_WORLD.recv(self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
+
+        if new_id < 0:
+            raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
+        
+        # wait for answer on id
+        cr = CollectiveRequest("comm_create", constants.TAG_COMM_CREATE, self, new_id)
+        
+        # FIXME validate that received group was identical to my worldview
 
         # check that i am member of group
         if group.rank() is -1:
-            return None # FIXME this is too early (see req. above that all processes participate)
+            return None
+            
+        newcomm = Communicator(group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
+        return newcomm
 
-        
-
-        # Create a receive request object and return
-        handle = CollectiveRequest("comm_create", self, [r for r in self.group().members], None, group)
-
-        # Add to the queue
-        self.request_add(handle)
-        return handle
+        # below is beginning of the distributed versions. 
+        # # Create a receive request object and return
+        # handle = CollectiveRequest("comm_create", self, [r for r in self.group().members], None, group)
+        # 
+        # # Add to the queue
+        # self.request_add(handle)
+        # return handle
 
 
 
@@ -358,7 +376,7 @@ class Communicator:
             if not data:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
-        cr = CollectiveRequest("bcast", self, data, root=root)
+        cr = CollectiveRequest("bcast", constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
     # Some wrapper methods
@@ -372,7 +390,7 @@ class Communicator:
         """
         document me
         """
-        cr = CollectiveRequest("barrier", self)
+        cr = CollectiveRequest("bcast", constants.TAG_BARRIER,self)
         return cr.wait()
 
     def recv(self, destination, tag):

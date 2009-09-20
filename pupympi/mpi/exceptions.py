@@ -24,3 +24,6 @@ class MPIInvalidTagException(MPIException):
 
 class MPICommunicatorGroupNotSubsetOf(MPIException):
     pass
+    
+class MPICommunicatorNoNewIdAvailable(MPIException):
+    pass

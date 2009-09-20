@@ -90,9 +90,9 @@ class MPI(Thread):
         # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
-        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, world_Group)
+        self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, world_Group, comm_root=None)
         self.communicators = {}
-        self.communicators[1] = self.MPI_COMM_WORLD
+        self.communicators[0] = self.MPI_COMM_WORLD
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels

@@ -7,13 +7,14 @@ from mpi.logger import Logger
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, request_type, communicator, data=None, root=0):
+    def __init__(self, request_supertype, tag, communicator, data=None, root=0):
         super(CollectiveRequest, self).__init__()
-        if request_type not in ('barrier', 'bcast', 'comm_create','comm_free'): # TODO more needed here
-            raise MPIException("Invalid type in collective request creation. This should never happen. ")
+        if request_supertype not in ('bcast',): # TODO more needed here
+            raise MPIException("Invalid request supertype in collective request creation. This should never happen. ")
 
-        self.request_type = request_type
+        self.request_supertype = request_supertype
         self.communicator = communicator
+        self.tag = tag
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -26,13 +27,15 @@ class CollectiveRequest(BaseRequest):
         #                  safely return from a test or wait call.
         self._m = {'status' : 'new' }
 
-        Logger().debug("CollectiveRequest object created for communicator %s and type %s" % (self.communicator.name, self.request_type))
+        Logger().debug("CollectiveRequest object created for communicator %s and supertype %s" % (self.communicator.name, self.request_supertype))
 
-        if self.request_type == "bcast":
-            self.start_bcast(root, data)
-
-        if self.request_type == 'barrier':
-            self.start_barrier()
+        if self.request_supertype == "bcast":
+            if self.tag in (constants.TAG_BCAST, constants.TAG_COMM_CREATE):
+                self.start_bcast(root, data, self.tag)
+            elif self.tag in (constants.TAG_BARRIER,):
+                self.start_barrier(self.tag)
+            else:
+                raise MPIException("Unsupported collective request tag %s" % self.tag)
 
     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def safehead(data_list):
@@ -115,11 +118,11 @@ class CollectiveRequest(BaseRequest):
         else:
             return rt_second
 
-    def start_barrier(self):
+    def start_barrier(self, tag):
         self.two_way_tree_traversal(constants.TAG_BARRIER)
 
-    def start_bcast(self, root, data):
-        self.data = self.two_way_tree_traversal(constants.TAG_BCAST, root=root, initial_data=data)
+    def start_bcast(self, root, data, tag):
+        self.data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
@@ -142,7 +145,7 @@ class CollectiveRequest(BaseRequest):
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._m['status'] = 'cancelled'
-        Logger().debug("Cancelling a %s request" % self.request_type)
+        Logger().debug("Cancelling a %s/%s request" % self.request_supertype, self.tag)
         
 
     # FIXME Deleted test and wait until we know if they'll be needed (copy from Request then)
