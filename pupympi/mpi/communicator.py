@@ -382,20 +382,84 @@ class Communicator:
     # Some wrapper methods
     def send(self, destination, content, tag):
         """
-        document me
+        Basic send function. Send to the destination rank a message
+        with the specified tag. 
+
+        This is a blocking operation. Look into isend if you can start your
+        send early and do some computing while you wait for the send to 
+        finish.
+
+        **Example**
+        Rank 0 sends "Hello world!" to rank 1. Rank 1 receives the message
+        and prints it::
+            
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 1
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+            else:
+                message = mpi.MPI_COMM_WORLD.recv(1, TAG)
+                print message
+
+        .. note::
+            The above program will only work if run with -c 2 parameter (see
+            :doc:`mpirun`). If invoked with more processes there will be size-2 
+            processes waiting for a message that will never come. 
+
+        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        this communicator. 
+
+        **See also**: :func:`recv` and :func:`isend`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.isend(destination, content, tag).wait()
 
     def barrier(self):
         """
-        document me
+        Blocks all the processes in the communicator until all have
+        reached this call. 
+
+        **Example usage**:
+        The following code will iterate 10 loops in sync by calling 
+        the barrier at the end of each loop::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            for i in range(10):
+                # Do some tedious calculation here
+                
+                mpi.MPI_COMM_WORLD.barrier()
+            mpi.finalize()
+
         """
         cr = CollectiveRequest("bcast", constants.TAG_BARRIER,self)
         return cr.wait()
 
     def recv(self, destination, tag):
         """
-        document me
+        Basic receive function. Receives from the destination rank a message
+        with the specified tag. 
+
+        This is a blocking operation. Look into irecv if you can start your
+        receive early and do some computing while you wait for the receive
+        result. 
+
+        This method will not return if the destination process never sends data
+        to this with the specified tag. See :func:`send` documentation for full
+        working example. 
+
+        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        this communicator. 
+
+        **See also**: :func:`irecv` and :func:`send`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.irecv(destination, tag).wait()
 
