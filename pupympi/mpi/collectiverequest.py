@@ -31,38 +31,89 @@ class CollectiveRequest(BaseRequest):
         if self.request_type == "bcast":
             self.start_bcast(root, data)
 
-    def start_bcast(self, root, data):
-        """
-        From the Communicator.bcast we are only invoking this call if we're
-        the root of the bcast. So we find all the receipients and send the
-        data to them
+    def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
+        def safehead(data_list):
+            if data_list:
+                return data_list.pop()
+            else:
+                return None
+    
+        def traverse(nodes_from, nodes_to, data_func, initial_data):
+            # If The direction is up, so we find the result of all our children
+            # and execute som function on these data. The result of the function
+            # is passed on to our parent. The result is also returned from the
+            # function, and if this is the last direction in the traversal the
+            # callee will get the data. 
+            data_list = []
 
-        Under development: New version of bcast. Using a broad cast tree we'r
-        first waiting for data from the upper part of the broad cast tree. When
-        we get it (or if we're the root) we send it furhter down the tree. 
+            # When receiving from N people, we're making them non-blocking so
+            # we can receive data while we wait for the last one. It might make
+            # sense to already start the receiving calls in the other direction?
+            request_list = []
+            
+            for rank in nodes_from:
+                handle = self.communicator.irecv(rank, tag)
+                request_list.append(handle)
 
-        FIXME: This is not really an blocking operation. Should it be?
-        """
-        # For a broad cast operation we need a broad cast tree with the 
-        # proper root element. 
+            for handle in request_list:
+                data = handle.wait()
+                data_list.append(data)
+
+            # Aggreate the data list to a single item (maybe?). The data list
+            # should probably we curried with the sender rank for operations 
+            # like Allgatherv
+            if data_list:
+                data = data_func(data_list)
+            else:
+                data = initial_data
+
+            # Send the data upwards in the tree. 
+            for rank in nodes_to:
+                self.communicator.send(rank, data, tag)
+
+            return data
+
+        def up(data=None):
+            return traverse(tree.down, tree.up, up_func, data)
+
+        def down(data=None):
+            return traverse(tree.up, tree.down, down_func, data)
+
+        # Step 1: Setup safe methods for propergating data through the tree if
+        #         the callee didn't give us any.
+        if not up_func:
+            up_func = safehead
+
+        if not down_func:
+            down_func = safehead
+
+        # Step 2: Find a broadcast tree with the proper root. The tree is 
+        #         aware of were we are :)
         tree = self.communicator.get_broadcast_tree(root=root)
 
-        # Wait for the element in the upper part of the tree. There will 
-        # only be 1 (or nothing).
-        for u in tree.up:
-            data = self.communicator.recv(u, constants.TAG_BCAST)
+        # Step 3: Traverse the tree in the first direction. 
+        if start_direction == "down":
+            rt_first = down(initial_data)
+            other = up
+        else:
+            rt_first = up(initial_data)
+            other = down
 
-        # Send the data through to the lower parts of the tree. There
-        # is an undefined number of children here. 
-        request_objects = []
-        for d in tree.down:
-            r = Request("bcast_send", self.communicator, d, constants.TAG_BCAST, data)
-            request_objects.append(r)
-            self.communicator.request_add(r)
+        # Step 4: Run the other direction. This should also just have been
+        #         done in the same if as before, but I seperated the cases
+        #         because I think we can get some performance out if we 
+        #         do stuff right here (ie. this is no correct yet). Is there
+        #         any reason we need to traverse the entire tree in one 
+        #         direction before we can start the second traversal?
+        rt_second = other()
 
-        [ r.wait() for r in request_objects ]
-
-        self.data = data
+        if return_type == 'first':
+            return rt_first
+        else:
+            return rt_second
+       
+    def start_bcast(self, root, data):
+        self.data = self.two_way_tree_traversal(constants.TAG_BCAST, root=root, initial_data=data)
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
