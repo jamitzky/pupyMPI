@@ -377,7 +377,20 @@ class Communicator:
 
     def recv(self, destination, tag):
         """
-        document me
+        Basic receive function. Receives from the destination rank a message
+        with the specified tag. 
+
+        This is a blocking operation. Look into irecv if you can start your
+        receive early and do some computing while you wait for the receive
+        result. 
+
+        This method will not return if the destination process never sends data
+        to this with the specified tag. 
+
+        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        this communicator. 
+
+        NOTES: See the Tag page for rules about your custom tags.
         """
         return self.irecv(destination, tag).wait()
 
