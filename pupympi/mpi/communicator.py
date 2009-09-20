@@ -364,6 +364,19 @@ class Communicator:
     # Some wrapper methods
     def send(self, destination, content, tag):
         """
+        Basic send function. Send to the destination rank a message
+        with the specified tag. 
+
+        This is a blocking operation. Look into isend if you can start your
+        send early and do some computing while you wait for the send to 
+        finish.
+
+        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        this communicator. 
+
+        SEE ALSO: the recv() call
+
+        NOTES: See the Tag page for rules about your custom tagse
         document me
         """
         return self.isend(destination, content, tag).wait()
@@ -404,6 +417,8 @@ class Communicator:
 
         POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
         this communicator. 
+
+        SEE ALSO: the send() call
 
         NOTES: See the Tag page for rules about your custom tagse
         """
