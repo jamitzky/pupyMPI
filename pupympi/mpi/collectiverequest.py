@@ -7,9 +7,9 @@ from mpi.logger import Logger
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, request_type, communicator, data=None, root=None):
+    def __init__(self, request_type, communicator, data=None, root=0):
         super(CollectiveRequest, self).__init__()
-        if request_type not in ('bcast', 'comm_create','comm_free'): # TODO more needed here
+        if request_type not in ('barrier', 'bcast', 'comm_create','comm_free'): # TODO more needed here
             raise MPIException("Invalid type in collective request creation. This should never happen. ")
 
         self.request_type = request_type
@@ -30,6 +30,9 @@ class CollectiveRequest(BaseRequest):
 
         if self.request_type == "bcast":
             self.start_bcast(root, data)
+
+        if self.request_type == 'barrier':
+            self.start_barrier()
 
     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def safehead(data_list):
@@ -111,7 +114,10 @@ class CollectiveRequest(BaseRequest):
             return rt_first
         else:
             return rt_second
-       
+
+    def start_barrier(self):
+        self.two_way_tree_traversal(constants.TAG_BARRIER)
+
     def start_bcast(self, root, data):
         self.data = self.two_way_tree_traversal(constants.TAG_BCAST, root=root, initial_data=data)
 
@@ -150,5 +156,5 @@ class CollectiveRequest(BaseRequest):
         handle stuff like locking, proper waiting for some signal that the
         request is finished. 
         """
-        return self.data
+        return getattr(self, "data", None)
         

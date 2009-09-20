@@ -382,8 +382,8 @@ class Communicator:
         """
         document me
         """
-        Logger().warn("Non-Implemented method 'Barrier' called.")
-        # FIXME: Insert something on the request queue
+        cr = CollectiveRequest("barrier", self)
+        return cr.wait()
 
     def recv(self, destination, tag):
         """
