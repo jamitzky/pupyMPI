@@ -193,37 +193,6 @@ class Communicator:
 
     def set_name(self, name):
         self.name = name
-
-    def irecv(self, sender, tag):
-        # Check the destination exists
-        if not self.have_rank(sender):
-            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
-
-        if not isinstance(tag, int):
-            raise MPIInvalidTagException("All tags should be integers")
-
-        # Create a receive request object and return
-        handle = Request("recv", self, sender, tag)
-
-        # Add to the queue
-        self.request_add(handle)
-        return handle
-
-    def isend(self, destination_rank, content, tag):
-        logger = Logger()
-        # Check the destination exists
-        if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
-
-        if not isinstance(tag, int):
-            raise MPIInvalidTagException("All tags should be integers")
-
-        # Create a receive request object and return
-        handle = Request("send", self, destination_rank, tag, data=content)
-
-        # Add to the queue
-        self.request_add(handle)
-        return handle
         
     ################################################################################################################
     #### Communicator creation, deletion
@@ -348,6 +317,36 @@ class Communicator:
     # MPI WAITSOME, 49 
     # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
+    def irecv(self, sender, tag = constants.MPI_TAG_ANY):
+         # Check the destination exists
+         if not self.have_rank(sender):
+             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
+
+         if not isinstance(tag, int):
+             raise MPIInvalidTagException("All tags should be integers")
+
+         # Create a receive request object and return
+         handle = Request("recv", self, sender, tag)
+
+         # Add to the queue
+         self.request_add(handle)
+         return handle
+
+    def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
+         logger = Logger()
+         # Check the destination exists
+         if not self.have_rank(destination_rank):
+             raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+
+         if not isinstance(tag, int):
+             raise MPIInvalidTagException("All tags should be integers")
+
+         # Create a receive request object and return
+         handle = Request("send", self, destination_rank, tag, data=content)
+
+         # Add to the queue
+         self.request_add(handle)
+         return handle
 
     def bcast(self, root, data=None):
         """
@@ -380,7 +379,7 @@ class Communicator:
         return cr.wait()
 
     # Some wrapper methods
-    def send(self, destination, content, tag):
+    def send(self, destination, content, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
         with the specified tag. 
@@ -395,7 +394,7 @@ class Communicator:
             
             from mpi import MPI
             mpi = MPI()
-            TAG = 1
+            TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
 
             if mpi.MPI_COMM_WORLD.rank() == 0:
                 mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
@@ -440,7 +439,7 @@ class Communicator:
         cr = CollectiveRequest("bcast", constants.TAG_BARRIER,self)
         return cr.wait()
 
-    def recv(self, destination, tag):
+    def recv(self, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
         with the specified tag. 

@@ -1,9 +1,10 @@
 
 # Predefined tags
-TAG_BCAST = -1
-TAG_EMPTY = -2
-TAG_BARRIER = -4
-TAG_COMM_CREATE = -8
+MPI_TAG_ANY = -1 # public
+TAG_BCAST   = -128 # internal, this and below
+TAG_EMPTY   = -256
+TAG_BARRIER = -512
+TAG_COMM_CREATE = -1024
 
 # NOT IMPLEMENTED:
 # MPI_COMM_SELF (MPI 2.x)
