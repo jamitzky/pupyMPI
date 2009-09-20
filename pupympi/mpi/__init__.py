@@ -139,7 +139,8 @@ class MPI(Thread):
         This method cleans up after a MPI run. Closes filehandles, 
         logfiles and sockets. 
 
-        FIXME: Should we manually try to kill some threads?
+		Remember to end for MPI program with this call. Otherwise proper 
+		shutdown might not happen. 
         """
         # Wait for shutdown to be signalled
         self.shutdown_lock.release()
@@ -156,12 +157,12 @@ class MPI(Thread):
             from mpi import MPI
 
             status = MPI.initialized()  # status will be False
-            mpi = MPI.initialize()
+            mpi = MPI()
 
             status = MPI.initialized()  # status will now be True
 
         Please, if you're thinking of using this method, you might
-        be down the wrong track. Don't bend the Python like Bromer does. 
+        be down the wrong track. 
         """
         return getattr(cls, '_initialized', False)
                 
