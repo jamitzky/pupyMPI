@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.6
 
 from mpi import MPI
+from mpi import constants
 import time
 
 class TestException(Exception): 
@@ -36,7 +37,10 @@ newG = cwG.excl([0 if rank is 1 else 1])
 assert newG is not None
 print "Excl group %s." % newG
 
-
+emptyG = cwG.incl([])
+assert emptyG is not None
+assert emptyG.is_empty()
+assert emptyG is constants.MPI_GROUP_EMPTY
 
 # Close the sockets down nicely
 mpi.finalize()

@@ -223,16 +223,6 @@ class Communicator:
         # Add to the queue
         self.request_add(handle)
         return handle
-
-    # TODO: may want to drop this and simply allow users access to the underlying dict?
-    # TODO: Global fixed keys (http://www.mpi-forum.org/docs/mpi-11-html/node143.html) should be defined?
-    def attr_get(self, key):
-        """Implements http://www.mpi-forum.org/docs/mpi-11-html/node119.html, python-style:
-        keyval is now any immutable datatype, and flag is not used. If the key is not defined, None is returned. """
-        return self.attr[key]
-    def attr_put(self, key, value):
-        """Implements http://www.mpi-forum.org/docs/mpi-11-html/node119.html"""
-        self.attr[key] = value   
         
     ################################################################################################################
     #### Communicator creation, deletion

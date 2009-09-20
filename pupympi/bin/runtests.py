@@ -34,6 +34,40 @@ FAIL = '\033[91m'
 ENDC = '\033[0m'
 
 
+def output_console(text, color = None, newline = True, block = "", output=True):
+    """Adds one block/line of output to console"""
+    out = ""
+    if color:
+        out += color
+    out += text
+    if color:
+        out += ENDC
+    if newline:
+        out += "\n\r"
+    if output:
+        sys.stdout.write(out)
+        sys.stdout.flush() 
+    return out
+
+def output_console_nocolor(text, color = None, newline = True, block = "", output=True):
+    """Adds one block/line of output to console, no colors for the yuppie types"""
+    out = ""
+    out += text
+    if newline:
+        out += "\n\r"
+    if output:
+        sys.stdout.write(out)
+        sys.stdout.flush() 
+    return out
+
+    
+def output_latex(text, color = None, newline = True, block = ""):
+    """Adds one block/line of output as latex output"""
+    pass
+    
+output = output_console
+
+
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
     cmd = "bin/mpirun.py -q -c RUN_COUNT --startup-method=STARTUP_METHOD --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
@@ -48,8 +82,7 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("REMOTE_PYTHON", options.remote_python)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
-        sys.stdout.write( "Launching %s: " % self.cmd)
-        sys.stdout.flush() # because python sucks
+        output( "Launching %s: " % self.cmd, newline=False)
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
         self.killed = False
 
@@ -64,15 +97,15 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            print "Timed out"
+            output( "Timed out" )
             self.process.terminate() # Try SIGTERM
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
         elif self.process.returncode is not 0:
-            print OKRED + "Failed" + ENDC
+            output("Failed", OKRED)
         else:
-            print "OK"  
+            output("OK")  
         #print self.process.communicate()
         self.returncode = self.process.returncode
 
@@ -81,27 +114,28 @@ def get_testnames():
     
 def _status_str(ret):
     if ret == 0:
-        return "ok"
+        return output("ok", newline=False, output=False)
     elif ret == -9 or ret == -15:
-        return "Timed out"
+        return output("Timed Out", newline=False, output=False)
     else:
-        return OKRED + "FAILURE: " + str(ret) + ENDC
+        return output("FAIL: %s" % ret, color=OKRED,newline=False, output=False)
         
 def format_output(threads):
     total_time = 0
     odd = False
-    print "TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE"
-    print "-----------------------------------------------------------------------------------------------------------"
+    output("TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE") 
+    output( "-----------------------------------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
-        print "%s%-45s\t\t%s\t\t%s\t\t%s%s" % (OKOFFWHITE if odd else OKBLACK, \
-                                            thread.test, round(thread.executiontime, 1), \
-                                            "KILLED" if thread.killed else "no", \
-                                            _status_str(thread.returncode),
-                                            ENDC)
+        output("%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, \
+                                                    round(thread.executiontime, 1), \
+                                                    "KILLED" if thread.killed else "no", \
+                                                    _status_str(thread.returncode)),
+                                                    color=OKOFFWHITE if odd else OKBLACK,
+                                                    block="Results table")                                                    
         odd = True if odd == False else False
         
-    print "\nTotal execution time: %ss" % (round(total_time, 1))
+    output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
 def combine_logs(logfile_prefix):
     combined = open(logfile_prefix+".log", "w")

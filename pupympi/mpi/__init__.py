@@ -9,6 +9,8 @@ from mpi.logger import Logger
 from mpi.network.tcp import TCPNetwork as Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
+from mpi import constants
+
 
 class MPI(Thread):
     """
@@ -109,6 +111,9 @@ class MPI(Thread):
         # Set a static attribute on the class so we know it's initialised.
         self.__class__._initialized = True
         logger.debug("Set the MPI environment to initialised")
+        
+        # set up 'constants'
+        constants.MPI_GROUP_EMPTY = Group(-1)
 
         self.daemon = True
         self.start()
