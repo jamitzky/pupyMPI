@@ -19,16 +19,16 @@ class AbstractNetwork(object):
         Logger().debug("Starting generic network")
 
         # Defining some "queues", just simple lists for now
-        self.incomming = []
+        self.incoming = []
         self.outgoing = []
         self.options = options
         rank = options.rank
         
         if options.single_communication_thread:
-            self.t_in = CommunicationHandler(rank, self.incomming, self.outgoing)
+            self.t_in = CommunicationHandler(rank, self.incoming, self.outgoing)
             self.t_out = self.t_in
         else:
-            self.t_in = CommunicationHandler(rank, self.incomming, None)
+            self.t_in = CommunicationHandler(rank, self.incoming, None)
             self.t_out = CommunicationHandler(rank, None, self.outgoing)
             self.t_out.daemon = True
             self.t_out.name = "t_out"
@@ -67,9 +67,9 @@ class AbstractNetwork(object):
             self.t_out.finalize()
 
 class AbstractCommunicationHandler(Thread):
-    def __init__(self, rank, incomming, outgoing):
+    def __init__(self, rank, incoming, outgoing):
         Thread.__init__(self)
-        self.incomming = incomming 
+        self.incoming = incoming 
         self.outgoing = outgoing
         self.rank = rank
 
@@ -82,7 +82,7 @@ class AbstractCommunicationHandler(Thread):
         self.callbacks[callback_type].append(callback)
         
     def add_in_job(self, job):
-        self.incomming.append(job)
+        self.incoming.append(job)
 
     def add_out_job(self, job):
         self.outgoing.append(job)

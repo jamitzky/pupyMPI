@@ -15,7 +15,7 @@ from mpi import constants
 class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
-    the MPI system is done by creating an instance of this class. Through a
+    the MPI system is done by creating an instance of this class. Via an
     MPI instance a program can interact with other processes through different
     communicators. 
 
@@ -25,8 +25,11 @@ class MPI(Thread):
     """
     
     def version_check(self):
+        """
+        Check that the required Python version is installed
+        """
         (major,minor,_,_,_) = sys.version_info
-        if major <= 2 and minor < 6:
+        if (major == 2 and minor < 6) or major < 2:
             Logger().error("pupyMPI requires Python 2.6 (you may have to kill processes manually)")
             sys.exit(1)
         elif major >= 2 and minor is not 6:
@@ -72,14 +75,14 @@ class MPI(Thread):
         
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-        # Let the communication handle start up if it need to.
 
         logger.debug("Finished all the runtime arguments")
 
-        # First check version
+        # First check for required Python version
         self.version_check()
 
-        # Starting the network. This is probably a TCP network, but it can be 
+        # Starting the network.
+        # NOTE: This is probably a TCP network, but it can be 
         # replaced pretty easily if we want to. 
         self.network = Network(options)
         
@@ -87,7 +90,7 @@ class MPI(Thread):
         world_Group = Group(options.rank)
         world_Group.members = self.network.all_procs
 
-        # Create the initial communicator MPI_COMM_WORLD. It's initialized with 
+        # Create the initial communicator MPI_COMM_WORLD. It is initialized with 
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
         self.MPI_COMM_WORLD = Communicator(options.rank, options.size, self.network, world_Group, comm_root=None)
@@ -108,7 +111,7 @@ class MPI(Thread):
         user_options.append(sys.argv[sys.argv.index("--")+1:])
         sys.argv = user_options
 
-        # Set a static attribute on the class so we know it's initialised.
+        # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
         logger.debug("Set the MPI environment to initialised")
         
@@ -119,9 +122,8 @@ class MPI(Thread):
         self.start()
 
     def run(self):
-        # This can be moved out of there
-        while True:
 
+        while True:
             # Check for shutdown
             if self.shutdown_lock.acquire(False):
                 self.shutdown_lock.release()
@@ -144,8 +146,8 @@ class MPI(Thread):
         This method cleans up after a MPI run. Closes filehandles, 
         logfiles and sockets. 
 
-		Remember to end for MPI program with this call. Otherwise proper 
-		shutdown might not happen. 
+        Remember to always end your MPI program with this call. Otherwise proper 
+        shutdown is not guaranteed. 
         """
         # Wait for shutdown to be signalled
         self.shutdown_lock.release()

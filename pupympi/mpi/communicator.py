@@ -114,10 +114,6 @@ class Communicator:
             elif status == 'ready':
                 # Ready means that we're waiting for the user to do something about
                 # it. We can't do anything.
-                # continue
-                # NOTE: I substituted continue for pass
-                # because we need to release the request.lock here also
-                # - Fred
                 pass
 
             elif status == 'finished':
@@ -199,7 +195,15 @@ class Communicator:
     ################################################################################################################
     def comm_create(self, group):
         """
-        This function creates a new communicator newcomm with communication group defined by group and a new context. No cached information propagates from comm to newcomm. The function returns MPI_COMM_NULL (None) to processes that are not in group. The call is erroneous if not all group arguments have the same value, or if group is not a subset of the group associated with comm. Note that the call is to be executed by all processes in comm, even if they do not belong to the new group. This call applies only to intra-communicators. 
+        This function creates a new communicator newcomm with communication
+        group defined by group and a new context. No cached information
+        propagates from comm to newcomm. The function returns
+        MPI_COMM_NULL (None) to processes that are not in group.
+        The call is erroneous if not all group arguments have the same value,
+        or if group is not a subset of the group associated with comm.
+        Note that the call is to be executed by all processes in comm,
+        even if they do not belong to the new group.
+        This call applies only to intra-communicators. 
         [ IN comm] communicator (handle - self object)
         [ IN group] Group, which is a subset of the group of comm (handle)
         [ OUT newcomm] new communicator (handle)
@@ -229,8 +233,9 @@ class Communicator:
         
         # FIXME validate that received group was identical to my worldview
 
-        # check that i am member of group
+        # Non-members have rank -1
         if group.rank() is -1:
+            #FIXME We should eventually return MPI_COMM_NULL here not hard-coded None
             return None
             
         newcomm = Communicator(group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
@@ -318,35 +323,37 @@ class Communicator:
     # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     def irecv(self, sender, tag = constants.MPI_TAG_ANY):
-         # Check the destination exists
-         if not self.have_rank(sender):
-             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
+        # Check that destination exists
+        if not self.have_rank(sender):
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
-         if not isinstance(tag, int):
-             raise MPIInvalidTagException("All tags should be integers")
+        # Check that tag is valid
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
 
-         # Create a receive request object and return
-         handle = Request("recv", self, sender, tag)
+        # Create a receive request object
+        handle = Request("recv", self, sender, tag)
 
-         # Add to the queue
-         self.request_add(handle)
-         return handle
+        # Add request object to the queue
+        self.request_add(handle)
+        return handle
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
-         logger = Logger()
-         # Check the destination exists
-         if not self.have_rank(destination_rank):
-             raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+        logger = Logger()
+        # Check that destination exists
+        if not self.have_rank(destination_rank):
+            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
 
-         if not isinstance(tag, int):
-             raise MPIInvalidTagException("All tags should be integers")
+        # Check that tag is valid
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
 
-         # Create a receive request object and return
-         handle = Request("send", self, destination_rank, tag, data=content)
+        # Create a receive request object
+        handle = Request("send", self, destination_rank, tag, data=content)
 
-         # Add to the queue
-         self.request_add(handle)
-         return handle
+        # Add request object to the queue
+        self.request_add(handle)
+        return handle
 
     def bcast(self, root, data=None):
         """

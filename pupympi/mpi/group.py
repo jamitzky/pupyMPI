@@ -31,6 +31,10 @@ class Group:
         return len(self.members)
 
     def is_empty(self):
+        # NOTE: Do we really want to expose this call to users? It does not seem
+        # to be part of MPI standard. Instead the user should do his/her own
+        # checking on size == 0
+        
         # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
         return self.size() == 0
 
@@ -39,7 +43,10 @@ class Group:
         
     def compare(self, other_group):
         """
-        compares group members and group order 
+        Compares group members and group order.
+        If the two groups have same members in same order MPI_IDENT is returned.
+        If members are the same but order is different MPI_SIMILAR is returned.
+        Otherwise MPI_UNEQUAL is returned.
         """
         Logger().warn("Non-Implemented method 'group.compare' called.")
 
@@ -70,7 +77,8 @@ class Group:
     def incl(self, required_members):
         """
         creates a new group from members of an existing group
-        required_members = list of ranks from existing group to include in new group, also determines the order in which they will rank in the new group
+        required_members = list of ranks from existing group to include in new
+        roup, also determines the order in which they will rank in the new group
         """
         # TODO Incl/excl very simply implemented, could probably be more pythonic.
         Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))

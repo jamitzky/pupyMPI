@@ -200,27 +200,26 @@ if __name__ == "__main__":
 
     logger.debug("Received information for all %d processes" % options.np)
     
-    # Send all the data to all the connections
+    # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
     for conn in sender_conns:
         conn.send( pickle.dumps( all_procs ))    
         conn.close()
-    # Close all the connections used for system setup
-    #[ c.close() for c in sender_conns ]
+
     # Close own "server" socket
     s.close()
     
     # Wait for all started processes to die
-    # NOTE: This seems redundant, see comment in processloaders.py
-    exit_codes = wait_for_shutdown(process_list)
+    exit_codes = wait_for_shutdown(process_list)    
+    # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
+        
     # Signal shutdown to io_forwarder thread
-    io_shutdown_lock.release()
-    
+    io_shutdown_lock.release()    
     # Wait for the IO_forwarder thread to stop
     t.join()
     logger.debug("IO forward thread joined")

@@ -12,10 +12,10 @@ except ImportError:
     
 def get_header_format():
     """
-    Return the format and size of the header format. We're 
-    using the format for a 32bit architecture as a basis. By
-    finding the multiplier we can determine the number of
-    padding bytes. Ie.
+    Return the format and size of the header format.
+    The format for a 32bit architecture is used as a basis. By
+    finding the actual multiplier the number of padding bytes is
+    determined. Ie.
     
     x64: 
         bit_multiplier = 2    # As a long takes but 8 bytes
@@ -47,9 +47,9 @@ def pack_header(*args):
 def structured_read(socket_connection):
     """
     Read an entire message from a socket connection
-    and returns the tag, sender rank and message. 
+    and return the tag, sender rank and message. 
     
-    The stucture of all the MPI message consists
+    The stucture of all MPI messages consists
     of a fixed size header and a variable length message.
     
     The header has these fields:
@@ -59,22 +59,24 @@ def structured_read(socket_connection):
         communicator : integer
         type         : integer
 
-    The method is constructed of two loops. The first loop
-    contents of the header is then unpacked. The unpacked
-    msg_size is used to receive the rest of the message. 
+    The method is constructed around two recieve loops. In the first loop
+    contents of the header is recieved and then unpacked. In the second loop
+    The msg_size from the header is used to receive the rest of the message. 
     """
     _, header_size = get_header_format()
     header_unpacked = False
 
-    # The end variables we're gonna return
+    # The end variables to return
     tag = sender = None
     data = ''
 
     Logger().debug("Starting receive first loop")
 
+    # get the header
     while not header_unpacked:
         data += socket_connection.recv(header_size)
         
+        # NOTE: Shouldn't it be >= header_size here?
         if len(data) > header_size:
             sender, tag, msg_size, communicator, recv_type = unpack_header(data)
             header_unpacked = True
@@ -167,7 +169,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         super(TCPCommunicationHandler, self).add_out_job(job)
         Logger().debug("Adding outgoing job")
 
-        # This is a sending operation. We should create a socket 
+        # This is a sending operation. We create a socket 
         # for the job, so we can select from it later. 
         receiver = ( job['participant']['host'], job['participant']['port'],)
         if not job['socket']:
@@ -182,7 +184,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.socket_to_job[ job['socket'] ] = job
 
     def add_in_job(self, job):
-        Logger().debug("Adding incomming job")
+        Logger().debug("Adding incoming job")
         super(TCPCommunicationHandler, self).add_in_job(job)
 
         if job['socket']:
@@ -200,7 +202,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         # Starting the select on the sockets. We're setting a timeout
         # so we can break and test if we should break out of the thread
         # if somebody have called finalize. 
-        it = 0
+        it = 0 #iteration counter
         while True:
             try:
                 if super(TCPCommunicationHandler, self).shutdown_ready():
@@ -250,7 +252,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
-        # FIXME: Should this socket be stared by the actual job? Otherwise it's the only
+        # FIXME: Should this socket be started by the actual job? Otherwise it's the only
         #        socket started before the job is created. 
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
         (socket, hostname, port_no) = get_socket()
