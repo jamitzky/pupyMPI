@@ -16,6 +16,7 @@ class Communicator:
         self.network = network
         self.comm_group = group
         self.id = id
+        self.id_ceiling = sys.maxint # for local communicator creation, can be deleted otherwise.
         self.MPI_COMM_WORLD = comm_root or self
         
         self.attr = {}
@@ -212,11 +213,30 @@ class Communicator:
 
         This call is currently implemented locally only.
         """
-        logger = Logger()
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
+
+        return self._comm_create_coll(group)        
+    
+    ceiling = sys.maxint
+    def _comm_create_local(self, group):
+        """
+        local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth. 
+        """
+        
+        # FIXME should probably lock...
+        if ceiling <= 2:
+            raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
+        new_id = id + (ceiling - self.id ) / 2
+        ceiling = new_id
+
+    def _comm_create_coll(self, group):
+        """
+        Collective implementation of the comm_create call
+        """
+        logger = Logger()
         
         new_id = -1
 
