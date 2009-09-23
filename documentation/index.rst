@@ -8,10 +8,10 @@ Table of contents
 .. toctree::
     :maxdepth: 1
 
-    Getting started <tut_getting_started>
-    Reference manual <api>
-    Running your program <mpirun>
-    Full table of contents <toc>
+    getting started <tut_getting_started>
+    reference manual <api>
+    running your program <mpirun>
+    full table of contents <toc>
 
 
 Getting started
