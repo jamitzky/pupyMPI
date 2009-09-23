@@ -317,7 +317,7 @@ class Communicator:
        
         This call applies only intra-communicators.
         
-        .. note::
+        .. warning::
         This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
         groups (albeit this is simpler), and it requires special handling.
         Target implementation version: 1.1 
@@ -357,7 +357,10 @@ class Communicator:
 
     def comm_compare(self, other_communicator):
         """
-        MPI_IDENT results if and only if comm1 and comm2 are handles for the same object (identical groups and same contexts). MPI_CONGRUENT results if the underlying groups are identical in constituents and rank order; these communicators differ only by context. MPI_SIMILAR results if the group members of both communicators are the same but the rank order differs. MPI_UNEQUAL results otherwise. 
+        MPI_IDENT results if and only if comm1 and comm2 is exactly the same object (identical groups and same contexts). 
+        MPI_CONGRUENT results if the underlying groups are identical in constituents and rank order; these communicators differ only by context. 
+        MPI_SIMILAR results if the group members of both communicators are the same but the rank order differs. 
+        MPI_UNEQUAL results otherwise. 
 
         http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
@@ -370,8 +373,6 @@ class Communicator:
             return constants.MPI_CONGRUENT
 
         return ret
-
-        
 
     ################################################################################################################
     # NETWORK OPERATIONS
@@ -497,7 +498,7 @@ class Communicator:
             if mpi.MPI_COMM_WORLD.rank() == 0:
                 mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
             else:
-                message = mpi.MPI_COMM_WORLD.recv(1, TAG)
+                message = mpi.MPI_COMM_WORLD.recv(0, TAG)
                 print message
 
         .. note::

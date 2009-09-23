@@ -10,7 +10,7 @@ PATH environment before running the examples in this section.
 The script requires one mandatory options -c (the number
 of processes to start) and the user script to start::
 
-    > mpirun.py -c=2 the-user-script.py
+    > mpirun.py -c 2 the-user-script.py
 
 That's all it takes. Your program will be started and can access the mpi
 environment by creating a new instance of the .. class:: MPI class.
@@ -21,14 +21,14 @@ write something about the argument handling here
 
 Passing arguments through to the user script
 --------------------------------------------
-Normally the internal mpi code will handle all command line arguments and return
+Normally the internal MPI code will handle all command line arguments and return
 an error if one or several arguments can't be recognized. So if your mpi program
 accepts arguments like "-a -b" the following will **FAIL**::
 
     # WRONG
     mpirun.py -c -a -b  the-user-script.py 
 
-Instead use the GNU argument-stop sign "--" and add the paramters after that.
+Instead use the GNU argument-stop sign "--" and add the parameters after that.
 For example::
 
     # RIGHT
