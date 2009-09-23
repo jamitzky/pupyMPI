@@ -3,7 +3,7 @@ from mpi.logger import Logger
 from mpi.network import AbstractNetwork, AbstractCommunicationHandler
 from threading import Thread, activeCount
 from mpi.bc_tree import BroadCastTree
-
+from mpi import constants
 
 try:
     import cPickle as pickle
@@ -290,11 +290,13 @@ class TCPNetwork(AbstractNetwork):
         recipient = (mpirun_hostname, mpirun_port)
         Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
-        s_conn.send(data)
         
-        # Receiving data about the communicator
-        all_procs = s_conn.recv(1024) # FIXME Communicator handshake payload fixed at 1024 bytes!!
-        all_procs = pickle.loads( all_procs )
+        # Pack the data with our special format
+        header = pack_header(internal_rank, constants.TAG_INITIALIZING, len(data), 0, constants.JOB_INITIALIZING)
+        s_conn.send(header + data)
+        
+        # Receiving data about the communicator, by unpacking the head etc.
+        tag, sender, communicator, recv_type, all_procs = structured_read(s_conn)
         Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
 
