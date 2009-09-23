@@ -1,6 +1,6 @@
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
 from mpi.logger import Logger
-import threading
+import threading,sys
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
@@ -218,19 +218,28 @@ class Communicator:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
 
-        return self._comm_create_coll(group)        
+        #return self._comm_create_coll(group)        
+        return self._comm_create_local(group)        
     
     ceiling = sys.maxint
     def _comm_create_local(self, group):
         """
-        local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth. 
+        local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth. 
         """
         
         # FIXME should probably lock...
-        if ceiling <= 2:
+        if self.ceiling <= 2:
             raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
-        new_id = id + (ceiling - self.id ) / 2
-        ceiling = new_id
+        # set up some easily understandable vars (can be optimized later)
+        old_comm_id = self.id
+        old_comm_ceiling = self.ceiling
+        
+        new_comm_ceiling = old_comm_ceiling
+        new_comm_id = ((new_comm_ceiling-old_comm_id)/2)+old_comm_id
+        self.ceiling = new_comm_id
+        newcomm = Communicator(group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
+        newcomm.ceiling = new_comm_ceiling
+        return newcomm
 
     def _comm_create_coll(self, group):
         """
@@ -271,13 +280,20 @@ class Communicator:
 
 
 
-    def comm_free(self, existing_communicator):
+    def comm_free(self):
         """
         This collective operation marks the communication object for deallocation. The handle is set to MPI_COMM_NULL. Any pending operations that use this communicator will complete normally; the object is actually deallocated only if there are no other active references to it. This call applies to intra- and inter-communicators. The delete callback functions for all cached attributes (see section Caching ) are called in arbitrary order.
 
         http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
+        for a in self.attr: # FIXME not tested
+            if hasattr(self.attr[a], '__call__'):
+                Logger().debug("Calling callback function on '%s'" % a)                
+                self.attr[a]()
+                
         Logger().warn("Non-Implemented method 'comm_free' called.")
+            
+            
 
 
     def comm_split(self, existing_communicator, color = None, key = None):
