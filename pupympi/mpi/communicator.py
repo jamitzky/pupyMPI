@@ -479,7 +479,7 @@ class Communicator:
             mpi.finalize()
 
         """
-        cr = CollectiveRequest("bcast", constants.TAG_BARRIER,self)
+        cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
         return cr.wait()
 
     def recv(self, destination, tag = constants.MPI_TAG_ANY):
@@ -548,14 +548,38 @@ class Communicator:
         # TODO return recvbuf
         Logger().warn("Non-Implemented method 'allgatherv' called.")
 
-    def allreduce(self, sendbuf, recvbuf, count, op):
+    def allreduce(self, data, op):
         """
-        Same as MPI_REDUCE except that the result appears in the receive buffer of all the group members.
+        Combines values from all the processes with the op-function. You can write
+        your own operations, see :ref:`writing-operations'. There is also a number
+        of predefined operations, like sum, average, min, max and prod. An example for
+        writing a really bad factorial function would be::
 
-        http://www.mpi-forum.org/docs/mpi-11-html/node82.html        
-        Examples: http://mpi.deino.net/mpi_functions/MPI_Allreduce.html
+            from mpi import MPI
+            from mpi.operations import prod
+
+            mpi = MPI()
+
+            # We start n processes, and try to calculate n!
+            rank = mpi.MPI_COMM_WORLD.rank()
+            fact = mpi.MPI_COMM_WORLD.allreduce(rank, prod)
+
+            print "I'm rank %d and I also got the result %d. So cool" % (rank, fact)
+
+            mpi.finalize()
+
+        Se also the :func:`reduce` function
+
+        .. note::
+            The allreduce function will raise an exception if you pass anything
+            else than a function as an operation. 
         """
-        Logger().warn("Non-Implemented method 'allreduce' called.")
+        if not getattr(op, "__call__", False):
+            raise MPIException("Operation should be a callable")
+
+        cr = CollectiveRequest("reduce", constants.TAG_ALLREDUCE, self, data=data)
+        cr.start_allreduce(op)
+        return cr.wait()
         
     def alltoall(self, sendbuf, sendcount, recvbuf, recvcount):
         """

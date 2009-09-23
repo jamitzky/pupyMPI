@@ -8,13 +8,17 @@ from mpi.logger import Logger
 class CollectiveRequest(BaseRequest):
 
     def __init__(self, request_supertype, tag, communicator, data=None, root=0):
+        # Note about the super types. How about we define them depending on how many 
+        # participants get the data? Or just remove them alltoghter. Added a reduce
+        # for now just to handle the allreduce implementation.
         super(CollectiveRequest, self).__init__()
-        if request_supertype not in ('bcast',): # TODO more needed here
+        if request_supertype not in ('bcast','reduce'): # TODO more needed here
             raise MPIException("Invalid request supertype in collective request creation. This should never happen. ")
 
         self.request_supertype = request_supertype
         self.communicator = communicator
         self.tag = tag
+        self.initial_data = data
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -44,7 +48,7 @@ class CollectiveRequest(BaseRequest):
             else:
                 return None
     
-        def traverse(nodes_from, nodes_to, data_func, initial_data):
+        def traverse(nodes_from, nodes_to, data_func, initial_data, force_initial_data=False):
             # If The direction is up, so we find the result of all our children
             # and execute som function on these data. The result of the function
             # is passed on to our parent. The result is also returned from the
@@ -68,10 +72,12 @@ class CollectiveRequest(BaseRequest):
             # Aggreate the data list to a single item (maybe?). The data list
             # should probably we curried with the sender rank for operations 
             # like Allgatherv
-            if data_list:
-                data = data_func(data_list)
-            else:
-                data = initial_data
+            if initial_data and force_initial_data:
+                data_list.append(initial_data)
+            
+            if not data_list:
+                data_list = [initial_data]
+            data = data_func(data_list)
 
             # Send the data upwards in the tree. 
             for rank in nodes_to:
@@ -79,19 +85,16 @@ class CollectiveRequest(BaseRequest):
 
             return data
 
-        def up(data=None):
-            return traverse(tree.down, tree.up, up_func, data)
+        def up(data=None, force_initial_data=False):
+            return traverse(tree.down, tree.up, up_func, data, force_initial_data=force_initial_data)
 
-        def down(data=None):
-            return traverse(tree.up, tree.down, down_func, data)
+        def down(data=None, force_initial_data=False):
+            return traverse(tree.up, tree.down, down_func, data, force_initial_data=force_initial_data)
 
         # Step 1: Setup safe methods for propergating data through the tree if
         #         the callee didn't give us any.
-        if not up_func:
-            up_func = safehead
-
-        if not down_func:
-            down_func = safehead
+        up_func = up_func or safehead
+        down_func = down_func or safehead
 
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
@@ -102,7 +105,7 @@ class CollectiveRequest(BaseRequest):
             rt_first = down(initial_data)
             other = up
         else:
-            rt_first = up(initial_data)
+            rt_first = up(initial_data, force_initial_data=True)
             other = down
 
         # Step 4: Run the other direction. This should also just have been
@@ -111,7 +114,7 @@ class CollectiveRequest(BaseRequest):
         #         do stuff right here (ie. this is no correct yet). Is there
         #         any reason we need to traverse the entire tree in one 
         #         direction before we can start the second traversal?
-        rt_second = other()
+        rt_second = other(rt_first)
 
         if return_type == 'first':
             return rt_first
@@ -119,10 +122,27 @@ class CollectiveRequest(BaseRequest):
             return rt_second
 
     def start_barrier(self, tag):
-        self.two_way_tree_traversal(constants.TAG_BARRIER)
+        self.two_way_tree_traversal(tag)
 
     def start_bcast(self, root, data, tag):
         self.data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+
+    def start_allreduce(self, operation):
+        """
+        Take a tree containing all the nodes. We start from the bottom up doing the
+        operation collecting the final result at the root of the node. This decudes that
+
+            up_func = operation
+            start_direction = up
+
+        We then take the result and pass it though to the nodes. This gives:
+
+            down_func = id = None
+            return_type = 'last'
+        """
+        
+        self.data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, 
+                up_func=operation, start_direction="up", return_type="last")
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
