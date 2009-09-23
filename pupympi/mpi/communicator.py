@@ -571,7 +571,7 @@ class Communicator:
     def allreduce(self, data, op):
         """
         Combines values from all the processes with the op-function. You can write
-        your own operations, see :ref:`writing-operations'. There is also a number
+        your own operations, see :ref:`the operations module <operations-api-label>`. There is also a number
         of predefined operations, like sum, average, min, max and prod. An example for
         writing a really bad factorial function would be::
 

@@ -33,3 +33,11 @@ The :mod:`mpi.communicator` Module
 .. autoclass:: Communicator
    :members: __init__, rank, size, group, set_name, irecv, isend, attr_get, attr_put, comm_create, comm_free, comm_split, comm_dup, comm_compare, send, barrier, recv, abort, allgather, allgatherv, allreduce, alltoall, alltoallv, bcast, gather, gatherv, reduce, reduce_scatter, scan, scatter, scatterv, start, startall, mname
 
+Operations 
+=======================================================================
+Operations are *special* functions used in operations like allreduce. pupympi
+comes with a handfull, python has functions that qualify and you can write your
+own off cause. 
+
+Read about them under :doc:`operations`
+
