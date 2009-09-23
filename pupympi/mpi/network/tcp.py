@@ -245,9 +245,9 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         job['status'] = 'finished'
 
             except select.error, e:
-                Logger().warning("Got an select error in the TCPCommunicationHandler select call: %s" % e.message)
+                Logger().info("Got an select error in the TCPCommunicationHandler select call: %s" % e)
             except socket.error, e:
-                Logger().warning("Got an socket error in the TCPCommunicationHandler select call: %s" % e.message)
+                Logger().info("Got an socket error in the TCPCommunicationHandler select call: %s" % e)
         
 class TCPNetwork(AbstractNetwork):
 
