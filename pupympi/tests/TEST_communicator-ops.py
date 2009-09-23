@@ -27,6 +27,10 @@ print "Communicator ID: %s. Split from the second mcw clone" % newcomm_full4.id
 
 newcomm_full4.comm_free() 
 
+cloned_comm_of_mcw = mpi.MPI_COMM_WORLD.comm_dup()
+assert cloned_comm_of_mcw is not None
+assert cloned_comm_of_mcw.group() is newgroup
+print "Cloned mcw: %s" % cloned_comm_of_mcw
 
 
 # Close the sockets down nicely
