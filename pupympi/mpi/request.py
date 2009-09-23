@@ -16,7 +16,6 @@ class BaseRequest(object):
         # create the object. A wait() will make a blocking accuire on that lock
         # and only get it when the lock is released. 
         self._m['waitlock'] = threading.Lock()
-        self._m['waitlock'].acquire()
 
     def release(self, *args, **kwargs):
         """
@@ -61,6 +60,18 @@ class Request(BaseRequest):
 
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
+
+        # If we have a request object we might already have received the
+        # result. So we look into the internal queue to see. If so, we use the
+        # network_callback method to update all the internal structure.
+        # FIXME:
+        if request_type == 'recv' and False:
+            data = communicator.pop_unhandled_message(participant, tag)
+            if data:
+                self.network_callback(lock=False, status="ready", data=data['data'])
+                return
+
+        self._m['waitlock'].acquire()
 
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
