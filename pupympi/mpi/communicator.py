@@ -282,18 +282,20 @@ class Communicator:
 
     def comm_free(self):
         """
-        This collective operation marks the communication object for deallocation. The handle is set to MPI_COMM_NULL. Any pending operations that use this communicator will complete normally; the object is actually deallocated only if there are no other active references to it. This call applies to intra- and inter-communicators. The delete callback functions for all cached attributes (see section Caching ) are called in arbitrary order.
+        This operation marks the communicator object as closed. 
+        This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
+        
+        The delete callback functions for any attributes are called in arbitrary order.
 
-        http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
+        For the original definition of comm_free, please see http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
         for a in self.attr: # FIXME not tested
             if hasattr(self.attr[a], '__call__'):
                 Logger().debug("Calling callback function on '%s'" % a)                
                 self.attr[a]()
                 
-        Logger().warn("Non-Implemented method 'comm_free' called.")
-            
-            
+
+        # thats it....dont do anything more. This deviates from the MPI standard.
 
 
     def comm_split(self, existing_communicator, color = None, key = None):
