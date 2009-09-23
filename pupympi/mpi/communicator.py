@@ -80,7 +80,8 @@ class Communicator:
         self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
         
         Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
-    
+        self.update()
+        
     def __repr__(self):
         return "<Communicator %s with %d members>" % (self.name, self.comm_group.size)
 
