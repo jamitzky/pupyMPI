@@ -315,11 +315,22 @@ class Communicator:
         rank in group, and all processes that are not members of group provide color~ =~ MPI_UNDEFINED. The function 
         MPI_COMM_SPLIT allows more general partitioning of a group into one or more subgroups with optional reordering. 
        
-        This call applies only intra-communicators. 
+        This call applies only intra-communicators.
+        
+        .. note::
+        This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
+        groups (albeit this is simpler), and it requires special handling.
+        Target implementation version: 1.1 
         """
 
-        # 1: create list of groups, this will only be a member of one
-        # 2: 
+        # one suggestion for implementation:
+        # 1: collective exchange color/key info
+        # 2: order into groups (each process will only be in one of N groups)
+        # 2: order by respective key
+        # 3: call comm_create lots of times
+        
+
+        raise NotImplementedException("comm_split targeted for version 1.1")
         if color is None:
             return None
 
@@ -344,13 +355,21 @@ class Communicator:
         new_comm._comm_call_attrs(type = self.comm_dup, calling_comm = new_comm, old_comm = self)
         return new_comm 
 
-    def comm_compare(self, communicator1, communicator2):
+    def comm_compare(self, other_communicator):
         """
         MPI_IDENT results if and only if comm1 and comm2 are handles for the same object (identical groups and same contexts). MPI_CONGRUENT results if the underlying groups are identical in constituents and rank order; these communicators differ only by context. MPI_SIMILAR results if the group members of both communicators are the same but the rank order differs. MPI_UNEQUAL results otherwise. 
 
         http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
-        Logger().warn("Non-Implemented method 'comm_compare' called.")
+        
+        if self is other_communicator:
+            return constants.MPI_IDENT
+        
+        ret = self.group().compare(other_communicator.group())
+        if ret is MPI_IDENT:
+            return MPI_CONGRUENT
+
+        return ret
 
         
 
@@ -486,7 +505,7 @@ class Communicator:
             :doc:`mpirun`). If invoked with more processes there will be size-2 
             processes waiting for a message that will never come. 
 
-        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
         this communicator. 
 
         **See also**: :func:`recv` and :func:`isend`
