@@ -11,6 +11,12 @@ class BaseRequest(object):
         # acquire function on this class directly so the variable stays private
         self._m['lock'] = threading.Lock()
 
+        # Start a waiting lock. We use this as an alternative way to test if the
+        # request is ready in the user level code. We acquire the lock when we
+        # create the object. A wait() will make a blocking accuire on that lock
+        # and only get it when the lock is released. 
+        self._m['waitlock'] = threading.Lock()
+
     def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
@@ -22,6 +28,10 @@ class BaseRequest(object):
         Just forwarding method call to the internal lock
         """
         return self._m['lock'].acquire(*args, **kwargs)
+
+    def wait(self):
+        self._m['waitlock'].acquire()
+        self._m['waitlock'].release()
 
 class Request(BaseRequest):
 
@@ -51,6 +61,18 @@ class Request(BaseRequest):
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
 
+        # If we have a request object we might already have received the
+        # result. So we look into the internal queue to see. If so, we use the
+        # network_callback method to update all the internal structure.
+        # FIXME:
+        if request_type == 'recv' and False:
+            data = communicator.pop_unhandled_message(participant, tag)
+            if data:
+                self.network_callback(lock=False, status="ready", data=data['data'])
+                return
+
+        self._m['waitlock'].acquire()
+
     def network_callback(self, lock=True, *args, **kwargs):
         Logger().debug("Network callback in request called")
 
@@ -60,6 +82,10 @@ class Request(BaseRequest):
         if "status" in kwargs:
             Logger().info("Updating status in request from %s to %s" % (self._m["status"], kwargs["status"]))
             self._m["status"] = kwargs["status"]
+
+            if kwargs["status"] == "ready":
+                self._m['waitlock'].release()
+
             
         if "data" in kwargs:
             Logger().info("Adding data to request object")
@@ -79,6 +105,9 @@ class Request(BaseRequest):
         # at a later point
         self._m['status'] = 'cancelled'
         Logger().debug("Cancelling a %s request" % self.request_type)
+
+        # We release the wait lock. FIXME: Is this right? 
+        self._m['waitlock'].release()
         
 
     def wait(self):
@@ -96,8 +125,7 @@ class Request(BaseRequest):
                each request object and lock it when we look at it?
         """
         Logger().info("Starting a %s wait" % self.request_type)
-        while not self.test():
-            time.sleep(1)
+        super(Request, self).wait()
 
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
