@@ -1,6 +1,6 @@
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
 from mpi.logger import Logger
-import threading,sys
+import threading,sys,copy
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
@@ -83,7 +83,7 @@ class Communicator:
         self.update()
         
     def __repr__(self):
-        return "<Communicator %s with %d members>" % (self.name, self.comm_group.size)
+        return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
 
     def update(self):
         """
@@ -198,24 +198,37 @@ class Communicator:
     ################################################################################################################
     #### Communicator creation, deletion
     ################################################################################################################
+    def _comm_call_attrs(self, **kwargs):
+        """Iterates through each value in the cached attribute collection and calls the value if its callable"""
+        for a in self.attr: # FIXME not tested
+            if hasattr(self.attr[a], '__call__'):
+                Logger().debug("Calling callback function on '%s'" % a)                
+                self.attr[a](self, **kwargs)
+        # done
+        
     def comm_create(self, group):
         """
         This function creates a new communicator newcomm with communication
         group defined by group and a new context. No cached information
         propagates from comm to newcomm. The function returns
-        MPI_COMM_NULL (None) to processes that are not in group.
+        None to processes that are not in group.
         The call is erroneous if not all group arguments have the same value,
         or if group is not a subset of the group associated with comm.
         Note that the call is to be executed by all processes in comm,
         even if they do not belong to the new group.
+
         This call applies only to intra-communicators. 
+
         [ IN comm] communicator (handle - self object)
-        [ IN group] Group, which is a subset of the group of comm (handle)
-        [ OUT newcomm] new communicator (handle)
+        [ IN group] Group, which is a subset of the group of comm
+        [ OUT newcomm] new communicator
 
         http://www.mpi-forum.org/docs/mpi-11-html/node102.html
 
-        This call is currently implemented locally only.
+        This call is internally implemented either locally, in which case only 32 new communicators 
+        can be created across the lifespan of your MPI application, or collective with no (realistic) limit on 
+        the amount of created communicators but is significantly slower. 
+        FIXME There is presently no way to determine which implementation is in effect. 
         """
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
@@ -274,16 +287,6 @@ class Communicator:
         newcomm = Communicator(group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
         return newcomm
 
-        # below is beginning of the distributed versions. 
-        # # Create a receive request object and return
-        # handle = CollectiveRequest("comm_create", self, [r for r in self.group().members], None, group)
-        # 
-        # # Add to the queue
-        # self.request_add(handle)
-        # return handle
-
-
-
     def comm_free(self):
         """
         This operation marks the communicator object as closed. 
@@ -293,11 +296,7 @@ class Communicator:
 
         For the original definition of comm_free, please see http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
-        for a in self.attr: # FIXME not tested
-            if hasattr(self.attr[a], '__call__'):
-                Logger().debug("Calling callback function on '%s'" % a)                
-                self.attr[a]()
-                
+        self._comm_call_attrs(type = self.comm_free, calling_comm = self)                
 
         # thats it....dont do anything more. This deviates from the MPI standard.
 
@@ -308,11 +307,26 @@ class Communicator:
         """
         Logger().warn("Non-Implemented method 'comm_split' called.")
 
-    def comm_dup(self, todo_args_missing):
+    def comm_dup(self):
         """
-        FIXME
+        Duplicates the existing communicator comm with associated key values. For each key value,
+        the respective copy callback function determines the attribute value associated with this 
+        key in the new communicator; one particular action that a copy callback may take is to 
+        delete the attribute from the new communicator. Returns in newcomm a new communicator with
+        the same group, any copied cached information, but a new context (see http://www.mpi-forum.org/docs/mpi-11-html/node119.html#Node119).    
+        
+        Deviation: keys named MPI_* are considered internal and not copied. 
+        
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
-        Logger().warn("Non-Implemented method 'comm_dup' called.")
+        new_comm = self.comm_create(self.group())
+        for a in self.attr: # FIXME not tested
+            if a.startswith("MPI_"):
+                continue
+            new_comm.attr[a] = copy.deepcopy(self.attr[a])
+        
+        new_comm._comm_call_attrs(type = self.comm_dup, calling_comm = new_comm, old_comm = self)
+        return new_comm 
 
     def comm_compare(self, communicator1, communicator2):
         """
