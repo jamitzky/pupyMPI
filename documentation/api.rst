@@ -6,38 +6,40 @@ The pupympi API documentation
 This is a general documentation of the API part. Please find
 information about binaries etc other places. 
 
-The :class:`mpi` class 
------------------------------
-.. module:: mpi
-.. autoclass:: MPI
-   :members: __init__, initialized, finalize
+Table of contents
+-----------------------------------
 
-The :mod:`mpi.request` Module
------------------------------
+.. toctree::
+    :maxdepth: 1
 
-.. module:: mpi.request
-.. autoclass:: Request
-   :members: cancel, test, wait
+    The main MPI object <api_mpi>
+    The request objects <api_request>
+    Communicators <api_communicator>
+    Operations <api_operations>
 
-The :mod:`mpi.collectiverequest` Module
------------------------------------------
+The main MPI object
+======================================================================================
+This is the object you use when you start your program. 
 
-.. module:: mpi.collectiverequest
-.. autoclass:: CollectiveRequest
-   :members: cancel
+Read about them under :doc:`api_mpi`.
 
-The :mod:`mpi.communicator` Module
-------------------------------------
+Request objects
+======================================================================================
+Handles you receive when doing fancy communication. 
 
-.. module:: mpi.communicator
-.. autoclass:: Communicator
-   :members: __init__, rank, size, group, set_name, irecv, isend, attr_get, attr_put, comm_create, comm_free, comm_split, comm_dup, comm_compare, send, barrier, recv, abort, allgather, allgatherv, allreduce, alltoall, alltoallv, bcast, gather, gatherv, reduce, reduce_scatter, scan, scatter, scatterv, start, startall, mname
+Read about them under :doc:`api_request`.
+
+Communicators
+======================================================================================
+Main object type you'll use to communicate between your processes. 
+
+Read about them under :doc:`api_communicator`.
 
 Operations 
-=======================================================================
+=============================================================================================================================================================================================================================
 Operations are *special* functions used in operations like allreduce. pupympi
 comes with a handfull, python has functions that qualify and you can write your
 own off cause. 
 
-Read about them under :doc:`operations`
+Read about them under :doc:`api_operations`
 
