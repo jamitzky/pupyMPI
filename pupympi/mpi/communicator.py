@@ -111,7 +111,7 @@ class Communicator:
             if status == 'cancelled':
                 # We remove the cancelled request, but I think we might need to
                 # cache it. What if there is a subsequent isend/irecv starting 
-                # receiving the data ment for this one. (the data might already
+                # receiving the data meant for this one. (the data might already
                 # be here)
                 self.request_remove( request )
                 Logger().info("Removing cancelled request")
@@ -301,11 +301,27 @@ class Communicator:
         # thats it....dont do anything more. This deviates from the MPI standard.
 
 
-    def comm_split(self, existing_communicator, color = None, key = None):
+    def comm_split(self, existing_communicator, color, key = None):
         """
-        FIXME
+        This function partitions the group associated with comm into disjoint subgroups, one for each value of color. 
+        Each subgroup contains all processes of the same color. Within each subgroup, the processes are ranked in the 
+        order defined by the value of the argument key, with ties broken according to their rank in the old group. 
+        A new communicator is created for each subgroup and returned in newcomm. A process may supply the color value
+        MPI_UNDEFINED, in which case newcomm returns MPI_COMM_NULL. This is a collective call, but each process is 
+        permitted to provide different values for color and key.
+
+        A call to MPI_COMM_CREATE(comm, group, newcomm) is equivalent to
+        a call to MPI_COMM_SPLIT(comm, color, key, newcomm), where all members of group provide color~ =~0 and key~=~ 
+        rank in group, and all processes that are not members of group provide color~ =~ MPI_UNDEFINED. The function 
+        MPI_COMM_SPLIT allows more general partitioning of a group into one or more subgroups with optional reordering. 
+       
+        This call applies only intra-communicators. 
         """
-        Logger().warn("Non-Implemented method 'comm_split' called.")
+
+        # 1: create list of groups, this will only be a member of one
+        # 2: 
+        if color is None:
+            return None
 
     def comm_dup(self):
         """
