@@ -14,6 +14,7 @@ from mpi.logger import Logger
 from mpi import constants
 
 class Group:
+    _NOT_A_MEMBER = 1
     """
     This class represents an MPI group. All operations are local.
     """
@@ -37,6 +38,9 @@ class Group:
         
         # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
         return self.size() == 0
+        
+    def _owner_is_member(self):
+        return self.rank() == _NOT_A_MEMBER
 
     def rank(self):
         return self.my_rank

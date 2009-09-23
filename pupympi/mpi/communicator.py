@@ -225,10 +225,10 @@ class Communicator:
 
         http://www.mpi-forum.org/docs/mpi-11-html/node102.html
 
-        This call is internally implemented either locally, in which case only 32 new communicators 
+        .. note::This call is internally implemented either locally, in which case only 32 new communicators 
         can be created across the lifespan of your MPI application, or collective with no (realistic) limit on 
         the amount of created communicators but is significantly slower. 
-        FIXME There is presently no way to determine which implementation is in effect. 
+        **FIXME** There is presently no way to determine which implementation is in effect. 
         """
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
@@ -280,8 +280,7 @@ class Communicator:
         # FIXME validate that received group was identical to my worldview
 
         # Non-members have rank -1
-        if group.rank() is -1:
-            #FIXME We should eventually return MPI_COMM_NULL here not hard-coded None
+        if not group._owner_is_member():
             return None
             
         newcomm = Communicator(group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
@@ -290,7 +289,8 @@ class Communicator:
     def comm_free(self):
         """
         This operation marks the communicator object as closed. 
-        This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
+        
+        .. note::This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
         The delete callback functions for any attributes are called in arbitrary order.
 
@@ -342,7 +342,7 @@ class Communicator:
         delete the attribute from the new communicator. Returns in newcomm a new communicator with
         the same group, any copied cached information, but a new context (see http://www.mpi-forum.org/docs/mpi-11-html/node119.html#Node119).    
         
-        Deviation: keys named MPI_* are considered internal and not copied. 
+        .. note::Deviation: keys named MPI_* are considered internal and not copied. 
         
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
