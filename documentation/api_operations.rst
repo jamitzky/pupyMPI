@@ -47,6 +47,12 @@ suggestions are most welcome.
  * random.choice
 
 The :mod:`mpi.operations` Module
-------------------------------------
+----------------------------------------------------------------------
 .. automodule:: mpi.operations
     :members: prod, avg
+
+
+The :mod:`mpi.operations.numpy` Module
+-------------------------------------------------------------------------
+.. automodule:: mpi.operations.numpy
+    :members: mmult
