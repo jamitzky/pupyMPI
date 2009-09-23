@@ -30,6 +30,7 @@ class Communicator:
         # Adding locks and initial information about the request queue
         self.current_request_id_lock = threading.Lock()
         self.request_queue_lock = threading.Lock()
+        self.unhandled_messages_lock = threading.Lock()
         self.current_request_id = 0
         self.request_queue = {}
         
@@ -57,12 +58,14 @@ class Communicator:
         return self.bc_trees[root] 
         
     def pop_unhandled_message(self, participant, tag):
+        self.unhandled_messages_lock.acquire()
         try:
             package = self.unhandled_receives[tag][participant].pop(0)
+            self.unhandled_messages_lock.release()
             return package
         except (IndexError, KeyError):
             pass
-        
+        self.unhandled_messages_lock.release()
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
         # Look for a request object right now. Otherwise we just put it on the queue and let the
         # update handler do it.
