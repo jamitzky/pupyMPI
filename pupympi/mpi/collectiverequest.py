@@ -63,11 +63,16 @@ class CollectiveRequest(BaseRequest):
             
             for rank in nodes_from:
                 handle = self.communicator.irecv(rank, tag)
+                data = handle.wait()
+                data_list.append(data)
+
+                print "Received %s from %s" % (data, rank)
                 request_list.append(handle)
 
             for handle in request_list:
-                data = handle.wait()
-                data_list.append(data)
+                #data = handle.wait()
+                #data_list.append(data)
+                pass
 
             # Aggreate the data list to a single item (maybe?). The data list
             # should probably we curried with the sender rank for operations 
