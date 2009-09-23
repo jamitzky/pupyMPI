@@ -1,7 +1,7 @@
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public
-TAG_BCAST   = -128 # internal, this and below
+TAG_BCAST   = -128 # internal, this and below. Note they do not have to be powers of two, but Rune is being silly.
 TAG_EMPTY   = -256
 TAG_BARRIER = -512
 TAG_COMM_CREATE = -1024
