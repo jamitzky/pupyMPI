@@ -6,7 +6,8 @@ import select, time
 import processloaders 
 from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
-from mpi.network.tcp import get_socket
+from mpi.network.tcp import get_socket, pack_header, structured_read
+from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
 
@@ -184,30 +185,31 @@ if __name__ == "__main__":
     sender_conns = []
 
     logger.debug("Waiting for %d processes" % options.np)
-
+    
     # Recieve listings from newly started proccesses phoning in
     # TODO: This initial communication should be more robust
     # - if procs die before contacting mother, we hang
     # - if procs don't send complete info in first attempt we go haywire
     # - if mother is contacted on port from anyone but the proper processes we could hang or miss a process
-    for i in range(options.np):        
+    for i in range(options.np):       
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
-                
-        data = pickle.loads(sender_conn.recv(4096))
+        
+        # Receiving data about the communicator, by unpacking the head etc.
+        tag, sender, communicator, recv_type, data = structured_read(sender_conn)
+        
         all_procs.append( data ) # add (rank,host,port) for process to the listing
-        #logger.debug("%d: Received initial startup date from proc-%d" % (i, data[2]))
-
     logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
+    pdata = pickle.dumps( all_procs )
     for conn in sender_conns:
-        conn.send( pickle.dumps( all_procs ))    
+        header = pack_header(-1, constants.TAG_INITIALIZING, len(pdata), 0, constants.JOB_INITIALIZING)
+        conn.send(header + pdata)
         conn.close()
-
     # Close own "server" socket
     s.close()
     
