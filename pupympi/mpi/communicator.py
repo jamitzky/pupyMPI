@@ -366,8 +366,8 @@ class Communicator:
             return constants.MPI_IDENT
         
         ret = self.group().compare(other_communicator.group())
-        if ret is MPI_IDENT:
-            return MPI_CONGRUENT
+        if ret is constants.MPI_IDENT:
+            return constants.MPI_CONGRUENT
 
         return ret
 
