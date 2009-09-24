@@ -107,7 +107,7 @@ def io_forwarder(process_list):
             else:
                 break
 
-    logger.debug("IO forwarder finished")
+    #logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
     options, args, user_options = parse_options() # Get options from cli
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     # Listing of socket connections to all the processes
     sender_conns = []
 
-    logger.debug("Waiting for %d processes" % options.np)
+    #logger.debug("Waiting for %d processes" % options.np)
     
     # Recieve listings from newly started proccesses phoning in
     # TODO: This initial communication should be more robust
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         tag, sender, communicator, recv_type, data = structured_read(sender_conn)
         
         all_procs.append( data ) # add (rank,host,port) for process to the listing
-    logger.debug("Received information for all %d processes" % options.np)
+    #logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
