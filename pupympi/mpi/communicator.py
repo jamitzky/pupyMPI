@@ -749,24 +749,23 @@ class Communicator:
         
     def wtime(self):
         """
-        returns a ﬂoating-point number of seconds, representing elapsed wall-clock 
-        time since some time in the past.  returns a ﬂoating-point number of seconds, representing elapsed wall-clock 
+        returns a floating-point number of seconds, representing elapsed wall-clock 
         time since some time in the past. 
         
         .. note::
-            *Deviation* MPI 1.1 states that "The “time in the past” is guaranteed not to change during the life of the process. ".
+            *Deviation* MPI 1.1 states that "The 'time in the past' is guaranteed not to change during the life of the process. ".
             pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
         """
         
         return time.time() # TODO Improve clock function
         
     def wtick(self):
+
         """
-        returns the resolution of MPI WTIME in seconds. That is, it returns, 
-        as a double precision value, the number of seconds between successive clock ticks. For 
-        example, if the clock is implemented by the hardware as a counter that is incremented 
-        every millisecond, the value returned by MPI WTICK should be 10^−3
-         
+        returns the resolution of wtime() in seconds. That is, it returns, 
+        as a double precision value, the number of seconds between successive clock ticks. For
+        example, if the clock is implemented by the hardware as a counter that is incremented
+        every millisecond, the value returned by wtick() should be 10 to the power of -3.
         """
         return 1.0 # TODO improve resolution detection
         
