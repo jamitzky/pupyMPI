@@ -70,7 +70,7 @@ def structured_read(socket_connection):
     tag = sender = None
     data = ''
 
-    Logger().debug("Starting receive first loop")
+    #Logger().debug("Starting receive first loop")
 
     # get the header
     while not header_unpacked:
@@ -94,7 +94,7 @@ def structured_read(socket_connection):
     # unpacking the data
     data = pickle.loads(data[header_size:])
 
-    Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
+    #Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
     return tag, sender, communicator, recv_type, data
 
@@ -112,7 +112,7 @@ def get_socket(min=10000, max=30000):
     hostname = socket.gethostname()
     port_no = None
 
-    logger.debug("get_socket: Starting loop with hostname %s" % hostname)
+    #logger.debug("get_socket: Starting loop with hostname %s" % hostname)
 
     while True:
         port_no = random.randint(min, max) 
@@ -121,7 +121,7 @@ def get_socket(min=10000, max=30000):
             continue
 
         try:
-            logger.debug("get_socket: Trying to bind on port %d" % port_no)
+            #logger.debug("get_socket: Trying to bind on port %d" % port_no)
             sock.bind( (hostname, port_no) )
             break
         except socket.error, e:
@@ -129,7 +129,7 @@ def get_socket(min=10000, max=30000):
             logger.debug("get_socket: Permission error on port %d" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
 
-    logger.debug("get_socket: Bound socket on port %d" % port_no)
+    #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
 class TCPCommunicationHandler(AbstractCommunicationHandler):
@@ -156,7 +156,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     """
 
     def __init__(self, *args, **kwargs):
-        Logger().debug("TCPCommunication handler initialized")
+        #Logger().debug("TCPCommunication handler initialized")
         super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
 
         # Add two TCP specific lists. Read and write sockets
