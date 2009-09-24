@@ -466,8 +466,7 @@ class Communicator:
 
             mpi.finalize()
 
-        For C methodology see: 
-        http://www.mpi-forum.org/docs/mpi-11-html/node67.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node67.html
         """
         if self.rank() == root:
             # Start collective request
@@ -551,7 +550,7 @@ class Communicator:
         to this with the specified tag. See :func:`send` documentation for full
         working example. 
 
-        POSSIBLE ERRORS: If you specify a destiantion rank out of scope for
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
         this communicator. 
 
         **See also**: :func:`irecv` and :func:`send`
@@ -586,7 +585,7 @@ class Communicator:
         MPI_ALLGATHER can be thought of as MPI_GATHER, but where all processes receive the result, instead of just the root. 
         The block of data sent from the jth process is received by every process and placed in the jth block of the buffer recvbuf. 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
         
         Examples: http://mpi.deino.net/mpi_functions/MPI_Allgather.html        
         """
@@ -597,7 +596,7 @@ class Communicator:
         """
         MPI_ALLGATHERV can be thought of as MPI_GATHERV, but where all processes receive the result, instead of just the root. The  jth block of data sent from each process is received by every process and placed in the  jth block of the buffer recvbuf. These blocks need not all be the same size. 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
         
         Examples: http://mpi.deino.net/mpi_functions/MPI_Allgatherv.html        
         """
@@ -625,6 +624,8 @@ class Communicator:
             mpi.finalize()
 
         Se also the :func:`reduce` function
+        
+        Original MPI 1.1 specification at FIXME
 
         .. note::
             The allreduce function will raise an exception if you pass anything
@@ -649,7 +650,7 @@ class Communicator:
         sends distinct data to each of the receivers. The jth block sent from process i is received 
         by process j and is placed in the ith block of recvbuf...
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node75.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html
         Example: http://mpi.deino.net/mpi_functions/MPI_Alltoall.html
         """
 
@@ -668,7 +669,7 @@ class Communicator:
         MPI_ALLTOALLV adds flexibility to MPI_ALLTOALL in that the location of data for the send is specified by sdispls
         and the location of the placement of the data on the receive side is specified by rdispls. 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node75.html    
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html    
         """
         
         Logger().warn("Non-Implemented method 'alltoallv' called.")
@@ -687,7 +688,7 @@ class Communicator:
         IN root rank of receiving process (integer) 
         IN comm communicator (handle) 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
         """
         Logger().warn("Non-Implemented method 'gather' called.")
         
@@ -709,7 +710,7 @@ class Communicator:
         IN root rank of receiving process (integer) 
         IN comm communicator (handle) 
 
-        http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
         """
         Logger().warn("Non-Implemented method 'gatherv' called.")
         
