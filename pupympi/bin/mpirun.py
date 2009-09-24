@@ -18,7 +18,7 @@ except ImportError:
 
 def parse_options():
     usage = 'usage: %prog [options] arg'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.01 (dev)")
+    parser = OptionParser(usage=usage, version="Pupympi version 0.2 (dev)")
     parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
     parser.add_option('--host-file', dest='hostfile', help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
@@ -28,12 +28,12 @@ def parse_options():
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
-    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system shoud log to. Defaults to mpi(.log)')
+    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to mpi(.log)')
     parser.add_option_group( parser_debug_group )
 
     parser_adv_group = OptionGroup(parser, "Advanced options", 
             "Be carefull. You could actually to strange things here. OMG Ponies!")
-    parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python`", metavar='method', help='Path to Python 2.6 on remote hosts.')
+    parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", metavar='method', help='Path to Python 2.6 on remote hosts.')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser.add_option_group( parser_adv_group )
@@ -44,7 +44,7 @@ def parse_options():
         parser.error("options --debug and -quiet are mutually exclusive")
         
     if len(args) != 1:
-        parser.error("There should only be one argument to mpirun. The program to execute")
+        parser.error("There should only be one argument to mpirun. The program to execute ('%s' was parsed)" % args)
 
     # Trying to find user args
     try:
