@@ -9,7 +9,8 @@ Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
-from common import gen_testset, gen_reductionset
+from common import gen_testset, gen_reductionset, N_BARR
+from mpi import constants
  
 mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
@@ -54,3 +55,28 @@ select_source = False       # 0/1 for sender selection off/on
 # int* sdispl;               # displacement argument for global ops.    
 # int* reccnt;               # recv count argument for global ops.      
 # int* rdispl;               # displacement argument for global ops.    
+
+def get_dest_single():
+    if rank == pair0:
+        dest = pair1
+    elif rank == pair1:
+        dest = pair0
+    else:
+        raise Exception("Pair values not initalized")
+        
+        
+    source = dest if select_source else constants.MPI_SOURCE_ANY 
+    
+    return (source, dest)
+    
+def get_tags_single():
+    """docstring for get_tag_single"""
+    return (1, 1 if select_tag else constants.MPI_TAG_ANY)
+    
+def barrier():
+    """docstring for barrier"""
+    for b in xrange(N_BARR):
+        communicator.barrier()
+    
+def get_iter_single(iteration_schedule, size):
+    return xrange(iteration_schedule[size] if iteration_schedule is not None else 50)

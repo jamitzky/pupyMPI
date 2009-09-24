@@ -538,7 +538,7 @@ class Communicator:
         cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
         return cr.wait()
 
-    def recv(self, destination, tag = constants.MPI_TAG_ANY):
+    def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
         with the specified tag. 
@@ -559,7 +559,7 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.irecv(destination, tag).wait()
+        return self.irecv(source, tag).wait()
 
     def abort(self, arg):
         """
@@ -747,7 +747,7 @@ class Communicator:
         # request becomes active once the call is made.
         pass
         
-    def wtime(self):
+    def Wtime(self):
         """
         returns a floating-point number of seconds, representing elapsed wall-clock 
         time since some time in the past. 
@@ -759,7 +759,7 @@ class Communicator:
         
         return time.time() # TODO Improve clock function
         
-    def wtick(self):
+    def Wtick(self):
 
         """
         returns the resolution of wtime() in seconds. That is, it returns, 
