@@ -116,7 +116,7 @@ class MPI(Thread):
         logger.debug("Set the MPI environment to initialised")
         
         # set up 'constants'
-        constants.MPI_GROUP_EMPTY = Group(-1)
+        constants.MPI_GROUP_EMPTY = Group()
 
         self.daemon = True
         self.start()
