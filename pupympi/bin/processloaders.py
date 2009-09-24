@@ -22,10 +22,11 @@ def ssh(host, arguments):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
-    sshexec = ["ssh"] + [host] + ["PYTHONPATH=" + python_path ]+ arguments 
-    logger.debug("Starting remote process: %s" % (' '.join(sshexec)))
+    sshexec = ["ssh"] + [host] + ["\""] + ["PYTHONPATH=" + python_path ]+ arguments + ["\""]
+    sshexec_str = ' '.join(sshexec)
+    logger.debug("Starting remote process: %s" % sshexec_str)
     # Execute the ssh command in a subprocess
-    p = subprocess.Popen(sshexec, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(sshexec_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process_list.append(p)
     return p
     
