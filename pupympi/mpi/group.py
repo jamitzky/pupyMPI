@@ -98,7 +98,6 @@ class Group:
         """
         s = self._global_keyed()
         o = other_group._global_keyed()
-        print "KEYS s: " + str(s) + " o:" + str(o)
         translated = []
         for r in ranks:
             # FIXME: This lookup should check for key error in case joe sixpack passes bad ranks
