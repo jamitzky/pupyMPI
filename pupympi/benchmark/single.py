@@ -13,7 +13,6 @@ import common
 from mpi import constants
 
 def test_PingPing(size, iteration_schedule = None):
-    print "test_PingPing %s (MPI %s)"%(size,c_info.mpi)
     s_tag = 1
     r_tag = s_tag if c_info.select_tag else constants.MPI_TAG_ANY
     dest = -1
@@ -27,12 +26,12 @@ def test_PingPing(size, iteration_schedule = None):
         c_info.communicator.barrier()
 
     t1 = c_info.communicator.Wtime()
-    data = gen_testset(size)
+    data = common.gen_testset(size)
 
     for r in xrange(iteration_schedule[size] if iteration_schedule is not None else 1000):
         # FIXME error handling for all statements
-        mpi.communicator.isend(dest, data)
-        recv_data = mpi.communicator.recv(source)
+        c_info.communicator.isend(dest, data)
+        recv_data = c_info.communicator.recv(source)
         # FIXME ierr = MPI_Wait(&request, &stat);
   	    
         # TODO: check for defects

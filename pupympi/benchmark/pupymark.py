@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.6
 # encoding: utf-8
 """
-ppmb.py - Benchmark runner.
+pupymark.py - Benchmark runner.
 
 Usage: MPI program - run with mpirun
 
@@ -26,12 +26,16 @@ The help message goes here.
 
 def runsingletest(test):
     results = []
-    for size in common.size_array:        
+    for size in common.size_array:  
+        print "%s with message size %s"%(test, size)        
         results.append((size, test(size, None)))
         
     return results
 
 def testrunner():
+    """
+    Initializes MPI, the shared context object and runs the tests in sequential order
+    """
     mpi = MPI()
     
     c_info.mpi = mpi

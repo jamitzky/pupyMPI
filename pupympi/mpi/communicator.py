@@ -747,7 +747,7 @@ class Communicator:
         # request becomes active once the call is made.
         pass
         
-    def wtime(self):
+    def Wtime(self):
         """
         returns a floating-point number of seconds, representing elapsed wall-clock 
         time since some time in the past. 
@@ -759,7 +759,7 @@ class Communicator:
         
         return time.time() # TODO Improve clock function
         
-    def wtick(self):
+    def Wtick(self):
 
         """
         returns the resolution of wtime() in seconds. That is, it returns, 
