@@ -16,7 +16,7 @@ class AbstractNetwork(object):
     start_job = _not_impl
 
     def __init__(self, CommunicationHandler, options):
-        Logger().debug("Starting generic network")
+        #Logger().debug("Starting generic network")
 
         # Defining some "queues", just simple lists for now
         self.incoming = []
