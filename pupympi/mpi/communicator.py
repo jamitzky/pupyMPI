@@ -1,6 +1,6 @@
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
 from mpi.logger import Logger
-import threading,sys,copy
+import threading,sys,copy,time
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
@@ -290,7 +290,8 @@ class Communicator:
         """
         This operation marks the communicator object as closed. 
         
-        .. note::This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
+        .. note::
+            *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
         The delete callback functions for any attributes are called in arbitrary order.
 
@@ -318,7 +319,7 @@ class Communicator:
         This call applies only intra-communicators.
         
         .. warning::
-            This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
+            This function is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
             groups (albeit this is simpler), and it requires special handling.
             Target implementation version: 1.1 
         """
@@ -414,9 +415,9 @@ class Communicator:
     # MPI WAITSOME, 49 
     # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
-    def irecv(self, sender, tag = constants.MPI_TAG_ANY):
+    def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
         # Check that destination exists
-        if not self.have_rank(sender):
+        if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
         # Check that tag is valid
@@ -746,9 +747,29 @@ class Communicator:
         # request becomes active once the call is made.
         pass
         
-    def mname(self, arg):
-        pass
-
+    def wtime(self):
+        """
+        returns a ﬂoating-point number of seconds, representing elapsed wall-clock 
+        time since some time in the past.  returns a ﬂoating-point number of seconds, representing elapsed wall-clock 
+        time since some time in the past. 
+        
+        .. note::
+            *Deviation* MPI 1.1 states that "The “time in the past” is guaranteed not to change during the life of the process. ".
+            pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
+        """
+        
+        return time.time() # TODO Improve clock function
+        
+    def wtick(self):
+        """
+        returns the resolution of MPI WTIME in seconds. That is, it returns, 
+        as a double precision value, the number of seconds between successive clock ticks. For 
+        example, if the clock is implemented by the hardware as a counter that is incremented 
+        every millisecond, the value returned by MPI WTICK should be 10^−3
+         
+        """
+        return 1.0 # TODO improve resolution detection
+        
     ################################################################################################################
     # LOCAL OPERATIONS
     ################################################################################################################
