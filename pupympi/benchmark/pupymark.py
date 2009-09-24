@@ -26,10 +26,14 @@ The help message goes here.
 
 def runsingletest(test):
     results = []
-    for size in common.size_array:  
-        print "%s with message size %s"%(test, size)        
+    sys.stdout.write("Testing %s: " % test)
+    sys.stdout.flush()  
+    for size in common.size_array:
+        sys.stdout.write(" %s " % size)
+        sys.stdout.flush()  
         results.append((size, test(size, None)))
-        
+
+    print ""
     return results
 
 def testrunner():
@@ -45,6 +49,7 @@ def testrunner():
     
     c_info.num_procs = c_info.communicator.size()
     c_info.rank = c_info.communicator.rank()
+    c_info.select_source = True
         
     # TODO generalize for several modules.
     testlist = [c for c in dir(single) if c.startswith("test_")] 
@@ -56,6 +61,7 @@ def testrunner():
         resultlist[fstr] = result
     pass
     
+    mpi.finalize()
     print resultlist
 
 class Usage(Exception):
