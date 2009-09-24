@@ -76,7 +76,7 @@ class MPI(Thread):
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
-        logger.debug("Finished all the runtime arguments")
+        #logger.debug("Finished all the runtime arguments")
 
         # First check for required Python version
         self.version_check()
@@ -113,7 +113,7 @@ class MPI(Thread):
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
-        logger.debug("Set the MPI environment to initialised")
+        #logger.debug("Set the MPI environment to initialised")
         
         # set up 'constants'
         constants.MPI_GROUP_EMPTY = Group()
@@ -136,7 +136,7 @@ class MPI(Thread):
             time.sleep(1)
 
     def recv_callback(self, *args, **kwargs):
-        Logger().debug("MPI layer recv_callback called")
+        #Logger().debug("MPI layer recv_callback called")
         
         if "communicator" in kwargs:
             self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
@@ -153,7 +153,7 @@ class MPI(Thread):
         self.shutdown_lock.release()
         # Shutdown the network
         self.network.finalize()
-        Logger().debug("Network finalized")
+        #Logger().debug("Network finalized")
         
     @classmethod
     def initialized(cls):
