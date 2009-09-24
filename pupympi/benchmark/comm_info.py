@@ -15,7 +15,7 @@ mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
 w_rank = None               # rank of actual process in COMM_WORLD      
 
-NP = None                   # #processes participating in benchmarks    
+NP = None                   # processes participating in benchmarks    
 topology = "Cartesian"      # NEW: topologytype
 px, py = (None, None)       # processes are part of px x py topology    
 
@@ -36,16 +36,7 @@ pair0, pair1 = (0, 1)       # process pair
 select_tag = False          # 0/1 for tag selection off/on             
 select_source = False       # 0/1 for sender selection off/on          
 
-# CHANGED disabled - its for mem handling.
-# void* s_buffer;            # send    buffer                           
-# assign_type* s_data;       # assign_type equivalent of s_buffer       
-# int   s_alloc;             # #bytes allocated in s_buffer             
-# void* r_buffer;            # receive buffer                           
-# assign_type* r_data;       # assign_type equivalent of r_buffer       
-# int   r_alloc;             # #bytes allocated in r_buffer             
-# # IMB 3.1 <<  
-# float max_mem, used_mem;   # max. allowed / used GBytes for all       
-#                            # message  buffers                         
+                      
 # # >> IMB 3.1   
 
 # TODO Implement part or all of this.

@@ -13,8 +13,6 @@ import unittest
 import array
 
 # bunch of useless constants for now
-MPI_ANY_TAG = 0
-MPI_ANY_SOURCE = 0
 N_BARR = 2
 
 size_array = (1,2,4,8,32,64,128,512,1024,4096,16384,32768, 65536) # etc
