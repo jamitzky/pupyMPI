@@ -8,8 +8,6 @@ class TestException(Exception):
     """Custom exception for tests"""
     pass
 
-print "before init"
-
 mpi = MPI()
 
 
@@ -39,7 +37,7 @@ print "Excl group %s." % newG
 
 emptyG = cwG.incl([])
 assert emptyG is not None
-assert emptyG.is_empty()
+assert emptyG.size() is 0
 assert emptyG is constants.MPI_GROUP_EMPTY
 
 # Close the sockets down nicely
