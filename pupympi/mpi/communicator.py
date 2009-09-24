@@ -538,7 +538,7 @@ class Communicator:
         cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
         return cr.wait()
 
-    def recv(self, destination, tag = constants.MPI_TAG_ANY):
+    def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
         with the specified tag. 
@@ -559,7 +559,7 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.irecv(destination, tag).wait()
+        return self.irecv(source, tag).wait()
 
     def abort(self, arg):
         """

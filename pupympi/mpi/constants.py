@@ -1,7 +1,7 @@
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below
-MPI_SOURCE_ANY = -1
+MPI_SOURCE_ANY = -768 # to be recognizable
 
 TAG_BCAST   = -128 # internal, this and below. Note they do not have to be powers of two, but Rune is being silly.
 TAG_EMPTY   = -256
