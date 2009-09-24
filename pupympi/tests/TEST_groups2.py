@@ -34,60 +34,60 @@ allButMe = cwG.excl([rank])
 
 # Make a shuffled group
 jumble = range(size)
-while jumble == rip or jumble == revRip: # Random is a tricky lover, make sure it's the right kind of random
+# Random is a tricky lover, make sure it's the right kind of random, ie. not
+# just one of the others
+while jumble == rip or jumble == revRip:
     random.shuffle(jumble)
 allShuffled = cwG.incl(jumble)
 
-# Manual shuffled group
-mshuf = [2,1,3,0]
-manShuf = cwG.incl(mshuf)
+allButLast = cwG.excl([size-1])
 
-#print "DASHUF " + str(manShuf)
+allButFirst = cwG.excl([0])
 
 #### Compare tests #####
+
 eq = cwG.compare(cwG)
 assert eq is constants.MPI_IDENT
 
-sim = cwG.compare(allReversed)
+sim = cwG.compare(allShuffled)
 assert sim is constants.MPI_SIMILAR
 
 uneq = cwG.compare(allButMe)
 assert uneq is constants.MPI_UNEQUAL
 
 
-# FIXME: Remember to compare on shuffled also (manually shuffled?)
-
-
 #### Translate tests #####
 
 # Translating ranks of allReversed to cwG (=global) ranks in the reverse order
 # should yield global order
-#tRipAllReverse = cwG.translate_ranks(revRip, allReversed)
-#assert tRipAllReverse == rip
-#
-## Translating the shuffled ranks to cwG should give global order (rip)
-#tRipAllShuf = cwG.translate_ranks(jumble, allShuffled)
-#assert tRipAllShuf == rip
+tRipAllReverse = cwG.translate_ranks(revRip, allReversed)
+assert tRipAllReverse == rip
 
-# TODO: Cross group translation tests need work
-"""
-# Translating shuffled ranks to reverse order should yield reverse order
-tCrossGroup = allReversed.translate_ranks(revRip, allShuffled)
-tCrossGroup2 = allShuffled.translate_ranks(jumble, allReversed)
-print jumble
-print tCrossGroup
-print tCrossGroup2
-"""
+# Translating the shuffled ranks to cwG should give global order (rip)
+tRipAllShuf = cwG.translate_ranks(jumble, allShuffled)
+assert tRipAllShuf == rip
+
+# Cross group translating
+t1 = allReversed.translate_ranks(rip, allShuffled)
+t2 = allShuffled.translate_ranks(rip, allReversed)
+assert allShuffled.translate_ranks(t1, allReversed) == allReversed.translate_ranks(t2, allShuffled)
+
+# Translating subsets
+tSubSet = cwG.translate_ranks(rip[1:], allReversed)
+assert tSubSet == revRip[1:]
+
+#FIXME : Remember translate of stuff not there to get MPI_UNDEFINED values in result list
 
 
-#tSubSet = cwG.translate_ranks([1,2,3], allReversed)
-#assert tSubSet == [2,1,0] or size != 4 # Guard extra or-condition in the assert so only tested if size == 4
+#### Union tests #####
+allButLastAndFirst = allButLast.union(allButFirst)
+#TODO: Now assert it
 
-tSubSet2 = cwG.translate_ranks([0,1,2,3], manShuf)
-print "shuf " +str(mshuf)
-print "res  " + str(tSubSet2)
-#assert tSubSet == [2,1,0] or size != 4 # Guard extra or-condition in the assert so only tested if size == 4
+#TODO: Also test union with empty and singleton results
 
+print allButFirst
+print allButLast
+print allButLastAndFirst
 
 # Close the sockets down nicely
 mpi.finalize()
