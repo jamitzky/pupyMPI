@@ -325,7 +325,7 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
+        Logger().debug("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
 
         job = {'type' : jobtype, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
 

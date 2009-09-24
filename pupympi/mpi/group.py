@@ -151,7 +151,7 @@ class Group:
             counter += 1
 
         if counter is 0:
-            Logger().debug("Empty group created")
+            #Logger().debug("Empty group created")
             return constants.MPI_GROUP_EMPTY
        
         new_group = Group(new_rank)
