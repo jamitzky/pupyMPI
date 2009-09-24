@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-single.py
+single.py - collection of single/point2point tests inspired by Intel MPI Benchmark (IMB)
 
 Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
