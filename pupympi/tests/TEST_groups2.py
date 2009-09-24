@@ -34,10 +34,15 @@ allButMe = cwG.excl([rank])
 
 # Make a shuffled group
 jumble = range(size)
-while jumble == rip or jumble == revRip: # Random is a tricky lover, make sure it's the right kind of random
+# Random is a tricky lover, make sure it's the right kind of random, ie. not
+# just one of the others
+while jumble == rip or jumble == revRip:
     random.shuffle(jumble)
 allShuffled = cwG.incl(jumble)
 
+allButLast = cwG.excl([size-1])
+
+allButFirst = cwG.excl([0])
 
 #### Compare tests #####
 
@@ -71,7 +76,18 @@ assert allShuffled.translate_ranks(t1, allReversed) == allReversed.translate_ran
 tSubSet = cwG.translate_ranks(rip[1:], allReversed)
 assert tSubSet == revRip[1:]
 
+#FIXME : Remember translate of stuff not there to get MPI_UNDEFINED values in result list
 
+
+#### Union tests #####
+allButLastAndFirst = allButLast.union(allButFirst)
+#TODO: Now assert it
+
+#TODO: Also test union with empty and singleton results
+
+print allButFirst
+print allButLast
+print allButLastAndFirst
 
 # Close the sockets down nicely
 mpi.finalize()
