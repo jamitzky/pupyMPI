@@ -223,7 +223,7 @@ class Communicator:
         [ IN group] Group, which is a subset of the group of comm
         [ OUT newcomm] new communicator
 
-        http://www.mpi-forum.org/docs/mpi-11-html/node102.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
 
         .. note::This call is internally implemented either locally, in which case only 32 new communicators 
         can be created across the lifespan of your MPI application, or collective with no (realistic) limit on 
@@ -294,7 +294,7 @@ class Communicator:
         
         The delete callback functions for any attributes are called in arbitrary order.
 
-        For the original definition of comm_free, please see http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)                
 
@@ -318,9 +318,9 @@ class Communicator:
         This call applies only intra-communicators.
         
         .. warning::
-        This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
-        groups (albeit this is simpler), and it requires special handling.
-        Target implementation version: 1.1 
+            This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
+            groups (albeit this is simpler), and it requires special handling.
+            Target implementation version: 1.1 
         """
 
         # one suggestion for implementation:
@@ -362,7 +362,7 @@ class Communicator:
         MPI_SIMILAR results if the group members of both communicators are the same but the rank order differs. 
         MPI_UNEQUAL results otherwise. 
 
-        http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
         
         if self is other_communicator:
