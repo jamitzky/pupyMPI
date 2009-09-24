@@ -184,7 +184,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.socket_to_job[ job['socket'] ] = job
 
     def add_in_job(self, job):
-        Logger().debug("Adding incoming job")
+        #Logger().debug("Adding incoming job")
         super(TCPCommunicationHandler, self).add_in_job(job)
 
         if job['socket']:
@@ -197,7 +197,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
             Logger().debug("No job was found by the socket")
 
     def run(self):
-        Logger().debug("Starting select loop in TCPCommunicatorHandler")
+        #Logger().debug("Starting select loop in TCPCommunicatorHandler")
 
         # Starting the select on the sockets. We're setting a timeout
         # so we can break and test if we should break out of the thread
@@ -260,7 +260,7 @@ class TCPNetwork(AbstractNetwork):
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-        Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
+        #Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
         
 
         # Do the initial handshaking with the other processes
@@ -280,7 +280,7 @@ class TCPNetwork(AbstractNetwork):
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket. 
         """
-        Logger().debug("handshake: Communicating ports and hostname to mpirun")
+        #Logger().debug("handshake: Communicating ports and hostname to mpirun")
         
         # Packing the data
         data = pickle.dumps( (self.hostname, self.port, internal_rank ) )
@@ -288,7 +288,7 @@ class TCPNetwork(AbstractNetwork):
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
-        Logger().debug("Trying to connect to (%s,%s)" % recipient)
+        #Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
         
         # Pack the data with our special format
@@ -297,7 +297,7 @@ class TCPNetwork(AbstractNetwork):
         
         # Receiving data about the communicator, by unpacking the head etc.
         tag, sender, communicator, recv_type, all_procs = structured_read(s_conn)
-        Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
+        #Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
 
         self.all_procs = {}
@@ -332,7 +332,7 @@ class TCPNetwork(AbstractNetwork):
         if participant is not None:
             job['participant'] = communicator.comm_group.members[participant]
 
-        Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
+        #Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
         if jobtype in ("bcast_send", "send"):
             self.t_out.add_out_job( job )
@@ -345,7 +345,7 @@ class TCPNetwork(AbstractNetwork):
         super(TCPNetwork, self).finalize()
 
         self.socket.close()
-        logger = Logger().debug("The TCP network is closed")
+        #logger = Logger().debug("The TCP network is closed")
 
     def barrier(self, comm):
         # TODO Implement
