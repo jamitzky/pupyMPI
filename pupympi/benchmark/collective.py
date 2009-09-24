@@ -4,7 +4,6 @@
 collective.py
 
 Created by Jan Wiberg on 2009-08-13.
-Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
 import sys
