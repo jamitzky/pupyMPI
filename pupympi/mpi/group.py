@@ -96,18 +96,17 @@ class Group:
         - List of translated ranks/MPI_UNDEFINED if no translation existed
         
         """
-        s = self._global_keyed()
         o = other_group._global_keyed()
         translated = []
         for r in ranks:
             # FIXME: This lookup should check for key error in case joe sixpack passes bad ranks
             # ... actually you are only allowed to pass valid ranks so throw an error?
-            gr = self.members[r]['global_rank']
+            gRank = self.members[r]['global_rank']
             
             try:
                 # Found in the other group, now translate to that groups' local rank
-                translated.append(o[gr])
-            except ValueError, e:
+                translated.append(o[gRank])
+            except KeyError, e:
                 # Unmatched in other group means not translatable
                 translated.append(constants.MPI_UNDEFINED)
         
@@ -115,9 +114,34 @@ class Group:
         
     def union(self, other_group):
         """
-        creates a group by combining two groups 
+        creates a group by union of two groups
+        
+        The rank ordering of the new group is based on rank ordering in the self
+        group
         """
-        Logger().warn("Non-Implemented method 'group.union' called.")
+        next_rank = 0
+        my_rank = -1 # Caller's rank in new group
+        union_members = {}
+        others = other_group._global_keyed()
+        
+        for k in self.members:
+            gRank = self.members[k]['global_rank']
+            try:
+                # Does k global rank exist in other group?
+                other_rank = others[gRank] # This raises ValueError if key not found
+                union_members[next_rank] = self.members[k] # Keep global rank etc.
+                if self.rank() == k:
+                    my_rank = next_rank
+                    
+                next_rank += 1
+            except KeyError, e:
+                continue
+        
+
+        union_group = Group(my_rank)
+        union_group.members = union_members
+        return union_group
+        
         
     def intersection(self, other_group):
         """
