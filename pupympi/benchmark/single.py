@@ -4,36 +4,35 @@
 single.py - collection of single/point2point tests inspired by Intel MPI Benchmark (IMB)
 
 Created by Jan Wiberg on 2009-08-13.
-Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
 import sys
 import os
 import comm_info as c_info
 import common
+from mpi import constants
 
 def test_PingPing(size, iteration_schedule = None):
-    print "test_PingPing ",size
+    print "test_PingPing %s (MPI %s)"%(size,c_info.mpi)
     s_tag = 1
-    r_tag = s_tag if c_info.select_tag else common.MPI_ANY_TAG
+    r_tag = s_tag if c_info.select_tag else constants.MPI_TAG_ANY
     dest = -1
     if c_info.rank == c_info.pair0:
         dest = c_info.pair1
     elif c_info.rank == c_info.pair1:
         dest = c_info.pair0
     
-    source = dest if c_info.select_source else common.MPI_ANY_SOURCE 
+    source = dest if c_info.select_source else constants.MPI_SOURCE_ANY 
     for b in xrange(common.N_BARR):
-        mpi.barrier(c_info.communicator)
+        c_info.communicator.barrier()
 
     t1 = c_info.communicator.Wtime()
     data = gen_testset(size)
 
-    # TODO actual test!
     for r in xrange(iteration_schedule[size] if iteration_schedule is not None else 1000):
         # FIXME error handling for all statements
-        mpi.isend(dest, data, common.MPI_ANY_TAG, c_info.communicator)
-        recv_data = mpi.recv(dest, MPI_ANY_TAG, c_info.communicator)
+        mpi.communicator.isend(dest, data)
+        recv_data = mpi.communicator.recv(source)
         # FIXME ierr = MPI_Wait(&request, &stat);
   	    
         # TODO: check for defects

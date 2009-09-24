@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-collective.py
+collective.py - collection of collective tests inspired by Intel MPI Benchmark (IMB)
 
 Created by Jan Wiberg on 2009-08-13.
 """

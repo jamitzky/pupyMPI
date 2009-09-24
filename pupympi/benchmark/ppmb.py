@@ -5,15 +5,14 @@ ppmb.py - Benchmark runner.
 
 Usage: MPI program - run with mpirun
 
-
 Created by Jan Wiberg on 2009-08-13.
 """
 
 import sys
 import getopt
-import mpi
+from mpi import MPI
 
-import common as c_info
+import comm_info as c_info
 import common
 import single
 import collective
@@ -34,9 +33,15 @@ def runsingletest(test):
 
 def testrunner():
     mpi = MPI()
+    
     c_info.mpi = mpi
     c_info.communicator = mpi.MPI_COMM_WORLD
+    c_info.w_num_procs = mpi.MPI_COMM_WORLD.size()
+    c_info.w_rank = mpi.MPI_COMM_WORLD.rank()
     
+    c_info.num_procs = c_info.communicator.size()
+    c_info.rank = c_info.communicator.rank()
+        
     # TODO generalize for several modules.
     testlist = [c for c in dir(single) if c.startswith("test_")] 
     resultlist = {}
