@@ -84,10 +84,11 @@ allButLastAndFirst = allButLast.union(allButFirst)
 #TODO: Now assert it
 
 #TODO: Also test union with empty and singleton results
-
-print allButFirst
-print allButLast
-print allButLastAndFirst
+allButLast.betterunion(allButFirst)
+#
+#print allButFirst
+#print allButLast
+#print allButLastAndFirst
 
 # Close the sockets down nicely
 mpi.finalize()
