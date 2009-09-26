@@ -5,7 +5,8 @@
 
 from mpi import MPI
 from mpi import constants
-import time
+from mpi.exceptions import MPINoSuchRankException
+
 import random
 
 class TestException(Exception): 
@@ -29,7 +30,7 @@ rip = range(size)
 revRip = range(size-1,-1,-1)
 allReversed = cwG.incl(revRip)
 
-# Make a group with all but self (unique per process)
+# Make a group with all but self (this group is unique per process!)
 allButMe = cwG.excl([rank])
 
 # Make a shuffled group
@@ -76,22 +77,43 @@ assert allShuffled.translate_ranks(t1, allReversed) == allReversed.translate_ran
 tSubSet = cwG.translate_ranks(rip[1:], allReversed)
 assert tSubSet == revRip[1:]
 
-#FIXME : Remember translate of stuff not there to get MPI_UNDEFINED values in result list
+tOneMore = cwG.translate_ranks(rip,allButLast)
+# Last one in the result should be MPI_UNDEFINED
+assert tOneMore == rip[:(size-1)]+[constants.MPI_UNDEFINED]
 
-
+# Testing exception raising
+invalidRanks = rip + [size,size+1]
+try:
+    tLostInTranslation = cwG.translate_ranks(invalidRanks,allReversed)
+except MPINoSuchRankException, e:
+    pass
+finally:
+    gotError = True
+assert gotError
+    
 #### Union tests #####
-allButLastAndFirst = allButLast.union(allButFirst)
-#TODO: Now assert it
 
-#TODO: Also test union with empty and singleton results
-betterUnion = allButLast.betterunion(allButFirst)
-print betterunion
+uniqueUnion = allButMe.union(allButFirst)
+# Since allButMe is unique per process so will this union group be unique for each process
+# Besides the global rank 0, who is not in the union group, everyone else will
+# be added as the last member of the union group (ie. when found in allButFirst)
+# and so everyone will have same (max) rank in the union group
+if rank == 0:
+    assert uniqueUnion.rank() == -1
+else:    
+    assert uniqueUnion.rank() == size - 1
 
 
-#
-#print allButFirst
-#print allButLast
-#print allButLastAndFirst
+# Make two groups by excluding and put them together with union
+exFirst = allReversed.excl([0]) # 2,1,0
+exRest = allReversed.excl(rip[1:]) # 3
+reUnion = exRest.union(exFirst) # Unioning "tail on head" should give original group order
+eq = reUnion.compare(allReversed)
+assert eq is constants.MPI_IDENT
+
+#FIXME: Also needs to test union with empty and singleton results
+
+
 
 # Close the sockets down nicely
 mpi.finalize()
