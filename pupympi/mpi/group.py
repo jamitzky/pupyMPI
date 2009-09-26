@@ -13,6 +13,7 @@ import copy
 import unittest
 from mpi.logger import Logger
 from mpi import constants
+from mpi.exceptions import MPINoSuchRankException
 
 
 class Group:
@@ -75,7 +76,7 @@ class Group:
         If members are the same but order is different MPI_SIMILAR is returned.
         Otherwise MPI_UNEQUAL is returned.
         """
-        if self == other_group:            
+        if self.members == other_group.members:            
             return constants.MPI_IDENT
         else:
             globRanksSelf = self._global_ranks()
@@ -103,7 +104,11 @@ class Group:
         for r in ranks:
             # FIXME: This lookup should check for key error in case joe sixpack passes bad ranks
             # ... actually you are only allowed to pass valid ranks so throw an error?
-            gRank = self.members[r]['global_rank']
+            try:
+                gRank = self.members[r]['global_rank']
+            except KeyError, e:
+                raise MPINoSuchRankException("Can not translate to rank %i since it is not in group"%r)
+                
             
             try:
                 # Found in the other group, now translate to that groups' local rank
@@ -114,41 +119,13 @@ class Group:
         
         return translated
         
-    def union(self, other_group):
-        """
-        creates a group by union of two groups
-        
-        The rank ordering of the new group is based on rank ordering in the self
-        group        
-        """
-        next_rank = 0
-        my_rank = -1 # Caller's rank in new group
-        union_members = {}
-        others = other_group._global_keyed()
-        
-        for k in self.members:
-            gRank = self.members[k]['global_rank']
-            try:
-                # Does k global rank exist in other group?
-                other_rank = others[gRank] # This raises ValueError if key not found
-                union_members[next_rank] = self.members[k] # Keep global rank etc.
-                if self.rank() == k:
-                    my_rank = next_rank
-                    
-                next_rank += 1
-            except KeyError, e:
-                continue
-        
-        union_group = Group(my_rank)
-        union_group.members = union_members
-        return union_group
 
-    def betterunion(self, second_group):
+    def union(self, second_group):
         """
         creates a group by union of two groups
         
         The rank ordering of the new group is based on rank ordering in the self
-        group secondarily on ordering of second group       
+        group secondarily on ordering of second group
         """
         
         # If caller has rank in first group that rank is retained
@@ -161,7 +138,7 @@ class Group:
         #Get a set of world ranks from first group
         first_ranks = self._global_ranks()
         # Start with first group
-        union_members = copy.copy(self.members) #NOTE: Do we need deep copy here? Or copy at all?
+        union_members = copy.copy(self.members)
         # Start ranking from highest rank+1
         next_rank = self.size()
 
@@ -185,9 +162,32 @@ class Group:
     def intersection(self, other_group):
         """
         creates a group from the intersection of two groups 
-        """
-        Logger().warn("Non-Implemented method 'group.intersection' called.")
         
+        The rank ordering of the new group is based on rank ordering in the self
+        group        
+        """
+        next_rank = 0
+        my_rank = -1 # Caller's rank in new group
+        intersection_members = {}
+        others = other_group._global_keyed()
+        
+        for k in self.members:
+            gRank = self.members[k]['global_rank']
+            try:
+                # Does k global rank exist in other group?
+                other_rank = others[gRank] # This raises ValueError if key not found
+                intersection_members[next_rank] = self.members[k] # Keep global rank etc.
+                if self.rank() == k:
+                    my_rank = next_rank
+                    
+                next_rank += 1
+            except KeyError, e:
+                continue
+        
+        intersection_group = Group(my_rank)
+        intersection_group.members = intersection_members
+        return intersection_group
+    
     def difference(self, other_group):
         """
         creates a group from the difference between two groups
