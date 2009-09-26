@@ -37,13 +37,13 @@ class Group:
 
     def _global_ranks(self):
         """
-        Convenience function to get list of members' global ranks
+        Convenience function to get set of members' global ranks
         """
-        l = []
+        ranks = set()
         for k in self.members:
-            l.append(self.members[k]['global_rank'])
+            ranks.add(self.members[k]['global_rank'])
 
-        return l
+        return ranks
 
     def _global_keyed(self):
         """
@@ -78,7 +78,7 @@ class Group:
         else:
             globRanksSelf = self._global_ranks()
             globRanksOther = other_group._global_ranks()
-            if set(globRanksSelf) == set(globRanksOther):
+            if globRanksSelf == globRanksOther:
                 return constants.MPI_SIMILAR
             else:
                 return constants.MPI_UNEQUAL
@@ -117,7 +117,7 @@ class Group:
         creates a group by union of two groups
         
         The rank ordering of the new group is based on rank ordering in the self
-        group
+        group        
         """
         next_rank = 0
         my_rank = -1 # Caller's rank in new group
@@ -137,10 +137,46 @@ class Group:
             except KeyError, e:
                 continue
         
-
         union_group = Group(my_rank)
         union_group.members = union_members
         return union_group
+
+    def betterunion(self, second_group):
+        """
+        creates a group by union of two groups
+        
+        BETTER WITH SET FUNCTIONS
+        
+        The rank ordering of the new group is based on rank ordering in the self
+        group        
+        """
+        next_rank = 0
+        my_rank = -1 # Caller's rank in new group
+        union_members = {}
+        
+        #First get a set of world ranks from both groups
+        set1 = self._global_ranks()
+        set2 = second_group._global_ranks()
+
+        union = set1.union(set2)
+        print set3
+        #
+        #for k in self.members:
+        #    gRank = self.members[k]['global_rank']
+        #    try:
+        #        # Does k global rank exist in other group?
+        #        other_rank = others[gRank] # This raises ValueError if key not found
+        #        union_members[next_rank] = self.members[k] # Keep global rank etc.
+        #        if self.rank() == k:
+        #            my_rank = next_rank
+        #            
+        #        next_rank += 1
+        #    except KeyError, e:
+        #        continue
+        
+        #union_group = Group(my_rank)
+        #union_group.members = union_members
+        #return union_group
         
         
     def intersection(self, other_group):
