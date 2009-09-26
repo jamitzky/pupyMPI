@@ -84,7 +84,10 @@ allButLastAndFirst = allButLast.union(allButFirst)
 #TODO: Now assert it
 
 #TODO: Also test union with empty and singleton results
-allButLast.betterunion(allButFirst)
+betterUnion = allButLast.betterunion(allButFirst)
+print betterunion
+
+
 #
 #print allButFirst
 #print allButLast
