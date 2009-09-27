@@ -72,7 +72,9 @@ class CollectiveRequest(BaseRequest):
             # Aggreate the data list to a single item (maybe?). The data list
             # should probably we curried with the sender rank for operations 
             # like Allgatherv
-            if initial_data and force_initial_data:
+            have_data = initial_data not in (None, [])
+                
+            if have_data and force_initial_data:
                 data_list.append(initial_data)
             
             if not data_list:
