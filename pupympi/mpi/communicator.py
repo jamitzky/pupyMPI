@@ -66,6 +66,7 @@ class Communicator:
         except (IndexError, KeyError):
             pass
         self.unhandled_messages_lock.release()
+        
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
         # Look for a request object right now. Otherwise we just put it on the queue and let the
         # update handler do it.
@@ -142,6 +143,13 @@ class Communicator:
     def request_remove(self, request_obj):
         self.request_queue_lock.acquire()
         del self.request_queue[request_obj.queue_idx]
+        """
+        FIXME: This del has been observed to give KeyError after only 4 iterations of TEST_cyclic
+        
+        File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 145, in request_remove
+        del self.request_queue[request_obj.queue_idx]
+        KeyError: 8
+        """
         self.request_queue_lock.release()
 
     def request_add(self, request_obj):
