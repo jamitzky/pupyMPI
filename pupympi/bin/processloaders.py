@@ -18,20 +18,29 @@ def popenssh(host, arguments):
 global process_list    
 process_list = []
 
-def ssh(host, arguments):
+def ssh(host, arguments, process_io):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
-    sshexec = ["ssh"] + [host] + ["\""] + ["PYTHONPATH=" + python_path ]+ arguments + ["\""]
-    sshexec_str = ' '.join(sshexec)
+    sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s" % sshexec_str)
+    if process_io in ['none', 'remote_file']:
+        target = None
+    elif process_io is 'pipe':
+        target = subprocess.PIPE
+    elif process_io is filepipe:
+        pass
+    else:
+        raise MPIException("Unsupported I/O type")
+
     # Execute the ssh command in a subprocess
-    p = subprocess.Popen(sshexec_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(sshexec_str, shell=True, stdout=target, stderr=target)
     process_list.append(p)
+
     return p
     
-def popen(host, arguments):
-    """ Process starter using subprocess. No loadbalancing yet"""
+def popen(host, arguments, process_io):
+    """ Process starter using subprocess. No loadbalancing yet. Process_io is ignored"""
     logger = Logger()
 
     if _islocal(host):
