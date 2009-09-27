@@ -170,17 +170,18 @@ if __name__ == "__main__":
         run_options.extend( user_options )
         
         # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.process_io)
+        p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
             
         #logger.debug("Process with rank %d started" % rank)
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
-    io_shutdown_lock = threading.Lock() # lock used to signal shutdown
-    io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
-    t = threading.Thread(target=io_forwarder, args=(process_list,))
-    t.start()
+    if options.process_io == "pipe":
+        io_shutdown_lock = threading.Lock() # lock used to signal shutdown
+        io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
+        t = threading.Thread(target=io_forwarder, args=(process_list,))
+        t.start()
         
     # Listing of (rank, host, port) for all the processes
     all_procs = []
@@ -223,9 +224,11 @@ if __name__ == "__main__":
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
         
-    # Signal shutdown to io_forwarder thread
-    io_shutdown_lock.release()    
-    # Wait for the IO_forwarder thread to stop
-    t.join()
-    #logger.debug("IO forward thread joined")
+    if options.process_io == "pipe":        
+        # Signal shutdown to io_forwarder thread
+        io_shutdown_lock.release()    
+        # Wait for the IO_forwarder thread to stop
+        t.join()
+        #logger.debug("IO forward thread joined")
+    
     sys.exit(1 if any_failures else 0)
