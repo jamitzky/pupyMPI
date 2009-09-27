@@ -25,18 +25,18 @@ def parse_options():
     # Add a logging and debugging
     parser_debug_group = OptionGroup(parser, "Logging and debugging", 
             "Use these settings to control the level of output to the program. The --debug and --quiet options can't be used at the same time. Trying to will result in an error.")
-    parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
+    parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
-    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to mpi(.log)')
+    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
     parser.add_option_group( parser_debug_group )
 
     parser_adv_group = OptionGroup(parser, "Advanced options", 
             "Be careful. You could do strange things here.")
-    parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", metavar='method', help='Path to Python 2.6 on remote hosts.')
-    parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
+    parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", help='Path to Python 2.6 on remote hosts. Defaults to  %default')
+    parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to %default')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
-    parser_adv_group.add_option('--process-io', dest='process_io', default="pipe", metavar='method', help='How to forward I/O (stdout, stderr) from remote process. Options are: none, pipe, filepipe or remote_file. Defaults to pipe')
+    parser_adv_group.add_option('--process-io', dest='process_io', default="pipe", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, pipe, filepipe or remote_file. Defaults to %default')
     parser.add_option_group( parser_adv_group )
 
     options, args = parser.parse_args()
