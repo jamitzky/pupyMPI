@@ -57,6 +57,7 @@ class Request(BaseRequest):
         if request_type == 'recv':
             data = communicator.pop_unhandled_message(participant, tag)
             if data:
+                Logger().debug("Unhandled message had data")
                 self.network_callback(lock=False, status="ready", data=data['data'])
                 return
             
@@ -78,7 +79,12 @@ class Request(BaseRequest):
             self._m["status"] = kwargs["status"]
 
             if kwargs["status"] == "ready" and "waitlock" in self._m:
-                self._m['waitlock'].release()
+                #if self._m['waitlock'].acquire(True):
+                #    self._m['waitlock'].release()
+                if self._m['waitlock'].acquire(False):                    
+                    self._m['waitlock'].release()
+
+                #self._m['waitlock'].release()
             
         if "data" in kwargs:
             Logger().info("Adding data to request object")
