@@ -9,12 +9,12 @@ data = ''.join(["a"] * 50)
 f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
 mpi.MPI_COMM_WORLD.barrier()
 iterations = 0
-
+max_iterations = 100
 t1 = mpi.MPI_COMM_WORLD.Wtime()    
 if mpi.MPI_COMM_WORLD.rank() is 0: 
-    while iterations < 5:
+    while iterations < max_iterations:
         iterations += 1
-        mpi.MPI_COMM_WORLD.send(1, data, 1)
+        mpi.MPI_COMM_WORLD.send(1, "rank%s,iterations%s" %(mpi.MPI_COMM_WORLD.rank(), iterations), 1)
         # print "%s: %s done sending" % (iterations, c_info.rank)
         recv = mpi.MPI_COMM_WORLD.recv(1, 1)
         # print "%s: %s done receiving %s" % (iterations, c_info.rank, "str(recv)")
@@ -23,11 +23,11 @@ if mpi.MPI_COMM_WORLD.rank() is 0:
         f.flush()
     f.write( "Done for rank 0\n")
 elif mpi.MPI_COMM_WORLD.rank() is 1: 
-    while iterations < 5:
+    while iterations < max_iterations:
         iterations += 1
         recv = mpi.MPI_COMM_WORLD.recv(0, 1)
         # print "%s, %s done recv: %s" % (iterations, c_info.rank," str(recv)")
-        mpi.MPI_COMM_WORLD.send(0, data, 1)
+        mpi.MPI_COMM_WORLD.send(0, "rank%s,iterations%s" %(mpi.MPI_COMM_WORLD.rank(), iterations), 1)
         # print "%s: %s done sending" % (iterations, c_info.rank)
         # FIXME Verify data if enabled
         f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank))
