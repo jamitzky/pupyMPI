@@ -32,10 +32,11 @@ def parse_options():
     parser.add_option_group( parser_debug_group )
 
     parser_adv_group = OptionGroup(parser, "Advanced options", 
-            "Be carefull. You could actually to strange things here. OMG Ponies!")
+            "Be careful. You could do strange things here.")
     parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", metavar='method', help='Path to Python 2.6 on remote hosts.')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
+    parser_adv_group.add_option('--process-io', dest='process_io', default="pipe", metavar='method', help='How to forward I/O (stdout, stderr) from remote process. Options are: none, pipe, filepipe or remote_file. Defaults to pipe')
     parser.add_option_group( parser_adv_group )
 
     options, args = parser.parse_args()
@@ -160,6 +161,8 @@ if __name__ == "__main__":
             run_options.append('--quiet')
         if options.debug:
             run_options.append('--debug')
+        if options.process_io is "remote_file":
+            run_options.append('--process-io=local')
         run_options.append('--log-file=%s' % options.logfile)
 
         # Adding user options. GNU style says this must be after the --
@@ -167,17 +170,18 @@ if __name__ == "__main__":
         run_options.extend( user_options )
         
         # Now start the process and keep track of it
-        p = remote_start(host, run_options)
+        p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
             
         #logger.debug("Process with rank %d started" % rank)
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
-    io_shutdown_lock = threading.Lock() # lock used to signal shutdown
-    io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
-    t = threading.Thread(target=io_forwarder, args=(process_list,))
-    t.start()
+    if options.process_io == "pipe":
+        io_shutdown_lock = threading.Lock() # lock used to signal shutdown
+        io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
+        t = threading.Thread(target=io_forwarder, args=(process_list,))
+        t.start()
         
     # Listing of (rank, host, port) for all the processes
     all_procs = []
@@ -220,9 +224,11 @@ if __name__ == "__main__":
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
         
-    # Signal shutdown to io_forwarder thread
-    io_shutdown_lock.release()    
-    # Wait for the IO_forwarder thread to stop
-    t.join()
-    #logger.debug("IO forward thread joined")
+    if options.process_io == "pipe":        
+        # Signal shutdown to io_forwarder thread
+        io_shutdown_lock.release()    
+        # Wait for the IO_forwarder thread to stop
+        t.join()
+        #logger.debug("IO forward thread joined")
+    
     sys.exit(1 if any_failures else 0)
