@@ -24,9 +24,8 @@ def ssh(host, arguments, process_io, rank):
     logger = Logger()
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
-    logger.debug("Starting remote process: %s" % sshexec_str)
+    logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
     
-#    sys.stdout = open("/tmp/myoutput")
     if process_io in ['none', 'remote_file']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
         target = None
     elif process_io == 'pipe': # uses io forwarder and prints to console

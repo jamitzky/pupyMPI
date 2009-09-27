@@ -161,7 +161,7 @@ if __name__ == "__main__":
             run_options.append('--quiet')
         if options.debug:
             run_options.append('--debug')
-        if options.process_io is "remote_file":
+        if options.process_io == "remote_file":
             run_options.append('--process-io=local')
         run_options.append('--log-file=%s' % options.logfile)
 
