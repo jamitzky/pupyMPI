@@ -1,19 +1,18 @@
 #!/usr/bin/env python2.6
 # encoding: utf-8
 """
-ppmb.py - Benchmark runner.
+pupymark.py - Benchmark runner.
 
 Usage: MPI program - run with mpirun
-
 
 Created by Jan Wiberg on 2009-08-13.
 """
 
 import sys
 import getopt
-import mpi
+from mpi import MPI
 
-import common as c_info
+import comm_info as c_info
 import common
 import single
 import collective
@@ -27,16 +26,31 @@ The help message goes here.
 
 def runsingletest(test):
     results = []
-    for size in common.size_array:        
+    sys.stdout.write("Testing %s: " % test)
+    sys.stdout.flush()  
+    for size in common.size_array:
+        sys.stdout.write(" %s " % size)
+        sys.stdout.flush()  
         results.append((size, test(size, None)))
-        
+
+    print ""
     return results
 
 def testrunner():
+    """
+    Initializes MPI, the shared context object and runs the tests in sequential order
+    """
     mpi = MPI()
+    
     c_info.mpi = mpi
     c_info.communicator = mpi.MPI_COMM_WORLD
+    c_info.w_num_procs = mpi.MPI_COMM_WORLD.size()
+    c_info.w_rank = mpi.MPI_COMM_WORLD.rank()
     
+    c_info.num_procs = c_info.communicator.size()
+    c_info.rank = c_info.communicator.rank()
+    c_info.select_source = True
+        
     # TODO generalize for several modules.
     testlist = [c for c in dir(single) if c.startswith("test_")] 
     resultlist = {}
@@ -47,6 +61,7 @@ def testrunner():
         resultlist[fstr] = result
     pass
     
+    mpi.finalize()
     print resultlist
 
 class Usage(Exception):

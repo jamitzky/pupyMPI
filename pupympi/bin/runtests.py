@@ -70,7 +70,9 @@ output = output_console
 
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
-    cmd = "bin/mpirun.py -q -c RUN_COUNT --startup-method=STARTUP_METHOD --remote-python REMOTE_PYTHON -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+
+    cmd = "bin/mpirun.py --process-io=filepipe -q -c RUN_COUNT --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+
     def __init__(self, test, primary_log, options):
         Thread.__init__(self)
         self.test = test
@@ -80,7 +82,6 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
-        self.cmd = self.cmd.replace("REMOTE_PYTHON", options.remote_python)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
         output( "Launching %s: " % self.cmd, newline=False)
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)

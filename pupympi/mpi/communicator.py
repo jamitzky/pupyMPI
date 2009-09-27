@@ -1,6 +1,6 @@
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
 from mpi.logger import Logger
-import threading,sys,copy
+import threading,sys,copy,time
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
@@ -66,6 +66,7 @@ class Communicator:
         except (IndexError, KeyError):
             pass
         self.unhandled_messages_lock.release()
+        
     def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
         # Look for a request object right now. Otherwise we just put it on the queue and let the
         # update handler do it.
@@ -142,6 +143,13 @@ class Communicator:
     def request_remove(self, request_obj):
         self.request_queue_lock.acquire()
         del self.request_queue[request_obj.queue_idx]
+        """
+        FIXME: This del has been observed to give KeyError after only 4 iterations of TEST_cyclic
+        
+        File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 145, in request_remove
+        del self.request_queue[request_obj.queue_idx]
+        KeyError: 8
+        """
         self.request_queue_lock.release()
 
     def request_add(self, request_obj):
@@ -290,7 +298,8 @@ class Communicator:
         """
         This operation marks the communicator object as closed. 
         
-        .. note::This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
+        .. note::
+            *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
         The delete callback functions for any attributes are called in arbitrary order.
 
@@ -318,7 +327,7 @@ class Communicator:
         This call applies only intra-communicators.
         
         .. warning::
-            This functon is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
+            This function is presently NOT IMPLEMENTED because it does not do anything that cannot otherwise be done with 
             groups (albeit this is simpler), and it requires special handling.
             Target implementation version: 1.1 
         """
@@ -414,9 +423,9 @@ class Communicator:
     # MPI WAITSOME, 49 
     # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
-    def irecv(self, sender, tag = constants.MPI_TAG_ANY):
+    def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
         # Check that destination exists
-        if not self.have_rank(sender):
+        if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
 
         # Check that tag is valid
@@ -537,7 +546,7 @@ class Communicator:
         cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
         return cr.wait()
 
-    def recv(self, destination, tag = constants.MPI_TAG_ANY):
+    def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
         with the specified tag. 
@@ -558,7 +567,7 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.irecv(destination, tag).wait()
+        return self.irecv(source, tag).wait()
 
     def abort(self, arg):
         """
@@ -746,9 +755,28 @@ class Communicator:
         # request becomes active once the call is made.
         pass
         
-    def mname(self, arg):
-        pass
+    def Wtime(self):
+        """
+        returns a floating-point number of seconds, representing elapsed wall-clock 
+        time since some time in the past. 
+        
+        .. note::
+            *Deviation* MPI 1.1 states that "The 'time in the past' is guaranteed not to change during the life of the process. ".
+            pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
+        """
+        
+        return time.time() # TODO Improve clock function
+        
+    def Wtick(self):
 
+        """
+        returns the resolution of wtime() in seconds. That is, it returns, 
+        as a double precision value, the number of seconds between successive clock ticks. For
+        example, if the clock is implemented by the hardware as a counter that is incremented
+        every millisecond, the value returned by wtick() should be 10 to the power of -3.
+        """
+        return 1.0 # TODO improve resolution detection
+        
     ################################################################################################################
     # LOCAL OPERATIONS
     ################################################################################################################
