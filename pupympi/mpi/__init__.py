@@ -67,16 +67,23 @@ class MPI(Thread):
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
         parser.add_option('--single-communication-thread', dest='single_communication_thread')
+        parser.add_option('--process-io', dest='process_io')
 
         options, args = parser.parse_args()
     
         self.shutdown_lock = threading.Lock()
         self.shutdown_lock.acquire()
         
+        if options.process_io == "local": # equal to process-io=remote_file on mpirun
+            output = open('/tmp/mpi.local.rank%s.log' % options.rank, "w")
+            sys.stdout = output
+            sys.stderr = output
+            
+        
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
-        logger.debug("Finished all the runtime arguments")
+        #logger.debug("Finished all the runtime arguments")
 
         # First check for required Python version
         self.version_check()
@@ -113,10 +120,10 @@ class MPI(Thread):
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
-        logger.debug("Set the MPI environment to initialised")
+        #logger.debug("Set the MPI environment to initialised")
         
         # set up 'constants'
-        constants.MPI_GROUP_EMPTY = Group(-1)
+        constants.MPI_GROUP_EMPTY = Group()
 
         self.daemon = True
         self.start()
@@ -136,7 +143,7 @@ class MPI(Thread):
             time.sleep(1)
 
     def recv_callback(self, *args, **kwargs):
-        Logger().debug("MPI layer recv_callback called")
+        #Logger().debug("MPI layer recv_callback called")
         
         if "communicator" in kwargs:
             self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
@@ -153,7 +160,7 @@ class MPI(Thread):
         self.shutdown_lock.release()
         # Shutdown the network
         self.network.finalize()
-        Logger().debug("Network finalized")
+        #Logger().debug("Network finalized")
         
     @classmethod
     def initialized(cls):

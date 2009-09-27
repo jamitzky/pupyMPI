@@ -70,7 +70,7 @@ def structured_read(socket_connection):
     tag = sender = None
     data = ''
 
-    Logger().debug("Starting receive first loop")
+    #Logger().debug("Starting receive first loop")
 
     # get the header
     while not header_unpacked:
@@ -94,7 +94,7 @@ def structured_read(socket_connection):
     # unpacking the data
     data = pickle.loads(data[header_size:])
 
-    Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
+    #Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
 
     return tag, sender, communicator, recv_type, data
 
@@ -112,7 +112,7 @@ def get_socket(min=10000, max=30000):
     hostname = socket.gethostname()
     port_no = None
 
-    logger.debug("get_socket: Starting loop with hostname %s" % hostname)
+    #logger.debug("get_socket: Starting loop with hostname %s" % hostname)
 
     while True:
         port_no = random.randint(min, max) 
@@ -121,7 +121,7 @@ def get_socket(min=10000, max=30000):
             continue
 
         try:
-            logger.debug("get_socket: Trying to bind on port %d" % port_no)
+            #logger.debug("get_socket: Trying to bind on port %d" % port_no)
             sock.bind( (hostname, port_no) )
             break
         except socket.error, e:
@@ -129,7 +129,7 @@ def get_socket(min=10000, max=30000):
             logger.debug("get_socket: Permission error on port %d" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
 
-    logger.debug("get_socket: Bound socket on port %d" % port_no)
+    #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
 class TCPCommunicationHandler(AbstractCommunicationHandler):
@@ -156,7 +156,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     """
 
     def __init__(self, *args, **kwargs):
-        Logger().debug("TCPCommunication handler initialized")
+        #Logger().debug("TCPCommunication handler initialized")
         super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
 
         # Add two TCP specific lists. Read and write sockets
@@ -184,7 +184,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         self.socket_to_job[ job['socket'] ] = job
 
     def add_in_job(self, job):
-        Logger().debug("Adding incoming job")
+        #Logger().debug("Adding incoming job")
         super(TCPCommunicationHandler, self).add_in_job(job)
 
         if job['socket']:
@@ -197,7 +197,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
             Logger().debug("No job was found by the socket")
 
     def run(self):
-        Logger().debug("Starting select loop in TCPCommunicatorHandler")
+        #Logger().debug("Starting select loop in TCPCommunicatorHandler")
 
         # Starting the select on the sockets. We're setting a timeout
         # so we can break and test if we should break out of the thread
@@ -213,8 +213,9 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 
                 # Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
                 # Fixme: Make general debugger stuff in the logger so the logger knows not to print everything
-                if it < 3 or (it < 100 and it % 10 == 0) or (it % 1000 == 0):
-                    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets." % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
+                # jan: quick hack to decrease spam
+                #if it < 3 or (it < 10000 and it % 1000 == 0) or (it % 100000 == 0):
+                #    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets." % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
 
                 # We handle read operations first
                 for read_socket in in_list:
@@ -258,7 +259,7 @@ class TCPNetwork(AbstractNetwork):
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-        Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
+        #Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
         
 
         # Do the initial handshaking with the other processes
@@ -278,7 +279,7 @@ class TCPNetwork(AbstractNetwork):
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket. 
         """
-        Logger().debug("handshake: Communicating ports and hostname to mpirun")
+        #Logger().debug("handshake: Communicating ports and hostname to mpirun")
         
         # Packing the data
         data = pickle.dumps( (self.hostname, self.port, internal_rank ) )
@@ -286,7 +287,7 @@ class TCPNetwork(AbstractNetwork):
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
-        Logger().debug("Trying to connect to (%s,%s)" % recipient)
+        #Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
         
         # Pack the data with our special format
@@ -295,7 +296,7 @@ class TCPNetwork(AbstractNetwork):
         
         # Receiving data about the communicator, by unpacking the head etc.
         tag, sender, communicator, recv_type, all_procs = structured_read(s_conn)
-        Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
+        #Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
         s_conn.close()
 
         self.all_procs = {}
@@ -323,14 +324,14 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().info("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
+        Logger().debug("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
 
         job = {'type' : jobtype, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
 
         if participant is not None:
             job['participant'] = communicator.comm_group.members[participant]
 
-        Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
+        #Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
         if jobtype in ("bcast_send", "send"):
             self.t_out.add_out_job( job )
@@ -343,7 +344,7 @@ class TCPNetwork(AbstractNetwork):
         super(TCPNetwork, self).finalize()
 
         self.socket.close()
-        logger = Logger().debug("The TCP network is closed")
+        #logger = Logger().debug("The TCP network is closed")
 
     def barrier(self, comm):
         # TODO Implement

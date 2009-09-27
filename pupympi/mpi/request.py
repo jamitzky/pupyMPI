@@ -56,7 +56,8 @@ class Request(BaseRequest):
         # network_callback method to update all the internal structure.
         if request_type == 'recv':
             data = communicator.pop_unhandled_message(participant, tag)
-            if data:
+            if data:                
+                Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
                 self.network_callback(lock=False, status="ready", data=data['data'])
                 return
             
@@ -78,7 +79,13 @@ class Request(BaseRequest):
             self._m["status"] = kwargs["status"]
 
             if kwargs["status"] == "ready" and "waitlock" in self._m:
-                self._m['waitlock'].release()
+                # FIXME: This release is sometimes called on released lock raising an error
+                # we should think locking strategy through again
+                try:
+                    self._m['waitlock'].release()
+                except Exception, e:
+                    Logger().error("WELEASE WODERICK %s" % e)
+                    raise Exception("EXTRA RELEASE")
             
         if "data" in kwargs:
             Logger().info("Adding data to request object")

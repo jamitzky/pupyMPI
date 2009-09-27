@@ -1,6 +1,8 @@
 
 # Predefined tags
-MPI_TAG_ANY = -1 # public
+MPI_TAG_ANY = -1 # public, this and below
+MPI_SOURCE_ANY = -768 # to be recognizable
+
 TAG_BCAST   = -128 # internal, this and below. Note they do not have to be powers of two, but Rune is being silly.
 TAG_EMPTY   = -256
 TAG_BARRIER = -512
@@ -17,5 +19,6 @@ MPI_IDENT       = 0     # Identical
 MPI_CONGRUENT   = 0     # (only for MPI_COMM_COMPARE) The groups are identical 
 MPI_SIMILAR     = 1     # Same members, but in a different order 
 MPI_UNEQUAL     = -1    # Different
+MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutorials/MPI/alliance/communicators/MPI_Group_rank.html)
 
 JOB_INITIALIZING = -1
