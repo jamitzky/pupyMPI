@@ -67,6 +67,7 @@ class MPI(Thread):
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
         parser.add_option('--single-communication-thread', dest='single_communication_thread')
+        parser.add_option('--process-io', dest='process_io')
 
         options, args = parser.parse_args()
     
