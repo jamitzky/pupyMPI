@@ -9,7 +9,7 @@ data = ''.join(["a"] * 50)
 f = open("/tmp/cyclic%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
 mpi.MPI_COMM_WORLD.barrier()
 iterations = 0
-max_iterations = 1000
+max_iterations = 200
 t1 = mpi.MPI_COMM_WORLD.Wtime()    
 if mpi.MPI_COMM_WORLD.rank() is 0: 
     while iterations < max_iterations:
