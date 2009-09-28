@@ -246,10 +246,8 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         job['status'] = 'finished'
 
             except select.error, e:
-                Logger().info("Got an select error in the TCPCommunicationHandler select call: %s" % e)
-            except socket.error, e:
-                Logger().info("Got an socket error in the TCPCommunicationHandler select call: %s" % e)
-        
+                break
+
 class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
