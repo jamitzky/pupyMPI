@@ -209,7 +209,7 @@ if __name__ == "__main__":
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
-    pdata = pickle.dumps( all_procs )
+    pdata = pickle.dumps( all_procs, protocol=-1 )
     for conn in sender_conns:
         header = pack_header(-1, constants.TAG_INITIALIZING, len(pdata), 0, constants.JOB_INITIALIZING)
         conn.send(header + pdata)

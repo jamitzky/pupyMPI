@@ -231,7 +231,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # Send the data to the receiver. This should probably be rewritten so it 
                         # pickles the clean data and sends the tag and data-lengths, update the job
                         # and wait for the answer to arive on the reading socket. 
-                        data = pickle.dumps(job['data'])
+                        data = pickle.dumps(job['data'],protocol=-1)
                         
                         # FIXME: Insert these header information 
                         recv_type = 42
@@ -282,7 +282,7 @@ class TCPNetwork(AbstractNetwork):
         #Logger().debug("handshake: Communicating ports and hostname to mpirun")
         
         # Packing the data
-        data = pickle.dumps( (self.hostname, self.port, internal_rank ) )
+        data = pickle.dumps( (self.hostname, self.port, internal_rank ),protocol=-1 )
         
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
