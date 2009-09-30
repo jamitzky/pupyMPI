@@ -9,18 +9,21 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 import sys, os, time, struct,pprint
 import cPickle as pickle
+import marshal
 #import pickle
 
 class stuff():
     def __init__(self):
         self.a = 'a'
         self.someint = 42
-        
-def main():
+
+
+def run_pickle():
+    """docstring for run_pickle"""
     iterations = 50000
     data = {"int": 1, "float": 0.42, "string" : "mystring", "listofints": [1,2,3,4,5,6,7,8,9,10], "class": stuff(), "largedict": dict([ (str(n), n) for n in range(100) ])}
     results = {}
-    
+
     for d in data:
         pickledata = data[d]
         start = time.clock()
@@ -37,8 +40,8 @@ def main():
         results[d] = (end - start)
 
     pp = pprint.PrettyPrinter(indent=4)
-    
-    print "Timings for %d iterations" % iterations
+
+    print "Timings for %d iterations, pickling. Sum %s" % (iterations, sum([results[r] for r in results]))
     pp.pprint(results)
 
     print "Sizes"
@@ -46,8 +49,49 @@ def main():
         pickledata = data[d]
         pickled = pickle.dumps(pickledata,protocol=-1)
         pp.pprint( "Size for type %s is %s" % (d, len(pickled)))
-        
 
+def run_marshal():
+    iterations = 50000
+    data = {"int": 1, "float": 0.42, "string" : "mystring", "listofints": [1,2,3,4,5,6,7,8,9,10], "class": stuff(), "largedict": dict([ (str(n), n) for n in range(100) ])}
+    results = {}
+
+    for d in data:
+        pickledata = data[d]
+        try:
+            start = time.clock()
+            for i in xrange(iterations):
+                if isinstance(pickledata, int ) or isinstance(pickledata, float):
+                    pickledata += i 
+                elif isinstance(pickledata, str):
+                    pickledata = data[d]
+                    pickledata += str(i)
+                pickled = marshal.dumps(pickledata)
+                marshal.loads(pickled)            
+                
+            end = time.clock()
+        except ValueError:
+            results[d] = "N/A"
+            continue
+        results[d] = (end - start)
+
+    pp = pprint.PrettyPrinter(indent=4)
+
+    print "Timings for %d iterations, marshalling. Sum %s" % (iterations, sum([results[r] if isinstance(results[r],float) else 0.0 for r in results]))
+    pp.pprint(results)
+
+    print "Sizes"
+    for d in data:
+        pickledata = data[d]
+        try:
+            pickled = marshal.dumps(pickledata)
+        except ValueError:
+            pickled = ""
+        pp.pprint( "Size for type %s is %s" % (d, len(pickled)))
+    """docstring for run_marshal"""
+
+def main():
+    run_pickle()
+    run_marshal()
 
 if __name__ == '__main__':
     main()
