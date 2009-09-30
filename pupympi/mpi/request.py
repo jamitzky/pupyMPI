@@ -47,6 +47,16 @@ class Request(BaseRequest):
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
 
         callbacks = [ self.network_callback, ]
+            
+        # Start a waiting lock. We use this as an alternative way to test if the
+        # request is ready in the user level code. We acquire the lock when we
+        # create the object. A wait() will make a blocking accuire on that lock
+        # and only get it when the lock is released.
+        
+        self._m['waitlock'] = threading.Lock()
+        Logger().debug("LOCKING in init %s" % (self._m['waitlock']))
+        self._m['waitlock'].acquire()
+        Logger().debug("LOCKED in init %s" % (self._m['waitlock']))
 
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
@@ -58,31 +68,28 @@ class Request(BaseRequest):
             data = communicator.pop_unhandled_message(participant, tag)
             if data:                
                 Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
-                self.network_callback(lock=False, status="ready", data=data['data'])
+                self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
                 return
-            
-        # Start a waiting lock. We use this as an alternative way to test if the
-        # request is ready in the user level code. We acquire the lock when we
-        # create the object. A wait() will make a blocking accuire on that lock
-        # and only get it when the lock is released. 
-        self._m['waitlock'] = threading.Lock()
-        self._m['waitlock'].acquire()
 
-    def network_callback(self, lock=True, *args, **kwargs):
+    def network_callback(self, lock=True, ffrom="from-nowhere", *args, **kwargs):
         Logger().debug("Network callback in request called")
 
         if lock:
+            Logger().info("REQUEST LOCKING %s" % ffrom)
             self.acquire()
+            Logger().info("REQUEST LOCKED %s" % ffrom)
 
         if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s" % (self._m["status"], kwargs["status"]))
+            Logger().info("Updating status in request from %s to %s <--" % (self._m["status"], kwargs["status"], ffrom))
             self._m["status"] = kwargs["status"]
 
             if kwargs["status"] == "ready" and "waitlock" in self._m:
                 # FIXME: This release is sometimes called on released lock raising an error
                 # we should think locking strategy through again
                 try:
+                    Logger().debug("RELEASING in network_callback %s" % (self._m['waitlock']) )
                     self._m['waitlock'].release()
+                    Logger().debug("RELEASED in network_callback %s" % (self._m['waitlock']) )
                 except Exception, e:
                     Logger().error("WELEASE WODERICK %s" % e)
                     raise Exception("EXTRA RELEASE")
@@ -90,9 +97,11 @@ class Request(BaseRequest):
         if "data" in kwargs:
             Logger().info("Adding data to request object")
             self.data = kwargs["data"]
-            
+        
         if lock:
+            Logger().info("REQUEST RELEASING %s" % ffrom)
             self.release()
+            Logger().info("REQUEST RELEASED %s" % ffrom)
 
     def cancel(self):
         """
@@ -106,8 +115,10 @@ class Request(BaseRequest):
         self._m['status'] = 'cancelled'
         Logger().debug("Cancelling a %s request" % self.request_type)
 
-        # We release the wait lock. FIXME: Is this right? 
+        # We release the wait lock. FIXME: Is this right?
+        Logger().debug("RELEASING in cancel %s" % (self._m['waitlock']) )
         self._m['waitlock'].release()
+        Logger().debug("RELEASED in cancel %s" % (self._m['waitlock']) )
         
 
     def wait(self):
@@ -123,12 +134,25 @@ class Request(BaseRequest):
 
         FIXME: This should probably be a bit more thread safe. Should we add a lock to 
                each request object and lock it when we look at it?
+               
+        FIXME: The C version of wait() returns always a status, but we're returning data
+               as it's the best thing in python. Maybe it would make sense to return a
+               tuple containing something like (status, data). 
         """
         Logger().info("Starting a %s wait" % self.request_type)
         
+        # See the second FIXME note in the docstring
+        if self._m['status'] == "cancelled":
+            Logger().debug("WAIT on cancel illegality")
+            raise MPIException("Illegal to wait on a cancelled request object")
+        
         if "waitlock" in self._m:
+            Logger().debug("LOCKING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].acquire()
+            Logger().debug("LOCKED in wait %s" % (self._m['waitlock']) )
+            Logger().debug("RELEASING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].release()
+            Logger().debug("RELEASED in wait %s" % (self._m['waitlock']) )
 
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
@@ -149,4 +173,5 @@ class Request(BaseRequest):
         return self._m['status'] == 'ready'
 
     def get_status(self):
+        # I think this is a API call? Check into it. 
         return self._m['status']

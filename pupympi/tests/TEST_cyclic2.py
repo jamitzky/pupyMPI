@@ -54,39 +54,58 @@
 #2009-09-30 11:37:45 proc-0      : INFO     Starting a recv wait
 
 
+
+
+
+
+#2009-09-30 13:31:59 proc-1      : INFO     Removing finished request
+#Exception in thread Thread-1:
+#Traceback (most recent call last):
+#  File "/home/fred/python/2.6/lib/python2.6/threading.py", line 525, in __bootstrap_inner
+#    self.run()
+#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py", line 141, in run
+#    comm.update()
+#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 129, in update
+#    self.request_remove( request )
+#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 145, in request_remove
+#    del self.request_queue[request_obj.queue_idx]
+#KeyError: 194
+#
+#2009-09-30 13:31:59 proc-1      : DEBUG    Starting a recv network job with tag 1 and 1 callbacks
+
+
+
 import time
 from mpi import MPI
 
 mpi = MPI()
 data = ''.join(["a"] * 50)
 f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
-mpi.MPI_COMM_WORLD.barrier()
+#mpi.MPI_COMM_WORLD.barrier()
 iterations = 0
 maxIterations = 250
 
 t1 = mpi.MPI_COMM_WORLD.Wtime()    
-if mpi.MPI_COMM_WORLD.rank() is 0: 
-    while iterations < maxIterations:
-        iterations += 1
+if mpi.MPI_COMM_WORLD.rank() is 0:
+    for iterations in xrange(maxIterations):
         mpi.MPI_COMM_WORLD.send(1, data, 1)
-        time.sleep(1)
+        #time.sleep(1)
         # print "%s: %s done sending" % (iterations, c_info.rank)
         recv = mpi.MPI_COMM_WORLD.recv(1, 1)
         # print "%s: %s done receiving %s" % (iterations, c_info.rank, "str(recv)")
         # FIXME Verify data if enabled
-        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank))
+        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
         f.flush()
     f.write( "Done for rank 0\n")
 elif mpi.MPI_COMM_WORLD.rank() is 1: 
-    while iterations < maxIterations:
-        iterations += 1
+    for iterations in xrange(maxIterations):
         recv = mpi.MPI_COMM_WORLD.recv(0, 1)
-        time.sleep(1)
+        #time.sleep(1)
         # print "%s, %s done recv: %s" % (iterations, c_info.rank," str(recv)")
         mpi.MPI_COMM_WORLD.send(0, data, 1)
         # print "%s: %s done sending" % (iterations, c_info.rank)
         # FIXME Verify data if enabled
-        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank))
+        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
         f.flush()
     f.write( "Done for rank 1\n")
 else: 
