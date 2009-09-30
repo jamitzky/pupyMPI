@@ -242,7 +242,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
                         # Trigger the callbacks. 
                         # FIXME: The callback should also include the sender / receiver of the data.
-                        self.callback(job, status='ready')
+                        self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
                         job['status'] = 'finished'
 
             except select.error, e:
