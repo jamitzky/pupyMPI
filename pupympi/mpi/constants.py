@@ -22,3 +22,5 @@ MPI_UNEQUAL     = -1    # Different
 MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutorials/MPI/alliance/communicators/MPI_Group_rank.html)
 
 JOB_INITIALIZING = -1
+
+SOCKET_POOL_SIZE = 10   # Allow the system to cache upto 10 sockets in a pool. This can probably be set higher without any complaints. 
