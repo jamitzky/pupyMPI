@@ -33,6 +33,8 @@ def run_pickle():
             elif isinstance(pickledata, str):
                 pickledata = data[d]
                 pickledata += str(i)
+            elif isinstance(pickledata, stuff):
+                stuff.someint = 42 + i
             pickled = pickle.dumps(pickledata,protocol=-1)
             pickle.loads(pickled)
 #            pickle.clear_memo()
