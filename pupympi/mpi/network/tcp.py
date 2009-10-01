@@ -125,10 +125,10 @@ def get_socket(min=10000, max=30000):
             sock.bind( (hostname, port_no) )
             break
         except socket.error, e:
-            raise e
             logger.debug("get_socket: Permission error on port %d" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
-
+            raise e
+        
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
