@@ -10,6 +10,9 @@ import comm_info as ci
 import common
 from mpi import constants
 
+def setup_single_test(size, single_test, iteration_schedule = None):
+    pass
+
 def test_PingPing(size, iteration_schedule = None):
     return 0 # FIXME
     
@@ -49,20 +52,22 @@ def test_PingPong(size, iteration_schedule = None):
     ci.synchronize_processes()
 
     t1 = ci.communicator.Wtime()    
-    if ci.rank is ci.pair0: 
-        for r in max_iterations:
+    for r in max_iterations:
+        print "rank %s iteration %s, source %s, dest %s" % (ci.rank, r, source, dest)
+        if ci.rank == ci.pair0: 
+            print "I think im rank 0 - sending with tag %s" % s_tag
             ci.communicator.send(dest, data, s_tag)
+            print "I think im rank 0 - posting receive"
             recv = ci.communicator.recv(source, r_tag)
-            # FIXME Verify data if enabled
-        
-    elif ci.rank is ci.pair1:
-        for r in max_iterations:
+            # FIXME Verify data if enabled        
+        elif ci.rank == ci.pair1:
+            print "I think im rank 1 - posting receive for tag %s" % r_tag
             recv = ci.communicator.recv(source, r_tag)
+            print "I think im rank 1 - send data"            
             ci.communicator.send(dest, data, s_tag)
             # FIXME Verify data if enabled
-    else: 
-        raise Exception("Broken state")
-        
+        else: 
+            raise Exception("Broken state")
     t2 = ci.communicator.Wtime()
     time = (t2 - t1)/max_iterations 
 
