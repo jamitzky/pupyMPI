@@ -80,7 +80,7 @@ class Request(BaseRequest):
             Logger().info("REQUEST LOCKED %s" % ffrom)
 
         if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s <--" % (self._m["status"], kwargs["status"], ffrom))
+            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], ffrom))
             self._m["status"] = kwargs["status"]
 
             if kwargs["status"] == "ready" and "waitlock" in self._m:
