@@ -8,8 +8,7 @@ Usage: MPI program - run with mpirun
 Created by Jan Wiberg on 2009-08-13.
 """
 
-import sys
-import getopt
+import sys,pprint,getopt
 from mpi import MPI
 
 import comm_info as ci
@@ -26,12 +25,9 @@ The help message goes here.
 
 def runsingletest(test):
     results = []
-    sys.stdout.write("Testing %s: " % test)
-    sys.stdout.flush()  
     for size in common.size_array:
-        sys.stdout.write(" %s " % size)
-        sys.stdout.flush()  
-        results.append((size, test(size, None)))
+        timing = single.setup_single_test(size, test, None)
+        results.append((size, timing))
 
     print ""
     return results
@@ -61,9 +57,15 @@ def testrunner():
         result = runsingletest(f)
         resultlist[fstr] = result
     pass
-    
+
+    root = False
+    if ci.rank == 0:
+        root = True
     mpi.finalize()
-    print resultlist
+    
+    if root:
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(resultlist)
 
 class Usage(Exception):
     def __init__(self, msg):

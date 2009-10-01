@@ -8,7 +8,7 @@ per process settings
 Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
-
+import time
 from common import gen_testset, gen_reductionset, N_BARR
 from mpi import constants
  
@@ -37,6 +37,7 @@ pair0, pair1 = (0, 1)       # process pair
 select_tag = False          # 0/1 for tag selection off/on             
 select_source = False       # 0/1 for sender selection off/on          
 
+clock_function = time.clock # set this to communicator.Wtime() for MPI time
                       
 # # >> IMB 3.1   
 
