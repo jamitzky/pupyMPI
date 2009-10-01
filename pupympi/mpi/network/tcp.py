@@ -190,11 +190,24 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         if job['socket']:
             self.sockets_in.append(job['socket'])
 
+    def remove_out_job(self, job, close_socket=True):
+        super(TCPCommunicationHandler, self).remove_out_job(job)
+
+        # Remove the socket from the list
+        self.sockets_out.remove( job['socket'] )
+
+        if job['socket'] and close_socket:
+            job['socket'].close()
+
     def job_by_socket(self, socket):
         try:
             return self.socket_to_job[ socket ]
         except KeyError:
-            Logger().debug("No job was found by the socket")
+            Logger().error("No job was found by the socket")
+            print "Socket: "
+            print socket
+            print "Socket to job list" 
+            print self.socket_to_job
 
     def run(self):
         #Logger().debug("Starting select loop in TCPCommunicatorHandler")
@@ -244,6 +257,12 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         # FIXME: The callback should also include the sender / receiver of the data.
                         self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
                         job['status'] = 'finished'
+
+                        # curently we haven't got any persistent connections so we can  
+                        # safely remove the socket from the outlist. This will make a 
+                        # significant performance boost when the program is running for
+                        # a while.
+                        self.remove_out_job(job)
 
             except select.error, e:
                 break

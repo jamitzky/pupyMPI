@@ -141,15 +141,19 @@ class Communicator:
             request.release()
 
     def request_remove(self, request_obj):
+        """
+        A request object can be removed from the queue but will live
+        in some user variable. This means that we can actually remove
+        it twice (or at least try to). 
+
+        So if we get a KeyError then we at least know that the object
+        is not in the queue. 
+        """
         self.request_queue_lock.acquire()
-        del self.request_queue[request_obj.queue_idx]
-        """
-        FIXME: This del has been observed to give KeyError after only 4 iterations of TEST_cyclic
-        
-        File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 145, in request_remove
-        del self.request_queue[request_obj.queue_idx]
-        KeyError: 8
-        """
+        try:
+            del self.request_queue[request_obj.queue_idx]
+        except KeyError, e:
+            pass
         self.request_queue_lock.release()
 
     def request_add(self, request_obj):
