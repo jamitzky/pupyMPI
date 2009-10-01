@@ -284,14 +284,82 @@ class SocketPool(object):
     will not always give you nice performance. Please don't use this feature
     do much as it can push other connections out of the cache. And these
     connections might be more important and your custom one.
+    
+    IMPLEMENTATION: This is a modified "Second change FIFO cache replacement
+    policy" algorithm. It's modified by allowing some elements to live 
+    forever in the cache.
+    
+    ERRORS: It's possible to trigger an error if you fill up the cache with
+    more persistent connections than the buffer can actually contain. An
+    MPIException will be raised in this situation. 
     """
     
-    def __init__(self):
+    def __init__(self, max_size):
         self.sockets = []
+        self.max_size = max_size
+        
+    def get_socket(self, rank, force_persistent=False):
+        """
+        Returns a socket to the specific rank. Consider this function 
+        a black box that will cache your connections when it's 
+        possible.
+        """
+        socket = self._get_rank(rank)
+        if socket:
+            return socket
+        else:
+            # FIXME: Create the connection
+            socket = None
+            
+            if len(self.sockets) == self.max_size:
+                self._remove_element()
+                
+            # Add the element to the list
+            self._add(rank, socket, force_persistent)
+        
+    def _remove_element(self):
+        """
+        Finds the first element that already had it's second change. 
+        Remove it from the list
+        """
+        for x in range(2):
+            for socket in self.sockets:
+                if socket.force_persistent:
+                    continue
+                
+                if socket.reference:
+                    socket.reference = False
+                else:
+                    self.sockets.remove(socket)
+                    break
+
+        raise MPIException("Not possible to add a socket connection to the internal caching system. There is %d persistant connections and they fill out the cache" % self.max_size)
+    
+    def _get_rank(self, rank):
+        """
+        Trieds to find a connection for a specific
+        rank. If not possible we return None
+        """
+        for socket in self.sockets:
+            if socket.rank == rank:
+                socket.reference = True
+                return socket
+        
+        return None
+    
+    def _add(self, rank, socket, force_persistent):
+        socket.rank = rank
+        socket.reference = True
+        socket.force_persistent = force_persistent
+        self.sockets.append(socket)
+    
 
 class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
+        # Initialize the socket pool. We'll use it to get / remove socket connections
+        self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
+        
         # FIXME: Should this socket be started by the actual job? Otherwise it's the only
         #        socket started before the job is created. 
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
