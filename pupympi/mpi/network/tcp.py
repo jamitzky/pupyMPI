@@ -266,6 +266,28 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
             except select.error, e:
                 break
+            
+class SocketPool(object):
+    """
+    This class manages a pool of socket connections. You request and deletes
+    connections through this class.
+    
+    The class have room for a number of cached socket connections, so if you're
+    connection is heavily used it will probably not be removed. This way your
+    call will not create and teardown the connection all the time. 
+    
+    NOTE: The number of cached elements are controlled through the constants 
+    module, even though it might be exposed at a later point through command
+    line arguments for mpirun.py
+    
+    NOTE 2: It's possible to mark a connections as mandatory persistent. This
+    will not always give you nice performance. Please don't use this feature
+    do much as it can push other connections out of the cache. And these
+    connections might be more important and your custom one.
+    """
+    
+    def __init__(self):
+        self.sockets = []
 
 class TCPNetwork(AbstractNetwork):
 
