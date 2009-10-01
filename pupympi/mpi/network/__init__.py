@@ -87,6 +87,9 @@ class AbstractCommunicationHandler(Thread):
     def add_out_job(self, job):
         self.outgoing.append(job)
 
+    def remove_out_job(self, job):
+        self.outgoing.remove(job)
+
     def callback(self, job=None, callback_type=None, *args, **kwargs):
         if job:
             callbacks = job.get('callbacks', [])

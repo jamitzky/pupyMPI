@@ -91,7 +91,6 @@ class Request(BaseRequest):
                     self._m['waitlock'].release()
                     Logger().debug("RELEASED in network_callback %s" % (self._m['waitlock']) )
                 except Exception, e:
-                    Logger().error("WELEASE WODERICK %s" % e)
                     raise Exception("EXTRA RELEASE")
             
         if "data" in kwargs:
