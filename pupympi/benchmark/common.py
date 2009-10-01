@@ -20,7 +20,7 @@ size_array = (1,2,4,8,32,64,128,512,1024,4096,16384,32768, 65536) # etc
 def gen_stditerationschedule(max_size):
     return [1000] * len(size_array)
     
-baseset = "abcdefghijklmnopqrstuvwxyz"
+baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 def gen_testset(size):
     """Generates a test message byte array of asked-for size. Used for single and parallel ops."""
     data = array.array('b')

@@ -73,7 +73,7 @@ def get_tags_single():
     """docstring for get_tag_single"""
     return (1, 1 if select_tag else constants.MPI_TAG_ANY)
     
-def barrier():
+def synchronize_processes():
     """docstring for barrier"""
     for b in xrange(N_BARR):
         communicator.barrier()
