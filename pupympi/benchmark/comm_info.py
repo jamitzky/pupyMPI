@@ -63,7 +63,7 @@ def get_dest_single():
     elif rank == pair1:
         dest = pair0
     else:
-        raise Exception("Pair values not initalized")
+        raise Exception("Pair values not as expected, pair0 %s, pair1 %s and rank %s" % (pair0, pair1, rank))
         
         
     source = dest if select_source else constants.MPI_SOURCE_ANY 
