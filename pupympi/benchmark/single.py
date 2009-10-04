@@ -14,7 +14,7 @@ meta_has_meta = True
 meta_processes_required = 2
 meta_separate_communicator = True
 
-def setup_single_test(size, single_test, iteration_schedule = None):
+def do_test(size, single_test, iteration_schedule = None):
     (s_tag, r_tag) = ci.get_tags_single()
     (source, dest) = ci.get_dest_single() # source for purposes of recv, rank-relative
     data = common.gen_testset(size)
