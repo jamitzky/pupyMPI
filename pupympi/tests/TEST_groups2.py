@@ -20,7 +20,13 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
+# Take this print out in final version
 print "---> PROCESS %d/%d" % (rank,size)
+
+#### Test prerequisites ####
+
+# Some tests do not make  sense if size < 4
+assert size > 3
 
 #### Set up groups for tests ####
 
@@ -34,6 +40,8 @@ allReversed = cwG.incl(revRip)
 
 # Make a group with all but self (this group is unique per process!)
 allButMe = cwG.excl([rank])
+# Make a group with only self (this group is unique per process!)
+onlyMe = cwG.incl([rank])
 
 # Make a shuffled group
 jumble = range(size)
@@ -46,6 +54,8 @@ allShuffled = cwG.incl(jumble)
 allButLast = cwG.excl([size-1])
 
 allButFirst = cwG.excl([0])
+
+allButLastAndFirst = cwG.incl(rip[1:-1])
 
 # Make an empty group
 emptyGroup = cwG.excl(rip)
@@ -128,7 +138,34 @@ emptyUnionAllShuffled = emptyGroup.union(allShuffled)
 same2 = emptyUnionAllShuffled.compare(allShuffled)
 assert same2 is constants.MPI_IDENT
 
+
 #### Intersection tests #####
+
+# Intersection producing all but last and first
+allButFirstAndLast = allButFirst.intersection(allButLast)
+# Compare with ready made group
+ident = allButLastAndFirst.compare(allButFirstAndLast)
+assert ident is constants.MPI_IDENT
+
+# Intersection with self is self
+sameShuffle = allShuffled.intersection(allShuffled)
+ident = sameShuffle.compare(allShuffled)
+assert ident is constants.MPI_IDENT
+
+# Intersection with similar is similar
+newShuffle = allShuffled.intersection(allReversed)
+similar = newShuffle.compare(allReversed)
+assert similar is constants.MPI_SIMILAR
+
+# Intersection with empty is empty
+newEmpty = emptyGroup.intersection(allButLast)
+ident = newEmpty.compare(emptyGroup)
+assert ident is constants.MPI_IDENT
+
+# Intersection of disjoint sets is empty
+noneCommon = allButMe.intersection(onlyMe)
+ident = noneCommon.compare(emptyGroup)
+assert ident is constants.MPI_IDENT
 
 
 # Close the sockets down nicely
