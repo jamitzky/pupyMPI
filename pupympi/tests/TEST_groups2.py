@@ -22,6 +22,8 @@ size = mpi.MPI_COMM_WORLD.size()
 
 print "---> PROCESS %d/%d" % (rank,size)
 
+#### Set up groups for tests ####
+
 cwG = mpi.MPI_COMM_WORLD.group()
 #print "Group of MPI_COMM_WORLD: %s" % cwG
 
@@ -44,6 +46,10 @@ allShuffled = cwG.incl(jumble)
 allButLast = cwG.excl([size-1])
 
 allButFirst = cwG.excl([0])
+
+# Make an empty group
+emptyGroup = cwG.excl(rip)
+
 
 #### Compare tests #####
 
@@ -77,6 +83,7 @@ assert allShuffled.translate_ranks(t1, allReversed) == allReversed.translate_ran
 tSubSet = cwG.translate_ranks(rip[1:], allReversed)
 assert tSubSet == revRip[1:]
 
+# Translating ranks where one does not translate
 tOneMore = cwG.translate_ranks(rip,allButLast)
 # Last one in the result should be MPI_UNDEFINED
 assert tOneMore == rip[:(size-1)]+[constants.MPI_UNDEFINED]
@@ -90,6 +97,7 @@ except MPINoSuchRankException, e:
 finally:
     gotError = True
 assert gotError
+
     
 #### Union tests #####
 
@@ -103,7 +111,6 @@ if rank == 0:
 else:    
     assert uniqueUnion.rank() == size - 1
 
-
 # Make two groups by excluding and put them together with union
 exFirst = allReversed.excl([0]) # 2,1,0
 exRest = allReversed.excl(rip[1:]) # 3
@@ -111,8 +118,17 @@ reUnion = exRest.union(exFirst) # Unioning "tail on head" should give original g
 eq = reUnion.compare(allReversed)
 assert eq is constants.MPI_IDENT
 
-#FIXME: Also needs to test union with empty and singleton results
+# Test union with an empty group produces same group
+allShuffledUnionEmpty = allShuffled.union(emptyGroup)
+same1 = allShuffledUnionEmpty.compare(allShuffled)
+assert same1 is constants.MPI_IDENT
 
+# Test empty group unioned with other group produces other group
+emptyUnionAllShuffled = emptyGroup.union(allShuffled)
+same2 = emptyUnionAllShuffled.compare(allShuffled)
+assert same2 is constants.MPI_IDENT
+
+#### Intersection tests #####
 
 
 # Close the sockets down nicely
