@@ -57,7 +57,7 @@ clock_function = time.clock # set this to communicator.Wtime() for MPI time
 # int* reccnt;               # recv count argument for global ops.      
 # int* rdispl;               # displacement argument for global ops.    
 
-def get_dest_single():
+def get_srcdest_paired():
     if rank == pair0:
         dest = pair1
     elif rank == pair1:
