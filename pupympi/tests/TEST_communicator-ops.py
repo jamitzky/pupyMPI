@@ -67,14 +67,16 @@ assert mcw.comm_compare(newcomm_full) is constants.MPI_CONGRUENT # test that the
 if mcw.rank() == 0: # more advanced testing now
     meandonegroup = newgroup.incl([0,1])
     oneandmegroup = newgroup.incl([1,0])
+    me_group = newgroup.incl([0])
     
     meandonecomm = mcw.comm_create(meandonegroup)
     oneandmecomm = mcw.comm_create(oneandmegroup)
+    me_comm = mcw.comm_create(me_group)
     assert meandonecomm.comm_compare(oneandmecomm) is constants.MPI_SIMILAR
-    assert meandonecomm.comm_compare(newcomm_full4) is constants.MPI_UNEQUAL
+    assert meandonecomm.comm_compare(me_comm) is constants.MPI_UNEQUAL
     
     # test for silliness
-    a = "this is really not a communicator, sssssssh! we might fool it!"
+    a = "this is really not a communicator, sssssssh! we might fool it!"    
     assert meandonecomm.comm_compare(a) is constants.MPI_UNEQUAL
     
 print "-- OK"

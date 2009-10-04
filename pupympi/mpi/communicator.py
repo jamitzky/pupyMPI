@@ -378,6 +378,9 @@ class Communicator:
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
         
+        if not isinstance(other_communicator, Communicator):
+            return constants.MPI_UNEQUAL
+        
         if self is other_communicator:
             return constants.MPI_IDENT
         
