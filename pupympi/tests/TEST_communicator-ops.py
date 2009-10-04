@@ -48,6 +48,16 @@ assert cloned_comm_of_mcw.group() is newgroup
 print "Cloned mcw: %s" % cloned_comm_of_mcw
 print "-- OK"
 
+print "Testing basic MCW clone communication abilities."
+print "----------------------------------------------------"
+if newcomm_full.rank() == 0:
+    newcomm_full.send(1, "MSG", 1)
+elif newcomm_full.rank() == 1:
+    data = newcomm_full.recv(0, 1)
+    assert data == "MSG"
+else:
+    pass # do nothing
+
 print "Testing communicator comm_compare"
 print "----------------------------------------------------"
 

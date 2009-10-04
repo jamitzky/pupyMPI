@@ -140,6 +140,8 @@ class MPI(Thread):
             for comm in self.communicators.values():
                 comm.update()                
             
+            if sys.stdout is not None:
+                sys.stdout.flush() # Dirty hack to get output out if logger isn't enabled
             time.sleep(1)
 
     def recv_callback(self, *args, **kwargs):

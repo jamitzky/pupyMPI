@@ -8,7 +8,7 @@ per process settings
 Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
-
+import time
 from common import gen_testset, gen_reductionset, N_BARR
 from mpi import constants
  
@@ -37,6 +37,7 @@ pair0, pair1 = (0, 1)       # process pair
 select_tag = False          # 0/1 for tag selection off/on             
 select_source = False       # 0/1 for sender selection off/on          
 
+clock_function = time.clock # set this to communicator.Wtime() for MPI time
                       
 # # >> IMB 3.1   
 
@@ -62,7 +63,7 @@ def get_dest_single():
     elif rank == pair1:
         dest = pair0
     else:
-        raise Exception("Pair values not initalized")
+        raise Exception("Pair values not as expected, pair0 %s, pair1 %s and rank %s" % (pair0, pair1, rank))
         
         
     source = dest if select_source else constants.MPI_SOURCE_ANY 
@@ -73,7 +74,7 @@ def get_tags_single():
     """docstring for get_tag_single"""
     return (1, 1 if select_tag else constants.MPI_TAG_ANY)
     
-def barrier():
+def synchronize_processes():
     """docstring for barrier"""
     for b in xrange(N_BARR):
         communicator.barrier()
