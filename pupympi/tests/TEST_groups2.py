@@ -168,5 +168,31 @@ ident = noneCommon.compare(emptyGroup)
 assert ident is constants.MPI_IDENT
 
 
+#### Difference tests #####
+
+# all except for me = all but me
+allButMe2 = cwG.difference(onlyMe)
+ident = allButMe.compare(allButMe2)
+assert ident is constants.MPI_IDENT
+
+# me except for all = no one
+empty = onlyMe.difference(allShuffled)
+ident = empty.compare(emptyGroup)
+assert ident is constants.MPI_IDENT
+
+# allButLast - allButFirst= onlyFirst
+onlyFirst = allButLast.difference(allButFirst)
+if rank == 0:
+    ident = onlyMe.compare(onlyFirst)
+    assert ident is constants.MPI_IDENT
+else:
+    uneq = onlyMe.compare(onlyFirst)
+    assert uneq is constants.MPI_UNEQUAL
+    
+
+#print "abm:  " + str(allButMe)
+#print "abm2: " + str(allButMe2)
+
+
 # Close the sockets down nicely
 mpi.finalize()
