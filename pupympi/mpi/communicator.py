@@ -11,13 +11,16 @@ class Communicator:
     """
     This class represents an MPI communicator.
     """
-    def __init__(self, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
+    def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
+        self.mpi = mpi 
         self.name = name
         self.network = network
         self.comm_group = group
         self.id = id
         self.id_ceiling = sys.maxint # for local communicator creation, can be deleted otherwise.
         self.MPI_COMM_WORLD = comm_root or self
+        
+        self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
         
         self.attr = {}
         if name == "MPI_COMM_WORLD": # FIXME Move to build_world
@@ -248,7 +251,8 @@ class Communicator:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
 
         #return self._comm_create_coll(group)        
-        return self._comm_create_local(group)        
+        new_comm = self._comm_create_local(group)        
+        return new_comm
     
     ceiling = sys.maxint
     def _comm_create_local(self, group):
@@ -266,7 +270,7 @@ class Communicator:
         new_comm_ceiling = old_comm_ceiling
         new_comm_id = ((new_comm_ceiling-old_comm_id)/2)+old_comm_id
         self.ceiling = new_comm_id
-        newcomm = Communicator(group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
+        newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
         newcomm.ceiling = new_comm_ceiling
         return newcomm
 
@@ -295,7 +299,7 @@ class Communicator:
         if not group._owner_is_member():
             return None
             
-        newcomm = Communicator(group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
+        newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
         return newcomm
 
     def comm_free(self):
