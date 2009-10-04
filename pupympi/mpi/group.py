@@ -191,9 +191,29 @@ class Group:
     def difference(self, other_group):
         """
         creates a group from the difference between two groups
-        """
-        Logger().warn("Non-Implemented method 'group.difference' called.")
         
+        The group returned contains all members of the first groups that are not
+        in the second group
+        """
+        next_rank = 0
+        my_rank = -1 # Caller's rank in new group
+        difference_members = {}
+        others = other_group._global_keyed()
+        
+        for k in self.members:
+            gRank = self.members[k]['global_rank']
+            # Does k global rank exist in other group?
+            if not gRank in others:
+                # Since k is not in other group it is part of the difference
+                difference_members[next_rank] = self.members[k] # Keep global rank etc.
+                if self.rank() == k:
+                    my_rank = next_rank                
+                next_rank += 1
+        
+        difference_group = Group(my_rank)
+        difference_group.members = difference_members
+        return difference_group
+    
     def incl(self, required_members):
         """
         creates a new group from members of an existing group
