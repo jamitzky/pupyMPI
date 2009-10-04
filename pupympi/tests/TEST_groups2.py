@@ -25,8 +25,8 @@ print "---> PROCESS %d/%d" % (rank,size)
 
 #### Test prerequisites ####
 
-# Some tests do not make  sense if size < 4
-assert size > 3
+# Some tests (range tests) do not make  sense if size < 18
+assert size > 17
 
 #### Set up groups for tests ####
 
@@ -189,6 +189,9 @@ else:
     uneq = onlyMe.compare(onlyFirst)
     assert uneq is constants.MPI_UNEQUAL
     
+
+#### Range tests #####
+# [0,1,2,3,4,5] [6,7,8,9,10,11] [12,13,14,15,16,17]
 
 #print "abm:  " + str(allButMe)
 #print "abm2: " + str(allButMe2)
