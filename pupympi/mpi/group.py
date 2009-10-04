@@ -265,19 +265,47 @@ class Group:
         new_group.members = new_members
         return new_group
     
-    def range_incl(self, arg):
-        # FIXME decide if to implement
-        pass
+    def range_incl(self, triples):
+        """
+        Produces a group by including ranges of processes from an existing group
+        
+        argument is a list of triples specifying (startrank,endrank,stride)
+        the new group produced includes the list of ranks resulting from the
+        evaluation of all triples
+        
+        Note: start and end are inclusive, that is
+        range_incl([(42,42,1)])
+        produces the group with rank 42
+        
+        TODO:
+        - Return proper error on invalid stride
+        - Check for duplicate ranks and return error
+        """
+        inclusions = []
+        for (start,end,stride) in triples:
+            if stride == 0:
+                print "Invalid stride (must not be zero)"
+                break
+            
+            l = range(start,end+1, stride)
+            inclusions.append(l)
+        
+        return self.incl(inclusions)
+
+        
+        
 
     def range_excl(self, arg):
-        # FIXME decide if to implement
+        """
+        Produces a group by excluding ranges of processes from an existing group 
+        """
         pass
         
     def free(self):
         """
         Marks a group for deallocation
         """
-        # FIXME decide if to implement
+        # TODO:  We decided not to implement this, so give a message saying not implemented.
         pass
 
 class groupTests(unittest.TestCase):
