@@ -5,7 +5,7 @@
 
 from mpi import MPI
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
 
 import random
 
@@ -25,8 +25,8 @@ print "---> PROCESS %d/%d" % (rank,size)
 
 #### Test prerequisites ####
 
-# Some tests (range tests) do not make  sense if size < 18
-assert size > 17
+# Some tests (range tests) do not really make sense if size < 9
+assert size > 8
 
 #### Set up groups for tests ####
 
@@ -191,10 +191,43 @@ else:
     
 
 #### Range tests #####
-# [0,1,2,3,4,5] [6,7,8,9,10,11] [12,13,14,15,16,17]
+odds = (1,size-1,2)
+evens = (0,size-1,2)
 
-#print "abm:  " + str(allButMe)
-#print "abm2: " + str(allButMe2)
+the1st3rdRev = (size-1,0,-3)
+the2nd3rdRev = (size-2,0,-3)
+the3rd3rd = (size-3,0,-3)
+
+causingduplicates = (1,17,1)
+badtriplet = (1,1,0)
+
+# Including the range of odds and the range of evens should be everyone
+rtAll = cwG.range_incl([evens,odds])
+sim = rtAll.compare(cwG)
+assert sim is constants.MPI_SIMILAR
+
+# Excluding a third should be like including 2 thirds
+rt1third = allReversed.range_excl([the3rd3rd])
+rt2thirds = allReversed.range_incl([the1st3rdRev,the2nd3rdRev])
+sim = rt1third.compare(rt2thirds)
+assert sim is constants.MPI_SIMILAR
+
+# Including range with just oneself should produce singleton group
+rtSelf = cwG.range_incl([(rank,rank,1)])
+ident = rtSelf.compare(onlyMe)
+assert ident is constants.MPI_IDENT
+
+# ranges with duplicates raises error
+try:
+    dummy = allShuffled.range_incl([odds,causingduplicates])
+except MPIInvalidRangeException, e:
+    pass
+
+# ranges with negative stride raises error
+try:
+    dummy = allShuffled.range_incl([badtriplet])
+except MPIInvalidStrideException, e:
+    pass
 
 
 # Close the sockets down nicely

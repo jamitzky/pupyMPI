@@ -13,7 +13,7 @@ import copy
 import unittest
 from mpi.logger import Logger
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
 
 
 class Group:
@@ -219,6 +219,8 @@ class Group:
         creates a new group from members of an existing group
         required_members = list of ranks from existing group to include in new
         group, also determines the order in which they will rank in the new group
+        
+        FIXME: Remember to check for duplicates
         """
         # TODO Incl/excl very simply implemented, could probably be more pythonic.
         #Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
@@ -243,6 +245,9 @@ class Group:
     def excl(self, excluded_members):
         """
         creates a group excluding listed members of an existing group
+        
+        
+        FIXME: Remember to check for duplicates
         """
         #Logger().debug("Called group.excl (me %s), self.members = %s, excluded_members %s" % (self.rank(), self.members, excluded_members))
         new_members = {}
@@ -277,29 +282,62 @@ class Group:
         range_incl([(42,42,1)])
         produces the group with rank 42
         
-        TODO:
-        - Return proper error on invalid stride
-        - Check for duplicate ranks and return error
+        Stride can be negative and startrank > endrank. So
+        range_incl([(9,3,-2])
+        produces the group with [9, 7, 5, 3] included
         """
         inclusions = []
         for (start,end,stride) in triples:
             if stride == 0:
-                print "Invalid stride (must not be zero)"
-                break
+                raise MPIInvalidStrideException("Illegal call to range_incl - stride can not be 0")
             
-            l = range(start,end+1, stride)
-            inclusions.append(l)
+            # We want endrank to be included, so add or subtract one depending on stride
+            if stride > 0:
+                l = range(start,end+1, stride)
+            else:
+                l = range(start,end-1, stride)
+            inclusions += l
         
+        # Check for duplicates is done here instead of deferring to incl() to
+        # provide better error message
+        if len(set(inclusions)) < len(inclusions):
+            raise MPIInvalidRangeException("Illegal call to range_incl - range contains duplicate ranks: %s " % (str(inclusions)))
+            
         return self.incl(inclusions)
 
         
         
 
-    def range_excl(self, arg):
+    def range_excl(self, triples):
         """
-        Produces a group by excluding ranges of processes from an existing group 
+        Produces a group by excluding ranges of processes from an existing group
+        
+        argument is a list of triples specifying (startrank,endrank,stride)
+        the new group produced excludes the list of ranks resulting from the
+        evaluation of all triples
+        
+        Note: start and end are inclusive, that is
+        range_excl([(42,42,1)])
+        produces the same group with rank 42 excluded        
         """
-        pass
+        exclusions = []
+        for (start,end,stride) in triples:
+            if stride == 0:
+                raise MPIInvalidStrideException("Illegal call to range_incl - stride can not be 0")
+            
+            # We want endrank to be excluded, so add or subtract one depending on stride
+            if stride > 0:
+                l = range(start,end+1, stride)
+            else:
+                l = range(start,end-1, stride)
+            exclusions += l
+        
+        # Check for duplicates is done here instead of deferring to incl() to
+        # provide better error message
+        if len(set(exclusions)) < len(exclusions):
+            raise MPIInvalidRangeException("Illegal call to range_excl - range contains duplicate ranks: %s " % (str(exclusions)))
+            
+        return self.excl(exclusions)
         
     def free(self):
         """
