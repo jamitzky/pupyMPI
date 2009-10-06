@@ -13,7 +13,7 @@ import copy
 import unittest
 from mpi.logger import Logger
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
+from mpi.exceptions import MPIException, MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
 
 
 class Group:
@@ -102,13 +102,10 @@ class Group:
         o = other_group._global_keyed()
         translated = []
         for r in ranks:
-            # FIXME: This lookup should check for key error in case joe sixpack passes bad ranks
-            # ... actually you are only allowed to pass valid ranks so throw an error?
             try:
                 gRank = self.members[r]['global_rank']
             except KeyError, e:
                 raise MPINoSuchRankException("Can not translate to rank %i since it is not in group"%r)
-                
             
             try:
                 # Found in the other group, now translate to that groups' local rank
@@ -219,11 +216,11 @@ class Group:
         creates a new group from members of an existing group
         required_members = list of ranks from existing group to include in new
         group, also determines the order in which they will rank in the new group
-        
-        FIXME: Remember to check for duplicates
         """
-        # TODO Incl/excl very simply implemented, could probably be more pythonic.
-        #Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
+        # No duplicate ranks allowed
+        if len(set(required_members)) < len(required_members):
+            raise MPIException("invalid call to incl, all ranks must be unique")
+        
         new_members = {}
         new_rank = -1 # 'my' new rank
         counter = 0 # new rank for each process as they are added to new group
@@ -245,11 +242,11 @@ class Group:
     def excl(self, excluded_members):
         """
         creates a group excluding listed members of an existing group
-        
-        
-        FIXME: Remember to check for duplicates
         """
-        #Logger().debug("Called group.excl (me %s), self.members = %s, excluded_members %s" % (self.rank(), self.members, excluded_members))
+        # No duplicate ranks allowed
+        if len(set(excluded_members)) < len(excluded_members):
+            raise MPIException("invalid call to excl, all ranks must be unique")
+            
         new_members = {}
         new_rank = -1 # 'my' new rank
         counter = 0 # new rank for each process as they are added to new group
@@ -343,7 +340,7 @@ class Group:
         """
         Marks a group for deallocation
         """
-        # TODO:  We decided not to implement this, so give a message saying not implemented.
+        # TODO:  We decided not to implement this, so remove or give a message saying not implemented.
         pass
 
 class groupTests(unittest.TestCase):
