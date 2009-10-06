@@ -19,6 +19,14 @@ class MPITopologyException(Exception):
 class MPINoSuchRankException(MPIException):
     pass
 
+class MPIInvalidStrideException(MPIException):
+    """ Custom exception for group (range) calls"""
+    pass
+
+class MPIInvalidRangeException(MPIException):
+    """ Custom exception for group (range) calls"""
+    pass
+
 class MPIInvalidTagException(MPIException):
     pass
 
