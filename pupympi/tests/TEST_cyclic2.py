@@ -37,12 +37,20 @@ elif rank % 2 == 0: # evens
     upper = (rank + 1) % adjSize
     lower = (rank - 1) % adjSize
     for iterations in xrange(maxIterations):
+        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
+        f.write("%s: Receiving lower to %s" % (rank, lower))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
+        f.write("%s: Sending lower to %s" % (rank, lower))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(lower, data, 1)
 
+        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
         f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
@@ -52,40 +60,25 @@ else: # odds
     upper = (rank + 1) % adjSize
     lower = (rank - 1) % adjSize
     for iterations in xrange(maxIterations):
+        f.write("%s: Receiving lower to %s" % (rank, lower))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
+        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
-mpi = MPI()
-data = 50*"a"
-f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
-#mpi.MPI_COMM_WORLD.barrier()
-iterations = 0
-maxIterations = 250
+        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.flush()
+        recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
-t1 = mpi.MPI_COMM_WORLD.Wtime()    
-if mpi.MPI_COMM_WORLD.rank() is 0:
-    for iterations in xrange(maxIterations):
-        mpi.MPI_COMM_WORLD.send(1, data+str(iterations), 1)
-        #time.sleep(1)
-        # print "%s: %s done sending" % (iterations, c_info.rank)
-        recv = mpi.MPI_COMM_WORLD.recv(1, 1)
-        # FIXME Verify data if enabled
-        f.write( "Iteration %s completed for rank %s (%s)\n" % (iterations, mpi.MPI_COMM_WORLD.rank(), recv))
+        f.write("%s: Sending lower to %s" % (rank, lower))
         f.flush()
-    f.write( "Done for rank 0\n")
-elif mpi.MPI_COMM_WORLD.rank() is 1: 
-    for iterations in xrange(maxIterations):
-        recv = mpi.MPI_COMM_WORLD.recv(0, 1)
-        #time.sleep(1)
-        mpi.MPI_COMM_WORLD.send(0, data, 1)
-        # print "%s: %s done sending" % (iterations, c_info.rank)
-        # FIXME Verify data if enabled
-        f.write( "Iteration %s completed for rank %s (%s)\n" % (iterations, mpi.MPI_COMM_WORLD.rank(), recv))
+        mpi.MPI_COMM_WORLD.send(lower, data, 1)
+
+        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
         f.flush()
-    f.write( "Done for rank 1\n")
-else: 
-    raise Exception("Broken state")
+    f.write( "Done for rank %i \n" % rank)
 
 
 t2 = mpi.MPI_COMM_WORLD.Wtime()
@@ -95,4 +88,5 @@ f.write( "Timings were %s for data length %s'n with %i processes participating" 
 f.flush()
 f.close()
 mpi.finalize()
+
 
