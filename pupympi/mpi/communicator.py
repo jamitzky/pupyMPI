@@ -408,6 +408,7 @@ class Communicator:
     # due to making no sense in a python environment:
     # bsend, ibsend
     # rsend, irsend
+    # sendrecv_replace
     # 
     # due to having to do with error handling: 
     # mpi_error_*
@@ -542,17 +543,18 @@ class Communicator:
         """
         if dest == source:
             return senddata
-           
-        Logger().warn("Non-Implemented method 'sendrecv_replace' called.") 
-        pass
+            
+        if source is not None:
+            recvhandle = self.irecv(source, recvtag)
         
-    def sendrecv_replace(self, arg):
-        """
-        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
-        """
-        Logger().warn("Non-Implemented method 'sendrecv_replace' called.")
-        pass
-        
+        if dest is not None:
+            self.send(dest, senddata, sendtag)
+            
+        if source is not None:
+            return recvhandle.wait()
+            
+        return None           
+                
     def ssend(self):
         """Synchroneous send"""
         Logger().warn("Non-Implemented method 'ssend' called.")
