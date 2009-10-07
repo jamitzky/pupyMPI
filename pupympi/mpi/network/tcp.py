@@ -70,8 +70,6 @@ def structured_read(socket_connection):
     tag = sender = None
     data = ''
 
-    #Logger().debug("Starting receive first loop")
-
     # get the header
     while not header_unpacked:
         data += socket_connection.recv(header_size)
@@ -94,8 +92,6 @@ def structured_read(socket_connection):
     # unpacking the data
     data = pickle.loads(data[header_size:])
 
-    #Logger().debug("Done with tag(%s), sender(%s) and data(%s)" % (tag, sender, data))
-
     return tag, sender, communicator, recv_type, data
 
 def get_socket(min=10000, max=30000):
@@ -107,12 +103,9 @@ def get_socket(min=10000, max=30000):
     used = []
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     
     hostname = socket.gethostname()
     port_no = None
-
-    #logger.debug("get_socket: Starting loop with hostname %s" % hostname)
 
     while True:
         port_no = random.randint(min, max) 
@@ -129,7 +122,6 @@ def get_socket(min=10000, max=30000):
             used.append( port_no ) # Mark socket as used (or no good or whatever)
             raise e
         
-    #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
 class TCPCommunicationHandler(AbstractCommunicationHandler):
@@ -156,13 +148,11 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
     """
 
     def __init__(self, *args, **kwargs):
-        #Logger().debug("TCPCommunication handler initialized")
         super(TCPCommunicationHandler, self).__init__(*args, **kwargs)
 
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
         self.sockets_out = []
-
         self.socket_to_job = {}
 
     def add_out_job(self, job):
@@ -174,14 +164,21 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         receiver = ( job['participant']['host'], job['participant']['port'],)
         if not job['socket']:
             # Create a client socket and connect to the other end
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect( receiver )
-            self.sockets_out.append(client_socket)
-            job['socket'] = client_socket
+            client_socket, created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
+            if created:
+                self.sockets_out.append(client_socket)
+
+                # The other side will probably write on this. FIXME: Make sure we have
+                # a method on the pool for adding an already created connection. 
+                self.sockets_in.append( client_socket)
+            job['socket'] = client_socket 
         job['status'] = 'ready'
 
         # Tag the socket with a job so we can find it again
-        self.socket_to_job[ job['socket'] ] = job
+        if not job['socket'] in self.socket_to_job:
+            self.socket_to_job[ job['socket'] ] = []
+
+        self.socket_to_job[ job['socket'] ].append(job)
 
     def add_in_job(self, job):
         #Logger().debug("Adding incoming job")
@@ -190,28 +187,15 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         if job['socket']:
             self.sockets_in.append(job['socket'])
 
-    def remove_out_job(self, job, close_socket=True):
-        super(TCPCommunicationHandler, self).remove_out_job(job)
-
-        # Remove the socket from the list
-        self.sockets_out.remove( job['socket'] )
-
-        if job['socket'] and close_socket:
-            job['socket'].close()
-
-    def job_by_socket(self, socket):
+    def jobs_by_socket(self, socket):
         try:
             return self.socket_to_job[ socket ]
         except KeyError:
             Logger().error("No job was found by the socket")
-            print "Socket: "
-            print socket
-            print "Socket to job list" 
-            print self.socket_to_job
+            print "Socket: ", socket
+            print "Socket to job list", self.socket_to_job
 
     def run(self):
-        #Logger().debug("Starting select loop in TCPCommunicatorHandler")
-
         # Starting the select on the sockets. We're setting a timeout
         # so we can break and test if we should break out of the thread
         # if somebody have called finalize. 
@@ -224,45 +208,44 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 it += 1
                 (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
                 
-                # Not so much debug please, let's see first 2 then every 10th until 12 then every 1000th            
-                # Fixme: Make general debugger stuff in the logger so the logger knows not to print everything
-                # jan: quick hack to decrease spam
-                #if it < 3 or (it < 10000 and it % 1000 == 0) or (it % 100000 == 0):
-                #    Logger().debug("Iteration %d in TCPCommunicationHandler. There are %d read sockets and %d write sockets. Selected %d in-sockets and %d out-sockets." % (it, len(self.sockets_in), len(self.sockets_out), len(in_list), len(out_list)))
-
-                # We handle read operations first
                 for read_socket in in_list:
-                    (conn, sender_address) = read_socket.accept()
+                    # There are both bound sockets and active connections in the 
+                    # in list. We try to accept (if it's a bound socket) and if
+                    # not we know we can just use the connection. 
+                    try:
+                        (conn, sender_address) = read_socket.accept()
+                        in_list.append(conn)
+                    except socket.error:
+                        conn = read_socket
 
                     tag, sender, communicator, recv_type, data = structured_read(conn)
                     self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
 
                 # We handle write operations second (for no reason).
+                i = 0
                 for client_socket in out_list:
-                    job = self.job_by_socket(client_socket)
-                    if job['status'] == 'ready':
-                        # Send the data to the receiver. This should probably be rewritten so it 
-                        # pickles the clean data and sends the tag and data-lengths, update the job
-                        # and wait for the answer to arive on the reading socket. 
-                        data = pickle.dumps(job['data'],protocol=-1)
-                        
-                        # FIXME: Insert these header information 
-                        recv_type = 42
-                        header = pack_header( self.rank, job['tag'], len(data), job['communicator'].id, recv_type )
+                    i += 1
+                    jobs = self.jobs_by_socket(client_socket)
+                    for job in jobs:
+                        if job['status'] == 'ready':
+                            # Send the data to the receiver. This should probably be rewritten so it 
+                            # pickles the clean data and sends the tag and data-lengths, update the job
+                            # and wait for the answer to arive on the reading socket. 
+                            data = pickle.dumps(job['data'],protocol=-1)
+                            
+                            # FIXME: Insert these header information 
+                            recv_type = 42
+                            header = pack_header( self.rank, job['tag'], len(data), job['communicator'].id, recv_type )
 
-                        job['socket'].send( header + data )
-                        Logger().info("Sending data on the socket. Going to call the callbacks")
+                            job['socket'].send( header + data )
+                            Logger().info("Sending data on the socket. Going to call the callbacks")
 
-                        # Trigger the callbacks. 
-                        # FIXME: The callback should also include the sender / receiver of the data.
-                        self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
-                        job['status'] = 'finished'
+                            # Trigger the callbacks. 
+                            # FIXME: The callback should also include the sender / receiver of the data.
+                            self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
+                            job['status'] = 'finished'
 
-                        # curently we haven't got any persistent connections so we can  
-                        # safely remove the socket from the outlist. This will make a 
-                        # significant performance boost when the program is running for
-                        # a while.
-                        self.remove_out_job(job)
+                            self.remove_out_job(job)
 
             except select.error, e:
                 break
@@ -297,26 +280,29 @@ class SocketPool(object):
     def __init__(self, max_size):
         self.sockets = []
         self.max_size = max_size
+        self.metainfo = {}
         
-    def get_socket(self, rank, force_persistent=False):
+    def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
         """
         Returns a socket to the specific rank. Consider this function 
         a black box that will cache your connections when it's 
         possible.
         """
-        socket = self._get_rank(rank)
-        if socket:
-            return socket
-        else:
-            # FIXME: Create the connection
-            socket = None
+        client_socket = self._get_rank(rank)
+        created = False
+        if not client_socket:
+            receiver = (socket_host, socket_port)
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect( receiver )
             
             if len(self.sockets) == self.max_size:
                 self._remove_element()
                 
             # Add the element to the list
-            self._add(rank, socket, force_persistent)
-        
+            self._add(rank, client_socket, force_persistent)
+            created = True
+        return client_socket, created
+
     def _remove_element(self):
         """
         Finds the first element that already had it's second change. 
@@ -324,13 +310,15 @@ class SocketPool(object):
         """
         for x in range(2):
             for socket in self.sockets:
-                if socket.force_persistent:
+                (srank, sreference, force_persistent) = self.metainfo[socket]
+                if force_persistent:
                     continue
                 
-                if socket.reference:
-                    socket.reference = False
+                if sreference:
+                    self.metainfo[socket] = (srank, False, force_persistent)
                 else:
                     self.sockets.remove(socket)
+                    del self.metainfo[socket]
                     break
 
         raise MPIException("Not possible to add a socket connection to the internal caching system. There is %d persistant connections and they fill out the cache" % self.max_size)
@@ -341,38 +329,39 @@ class SocketPool(object):
         rank. If not possible we return None
         """
         for socket in self.sockets:
-            if socket.rank == rank:
-                socket.reference = True
+            (srank, _, fp) = self.metainfo[socket]
+            if srank == rank:
+                self.metainfo[socket] = (srank, True, fp)
                 return socket
         
         return None
     
     def _add(self, rank, socket, force_persistent):
-        socket.rank = rank
-        socket.reference = True
-        socket.force_persistent = force_persistent
+        self.metainfo[socket] = (rank, True, force_persistent)
         self.sockets.append(socket)
     
-
 class TCPNetwork(AbstractNetwork):
 
     def __init__(self, options):
         # Initialize the socket pool. We'll use it to get / remove socket connections
         self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
         
-        # FIXME: Should this socket be started by the actual job? Otherwise it's the only
-        #        socket started before the job is created. 
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
         (socket, hostname, port_no) = get_socket()
         self.port = port_no
         self.hostname = hostname
         socket.listen(5)
         self.socket = socket
-        #Logger().debug("Network started on port %s. Currently active threads %d." % (port_no, activeCount()))
-        
+
+        print "I'm on %s and %d" % (hostname, port_no)
 
         # Do the initial handshaking with the other processes
         self.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
+
+        # Give the inboundand outbound thread access to the socket
+        # connection pool.
+        self.t_in.socket_pool = self.socket_pool
+        self.t_out.socket_pool = self.socket_pool
 
     def set_mpi_world(self, MPI_COMM_WORLD):
         self.MPI_COMM_WORLD = MPI_COMM_WORLD
@@ -435,12 +424,12 @@ class TCPNetwork(AbstractNetwork):
         """
         Logger().debug("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
 
-        job = {'type' : jobtype, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
+        global_rank = communicator.group().members[communicator.rank()]['global_rank']
+
+        job = {'type' : jobtype, 'global_rank' : global_rank, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
 
         if participant is not None:
             job['participant'] = communicator.comm_group.members[participant]
-
-        #Logger().debug("Network job structure created. Adding it to the correct thead by relying on inherited magic.")
 
         if jobtype in ("bcast_send", "send"):
             self.t_out.add_out_job( job )
@@ -453,8 +442,3 @@ class TCPNetwork(AbstractNetwork):
         super(TCPNetwork, self).finalize()
 
         self.socket.close()
-        #logger = Logger().debug("The TCP network is closed")
-
-    def barrier(self, comm):
-        # TODO Implement
-        pass
