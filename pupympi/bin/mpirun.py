@@ -44,8 +44,8 @@ def parse_options():
     if options.debug and options.quiet:
         parser.error("options --debug and -quiet are mutually exclusive")
         
-    if len(args) != 1:
-        parser.error("There should only be one argument to mpirun. The program to execute ('%s' was parsed)" % args)
+    # if len(args) != 1:
+    #     parser.error("There should only be one argument to mpirun. The program to execute ('%s' was parsed)" % args)
 
     # Trying to find user args
     try:
@@ -112,7 +112,7 @@ def io_forwarder(process_list):
 
 if __name__ == "__main__":
     options, args, user_options = parse_options() # Get options from cli
-    if args is None: # TODO hack-handle no options
+    if args is None or len(args) == 0: # TODO hack-handle no options
         print "Please use --help for help with options"
         sys.exit()
     executeable = args[0]

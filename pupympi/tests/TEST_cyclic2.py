@@ -37,12 +37,20 @@ elif rank % 2 == 0: # evens
     upper = (rank + 1) % adjSize
     lower = (rank - 1) % adjSize
     for iterations in xrange(maxIterations):
+        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
+        f.write("%s: Receiving lower to %s" % (rank, lower))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
+        f.write("%s: Sending lower to %s" % (rank, lower))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(lower, data, 1)
 
+        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
         f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
@@ -52,12 +60,20 @@ else: # odds
     upper = (rank + 1) % adjSize
     lower = (rank - 1) % adjSize
     for iterations in xrange(maxIterations):
+        f.write("%s: Receiving lower to %s" % (rank, lower))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
+        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
+        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
+        f.write("%s: Sending lower to %s" % (rank, lower))
+        f.flush()
         mpi.MPI_COMM_WORLD.send(lower, data, 1)
 
         f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
@@ -72,4 +88,5 @@ f.write( "Timings were %s for data length %s'n with %i processes participating" 
 f.flush()
 f.close()
 mpi.finalize()
+
 

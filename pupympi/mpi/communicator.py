@@ -408,6 +408,7 @@ class Communicator:
     # due to making no sense in a python environment:
     # bsend, ibsend
     # rsend, irsend
+    # sendrecv_replace
     # 
     # due to having to do with error handling: 
     # mpi_error_*
@@ -421,19 +422,12 @@ class Communicator:
     # due to being related to profiling:
     # mpi_pcontrol
     # 
+    # MPI 2.0
+    # mpi_start, mpi_start_all, mpi_xxx_init(...)
+    # 
     # other stuff, related to requests that may get done:
-    # MPI TEST, 43 
-    # MPI TEST CANCELLED, 55 
-    # MPI TESTALL, 48 
-    # MPI TESTANY, 47 
-    # MPI TESTSOME, 50 
-    # MPI TOPO TEST, 184 
-    # MPI WAIT, 42 
-    # MPI WAITALL, 48 
-    # MPI WAITANY, 46 
-    # MPI WAITSOME, 49 
-    # MPI WTICK, 201 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
+    #
     def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
         # Check that destination exists
         if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
@@ -447,7 +441,9 @@ class Communicator:
         handle = Request("recv", self, sender, tag)
 
         # Add request object to the queue
-        self.request_add(handle)
+        if not handle.test():
+            self.request_add(handle)
+
         return handle
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
@@ -464,39 +460,10 @@ class Communicator:
         handle = Request("send", self, destination_rank, tag, data=content)
 
         # Add request object to the queue
-        self.request_add(handle)
+        if not handle.test():
+            self.request_add(handle)
         return handle
 
-    def bcast(self, root, data=None):
-        """
-        Broadcast a message (data) from the process with rank <root>
-        to all other participants in the communicator. 
-
-        This examples shows howto broadcast from rank 3 to all other
-        processes who will print the message::
-
-            from mpi import MPI
-
-            mpi = MPI()
-            if mpi.MPI_COMM_WORLD.rank() == 3:
-                mpi.MPI_COMM_WORLD.bcast(3, "Test message")
-            else:
-                message = mpi.MPI_COMM_WORLD.bcast(3)
-                print message
-
-            mpi.finalize()
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node67.html
-        """
-        if self.rank() == root:
-            # Start collective request
-            if not data:
-                raise MPIException("You need to specify data when you're the root of a broadcast")
-
-        cr = CollectiveRequest("bcast", constants.TAG_BCAST, self, data, root=root)
-        return cr.wait()
-
-    # Some wrapper methods
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -535,28 +502,6 @@ class Communicator:
         """
         return self.isend(destination, content, tag).wait()
 
-    def barrier(self):
-        """
-        Blocks all the processes in the communicator until all have
-        reached this call. 
-
-        **Example usage**:
-        The following code will iterate 10 loops in sync by calling 
-        the barrier at the end of each loop::
-
-            from mpi import MPI
-
-            mpi = MPI()
-            for i in range(10):
-                # Do some tedious calculation here
-                
-                mpi.MPI_COMM_WORLD.barrier()
-            mpi.finalize()
-
-        """
-        cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
-        return cr.wait()
-
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
@@ -579,6 +524,88 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.irecv(source, tag).wait()
+
+    def sendrecv(self, senddata, dest, sendtag, source, recvtag):
+        """
+        The send-receive operations combine in one call the sending of a message to one destination and the receiving of another message, from another process.
+        The two (source and destination) are possibly the same. 
+        
+        A send-receive operation is very useful for executing a shift operation across a chain of processes.
+        A message sent by a send-receive operation can be received by a regular receive operation or probed by a probe operation; a send-receive operation can receive a message sent by a regular send operation. 
+        
+        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
+        """
+        if dest == source:
+            return senddata
+            
+        if source is not None:
+            recvhandle = self.irecv(source, recvtag)
+        
+        if dest is not None:
+            self.send(dest, senddata, sendtag)
+            
+        if source is not None:
+            return recvhandle.wait()
+            
+        return None           
+                
+    def ssend(self):
+        """Synchroneous send"""
+        Logger().warn("Non-Implemented method 'ssend' called.")
+        
+    def probe(self):
+        Logger().warn("Non-Implemented method 'probe' called.")
+        
+    def barrier(self):
+        """
+        Blocks all the processes in the communicator until all have
+        reached this call. 
+
+        **Example usage**:
+        The following code will iterate 10 loops in sync by calling 
+        the barrier at the end of each loop::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            for i in range(10):
+                # Do some tedious calculation here
+
+                mpi.MPI_COMM_WORLD.barrier()
+            mpi.finalize()
+
+        """
+        cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
+        return cr.wait()
+        
+    def bcast(self, root, data=None):
+        """
+        Broadcast a message (data) from the process with rank <root>
+        to all other participants in the communicator. 
+
+        This examples shows howto broadcast from rank 3 to all other
+        processes who will print the message::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            if mpi.MPI_COMM_WORLD.rank() == 3:
+                mpi.MPI_COMM_WORLD.bcast(3, "Test message")
+            else:
+                message = mpi.MPI_COMM_WORLD.bcast(3)
+                print message
+
+            mpi.finalize()
+
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node67.html
+        """
+        if self.rank() == root:
+            # Start collective request
+            if not data:
+                raise MPIException("You need to specify data when you're the root of a broadcast")
+
+        cr = CollectiveRequest("bcast", constants.TAG_BCAST, self, data, root=root)
+        return cr.wait()
 
     def abort(self, arg):
         """
@@ -752,18 +779,37 @@ class Communicator:
         
     def scatterv(self, arg):
         # FIXME
+        pass        
+
+    def test_cancelled(self):
         pass
     
-    def start(self, arg):
-        # TODO The argument, request, is a handle returned by one of the
-        # previous five  calls. The ass. request should be inactive. The
-        # request becomes active once the call is made.
+    def testall(self):
+        """docstring for test_all"""
+        pass
+        
+    def testany(self):
+        """docstring for test_any"""
         pass
     
-    def startall(self, arg):
-        # TODO The argument, request, is a handle returned by one of the
-        # previous five  calls. The ass. request should be inactive. The
-        # request becomes active once the call is made.
+    def testsome(self):
+        """docstring for testsome"""
+        pass
+        
+    def topo_test(self):
+        """docstring for topo_test"""
+        pass
+        
+    def waitall(self):
+        """docstring for waitall"""
+        pass
+        
+    def waitany(self):
+        """docstring for waitany"""
+        pass
+            
+    def waitsome(self):
+        """docstring for waitsome"""
         pass
         
     def Wtime(self):

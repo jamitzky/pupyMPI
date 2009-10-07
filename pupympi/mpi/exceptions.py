@@ -12,7 +12,7 @@ class MPIException(Exception):
     """Custom exception for pupyMPI"""
     pass
     
-class MPITopologyException(Exception): 
+class MPITopologyException(MPIException): 
     """Custom exception for Topologies"""
     pass
 

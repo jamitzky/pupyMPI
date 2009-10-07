@@ -22,7 +22,7 @@ help_message = '''
 The help message goes here.
 '''
 
-def testrunner():
+def testrunner(fixed_module = None):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order
     """
@@ -37,7 +37,7 @@ def testrunner():
         results = []
         for size in common.size_array:
             timing = module.do_test(size, test, None)
-            results.append((size, timing))
+            results.append((size, round(timing, 5)))
 
         return results
         
@@ -61,13 +61,18 @@ def testrunner():
         ci.rank = new_comm.rank()
             
     for module in modules:
-        _setupCI(mpi, module)
-        # we now know if THIS process participates
-        if ci.rank == -1:
+        if fixed_module is not None and module.__name__ != fixed_module:
             continue
+
+        _setupCI(mpi, module)
+        
+        if ci.rank == -1: # skip unless THIS process participates
+            continue
+        #print "%s Setting up for %s" % (ci.rank, module.__name__)
         for test in dir(module):
             if test.startswith("test_"):
                 f = getattr(module, test)
+                #print "module %s, function %s" % (module, f)
                 result = test_per_size(module, f)
                 #result = 0.0
                 resultlist[test] = result
@@ -84,13 +89,12 @@ class Usage(Exception):
 
 
 def main(argv=None):    
-    testrunner()
     # Parameter parsing disabled until parameter passing through mpirun works
     # if argv is None:
     #     argv = sys.argv
     # try:
     #     try:
-    #         opts, args = getopt.getopt(argv[1:], "ho:v", ["help", "output="])
+    #         opts, args = getopt.getopt(argv[1:], "ho:vm:", ["help", "output=", "module="])
     #     except getopt.error, msg:
     #         raise Usage(msg)
     # 
@@ -102,11 +106,23 @@ def main(argv=None):
     #             raise Usage(help_message)
     #         if option in ("-o", "--output"):
     #             output = value
+    #         if option in ("-m", "--module"):
+    #             module = value
     # 
     # except Usage, err:
     #     print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
     #     print >> sys.stderr, "\t for help use --help"
+    #     print >> sys.stderr, "\t Args: " + str(sys.argv)
     #     return 2
+    
+    # FIXME: haxx it for now (I need the option to run individual modules because everything is too broken to get anywhere)
+    
+    for arg in sys.argv:
+        if arg.startswith("--module="):
+            module = arg.split("=")[1]
+        
+    testrunner(module)
+    
 
 if __name__ == "__main__":
     main()
