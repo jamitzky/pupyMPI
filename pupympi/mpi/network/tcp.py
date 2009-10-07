@@ -11,30 +11,9 @@ except ImportError:
     import pickle
     
 def get_header_format():
-    """
-    Return the format and size of the header format.
-    The format for a 32bit architecture is used as a basis. By
-    finding the actual multiplier the number of padding bytes is
-    determined. Ie.
-    
-    x64: 
-        bit_multiplier = 2    # As a long takes but 8 bytes
-        padbytes = (2-1)*(5*8/2) => 20. Ie. we'll but 20 
-                        pad bytes in there which will double
-                        the data as expected by doubling the
-                        the bitsize
-    x128:
-         bit_multiplier = 4
-         padbytes = (4-1)*(5*16/4) => 60. Ie. we'll but 60 
-                        pad bytes in there which will x4
-                        the data as expected by x4 the
-                        the bitsize
-    """
-    format_32 = "lllll"
-    bit_multiplier = struct.calcsize("l") / 4
-    padbytes = (bit_multiplier-1)*(struct.calcsize(format_32)/bit_multiplier)
-    format = format_32 + "x"*padbytes
-    return (format, struct.calcsize(format) )
+    format = "lllll"
+    size = struct.calcsize(format) 
+    return (format, size )
     
 def unpack_header(data):
     format, header_size = get_header_format()
@@ -74,9 +53,9 @@ def structured_read(socket_connection):
     while not header_unpacked:
         data += socket_connection.recv(header_size)
         
-        # NOTE: Shouldn't it be >= header_size here?
-        if len(data) > header_size:
+        if len(data) >= header_size:
             sender, tag, msg_size, communicator, recv_type = unpack_header(data)
+            Logger().info("Data from header unpack is sender(%s) tag(%s) msg_size(%s) communicator(%s) and recv_type(%s)" % (sender, tag, msg_size, communicator, recv_type))
             header_unpacked = True
     
     # receive the rest of the data 
@@ -187,6 +166,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         if job['socket']:
             self.sockets_in.append(job['socket'])
 
+    def remove_out_job(self, job):
+        super(TCPCommunicationHandler, self).remove_out_job(job)
+        return self.socket_to_job[ job['socket'] ].remove(job)
+
     def jobs_by_socket(self, socket):
         try:
             return self.socket_to_job[ socket ]
@@ -242,12 +225,20 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
                             # Trigger the callbacks. 
                             # FIXME: The callback should also include the sender / receiver of the data.
+                            
+                            l = Logger()
+                            l.debug("="*60)
+                            l.debug(job.__repr__())
+                            l.debug(job['communicator'].__repr__())
+                            l.debug("="*60)
+                            
                             self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
                             job['status'] = 'finished'
 
                             self.remove_out_job(job)
 
             except select.error, e:
+                print e
                 break
             
 class SocketPool(object):
@@ -367,7 +358,11 @@ class TCPNetwork(AbstractNetwork):
         self.MPI_COMM_WORLD = MPI_COMM_WORLD
 
         # Manually add a "always-on"/daemon socket on the right thread.
-        self.start_job(None, MPI_COMM_WORLD, "world", None, None, None, self.socket)
+        job = {'type' : "world", 'socket' : self.socket, 'status' : 'new', 'persistent': True}
+
+        self.t_in.add_in_job( job )
+
+#        self.start_job(None, MPI_COMM_WORLD, "world", None, None, None, self.socket)
 
     def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -424,17 +419,25 @@ class TCPNetwork(AbstractNetwork):
         """
         Logger().debug("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
 
-        global_rank = communicator.group().members[communicator.rank()]['global_rank']
+        global_rank = communicator.group().members[participant]['global_rank']
+        
+        Logger().info("Starting a job with global rank %d" % global_rank)
+            
+        job = {
+               'type' : jobtype, 
+               'global_rank' : global_rank, 
+               'tag' : tag, 
+               'data' : data, 
+               'socket' : socket, 
+               'request' : request, 
+               'status' : 'new', 
+               'callbacks' : callbacks, 
+               'communicator' : communicator, 
+               'persistent': False,
+               'participant' : communicator.comm_group.members[participant]
+        } 
 
-        job = {'type' : jobtype, 'global_rank' : global_rank, 'tag' : tag, 'data' : data, 'socket' : socket, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': False}
-
-        if participant is not None:
-            job['participant'] = communicator.comm_group.members[participant]
-
-        if jobtype in ("bcast_send", "send"):
-            self.t_out.add_out_job( job )
-        elif jobtype == "world":
-            self.t_in.add_in_job( job )
+        self.t_out.add_out_job( job )
 
     def finalize(self):
         # Call the finalize in the parent class. This will handle

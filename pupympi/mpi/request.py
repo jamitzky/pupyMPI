@@ -57,10 +57,9 @@ class Request(BaseRequest):
         Logger().debug("LOCKING in init %s" % (self._m['waitlock']))
         self._m['waitlock'].acquire()
         Logger().debug("LOCKED in init %s" % (self._m['waitlock']))
-
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
-
+        
         # If we have a request object we might already have received the
         # result. So we look into the internal queue to see. If so, we use the
         # network_callback method to update all the internal structure.
@@ -70,6 +69,15 @@ class Request(BaseRequest):
                 Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
                 self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
                 return
+            
+    def __repr__(self):
+        return """<request:
+            request_type %s
+            communicator %s
+            participant %s
+            tag %s
+            data %s
+        """ % (self.request_type, self.communicator, self.participant, self.tag, self.data)
 
     def network_callback(self, lock=True, ffrom="from-nowhere", *args, **kwargs):
         Logger().debug("Network callback in request called")
@@ -81,9 +89,12 @@ class Request(BaseRequest):
 
         if "status" in kwargs:
             Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], ffrom))
+            old_status = self._m["status"] 
             self._m["status"] = kwargs["status"]
 
-            if kwargs["status"] == "ready" and "waitlock" in self._m:
+            # we need some smarter way to ensure we're not actually trying to update
+            # the status when it's already finished or ready. 
+            if kwargs["status"] == "ready" and old_status not in ('finished','ready') and "waitlock" in self._m:
                 # FIXME: This release is sometimes called on released lock raising an error
                 # we should think locking strategy through again
                 try:
