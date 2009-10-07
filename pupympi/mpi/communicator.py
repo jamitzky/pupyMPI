@@ -530,10 +530,20 @@ class Communicator:
         """
         return self.irecv(source, tag).wait()
 
-    def sendrecv(self, sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status):
+    def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
+        The send-receive operations combine in one call the sending of a message to one destination and the receiving of another message, from another process.
+        The two (source and destination) are possibly the same. 
+        
+        A send-receive operation is very useful for executing a shift operation across a chain of processes.
+        A message sent by a send-receive operation can be received by a regular receive operation or probed by a probe operation; a send-receive operation can receive a message sent by a regular send operation. 
+        
         http://www.mpi-forum.org/docs/mpi-11-html/node52.html
         """
+        if dest == source:
+            return senddata
+           
+        Logger().warn("Non-Implemented method 'sendrecv_replace' called.") 
         pass
         
     def sendrecv_replace(self, arg):
@@ -542,6 +552,13 @@ class Communicator:
         """
         Logger().warn("Non-Implemented method 'sendrecv_replace' called.")
         pass
+        
+    def ssend(self):
+        """Synchroneous send"""
+        Logger().warn("Non-Implemented method 'ssend' called.")
+        
+    def probe(self):
+        Logger().warn("Non-Implemented method 'probe' called.")
         
     def barrier(self):
         """
