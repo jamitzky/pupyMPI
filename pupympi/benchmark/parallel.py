@@ -37,7 +37,8 @@ def do_test(size, parallel_test, iteration_schedule = None):
     
 def test_Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):
         
-    print "%s -> [%s] -> %s" % (source, ci.rank, dest)
+    #print "%s -> [%s] -> %s" % (source, ci.rank, dest)
+    
     
     
 def test_Exchange(s_tag, r_tag, source, dest, data, max_iterations):
