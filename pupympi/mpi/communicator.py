@@ -426,15 +426,6 @@ class Communicator:
     # mpi_start, mpi_start_all, mpi_xxx_init(...)
     # 
     # other stuff, related to requests that may get done:
-    # MPI TEST CANCELLED, 55 
-    # MPI TESTALL, 48 
-    # MPI TESTANY, 47 
-    # MPI TESTSOME, 50 
-    # MPI TOPO TEST, 184 
-    # MPI WAIT, 42 
-    # MPI WAITALL, 48 
-    # MPI WAITANY, 46 
-    # MPI WAITSOME, 49 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
     def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
@@ -785,8 +776,39 @@ class Communicator:
         
     def scatterv(self, arg):
         # FIXME
+        pass        
+
+    def test_cancelled(self):
+        pass
+    
+    def testall(self):
+        """docstring for test_all"""
+        pass
+        
+    def testany(self):
+        """docstring for test_any"""
+        pass
+    
+    def testsome(self):
+        """docstring for testsome"""
+        pass
+        
+    def topo_test(self):
+        """docstring for topo_test"""
+        pass
+        
+    def waitall(self):
+        """docstring for waitall"""
+        pass
+        
+    def waitany(self):
+        """docstring for waitany"""
         pass
             
+    def waitsome(self):
+        """docstring for waitsome"""
+        pass
+        
     def Wtime(self):
         """
         returns a floating-point number of seconds, representing elapsed wall-clock 
