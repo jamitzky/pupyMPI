@@ -13,7 +13,7 @@ import copy
 import unittest
 from mpi.logger import Logger
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException
+from mpi.exceptions import MPIException, MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
 
 
 class Group:
@@ -102,13 +102,10 @@ class Group:
         o = other_group._global_keyed()
         translated = []
         for r in ranks:
-            # FIXME: This lookup should check for key error in case joe sixpack passes bad ranks
-            # ... actually you are only allowed to pass valid ranks so throw an error?
             try:
                 gRank = self.members[r]['global_rank']
             except KeyError, e:
                 raise MPINoSuchRankException("Can not translate to rank %i since it is not in group"%r)
-                
             
             try:
                 # Found in the other group, now translate to that groups' local rank
@@ -191,17 +188,39 @@ class Group:
     def difference(self, other_group):
         """
         creates a group from the difference between two groups
-        """
-        Logger().warn("Non-Implemented method 'group.difference' called.")
         
+        The group returned contains all members of the first groups that are not
+        in the second group
+        """
+        next_rank = 0
+        my_rank = -1 # Caller's rank in new group
+        difference_members = {}
+        others = other_group._global_keyed()
+        
+        for k in self.members:
+            gRank = self.members[k]['global_rank']
+            # Does k global rank exist in other group?
+            if not gRank in others:
+                # Since k is not in other group it is part of the difference
+                difference_members[next_rank] = self.members[k] # Keep global rank etc.
+                if self.rank() == k:
+                    my_rank = next_rank                
+                next_rank += 1
+        
+        difference_group = Group(my_rank)
+        difference_group.members = difference_members
+        return difference_group
+    
     def incl(self, required_members):
         """
         creates a new group from members of an existing group
         required_members = list of ranks from existing group to include in new
         group, also determines the order in which they will rank in the new group
         """
-        # TODO Incl/excl very simply implemented, could probably be more pythonic.
-        #Logger().debug("Called group.incl (me %s), self.members = %s, required_members %s" % (self.rank(), self.members, required_members))
+        # No duplicate ranks allowed
+        if len(set(required_members)) < len(required_members):
+            raise MPIException("invalid call to incl, all ranks must be unique")
+        
         new_members = {}
         new_rank = -1 # 'my' new rank
         counter = 0 # new rank for each process as they are added to new group
@@ -224,7 +243,10 @@ class Group:
         """
         creates a group excluding listed members of an existing group
         """
-        #Logger().debug("Called group.excl (me %s), self.members = %s, excluded_members %s" % (self.rank(), self.members, excluded_members))
+        # No duplicate ranks allowed
+        if len(set(excluded_members)) < len(excluded_members):
+            raise MPIException("invalid call to excl, all ranks must be unique")
+            
         new_members = {}
         new_rank = -1 # 'my' new rank
         counter = 0 # new rank for each process as they are added to new group
@@ -245,19 +267,80 @@ class Group:
         new_group.members = new_members
         return new_group
     
-    def range_incl(self, arg):
-        # FIXME decide if to implement
-        pass
+    def range_incl(self, triples):
+        """
+        Produces a group by including ranges of processes from an existing group
+        
+        argument is a list of triples specifying (startrank,endrank,stride)
+        the new group produced includes the list of ranks resulting from the
+        evaluation of all triples
+        
+        Note: start and end are inclusive, that is
+        range_incl([(42,42,1)])
+        produces the group with rank 42
+        
+        Stride can be negative and startrank > endrank. So
+        range_incl([(9,3,-2])
+        produces the group with [9, 7, 5, 3] included
+        """
+        inclusions = []
+        for (start,end,stride) in triples:
+            if stride == 0:
+                raise MPIInvalidStrideException("Illegal call to range_incl - stride can not be 0")
+            
+            # We want endrank to be included, so add or subtract one depending on stride
+            if stride > 0:
+                l = range(start,end+1, stride)
+            else:
+                l = range(start,end-1, stride)
+            inclusions += l
+        
+        # Check for duplicates is done here instead of deferring to incl() to
+        # provide better error message
+        if len(set(inclusions)) < len(inclusions):
+            raise MPIInvalidRangeException("Illegal call to range_incl - range contains duplicate ranks: %s " % (str(inclusions)))
+            
+        return self.incl(inclusions)
 
-    def range_excl(self, arg):
-        # FIXME decide if to implement
-        pass
+        
+        
+
+    def range_excl(self, triples):
+        """
+        Produces a group by excluding ranges of processes from an existing group
+        
+        argument is a list of triples specifying (startrank,endrank,stride)
+        the new group produced excludes the list of ranks resulting from the
+        evaluation of all triples
+        
+        Note: start and end are inclusive, that is
+        range_excl([(42,42,1)])
+        produces the same group with rank 42 excluded        
+        """
+        exclusions = []
+        for (start,end,stride) in triples:
+            if stride == 0:
+                raise MPIInvalidStrideException("Illegal call to range_incl - stride can not be 0")
+            
+            # We want endrank to be excluded, so add or subtract one depending on stride
+            if stride > 0:
+                l = range(start,end+1, stride)
+            else:
+                l = range(start,end-1, stride)
+            exclusions += l
+        
+        # Check for duplicates is done here instead of deferring to incl() to
+        # provide better error message
+        if len(set(exclusions)) < len(exclusions):
+            raise MPIInvalidRangeException("Illegal call to range_excl - range contains duplicate ranks: %s " % (str(exclusions)))
+            
+        return self.excl(exclusions)
         
     def free(self):
         """
         Marks a group for deallocation
         """
-        # FIXME decide if to implement
+        # TODO:  We decided not to implement this, so remove or give a message saying not implemented.
         pass
 
 class groupTests(unittest.TestCase):

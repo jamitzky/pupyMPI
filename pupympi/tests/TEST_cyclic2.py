@@ -2,81 +2,59 @@
 # META: SKIP
 # heavier-duty test
 
-# OBSERVATIONS:
-# With 2 sec padding all is ok for 250, all procs cleanly die
-# With 1 sec padding not ok for 250 but we get almost halfway, sometimes all the way
-# With no padding not ok for 250, we hang after first few iterations - examples below
-
-#################### 0 sec padding
-# 2009-09-30 10:59:34 proc-0      : ERROR    WELEASE WODERICK release unlocked lock
-# ==> /tmp/mpi.local.rank0.log <==
-# ...
-# 2009-09-30 10:59:34 proc-1      : DEBUG    Added request object to the queue with index 5. There are now 3 items in the queue
-# 2009-09-30 10:59:34 proc-1      : INFO     Starting a recv wait
-# 2009-09-30 10:59:34 proc-1      : INFO     Removing finished request
-# 2009-09-30 10:59:34 proc-1      : INFO     Removing finished request
-
-#################### 0 sec padding
- #2009-09-30 11:05:44 proc-1      : DEBUG    Added request object to the queue with index 43. There are now 2 items in the queue
- #2009-09-30 11:05:44 proc-1      : INFO     Starting a recv wait
- #2009-09-30 11:05:44 proc-1      : INFO     Updating status in request from finished to ready
- #2009-09-30 11:05:44 proc-1      : ERROR    WELEASE WODERICK release unlocked lock
- #==> /tmp/mpi.local.rank0.log <==
- #2009-09-30 11:05:45 proc-0      : INFO     Removing finished request
- #2009-09-30 11:05:45 proc-0      : INFO     Removing finished request
-
-#################### 0 sec padding
-#2009-09-30 11:07:27 proc-0      : DEBUG    Network callback in request called
-#2009-09-30 11:07:27 proc-0      : INFO     Updating status in request from finished to ready
-#2009-09-30 11:07:27 proc-0      : ERROR    WELEASE WODERICK release unlocked lock
-#
-#==> /tmp/mpi.local.rank1.log <==
-#...
-#2009-09-30 11:07:27 proc-1      : DEBUG    Request object created for communicator MPI_COMM_WORLD, tag 1 and request_type recv and participant 0
-#2009-09-30 11:07:27 proc-1      : DEBUG    Starting a recv network job with tag 1 and 1 callbacks
-#2009-09-30 11:07:27 proc-1      : DEBUG    Adding request object to the request queue
-#2009-09-30 11:07:27 proc-1      : DEBUG    Added request object to the queue with index 7. There are now 3 items in the queue
-#2009-09-30 11:07:27 proc-1      : INFO     Starting a recv wait
-#2009-09-30 11:07:28 proc-1      : INFO     Removing finished request
-#2009-09-30 11:07:28 proc-1      : INFO     Removing finished request
-
-
-#################### 1 sec padding
-#2009-09-30 11:37:44 proc-1      : DEBUG    Network callback in request called
-#2009-09-30 11:37:44 proc-1      : INFO     Updating status in request from finished to ready
-#2009-09-30 11:37:44 proc-1      : ERROR    WELEASE WODERICK release unlocked lock
-#
-#==> /tmp/mpi.local.rank0.log <==
-#2009-09-30 11:37:45 proc-0      : DEBUG    Request object created for communicator MPI_COMM_WORLD, tag 1 and request_type recv and participant 1
-#2009-09-30 11:37:45 proc-0      : DEBUG    Starting a recv network job with tag 1 and 1 callbacks
-#2009-09-30 11:37:45 proc-0      : DEBUG    Adding request object to the request queue
-#2009-09-30 11:37:45 proc-0      : DEBUG    Added request object to the queue with index 302. There are now 1 items in the queue
-#2009-09-30 11:37:45 proc-0      : INFO     Starting a recv wait
-
-
-
-
-
-
-#2009-09-30 13:31:59 proc-1      : INFO     Removing finished request
-#Exception in thread Thread-1:
-#Traceback (most recent call last):
-#  File "/home/fred/python/2.6/lib/python2.6/threading.py", line 525, in __bootstrap_inner
-#    self.run()
-#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py", line 141, in run
-#    comm.update()
-#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 129, in update
-#    self.request_remove( request )
-#  File "/home/fred/Diku/ppmpi/code/pupympi/mpi/communicator.py", line 145, in request_remove
-#    del self.request_queue[request_obj.queue_idx]
-#KeyError: 194
-#
-#2009-09-30 13:31:59 proc-1      : DEBUG    Starting a recv network job with tag 1 and 1 callbacks
-
+# Processes communicate point to point with neighbours in lockstep
+# Evens send and odds recieve then vice versa
+# If uneven number of processes are specified the last ranking one is automatically
+# excluded so the lockstep scheme does not break down (deadlock)
 
 
 import time
 from mpi import MPI
+
+mpi = MPI()
+dummydata = ''.join(["a"] * 50)
+# Everybody log now
+f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
+maxIterations = 10
+
+size = mpi.MPI_COMM_WORLD.size()
+
+# We need an even number of processes so if not we designate last one as idle
+if size % 2 != 0:
+    adjSize = size -1
+else:
+    adjSize = size
+
+rank = mpi.MPI_COMM_WORLD.rank()
+
+t1 = mpi.MPI_COMM_WORLD.Wtime() # Time it
+
+data = "message from %i: %s" % (rank, dummydata)
+
+if rank == adjSize: # You are the odd one out so just stay idle
+    pass
+elif rank % 2 == 0: # evens
+    upper = (rank + 1) % adjSize
+    lower = (rank - 1) % adjSize
+    for iterations in xrange(maxIterations):
+        mpi.MPI_COMM_WORLD.send(upper, data, 1)
+
+        recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
+
+        mpi.MPI_COMM_WORLD.send(lower, data, 1)
+
+        recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
+
+        f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
+        f.flush()
+    f.write( "Done for rank %i \n" % rank)
+else: # odds
+    upper = (rank + 1) % adjSize
+    lower = (rank - 1) % adjSize
+    for iterations in xrange(maxIterations):
+        recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
+
+        mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
 mpi = MPI()
 data = 50*"a"
@@ -113,7 +91,7 @@ else:
 t2 = mpi.MPI_COMM_WORLD.Wtime()
 time = (t2 - t1) 
 
-f.write( "Timings were %s for data length %s'n" % (time, len(data)))
+f.write( "Timings were %s for data length %s'n with %i processes participating" % (time, len(data), adjSize))
 f.flush()
 f.close()
 mpi.finalize()

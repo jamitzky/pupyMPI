@@ -12,11 +12,19 @@ class MPIException(Exception):
     """Custom exception for pupyMPI"""
     pass
     
-class MPITopologyException(Exception): 
+class MPITopologyException(MPIException): 
     """Custom exception for Topologies"""
     pass
 
 class MPINoSuchRankException(MPIException):
+    pass
+
+class MPIInvalidStrideException(MPIException):
+    """ Custom exception for group (range) calls"""
+    pass
+
+class MPIInvalidRangeException(MPIException):
+    """ Custom exception for group (range) calls"""
     pass
 
 class MPIInvalidTagException(MPIException):
