@@ -408,6 +408,7 @@ class Communicator:
     # due to making no sense in a python environment:
     # bsend, ibsend
     # rsend, irsend
+    # sendrecv_replace
     # 
     # due to having to do with error handling: 
     # mpi_error_*
@@ -425,15 +426,6 @@ class Communicator:
     # mpi_start, mpi_start_all, mpi_xxx_init(...)
     # 
     # other stuff, related to requests that may get done:
-    # MPI TEST CANCELLED, 55 
-    # MPI TESTALL, 48 
-    # MPI TESTANY, 47 
-    # MPI TESTSOME, 50 
-    # MPI TOPO TEST, 184 
-    # MPI WAIT, 42 
-    # MPI WAITALL, 48 
-    # MPI WAITANY, 46 
-    # MPI WAITSOME, 49 
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
     def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
@@ -533,18 +525,36 @@ class Communicator:
         """
         return self.irecv(source, tag).wait()
 
-    def sendrecv(self, sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status):
+    def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
-        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
-        """
-        pass
+        The send-receive operations combine in one call the sending of a message to one destination and the receiving of another message, from another process.
+        The two (source and destination) are possibly the same. 
         
-    def sendrecv_replace(self, arg):
-        """
+        A send-receive operation is very useful for executing a shift operation across a chain of processes.
+        A message sent by a send-receive operation can be received by a regular receive operation or probed by a probe operation; a send-receive operation can receive a message sent by a regular send operation. 
+        
         http://www.mpi-forum.org/docs/mpi-11-html/node52.html
         """
-        Logger().warn("Non-Implemented method 'sendrecv_replace' called.")
-        pass
+        if dest == source:
+            return senddata
+            
+        if source is not None:
+            recvhandle = self.irecv(source, recvtag)
+        
+        if dest is not None:
+            self.send(dest, senddata, sendtag)
+            
+        if source is not None:
+            return recvhandle.wait()
+            
+        return None           
+                
+    def ssend(self):
+        """Synchroneous send"""
+        Logger().warn("Non-Implemented method 'ssend' called.")
+        
+    def probe(self):
+        Logger().warn("Non-Implemented method 'probe' called.")
         
     def barrier(self):
         """
@@ -769,8 +779,39 @@ class Communicator:
         
     def scatterv(self, arg):
         # FIXME
+        pass        
+
+    def test_cancelled(self):
+        pass
+    
+    def testall(self):
+        """docstring for test_all"""
+        pass
+        
+    def testany(self):
+        """docstring for test_any"""
+        pass
+    
+    def testsome(self):
+        """docstring for testsome"""
+        pass
+        
+    def topo_test(self):
+        """docstring for topo_test"""
+        pass
+        
+    def waitall(self):
+        """docstring for waitall"""
+        pass
+        
+    def waitany(self):
+        """docstring for waitany"""
         pass
             
+    def waitsome(self):
+        """docstring for waitsome"""
+        pass
+        
     def Wtime(self):
         """
         returns a floating-point number of seconds, representing elapsed wall-clock 
