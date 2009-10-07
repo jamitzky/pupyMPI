@@ -529,6 +529,19 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         return self.irecv(source, tag).wait()
+
+    def sendrecv(self, sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status):
+        """
+        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
+        """
+        pass
+        
+    def sendrecv_replace(self, arg):
+        """
+        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
+        """
+        Logger().warn("Non-Implemented method 'sendrecv_replace' called.")
+        pass
         
     def barrier(self):
         """
