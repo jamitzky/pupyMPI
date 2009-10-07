@@ -112,7 +112,7 @@ def io_forwarder(process_list):
 
 if __name__ == "__main__":
     options, args, user_options = parse_options() # Get options from cli
-    if args is None: # TODO hack-handle no options
+    if args is None or len(args) == 0: # TODO hack-handle no options
         print "Please use --help for help with options"
         sys.exit()
     executeable = args[0]
