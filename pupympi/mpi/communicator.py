@@ -459,7 +459,7 @@ class Communicator:
         # Create a receive request object
         handle = Request("send", self, destination_rank, tag, data=content)
 
-        # Add request object to the queue
+        # Add request object to the queue unless it's ready already
         if not handle.test():
             self.request_add(handle)
         return handle
