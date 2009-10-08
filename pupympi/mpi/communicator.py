@@ -181,7 +181,8 @@ class Communicator:
         self.request_queue[idx] = request_obj
         self.request_queue_lock.release()
         logger.debug("Added request object to the queue with index %s. There are now %d items in the queue" % (idx, len(self.request_queue)))
-        return idx
+        return idx # NOTE: This is returned here although caller does not use it.
+                   # Since we always use the queue_idx property of the request object we could drop the return
 
     def have_rank(self, rank):
         return rank in self.comm_group.members
