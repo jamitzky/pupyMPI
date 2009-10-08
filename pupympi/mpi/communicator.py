@@ -839,10 +839,23 @@ class Communicator:
             return_list.append(data)
         return return_list
         
-    def waitany(self):
-        """docstring for waitany"""
-        pass
-            
+    def waitany(self, request_list):
+        """
+        Wait for one request in the request list and return a tuple
+        with the request and the data from the wait(). 
+        """
+        if len(request_list) == 0:
+            raise MPIException("The request_list argument to waitany can't be empty.. ")
+
+        sleep_time = 0.1
+        while True:
+            for request in request_list:
+                if request.test()
+                    data = request.wait()
+                    return (request, data)
+            time.sleep(sleep_time)
+            sleep_time *= 2
+
     def waitsome(self):
         """docstring for waitsome"""
         pass
