@@ -856,9 +856,52 @@ class Communicator:
             time.sleep(sleep_time)
             sleep_time *= 2
 
-    def waitsome(self):
-        """docstring for waitsome"""
-        pass
+    def waitsome(self, request_list):
+        """
+        Waits for some requests in the given request list to 
+        complete. Returns a list with (request, data) pairs
+        for the completed requests. 
+
+        If you want to receive a message from all the even
+        ranks you could do it like this::
+
+            from mpi import MPI
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+            request_list = []
+
+            for rank in range(0, world.size(), 2):
+                request = world.irecv(rank)
+                request_list.append(request)
+
+            while request_list:
+                for item in world.waitsome(request_list):
+                    (request, data) = item
+                    print "Got message", data
+                    request_list.remove(request)
+
+        .. note::
+            This function works in many aspects as the unix
+            select functionality. You can use it as a simple
+            way to just work on the messages that are actually
+            ready without coding all the boilor plate yourself.
+
+            Note however that it's not given that this function
+            will include **all** the requests that are ready. It
+            will however include **some**. 
+        
+        """
+        return_list = []
+
+        for request in request_list:
+            if request.test():
+                data = request.wait()
+                return_list.append( (request, data))
+
+        if return_list:
+            return return_list
+
+        return [ self.waitany(request_list) ]
         
     def Wtime(self):
         """
