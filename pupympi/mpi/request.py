@@ -68,7 +68,7 @@ class Request(BaseRequest):
             if data:                
                 Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
                 self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
-                return
+                return # NOTE: this return is superfluous until we add code after the =='recv' check
             
     def __repr__(self):
         return """<request:
@@ -156,6 +156,8 @@ class Request(BaseRequest):
             Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
         
+        
+        # NOTE: Are there actually request objects without a waitlock? otherwise this test does not make sense.
         if "waitlock" in self._m:
             Logger().debug("LOCKING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].acquire()
@@ -163,25 +165,28 @@ class Request(BaseRequest):
             Logger().debug("RELEASING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].release()
             Logger().debug("RELEASED in wait %s" % (self._m['waitlock']) )
+        else:
+            logger.error("Alien object found! How can it not have a waitlock!?")
+            raise MPIException("Wait on request object without waitlock!")
 
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
         self._m['status'] = 'finished'
+        
+        #Logger().info("Ending a %s wait" % self.request_type)
+        
+        # This will be None (if sending) or the actual data (if recieving)
+        return self.data
 
-        # Return none or the data
-        if self.request_type == 'recv':
-            return self.data
-
-        Logger().info("Ending a %s wait" % self.request_type)
 
     def test(self):
         """
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
-        Logger().debug("Testing a %s request" % self.request_type)
+        #Logger().debug("Testing a %s request" % self.request_type)
         return self._m['status'] == 'ready'
 
     def get_status(self):
-        # I think this is a API call? Check into it. 
+        # TODO: I think this is a API call? Check into it. 
         return self._m['status']

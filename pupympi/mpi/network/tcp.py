@@ -132,29 +132,33 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
         self.sockets_out = []
-        self.socket_to_job = {}
+        self.socket_to_job = {} # for mapping of a socket to its jobs
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
         Logger().debug("Adding outgoing job")
 
         # Create a client socket and connect to the other end
-        client_socket, created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
-        if created:
+        client_socket, newly_created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
+        
+        if newly_created: # is this a reused socket?
             self.sockets_out.append(client_socket) # Register the socket on tcp thread
 
-            # The other side will probably write on this. FIXME: Make sure we have
-            # a method on the pool for adding an already created connection. 
+            # The other side will probably write on this.
+            # FIXME: Make sure we have
+            # a method on the pool for adding an already created connection.
+            # NOTE: Why do we do this for an out job???
             self.sockets_in.append( client_socket)
-        job['socket'] = client_socket
-        
-        job['status'] = 'ready'
+            
+        job['socket'] = client_socket # now the job has a socket assigned       
+        job['status'] = 'ready' # since it is a send job it is now ready
 
-        # Tag the socket with a job so we can find it again
-        if not job['socket'] in self.socket_to_job:
-            self.socket_to_job[ job['socket'] ] = []
-
-        self.socket_to_job[ job['socket'] ].append(job)
+        # Tag the socket with the job so we can find it again
+        if not client_socket in self.socket_to_job:
+            # NOTE: The above could be replaced by testing on newly_created, these
+            # should be the only sockets not already present in the mapping
+            self.socket_to_job[client_socket] = []
+        self.socket_to_job[ client_socket ].append(job)
 
     def add_in_job(self, job):
         #Logger().debug("Adding incoming job")
@@ -297,7 +301,7 @@ class SocketPool(object):
         Finds the first element that already had it's second chance and
         remove it from the list.
         
-        FIXME: Shouldn't we close the socket we are removing here?
+        NOTE: Shouldn't we close the socket we are removing here?
         """
         for x in range(2): # Run through twice
             for socket in self.sockets:
@@ -308,11 +312,11 @@ class SocketPool(object):
                 if sreference: # Mark second chance
                     self.metainfo[socket] = (srank, False, force_persistent)
                 else: # Has already had its second chance
-                    self.sockets.remove(socket)
-                    del self.metainfo[socket]
+                    self.sockets.remove(socket) # remove from socket pool
+                    del self.metainfo[socket] # delete metainfo
                     break
 
-        raise MPIException("Not possible to add a socket connection to the internal caching system. There is %d persistant connections and they fill out the cache" % self.max_size)
+        raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
     
     def _get_socket_for_rank(self, rank):
         """
