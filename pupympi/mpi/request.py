@@ -67,7 +67,7 @@ class Request(BaseRequest):
             data = communicator.pop_unhandled_message(participant, tag)
             if data:                
                 Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
-                self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
+                self.network_callback(lock=False, status="ready", data=data['data'], callfrom="Right-away-quick-fast-receive")
                 return # NOTE: this return is superfluous until we add code after the =='recv' check
             
     def __repr__(self):
@@ -79,16 +79,16 @@ class Request(BaseRequest):
             data %s
         """ % (self.request_type, self.communicator, self.participant, self.tag, self.data)
 
-    def network_callback(self, lock=True, ffrom="from-nowhere", *args, **kwargs):
+    def network_callback(self, lock=True, callfrom="from-nowhere", *args, **kwargs):
         Logger().debug("Network callback in request called")
 
         if lock:
-            Logger().info("REQUEST LOCKING %s" % ffrom)
+            Logger().info("REQUEST LOCKING %s" % callfrom)
             self.acquire()
-            Logger().info("REQUEST LOCKED %s" % ffrom)
+            Logger().info("REQUEST LOCKED %s" % callfrom)
 
         if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], ffrom))
+            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], callfrom))
             old_status = self._m["status"] 
             self._m["status"] = kwargs["status"]
 
@@ -109,9 +109,9 @@ class Request(BaseRequest):
             self.data = kwargs["data"]
         
         if lock:
-            Logger().info("REQUEST RELEASING %s" % ffrom)
+            Logger().info("REQUEST RELEASING %s" % callfrom)
             self.release()
-            Logger().info("REQUEST RELEASED %s" % ffrom)
+            Logger().info("REQUEST RELEASED %s" % callfrom)
 
     def cancel(self):
         """

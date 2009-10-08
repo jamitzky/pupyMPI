@@ -209,6 +209,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 i = 0
                 for client_socket in out_list:
                     i += 1
+                    # Get any jobs that require sending on the particular socket
                     jobs = self.jobs_by_socket(client_socket)
                     for job in jobs:
                         if job['status'] == 'ready':
@@ -222,21 +223,25 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                             header = pack_header( self.rank, job['tag'], len(data), job['communicator'].id, recv_type )
 
                             job['socket'].send( header + data )
-                            Logger().info("Sending data on the socket. Going to call the callbacks")
+                            #Logger().info("Sending data on the socket. Going to call the callbacks")
 
                             # Trigger the callbacks. 
                             # FIXME: The callback should also include the sender / receiver of the data.
                             
-                            l = Logger()
-                            l.debug("="*60)
-                            l.debug(job.__repr__())
-                            l.debug(job['communicator'].__repr__())
-                            l.debug("="*60)
+                            #l = Logger()
+                            #l.debug("="*60)
+                            #l.debug(job.__repr__())
+                            #l.debug(job['communicator'].__repr__())
+                            #l.debug("="*60)
                             
-                            self.callback(job, status='ready', ffrom="socket-outlist, tcp.py 244ish+1->225ish - ish => 255")
+                            self.callback(job, status='ready', callfrom="socket-outlist, tcp.py (line 230-ish)")
                             job['status'] = 'finished'
 
                             self.remove_out_job(job)
+                        else:
+                            # TODO: We should remove finished or cancelled jobs eventually
+                            # if a socket is heavily used they might pile up considerably
+                            logger.debug("ignored job with status != ready")
 
             except select.error, e:
                 print e
