@@ -797,9 +797,47 @@ class Communicator:
         """docstring for topo_test"""
         pass
         
-    def waitall(self):
-        """docstring for waitall"""
-        pass
+    def waitall(self, request_list):
+        """
+        Waits for all the requets in the given list and returns a list
+        with the returned data. 
+
+        **Example**
+        Rank 0 sends 10 messages to and 1 and then receives 10. We're
+        waiting for the receive completions with a waitall call::
+            
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
+            request_list = []
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                for i in range(10):
+                    mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+
+                for i in range(10):
+                    handle = mpi.MPI_COMM_WORLD.irecv(1, TAG)
+                    request_list.append(handle)
+
+                messages = mpi.MPI_COMM_WORLD.waitall(request_list)
+            elif mpi.MPI_COMM_WORLD.rank() == 1:
+                for i in range(10):
+                    handle = mpi.MPI_COMM_WORLD.irecv(1, TAG)
+                    request_list.append(handle)
+
+                for i in range(10):
+                    mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+
+                messages = mpi.MPI_COMM_WORLD.waitall(request_list)
+            else:
+                pass
+        """
+        return_list = []
+
+        for request in request_list:
+            data = request.wait()
+            return_list.append(data)
+        return return_list
         
     def waitany(self):
         """docstring for waitany"""
