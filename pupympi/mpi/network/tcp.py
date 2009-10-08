@@ -73,7 +73,7 @@ def structured_read(socket_connection):
 
     return tag, sender, communicator, recv_type, data
 
-def get_socket(min=10000, max=30000):
+def get_free_socket(min=10000, max=30000):
     """
     A simple helper method for creating a socket,
     binding it to a random free port within the specified range. 
@@ -138,19 +138,16 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
         super(TCPCommunicationHandler, self).add_out_job(job)
         Logger().debug("Adding outgoing job")
 
-        # This is a sending operation. We create a socket 
-        # for the job, so we can select from it later. 
-        receiver = ( job['participant']['host'], job['participant']['port'],)
-        if not job['socket']:
-            # Create a client socket and connect to the other end
-            client_socket, created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
-            if created:
-                self.sockets_out.append(client_socket)
+        # Create a client socket and connect to the other end
+        client_socket, created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
+        if created:
+            self.sockets_out.append(client_socket) # Register the socket on tcp thread
 
-                # The other side will probably write on this. FIXME: Make sure we have
-                # a method on the pool for adding an already created connection. 
-                self.sockets_in.append( client_socket)
-            job['socket'] = client_socket 
+            # The other side will probably write on this. FIXME: Make sure we have
+            # a method on the pool for adding an already created connection. 
+            self.sockets_in.append( client_socket)
+        job['socket'] = client_socket
+        
         job['status'] = 'ready'
 
         # Tag the socket with a job so we can find it again
@@ -243,10 +240,10 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
             
 class SocketPool(object):
     """
-    This class manages a pool of socket connections. You request and deletes
+    This class manages a pool of socket connections. You request and delete
     connections through this class.
     
-    The class have room for a number of cached socket connections, so if you're
+    The class has room for a number of cached socket connections, so if your
     connection is heavily used it will probably not be removed. This way your
     call will not create and teardown the connection all the time. 
     
@@ -256,8 +253,8 @@ class SocketPool(object):
     
     NOTE 2: It's possible to mark a connections as mandatory persistent. This
     will not always give you nice performance. Please don't use this feature
-    do much as it can push other connections out of the cache. And these
-    connections might be more important and your custom one.
+    too much as it will push other connections out of the cache. And these
+    connections might be more important than your custom one.
     
     IMPLEMENTATION: This is a modified "Second change FIFO cache replacement
     policy" algorithm. It's modified by allowing some elements to live 
@@ -276,48 +273,51 @@ class SocketPool(object):
     def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
         """
         Returns a socket to the specific rank. Consider this function 
-        a black box that will cache your connections when it's 
+        a black box that will cache your connections when it is 
         possible.
         """
-        client_socket = self._get_rank(rank)
-        created = False
-        if not client_socket:
+        client_socket = self._get_socket_for_rank(rank) # Try to find an existing socket connection
+        newly_created = False
+        if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect( receiver )
             
-            if len(self.sockets) == self.max_size:
+            if len(self.sockets) > self.max_size: # Throw one out if there are too many
                 self._remove_element()
                 
-            # Add the element to the list
+            # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
-            created = True
-        return client_socket, created
+            newly_created = True
+            
+        return client_socket, newly_created
 
     def _remove_element(self):
         """
-        Finds the first element that already had it's second change. 
-        Remove it from the list
+        Finds the first element that already had it's second chance and
+        remove it from the list.
+        
+        FIXME: Shouldn't we close the socket we are removing here?
         """
-        for x in range(2):
+        for x in range(2): # Run through twice
             for socket in self.sockets:
                 (srank, sreference, force_persistent) = self.metainfo[socket]
-                if force_persistent:
+                if force_persistent: # We do not remove persistent connections
                     continue
                 
-                if sreference:
+                if sreference: # Mark second chance
                     self.metainfo[socket] = (srank, False, force_persistent)
-                else:
+                else: # Has already had its second chance
                     self.sockets.remove(socket)
                     del self.metainfo[socket]
                     break
 
         raise MPIException("Not possible to add a socket connection to the internal caching system. There is %d persistant connections and they fill out the cache" % self.max_size)
     
-    def _get_rank(self, rank):
+    def _get_socket_for_rank(self, rank):
         """
-        Trieds to find a connection for a specific
-        rank. If not possible we return None
+        Attempts to find an already created socket with a connection to a
+        specific rank. If this does not exist we return None
         """
         for socket in self.sockets:
             (srank, _, fp) = self.metainfo[socket]
@@ -338,7 +338,7 @@ class TCPNetwork(AbstractNetwork):
         self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
         
         super(TCPNetwork, self).__init__(TCPCommunicationHandler, options)
-        (socket, hostname, port_no) = get_socket()
+        (socket, hostname, port_no) = get_free_socket()
         self.port = port_no
         self.hostname = hostname
         socket.listen(5)
@@ -404,7 +404,7 @@ class TCPNetwork(AbstractNetwork):
         tree.up()
         tree.down()
         
-    def start_job(self, request, communicator, jobtype, participant, tag, data, socket=None, callbacks=[]):
+    def start_job(self, request, communicator, jobtype, participant, tag, data, callbacks=[]):
         """
         Used to create a specific job structure for the TCP layer. This involves setting
         up an initial job structure and passing it to the correct thread. 
@@ -417,27 +417,33 @@ class TCPNetwork(AbstractNetwork):
         a request object. Why not just create it when we make the accept on the daemon socket
         and then match it on the pending requests later on?
         """
-        Logger().debug("Starting a %s network job with tag %s and %d callbacks" % (jobtype, tag, len(callbacks)))
-
+        
+        # Find global rank of the "other" process
         global_rank = communicator.group().members[participant]['global_rank']
         
-        Logger().info("Starting a job with global rank %d" % global_rank)
+        Logger().debug("Starting a %s network job with participant %i (globally), tag %s and %d callbacks" % (jobtype, global_rank, tag, len(callbacks)))
             
         job = {
-               'type' : jobtype, 
-               'global_rank' : global_rank, 
+               'type' : jobtype, # Send, recv, broadcast etc.
+               'global_rank' : global_rank, # Global rank of the other part in the communication
                'tag' : tag, 
                'data' : data, 
-               'socket' : socket, 
+               'socket' : None, # The socket is created/bound to the job later
                'request' : request, 
                'status' : 'new', 
                'callbacks' : callbacks, 
                'communicator' : communicator, 
                'persistent': False,
-               'participant' : communicator.comm_group.members[participant]
+               'participant' : communicator.comm_group.members[participant] # comm-specific representation of other part in the communication
         } 
-
-        self.t_out.add_out_job( job )
+        
+        # In or out job?
+        if jobtype == 'send':
+            self.t_out.add_out_job( job )
+        elif jobtype == 'recv':
+            self.t_in.add_in_job( job )
+        else:
+            raise MPIException("Unhandled jobtype (%s) in start_job!" % jobtype)
 
     def finalize(self):
         # Call the finalize in the parent class. This will handle

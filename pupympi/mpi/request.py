@@ -32,7 +32,7 @@ class Request(BaseRequest):
 
         self.request_type = request_type
         self.communicator = communicator
-        self.participant = participant
+        self.participant = participant # The other process' rank
         self.tag = tag
         self.data = data
 
