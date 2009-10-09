@@ -441,7 +441,9 @@ class Communicator:
         handle = Request("recv", self, sender, tag)
 
         # Add request object to the queue
-        self.request_add(handle)
+        if not handle.test():
+            self.request_add(handle)
+
         return handle
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
@@ -458,7 +460,8 @@ class Communicator:
         handle = Request("send", self, destination_rank, tag, data=content)
 
         # Add request object to the queue
-        self.request_add(handle)
+        if not handle.test():
+            self.request_add(handle)
         return handle
 
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
