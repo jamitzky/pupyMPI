@@ -836,7 +836,7 @@ class Communicator:
             request_list = ...
             finished_requests = mpi.MPI_COMM_WORLD.testsome(request_list)
             data_list = mpi_MPI_COMM_WORLD.waitall(finished_requests)
-            print "\n".join(data_list)
+            print "\\n".join(data_list)
         """
         return_list = []
         for request in request_list:
