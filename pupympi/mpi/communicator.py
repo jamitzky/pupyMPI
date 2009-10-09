@@ -794,9 +794,31 @@ class Communicator:
                 return False
         return True
         
-    def testany(self):
-        """docstring for test_any"""
-        pass
+    def testany(self, request_list):
+        """
+        Test if any of the requests in the request list has completed and 
+        return the first one it encounters. If none of the processes has
+        completed the returned request will be None. 
+
+        This function returns a tuple with a boolean flag to indicate if
+        any of the requests is completed and the request object::
+
+            from mpi import MPI
+            mpi = MPI()
+
+            ...
+
+            (completed, request) = mpi.MPI_COMM_WORLD.testany(request_list)
+
+            if completed:
+                data = request.wait() # will return right away.. 
+            else:
+                pass # the request will be None
+        """
+        for request in request_list:
+            if request.test():
+                return (True, request)
+        return (False, None)
     
     def testsome(self):
         """docstring for testsome"""
