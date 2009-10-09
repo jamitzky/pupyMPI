@@ -22,7 +22,7 @@ px, py = (None, None)       # processes are part of px x py topology
 
 communicator = None         # underlying communicator for benchmark(s)  
 
-num_procs = None            # number of processes in communicator       
+num_procs = None            # number of processes in communicator (aka size)      
 rank = None                 # rank of actual process in communicator    
 
 s_data_type = 'b'           # data type of sent data                    
