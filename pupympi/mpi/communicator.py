@@ -846,6 +846,9 @@ class Communicator:
         """
         Wait for one request in the request list and return a tuple
         with the request and the data from the wait(). 
+
+        This method will raise an MPIException if the supplied return_list
+        is empty. 
         """
         if len(request_list) == 0:
             raise MPIException("The request_list argument to waitany can't be empty.. ")
@@ -853,7 +856,7 @@ class Communicator:
         sleep_time = 0.1
         while True:
             for request in request_list:
-                if request.test()
+                if request.test():
                     data = request.wait()
                     return (request, data)
             time.sleep(sleep_time)
