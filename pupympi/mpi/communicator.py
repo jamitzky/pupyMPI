@@ -820,9 +820,29 @@ class Communicator:
                 return (True, request)
         return (False, None)
     
-    def testsome(self):
-        """docstring for testsome"""
-        pass
+    def testsome(self, request_list):
+        """
+        Tests that some of the operations has completed. Return a list
+        of requst objects from that list that's completed. If none of
+        the operations has completed the empty list is returned. 
+
+        To receive a number of messages and print them you would do
+        something like this::
+
+            from mpi import MPI
+            mpi = MPI()
+
+            ...
+            request_list = ...
+            finished_requests = mpi.MPI_COMM_WORLD.testsome(request_list)
+            data_list = mpi_MPI_COMM_WORLD.waitall(finished_requests)
+            print "\n".join(data_list)
+        """
+        return_list = []
+        for request in request_list:
+            if request.test():
+                return_list.append( request )
+        return return_list
         
     def topo_test(self):
         """docstring for topo_test"""
