@@ -42,6 +42,30 @@ def ssh(host, arguments, process_io, rank):
 
     return p
     
+def rsh(host, arguments, process_io, rank):
+    """Process starter using ssh through subprocess. No loadbalancing yet."""
+    logger = Logger()
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    exec_str = "rsh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
+    logger.debug("Starting remote process: %s with process_io type %s" % (exec_str, process_io))
+
+    if process_io in ['none', 'remote_file']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
+        target = None
+    elif process_io == 'pipe': # uses io forwarder and prints to console
+        target = subprocess.PIPE
+    elif process_io == 'filepipe': # writes to a file on the mpirun machine only
+        target = open("/tmp/mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        io_target_list.append(target)
+    else:
+        raise MPIException("Unsupported I/O type: '%s'" % process_io)
+
+    # Execute the ssh command in a subprocess
+    p = subprocess.Popen(exec_str, shell=True, stdout=target, stderr=target)
+    process_list.append(p)
+
+    return p
+
+    
 def popen(host, arguments, process_io, rank):
     """ Process starter using subprocess. No loadbalancing yet. Process_io is ignored"""
     logger = Logger()
