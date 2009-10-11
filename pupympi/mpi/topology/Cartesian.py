@@ -114,6 +114,16 @@ class Cartesian(BaseTopology):
         
         return coords
         
+    def coords(self, rank):
+        """
+        The inverse mapping, rank-to-coordinates translation is provided by MPI_CART_COORDS
+
+        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        """
+        # FIXME: Decide whether to implement as it is as get, except get is supposedly aware of rank?
+        raise MPITopologyException("Use Cartesian.get")
+        
+        
     def rank(self, coords):
         """
         Get my 1D rank from grid coordinates
@@ -156,12 +166,6 @@ class Cartesian(BaseTopology):
         """
         return self.communicator.rank()
         
-    def coords(self):
-        """
-        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
-        """
-        # FIXME: Implement
-        raise MPITopologyException("Not implemented")
 
 # convience and "statics"
 def _writeDimStr(dim, periodic):
