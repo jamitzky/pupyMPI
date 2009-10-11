@@ -3,6 +3,7 @@
 # heavier-duty test
 
 from mpi import MPI
+import time
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -11,7 +12,7 @@ rank = world.rank()
 data = 50*"a"
 f = open("/tmp/mpi.local.rank%s.log" % rank, "w")
 
-max_iterations = 2
+max_iterations = 5
     
 
 for iterations in xrange(max_iterations):
@@ -30,6 +31,7 @@ for iterations in xrange(max_iterations):
     f.write(msg)
     f.flush()
 f.write( "Done for rank %d\n" % rank)
+#time.sleep(2)
 
 
 f.flush()
