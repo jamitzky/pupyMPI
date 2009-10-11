@@ -25,9 +25,11 @@ class AbstractNetwork(object):
         rank = options.rank
         
         if options.single_communication_thread:
+            Logger().debug("Going single")
             self.t_in = CommunicationHandler(rank, self.incoming, self.outgoing)
             self.t_out = self.t_in
         else:
+            Logger().debug("Going double")
             self.t_in = CommunicationHandler(rank, self.incoming, None)
             self.t_out = CommunicationHandler(rank, None, self.outgoing)
             self.t_out.daemon = True
@@ -119,4 +121,5 @@ class AbstractCommunicationHandler(Thread):
         in the main run loop and allows the thread to break out of the while True
         loop. 
         """
+        Logger().debug("its final...")
         self.shutdown_lock.release()

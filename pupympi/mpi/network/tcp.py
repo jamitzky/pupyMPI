@@ -65,12 +65,13 @@ def structured_read(socket_connection):
     Logger().debug("Starting receive second loop with total_msg_size(%d) and recv_size(%d)" %(total_msg_size, recv_size))
 
     while len(data) < total_msg_size:
+        #Logger().debug("DATA: " +  str(pickle.loads(data[header_size:]))) # BAD EOF
         recv_size = total_msg_size - len(data)
         data += socket_connection.recv(recv_size)
     
     # unpacking the data
     data = pickle.loads(data[header_size:])
-
+    #Logger().debug("DATA: %s" % data) # BAD string conversion
     return tag, sender, communicator, recv_type, data
 
 def get_free_socket(min=10000, max=30000):
@@ -131,12 +132,15 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
 
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
+        # NOTE: When this class is instantiated twice, how do we know which network thread will have the proper socket?
+        # ... on second thought - why is this class instantiated twice for one mpi process?
+        #Logger().error("instantiaing IN LIST")
         self.sockets_out = []
         self.socket_to_job = {} # for mapping of a socket to its jobs
 
     def add_out_job(self, job):
         super(TCPCommunicationHandler, self).add_out_job(job)
-        Logger().debug("Adding outgoing job")
+        #Logger().debug("Adding outgoing job")
 
         # Create a client socket and connect to the other end
         client_socket, newly_created = self.socket_pool.get_socket(job['global_rank'], job['participant']['host'], job['participant']['port'])
@@ -192,6 +196,7 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                 it += 1
                 (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
                 
+                Logger().info("in_list: %s, of sockets_in: %s" % (in_list,self.sockets_in) )
                 for read_socket in in_list:
                     # There are both bound sockets and active connections in the 
                     # in list. We try to accept (if it's a bound socket) and if
@@ -201,8 +206,9 @@ class TCPCommunicationHandler(AbstractCommunicationHandler):
                         in_list.append(conn)
                     except socket.error:
                         conn = read_socket
-
+                    
                     tag, sender, communicator, recv_type, data = structured_read(conn)
+                    Logger().info("Callback on iteration: %i, with data:%s" % (it,data))
                     self.callback(callback_type="recv", tag=tag, sender=sender, communicator=communicator, recv_type=recv_type, data=data)
 
                 # We handle write operations second (for no reason).
@@ -367,8 +373,9 @@ class TCPNetwork(AbstractNetwork):
         self.MPI_COMM_WORLD = MPI_COMM_WORLD
 
         # Manually add a "always-on"/daemon socket on the right thread.
+        # NOTE: Why do we do this? Who starts the job?
+        # Can I get a comment from Codex Rex (aka. the King of code)? ;)
         job = {'type' : "world", 'socket' : self.socket, 'status' : 'new', 'persistent': True}
-
         self.t_in.add_in_job( job )
 
 #        self.start_job(None, MPI_COMM_WORLD, "world", None, None, None, self.socket)
