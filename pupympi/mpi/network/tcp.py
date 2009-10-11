@@ -359,8 +359,6 @@ class TCPNetwork(AbstractNetwork):
         socket.listen(5)
         self.socket = socket
 
-        print "I'm on %s and %d" % (hostname, port_no)
-
         # Do the initial handshaking with the other processes
         self.handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
 
