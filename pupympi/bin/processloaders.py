@@ -22,6 +22,8 @@ io_target_list = []
 def ssh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
+    # FIXME check if file exists on remote, which seems to be the last hang problem
+    # if [[ -e ~/html ]]; then echo "boom"; else echo "bust";fi 
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
