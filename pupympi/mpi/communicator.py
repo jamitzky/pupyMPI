@@ -857,7 +857,7 @@ class Communicator:
         sleep_time = 0.1
         while True:
             for request in request_list:
-                if request.test()
+                if request.test():
                     data = request.wait()
                     return (request, data)
             time.sleep(sleep_time)
