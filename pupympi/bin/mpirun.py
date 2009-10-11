@@ -6,7 +6,7 @@ import select, time
 import processloaders 
 from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
-from mpi.network.tcp import get_socket, pack_header, structured_read
+from mpi.network.tcp import get_free_socket, pack_header, structured_read
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(hosts, options.np,"rr") # TODO: This call should get scheduling option from args to replace "rr" parameter
     
-    s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
+    s, mpi_run_hostname, mpi_run_port = get_free_socket() # Find an available socket
     s.listen(5)
     #logger.debug("Socket bound to port %d" % mpi_run_port)
 

@@ -86,8 +86,8 @@ class Communicator:
         Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
         self.update()
         
-    def __repr__(self):
-        return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
+    #def __repr__(self):
+    #    return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
 
     def update(self):
         """
@@ -104,9 +104,12 @@ class Communicator:
 
         # Loook through all the request objects to see if there is anything we can do here
         for request in self.request_queue.values():
+            #logger.info("values in request queue: " + str(self.request_queue.values()))
+            
             # We will skip requests objects that are not possible to
             # acquire a lock on right away. 
             if not request.acquire(False):
+                logger.info("Skipped a request object.")
                 continue
 
             status = request.get_status()
@@ -130,7 +133,7 @@ class Communicator:
                 # request from the cancelled so it's easier to make different in 
                 # the future
                 self.request_remove( request )
-                Logger().info("Removing finished request")
+                #Logger().info("Removing finished request")
         
             elif status == 'new':
                 package = self.pop_unhandled_message(request.participant, request.tag)
@@ -142,6 +145,7 @@ class Communicator:
 
             # Release the lock after we're done
             request.release()
+            Logger().info("Request object released.")
 
     def request_remove(self, request_obj):
         """
@@ -181,7 +185,7 @@ class Communicator:
         self.request_queue[idx] = request_obj
         self.request_queue_lock.release()
         logger.debug("Added request object to the queue with index %s. There are now %d items in the queue" % (idx, len(self.request_queue)))
-        return idx
+        return idx 
 
     def have_rank(self, rank):
         return rank in self.comm_group.members
@@ -440,8 +444,10 @@ class Communicator:
         # Create a receive request object
         handle = Request("recv", self, sender, tag)
 
-        # Add request object to the queue
-        self.request_add(handle)
+        # Add request object to the queue unless it's ready already
+        if not handle.test():
+            self.request_add(handle)
+
         return handle
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
@@ -457,8 +463,9 @@ class Communicator:
         # Create a receive request object
         handle = Request("send", self, destination_rank, tag, data=content)
 
-        # Add request object to the queue
-        self.request_add(handle)
+        # Add request object to the queue unless it's ready already
+        if not handle.test():
+            self.request_add(handle)
         return handle
 
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):

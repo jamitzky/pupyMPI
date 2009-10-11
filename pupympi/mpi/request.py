@@ -32,7 +32,7 @@ class Request(BaseRequest):
 
         self.request_type = request_type
         self.communicator = communicator
-        self.participant = participant
+        self.participant = participant # The other process' rank
         self.tag = tag
         self.data = data
 
@@ -57,33 +57,44 @@ class Request(BaseRequest):
         Logger().debug("LOCKING in init %s" % (self._m['waitlock']))
         self._m['waitlock'].acquire()
         Logger().debug("LOCKED in init %s" % (self._m['waitlock']))
-
         # Start the network layer on a job as well
         self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
-
+        
         # If we have a request object we might already have received the
         # result. So we look into the internal queue to see. If so, we use the
         # network_callback method to update all the internal structure.
         if request_type == 'recv':
             data = communicator.pop_unhandled_message(participant, tag)
             if data:                
-                Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
-                self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
-                return
+                Logger().debug("Unhandled message had data: %s" % data)
+                self.network_callback(lock=False, status="ready", data=data['data'], callfrom="Right-away-quick-fast-receive")
+                return # NOTE: this return is superfluous until we add code after the =='recv' check
+            
+    def __repr__(self):
+        return """<request:
+            request_type %s
+            communicator %s
+            participant %s
+            tag %s
+            data %s
+        """ % (self.request_type, self.communicator, self.participant, self.tag, self.data)
 
-    def network_callback(self, lock=True, ffrom="from-nowhere", *args, **kwargs):
+    def network_callback(self, lock=True, callfrom="from-nowhere", *args, **kwargs):
         Logger().debug("Network callback in request called")
 
         if lock:
-            Logger().info("REQUEST LOCKING %s" % ffrom)
+            Logger().info("REQUEST LOCKING %s" % callfrom)
             self.acquire()
-            Logger().info("REQUEST LOCKED %s" % ffrom)
+            Logger().info("REQUEST LOCKED %s" % callfrom)
 
         if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], ffrom))
+            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], callfrom))
+            old_status = self._m["status"] 
             self._m["status"] = kwargs["status"]
 
-            if kwargs["status"] == "ready" and "waitlock" in self._m:
+            # we need some smarter way to ensure we're not actually trying to update
+            # the status when it's already finished or ready. 
+            if kwargs["status"] == "ready" and old_status not in ('finished','ready') and "waitlock" in self._m:
                 # FIXME: This release is sometimes called on released lock raising an error
                 # we should think locking strategy through again
                 try:
@@ -91,6 +102,7 @@ class Request(BaseRequest):
                     self._m['waitlock'].release()
                     Logger().debug("RELEASED in network_callback %s" % (self._m['waitlock']) )
                 except Exception, e:
+                    logger.error("Extra release! Oh why!?")
                     raise Exception("EXTRA RELEASE")
             
         if "data" in kwargs:
@@ -98,9 +110,9 @@ class Request(BaseRequest):
             self.data = kwargs["data"]
         
         if lock:
-            Logger().info("REQUEST RELEASING %s" % ffrom)
+            Logger().info("REQUEST RELEASING %s" % callfrom)
             self.release()
-            Logger().info("REQUEST RELEASED %s" % ffrom)
+            Logger().info("REQUEST RELEASED %s" % callfrom)
 
     def cancel(self):
         """
@@ -145,6 +157,8 @@ class Request(BaseRequest):
             Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
         
+        
+        # NOTE: Are there actually request objects without a waitlock? otherwise this test does not make sense.
         if "waitlock" in self._m:
             Logger().debug("LOCKING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].acquire()
@@ -152,25 +166,28 @@ class Request(BaseRequest):
             Logger().debug("RELEASING in wait %s" % (self._m['waitlock']) )
             self._m['waitlock'].release()
             Logger().debug("RELEASED in wait %s" % (self._m['waitlock']) )
+        else:
+            logger.error("Alien object found! How can it not have a waitlock!?")
+            raise MPIException("Wait on request object without waitlock!")
 
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
         self._m['status'] = 'finished'
+        
+        #Logger().info("Ending a %s wait" % self.request_type)
+        
+        # This will be None (if sending) or the actual data (if recieving)
+        return self.data
 
-        # Return none or the data
-        if self.request_type == 'recv':
-            return self.data
-
-        Logger().info("Ending a %s wait" % self.request_type)
 
     def test(self):
         """
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
-        Logger().debug("Testing a %s request" % self.request_type)
+        #Logger().debug("Testing a %s request" % self.request_type)
         return self._m['status'] == 'ready'
 
     def get_status(self):
-        # I think this is a API call? Check into it. 
+        # TODO: I think this is a API call? Check into it. 
         return self._m['status']
