@@ -35,8 +35,8 @@ def testrunner(fixed_module = None):
 
     def test_per_size(module, test):
         results = []
-        for size in common.size_array:
-            timing = module.do_test(size, test, None)
+        for size in module.meta_size_array:
+            timing = test(size, None)
             results.append((size, round(timing, 5)))
 
         return results
