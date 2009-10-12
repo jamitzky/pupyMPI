@@ -36,7 +36,7 @@ def parse_options():
     parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", help='Path to Python 2.6 on remote hosts. Defaults to  %default')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh, rsh (not supported) and popen (local only). Defaults to %default')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
-    parser_adv_group.add_option('--process-io', dest='process_io', default="pipe", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, pipe, filepipe or remote_file. Defaults to %default')
+    parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser.add_option_group( parser_adv_group )
 
     options, args = parser.parse_args()
@@ -153,7 +153,7 @@ if __name__ == "__main__":
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
-                "--verbosity=%d" % options.verbosity] 
+                "--verbosity=%d" % options.verbosity, "--process-io=%s" % options.process_io] 
         
         # Special options
         # TODO: This could be done nicer, no need for spec ops
@@ -161,8 +161,6 @@ if __name__ == "__main__":
             run_options.append('--quiet')
         if options.debug:
             run_options.append('--debug')
-        if options.process_io == "remote_file":
-            run_options.append('--process-io=local')
         run_options.append('--log-file=%s' % options.logfile)
 
         # Adding user options. GNU style says this must be after the --
@@ -177,7 +175,7 @@ if __name__ == "__main__":
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
-    if options.process_io == "pipe":
+    if options.process_io == "asyncdirect":
         io_shutdown_lock = threading.Lock() # lock used to signal shutdown
         io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
         t = threading.Thread(target=io_forwarder, args=(process_list,))

@@ -74,14 +74,20 @@ class MPI(Thread):
         self.shutdown_lock = threading.Lock()
         self.shutdown_lock.acquire()
         
-        if options.process_io == "local": # equal to process-io=remote_file on mpirun
-            output = open('/tmp/mpi.local.rank%s.log' % options.rank, "w")
-            sys.stdout = output
-            sys.stderr = output
             
         
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+
+        if options.process_io == "remotefile": 
+            filename = '/tmp/mpi.local.rank%s.log' % options.rank
+            logger.debug("Opening file for I/O: %s" % filename)
+            output = open(filename, "w")
+            sys.stdout = output
+            sys.stderr = output
+        elif options.process_io == "none":
+            logger.debug("Closing stdout")
+            sys.stdout = None
 
         #logger.debug("Finished all the runtime arguments")
 

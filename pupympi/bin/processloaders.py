@@ -28,11 +28,11 @@ def ssh(host, arguments, process_io, rank):
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
     
-    if process_io in ['none', 'remote_file']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
+    if process_io in ['none', 'direct', 'remotefile']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
         target = None
-    elif process_io == 'pipe': # uses io forwarder and prints to console
+    elif process_io == 'asyncdirect': # uses io forwarder and prints to console
         target = subprocess.PIPE
-    elif process_io == 'filepipe': # writes to a file on the mpirun machine only
+    elif process_io == 'localfile': # writes to a file on the mpirun machine only
         target = open("/tmp/mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
         io_target_list.append(target)
     else:
