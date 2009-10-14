@@ -71,11 +71,6 @@ class MPI(Thread):
 
         options, args = parser.parse_args()
     
-        self.shutdown_lock = threading.Lock()
-        self.shutdown_lock.acquire()
-        
-            
-        
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
@@ -132,13 +127,27 @@ class MPI(Thread):
 
         self.daemon = True
         self.start()
+        
+        # Initialising data structures for staring jobs.
+        self.unstarted_requests = []
+        self.unstarted_requests_cond = Threading.Condition()
+
+        self.shutdown_event = threading.Event()
 
     def run(self):
 
-        while True:
-            # Check for shutdown
-            if self.shutdown_lock.acquire(False):
-                self.shutdown_lock.release()
+        while not self.shutdown_event.is_set():
+            with self.unstarted_requests_cond:
+                self.unstarted_requests_cond.wait()
+                
+                for request in self.unstarted_requests:
+                    # Start request through the network object
+                    
+                    self.unstarted_requests.remove(request)
+            
+            # CODE BELOW THIS POINT IS NOT REWRITTEN TO THE NEW STRUCTURE
+            # Check for shutdown. #TODO. This should be rewritten with the
+            # proper lock abstraction.
                 break
 
             # Update request objects
@@ -163,8 +172,10 @@ class MPI(Thread):
         Remember to always end your MPI program with this call. Otherwise proper 
         shutdown is not guaranteed. 
         """
-        # Wait for shutdown to be signalled
-        self.shutdown_lock.release()
+        # Signal shutdown to the system (look in main while loop in
+        # the run method)
+        self.shutdown_event.set()
+
         # Shutdown the network
         self.network.finalize()
         #Logger().debug("Network finalized")

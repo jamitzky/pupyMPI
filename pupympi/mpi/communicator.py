@@ -456,9 +456,14 @@ class Communicator:
 
         # Create a receive request object
         handle = Request("send", self, destination_rank, tag, data=content)
+        
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        with self.mpi.unstarted_requests_cond:
+            self.mpi.unstarted_requests.append( handle )
+            mpi.unstarted_requests_cond.notify()
 
-        # Add request object to the queue
-        self.request_add(handle)
         return handle
 
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
