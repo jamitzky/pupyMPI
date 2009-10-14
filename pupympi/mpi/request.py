@@ -53,19 +53,6 @@ class Request(BaseRequest):
 
         callbacks = [ self.network_callback, ]
         
-        # Start the network layer on a job as well
-        # MOVE THIS TO THE MPI THREAD
-        self.communicator.network.start_job(self, self.communicator, request_type, self.participant, tag, data, callbacks=callbacks)
-
-        # If we have a request object we might already have received the
-        # result. So we look into the internal queue to see. If so, we use the
-        # network_callback method to update all the internal structure.
-        if request_type == 'recv':
-            data = communicator.pop_unhandled_message(participant, tag)
-            if data:                
-                Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
-                self.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
-                return
 
     def network_callback(self, lock=True, caller="from-nowhere", *args, **kwargs):
         Logger().debug("Network callback in request called")
