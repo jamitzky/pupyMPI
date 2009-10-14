@@ -130,33 +130,37 @@ class MPI(Thread):
         
         # Initialising data structures for staring jobs.
         self.unstarted_requests = []
-        self.unstarted_requests_cond = Threading.Condition()
+        self.unstarted_requests_lock = threading.Lock()
+        self.unstarted_requests_has_work = threading.Event()
+        
+        self.pending_requests = []
+        self.pending_requests_lock = threading.Lock()
+        self.pending_requests_has_work = threading.Event()
+        
+        self.has_work_cond = Threading.Condition()
 
         self.shutdown_event = threading.Event()
 
     def run(self):
 
         while not self.shutdown_event.is_set():
-            with self.unstarted_requests_cond:
-                self.unstarted_requests_cond.wait()
+            with self.has_work_cond:
+                self.has_work_cond.wait()
                 
-                for request in self.unstarted_requests:
-                    # Start request through the network object
+                if self.pending_requests_has_work.is_set():
+                    with self.pending_requests_lock:
+                        for request in self.pending_requests:
+                            # Handle the actual request
+                            pass
+                        self.pending_requests_has_work.clear()
                     
-                    self.unstarted_requests.remove(request)
-            
-            # CODE BELOW THIS POINT IS NOT REWRITTEN TO THE NEW STRUCTURE
-            # Check for shutdown. #TODO. This should be rewritten with the
-            # proper lock abstraction.
-                break
-
-            # Update request objects
-            for comm in self.communicators.values():
-                comm.update()                
-            
-            if sys.stdout is not None:
-                sys.stdout.flush() # Dirty hack to get output out if logger isn't enabled
-            time.sleep(1)
+                if self.unstarted_requests_has_work.is_set():
+                    with self.unstarted_requests_lock:
+                        for request in self.unstarted_requests:
+                            self.unstarted_requests.remove(request)
+                            # Add the request
+                        self.unstarted_requests_has_work.clear()
+                            
 
     def recv_callback(self, *args, **kwargs):
         #Logger().debug("MPI layer recv_callback called")
