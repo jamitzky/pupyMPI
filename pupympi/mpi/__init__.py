@@ -89,11 +89,11 @@ class MPI(Thread):
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
-        self.network.set_mpi_world( self.MPI_COMM_WORLD )
+        self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
         
         # Set the default receive callback for handling those 
         # receives. 
-        self.network.register_callback("recv", self.recv_callback)
+        self.network.t_in.register_callback("recv", self.recv_callback)
 
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.

@@ -1,4 +1,5 @@
-import socket
+import socket, threading
+
 from mpi.exceptions import MPIException
 from mpi.network.utils import get_socket
 from mpi.network.socketpool import SocketPool
@@ -26,11 +27,11 @@ class Network(object):
         self.hostname = hostname
         socket.listen(5)
         self.main_receive_socket = socket
+        
+        # Do the initial handshaking with the other processes
+        self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
 
-    def set_mpi_world(self, MPI_COMM_WORLD):
-        self.MPI_COMM_WORLD = MPI_COMM_WORLD
-
-    def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
+    def _handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
         This method create the MPI_COMM_WORLD communicator, by receiving
         (hostname, port, rank) for all the processes started by mpirun.
@@ -38,8 +39,6 @@ class Network(object):
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket. 
         """
-        #Logger().debug("handshake: Communicating ports and hostname to mpirun")
-        
         # Packing the data
         data = pickle.dumps( (self.hostname, self.port, internal_rank ),protocol=-1 )
         
@@ -70,7 +69,6 @@ class Network(object):
         tree.up()
         tree.down()
 
-
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
@@ -82,10 +80,11 @@ class Network(object):
             self.t_out.finalize()
         self.main_receive_socket.close()
 
-class CommunicationHandler(object):
+class CommunicationHandler(threading.Thread):
     """
     """
     # Add two TCP specific lists. Read and write sockets
     self.sockets_in = []
     self.sockets_out = []
-
+    
+    
