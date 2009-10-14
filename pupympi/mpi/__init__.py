@@ -138,8 +138,8 @@ class MPI(Thread):
                 if self.pending_requests_has_work.is_set():
                     with self.pending_requests_lock:
                         for request in self.pending_requests:
-                            # Handle the actual request
                             pass
+
                         self.pending_requests_has_work.clear()
                     
                 if self.unstarted_requests_has_work.is_set():

@@ -79,6 +79,10 @@ class Network(object):
         if not self.options.single_communication_thread:
             self.t_out.finalize()
         self.main_receive_socket.close()
+        
+    def add_request(self, request):
+        if request.request_type in ("bcast_send", "send"):
+            self.t_out.add_out_request(request)
 
 class CommunicationHandler(threading.Thread):
     """
@@ -86,7 +90,7 @@ class CommunicationHandler(threading.Thread):
     """
     def __init__(self,network, rank, socket_pool):
         # Store all procs in the network for lookup
-        self.all_procs = network.all_procs
+        self.network = network
         
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
@@ -99,23 +103,25 @@ class CommunicationHandler(threading.Thread):
         self.rank = rank
         self.socket_pool = socket_pool
     
-    def add_request(self, request):
-        if request.request_type in ('bcast_send', 'send'):
-            
-            # Find the global rank of other party
-            global_rank = request.communicator.group().members[request[participant]]['global_rank']
-            
-            # Find a socket and port of other party           
-            host = self.all_procs[global_rank]['host']
-            port = self.all_procs[global_rank]['port']
+    def add_out_request(self, request):
+        # Find the global rank of other party
+        global_rank = request.communicator.group().members[request[participant]]['global_rank']
+        
+        # Find a socket and port of other party           
+        host = self.network.all_procs[global_rank]['host']
+        port = self.network.all_procs[global_rank]['port']
 
-            socket = self.socket_pool.get_socket(global_rank, host, port)
-            
-            # Add the socket and request to the internal system
-            if socket in self.socket_to_request:
-                self.socket_to_request[socket].append(request) # socket already exists just add another request to the list
-            else:
-                self.socket_to_request[socket] = [ request ] # new socket, add the request in a singleton list
+        socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
+        
+        if newly_created:
+            self.network.t_in.sockets_in.append(socket)
+            self.network.t_out.sockets_out.append(socket)
+        
+        # Add the socket and request to the internal system
+        if socket in self.socket_to_request:
+            self.socket_to_request[socket].append(request) # socket already exists just add another request to the list
+        else:
+            self.socket_to_request[socket] = [ request ] # new socket, add the request in a singleton list
             
     def remove_request(request):
         """
