@@ -38,6 +38,8 @@ select_tag = False          # 0/1 for tag selection off/on
 select_source = False       # 0/1 for sender selection off/on          
 
 clock_function = time.clock # set this to communicator.Wtime() for MPI time
+
+sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops FIXME snd-, and reccnt not presently used.
                       
 # # >> IMB 3.1   
 
@@ -52,10 +54,6 @@ clock_function = time.clock # set this to communicator.Wtime() for MPI time
 # int* g_sizes;              # array of group sizes                     
 # int* g_ranks;              # w_ranks constituting the groups          
 # 
-# int* sndcnt;               # send count argument for global ops.      
-# int* sdispl;               # displacement argument for global ops.    
-# int* reccnt;               # recv count argument for global ops.      
-# int* rdispl;               # displacement argument for global ops.    
 
 def get_srcdest_paired():
     if rank == pair0:
