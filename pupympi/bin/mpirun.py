@@ -6,7 +6,7 @@ import select, time
 import processloaders 
 from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
-from mpi.network.tcp import get_socket, pack_header, structured_read
+from mpi.network import get_socket, pack_header, structured_read
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
