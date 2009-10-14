@@ -166,14 +166,14 @@ class CollectiveRequest(BaseRequest):
         """
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
-        self._m['status'] = 'cancelled'
+        self._metadata['status'] = 'cancelled'
         Logger().debug("Cancelling a %s/%s request" % self.request_supertype, self.tag)
         
 
     # FIXME Deleted test and wait until we know if they'll be needed (copy from Request then)
 
     def get_status(self):
-        return self._m['status']
+        return self._metadata['status']
 
     def wait(self):
         """

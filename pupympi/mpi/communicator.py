@@ -163,6 +163,8 @@ class Communicator:
         """
         Add the request object to a queue so we can get a hold of it later.
         Returns the lookup idx for later use.
+        
+        FIXME: MARKED FOR DELETION (MOVE SOMEWHERE ELSE)
         """
         logger = Logger()
         logger.debug("Adding request object to the request queue")
@@ -443,9 +445,10 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        with self.mpi.unstarted_requests_cond:
+        with self.mpi.has_work_cond:
             self.mpi.unstarted_requests.append( handle )
-            mpi.unstarted_requests_cond.notify()
+            mpi.unstarted_requests_event.set()
+            mpi.has_work_cond.notify()
 
         return handle
 
@@ -465,9 +468,10 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        with self.mpi.unstarted_requests_cond:
+        with self.mpi.has_work_cond:
             self.mpi.unstarted_requests.append( handle )
-            mpi.unstarted_requests_cond.notify()
+            mpi.unstarted_requests_event.set()
+            mpi.has_work_cond.notify()
 
         return handle
 
