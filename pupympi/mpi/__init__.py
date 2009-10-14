@@ -6,7 +6,7 @@ from threading import Thread
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
-from mpi.network.tcp import TCPNetwork as Network
+from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
 from mpi import constants
@@ -89,14 +89,9 @@ class MPI(Thread):
             logger.debug("Closing stdout")
             sys.stdout = None
 
-        #logger.debug("Finished all the runtime arguments")
-
         # First check for required Python version
         self.version_check()
 
-        # Starting the network.
-        # NOTE: This is probably a TCP network, but it can be 
-        # replaced pretty easily if we want to. 
         self.network = Network(options)
         
         # Create the initial global Group, and assign the network all_procs as members
@@ -167,7 +162,6 @@ class MPI(Thread):
         self.shutdown_lock.release()
         # Shutdown the network
         self.network.finalize()
-        #Logger().debug("Network finalized")
         
     @classmethod
     def initialized(cls):
