@@ -6,7 +6,7 @@ from threading import Thread
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
-from mpi.network.tcp import TCPNetwork as Network
+from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
 from mpi import constants
@@ -23,18 +23,6 @@ class MPI(Thread):
     instances will always yield 'the same' instance, much like a singleton design
     pattern. 
     """
-    
-    def version_check(self):
-        """
-        Check that the required Python version is installed
-        """
-        (major,minor,_,_,_) = sys.version_info
-        if (major == 2 and minor < 6) or major < 2:
-            Logger().error("pupyMPI requires Python 2.6 (you may have to kill processes manually)")
-            sys.exit(1)
-        elif major >= 2 and minor is not 6:
-            Logger().warn("pupyMPI is only certified to run on Python 2.6")
-
 
     def __init__(self):
         Thread.__init__(self)
@@ -71,11 +59,6 @@ class MPI(Thread):
 
         options, args = parser.parse_args()
     
-        self.shutdown_lock = threading.Lock()
-        self.shutdown_lock.acquire()
-        
-            
-        
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
@@ -89,14 +72,9 @@ class MPI(Thread):
             logger.debug("Closing stdout")
             sys.stdout = None
 
-        #logger.debug("Finished all the runtime arguments")
-
         # First check for required Python version
-        self.version_check()
+        self._version_check()
 
-        # Starting the network.
-        # NOTE: This is probably a TCP network, but it can be 
-        # replaced pretty easily if we want to. 
         self.network = Network(options)
         
         # Create the initial global Group, and assign the network all_procs as members
@@ -129,25 +107,104 @@ class MPI(Thread):
         
         # set up 'constants'
         constants.MPI_GROUP_EMPTY = Group()
+        
+        # Initialising data structures for staring jobs.
+        self.unstarted_requests = []
+        self.unstarted_requests_lock = threading.Lock()
+        self.unstarted_requests_has_work = threading.Event()
+        
+        self.pending_requests = []
+        self.pending_requests_lock = threading.Lock()
+        self.pending_requests_has_work = threading.Event()
+        
+        self.has_work_cond = Threading.Condition()
 
+        self.shutdown_event = threading.Event()
+        
+        # Adding locks and initial information about the request queue
+        self.current_request_id_lock = threading.Lock()
+        self.current_request_id = 0
+        
         self.daemon = True
         self.start()
 
     def run(self):
 
-        while True:
-            # Check for shutdown
-            if self.shutdown_lock.acquire(False):
-                self.shutdown_lock.release()
-                break
+        while not self.shutdown_event.is_set():
+            with self.has_work_cond:
+                self.has_work_cond.wait()
+                
+                # Think about optimal ordering
+                if self.pending_requests_has_work.is_set():
+                    with self.pending_requests_lock:
+                        for request in self.pending_requests:
+                            # Handle the actual request
+                            pass
+                        self.pending_requests_has_work.clear()
+                    
+                if self.unstarted_requests_has_work.is_set():
+                    with self.unstarted_requests_lock:
+                        for request in self.unstarted_requests:
+                            self.unstarted_requests.remove(request)
+                            self.schedule_request(request)
+                            
+                        self.unstarted_requests_has_work.clear()
+                            
+    def schedule_request(self, request):
+        # If we have a request object we might already have received the
+        # result. So we look into the internal queue to see. If so, we use the
+        # network_callback method to update all the internal structure.
+        if request.request_type == 'recv':
+            data = self.pop_unhandled_message(participant, tag)
+            if data:                
+                Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
+                request.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
+                return
 
-            # Update request objects
-            for comm in self.communicators.values():
-                comm.update()                
+        # Add the request to the internal queue
+        with self.pending_requests_lock:
+            self.pending_requests.append(request)
+            self.pending_requests_has_work.set()
+            self.has_work_cond.notify()
+
+        # Start the network layer on a job as well
+        self.network.add_request(request)
+
+    def remove_pending_request(self, request):
+        with self.pending_requests_lock:
+            self.pending_requests.remove(request)
             
-            if sys.stdout is not None:
-                sys.stdout.flush() # Dirty hack to get output out if logger isn't enabled
-            time.sleep(1)
+        # FIXME: Remove this from the network layout mapping
+        # asssss well. 
+
+    # FIXME: JUST MOVED FROM COMMUNICATOR
+    def pop_unhandled_message(self, participant, tag):
+        self.unhandled_messages_lock.acquire()
+        try:
+            package = self.unhandled_receives[tag][participant].pop(0)
+            self.unhandled_messages_lock.release()
+            return package
+        except (IndexError, KeyError):
+            pass
+        self.unhandled_messages_lock.release()
+    
+    # FIXME: JUST MOVED FROM COMMUNICATOR
+    def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
+        # Look for a request object right now. Otherwise we just put it on the queue and let the
+        # update handler do it.
+        
+        # Put it on unhandled requests
+        if tag not in self.unhandled_receives:
+            self.unhandled_receives[tag] = {}
+            
+        if not sender in self.unhandled_receives[tag]:
+            self.unhandled_receives[tag][sender] = []
+
+        self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
+        
+        Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
+        self.update()
+
 
     def recv_callback(self, *args, **kwargs):
         #Logger().debug("MPI layer recv_callback called")
@@ -163,11 +220,12 @@ class MPI(Thread):
         Remember to always end your MPI program with this call. Otherwise proper 
         shutdown is not guaranteed. 
         """
-        # Wait for shutdown to be signalled
-        self.shutdown_lock.release()
+        # Signal shutdown to the system (look in main while loop in
+        # the run method)
+        self.shutdown_event.set()
+
         # Shutdown the network
         self.network.finalize()
-        #Logger().debug("Network finalized")
         
     @classmethod
     def initialized(cls):
@@ -201,3 +259,25 @@ class MPI(Thread):
     def get_version(self):
         # FIXME (doc)
         return __version__
+    
+    def _version_check(self):
+        """
+        Check that the required Python version is installed
+        """
+        (major,minor,_,_,_) = sys.version_info
+        if (major == 2 and minor < 6) or major < 2:
+            Logger().error("pupyMPI requires Python 2.6 (you may have to kill processes manually)")
+            sys.exit(1)
+        elif major >= 2 and minor is not 6:
+            Logger().warn("pupyMPI is only certified to run on Python 2.6")
+    
+    def _increment_request_id():
+        """
+        Threadsafe incrementing and return of request ids
+        """    
+        with self.current_request_id_lock:            
+            self.current_request_id += 1
+            return self.current_request_id
+        
+        
+
