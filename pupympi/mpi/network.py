@@ -1,6 +1,128 @@
 import socket
 from mpi.exceptions import MPIException
 
+def get_socket(min=10000, max=30000):
+    """
+    A simple helper method for creating a socket,
+    binding it to a random free port within the specified range. 
+    """
+    logger = Logger()
+    used = []
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    
+    hostname = socket.gethostname()
+    port_no = None
+
+    #logger.debug("get_socket: Starting loop with hostname %s" % hostname)
+
+    while True:
+        port_no = random.randint(min, max) 
+        if port_no in used:
+            logger.debug("get_socket: Port %d is already in use %d" % port_no)
+            continue
+
+        try:
+            #logger.debug("get_socket: Trying to bind on port %d" % port_no)
+            sock.bind( (hostname, port_no) )
+            break
+        except socket.error, e:
+            logger.debug("get_socket: Permission error on port %d" % port_no)
+            used.append( port_no ) # Mark socket as used (or no good or whatever)
+            raise e
+        
+    #logger.debug("get_socket: Bound socket on port %d" % port_no)
+    return sock, hostname, port_no
+
+class Network(object):
+    def __init__(self, options):
+        self.options = options
+        self.t_in = CommunicationHandler(rank)
+        self.t_in.name = "t_in"
+        self.t_in.daemon = True
+        self.t_in.start()
+        
+        if options.single_communication_thread:
+            self.t_out = self.t_in
+        else:
+            self.t_out = CommunicationHandler(rank)
+            self.t_out.daemon = True
+            self.t_out.name = "t_out"
+            self.t_out.start()
+
+        self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
+        
+        (socket, hostname, port_no) = get_socket()
+        self.port = port_no
+        self.hostname = hostname
+        socket.listen(5)
+        self.main_receive_socket = socket
+
+    def set_mpi_world(self, MPI_COMM_WORLD):
+        self.MPI_COMM_WORLD = MPI_COMM_WORLD
+
+    def handshake(self, mpirun_hostname, mpirun_port, internal_rank):
+        """
+        This method create the MPI_COMM_WORLD communicator, by receiving
+        (hostname, port, rank) for all the processes started by mpirun.
+        
+        For mpirun to have this information we first send all the data
+        from our own process. So we bind a socket. 
+        """
+        #Logger().debug("handshake: Communicating ports and hostname to mpirun")
+        
+        # Packing the data
+        data = pickle.dumps( (self.hostname, self.port, internal_rank ),protocol=-1 )
+        
+        # Connection to the mpirun processs
+        s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        recipient = (mpirun_hostname, mpirun_port)
+        #Logger().debug("Trying to connect to (%s,%s)" % recipient)
+        s_conn.connect(recipient)
+        
+        # Pack the data with our special format
+        header = pack_header(internal_rank, constants.TAG_INITIALIZING, len(data), 0, constants.JOB_INITIALIZING)
+        s_conn.send(header + data)
+        
+        # Receiving data about the communicator, by unpacking the head etc.
+        tag, sender, communicator, recv_type, all_procs = structured_read(s_conn)
+        #Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
+        s_conn.close()
+
+        self.all_procs = {}
+        for (host, port, global_rank) in all_procs:
+            self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
+
+    def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
+        Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))
+        
+        job = {'type' : jobtype, 'data' : data, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': True}
+        tree = BroadCastTree(range(communicator.size()), communicator.rank())
+        tree.up()
+        tree.down()
+
+
+    def finalize(self):
+        """
+        Forwarding the finalize call to the threads. Look at the 
+        CommunicationHandler.finalize for a deeper description of
+        the shutdown procedure. 
+        """
+        self.t_in.finalize()
+        if not self.options.single_communication_thread:
+            self.t_out.finalize()
+        self.main_receive_socket.close()
+
+class CommunicationHandler(object):
+    """
+    """
+    # Add two TCP specific lists. Read and write sockets
+    self.sockets_in = []
+    self.sockets_out = []
+
+
+
 class SocketPool(object):
     """
     This class manages a pool of socket connections. You request and delete
