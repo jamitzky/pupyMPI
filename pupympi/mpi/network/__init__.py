@@ -163,8 +163,8 @@ class CommunicationHandler(threading.Thread):
             
             #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
             should_signal_work = False
-            add_to_pool = False
             for read_socket in in_list:
+                add_to_pool = False
                 Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
