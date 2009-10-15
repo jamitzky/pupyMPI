@@ -41,7 +41,7 @@ def get_socket(min=10000, max=30000):
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
-def get_raw_message(socket):
+def get_raw_message(client_socket):
     """
     The first part of a message is the actual size (N) of the message. The
     rest is N bytes of pickled data. So we start by receiving a long and
@@ -53,11 +53,13 @@ def get_raw_message(socket):
         """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes"""
         message = ""
         while length:
-            Logger().debug("utils.receive_fixed(%d)" % length)
-            data = socket.recv(min(length, 4096))
+            Logger().debug("utils.receive_fixed: Staring a recv for %d bytes" % length)
+            data = client_socket.recv(min(length, 4096))
             length -= len(data)
             message += data
         return message
+    
+    Logger().debug("utils.receive_fixed: Starting the call for socket %s" % client_socket)
 
     header_size = struct.calcsize("ll")
     header = receive_fixed(header_size)
