@@ -75,6 +75,11 @@ class Network(object):
         tree = BroadCastTree(range(communicator.size()), communicator.rank())
         tree.up()
         tree.down()
+        
+    def find_global_rank(hostname, portno):
+        for member in self.mpi.MPI_COMM_WORLD.members:
+            if member['host'] == hostname and member['port'] == portno:
+                return member['global_rank']
 
     def finalize(self):
         """
@@ -154,9 +159,21 @@ class CommunicationHandler(threading.Thread):
             
             should_signal_work = False
             for read_socket in in_list:
+                try:
+                    (conn, sender_address) = read_socket.accept()
+                    self.sockets_in.append(conn)
+                    
+                    # Look through our network details to find the rank of the
+                    # other side of this newly created socket. Then add it manually
+                    # to the socket pool.
+                    global_rank = self.network.find_global_rank(*sender_address)
+                    self.network.socket_pool.add_created_socket(conn, global_rank)
+                except socket.error:
+                    conn = read_socket
+
                 should_signal_work = True
                 
-                raw_data = get_raw_message(socket)
+                raw_data = get_raw_message(conn)
                 
                 with self.network.mpi.raw_data_lock:
                     self.network.mpi.raw_data.queue.append(raw_data)
