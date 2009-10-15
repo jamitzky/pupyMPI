@@ -128,17 +128,16 @@ class CommunicationHandler(threading.Thread):
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.data)
         request.data = prepare_message(data)
 
-        socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
-        
+        client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         if newly_created:
-            self.network.t_in.sockets_in.append(socket)
-            self.network.t_out.sockets_out.append(socket)
+            self.network.t_in.sockets_in.append(client_socket)
+            self.network.t_out.sockets_out.append(client_socket)
         
         # Add the socket and request to the internal system
         if socket in self.socket_to_request:
-            self.socket_to_request[socket].append(request) # socket already exists just add another request to the list
+            self.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
         else:
-            self.socket_to_request[socket] = [ request ] # new socket, add the request in a singleton list
+            self.socket_to_request[client_socket] = [ request ] # new socket, add the request in a singleton list
             
     def remove_request(socket, request):
         """
@@ -175,18 +174,19 @@ class CommunicationHandler(threading.Thread):
                 self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
+                Logger().debug("Found socket in out-list")
                 removal = []
                 request_list = self.socket_to_request[write_socket]
                 for request in request_list:
-                    if request.get_status() == "cancelled":
+                    if request.status == "cancelled":
                         removal.append((socket, request))
-                    elif request.get_status() == "new":
+                    elif request.status == "new":
                         # Send the data on the socket
                         write_socket.send(request.data)
                         removal.append((write_socket, request))
                         request.update("ready")
                     else:
-                        raise Exception("We got a status in the send socket select we don't handle.. it's there--> %s" % request.get_status())
+                        raise Exception("We got a status in the send socket select we don't handle.. it's there--> %s" % request.status)
                 
                 if removal:
                     should_signal_work = True

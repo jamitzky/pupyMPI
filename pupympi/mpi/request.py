@@ -4,29 +4,28 @@ import threading, time
 
 class BaseRequest(object):
     def __init__(self):
-        self._metadata = {'status' : 'new' }
-
+        self.status = "new"
         # Start a lock for this request object. The lock should be taken
         # whenever we change the content. It should be legal to read 
         # information without locking (like test()). We implement the release() and
         # acquire function on this class directly so the variable stays private
-        self._metadata['lock'] = threading.Lock()
+        self._lock = threading.Lock()
         
         # Start an event for waiting on the request
-        self._metadata['waitevent'] = threading.Event()
+        self._waitevent = threading.Event()
         
 
     def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
         """
-        return self._metadata['lock'].release(*args, **kwargs)
+        return self._lock.release(*args, **kwargs)
 
     def acquire(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
         """
-        return self._metadata['lock'].acquire(*args, **kwargs)
+        return self._lock.acquire(*args, **kwargs)
 
 class Request(BaseRequest):
 
@@ -52,6 +51,7 @@ class Request(BaseRequest):
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
     
     def update(status, data=None):
+        Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))
         if self.status not in ("finished", "cancelled"): # No updating on dead requests
             self.status = status
         else:
@@ -65,7 +65,7 @@ class Request(BaseRequest):
         # If the status is ready we're enabling the wait operation
         # to complete
         if status in ("ready", "cancelled"):
-            self._metadata['waitevent'].set()
+            self._waitevent.set()
 
     def cancel(self):
         """
@@ -95,15 +95,15 @@ class Request(BaseRequest):
         """
         Logger().info("Starting a %s wait" % self.request_type)
         
-        if self._metadata['status'] == "cancelled":
+        if self.status == "cancelled":
             Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
         
-        self._metadata['waitevent'].wait()
+        self._waitevent.wait()
         
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
-        self._metadata['status'] = 'finished'
+        self.status = 'finished'
 
         # Return none or the data
         if self.request_type == 'recv':
@@ -114,8 +114,4 @@ class Request(BaseRequest):
         A non-blocking check to see if the request is ready to complete. If true a 
         following wait() should return very fast.
         """
-        return self._metadata['waitevent'].is_set()
-
-    def get_status(self):
-        # I think this is a API call? Check into it. 
-        return self._metadata['status']
+        return self._waitevent.is_set()
