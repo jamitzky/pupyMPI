@@ -1,4 +1,5 @@
 import socket
+import threading
 
 class SocketPool(object):
     """
@@ -31,6 +32,8 @@ class SocketPool(object):
         self.sockets = []
         self.max_size = max_size
         self.metainfo = {}
+        
+        self.sockets_lock = threading.Lock()
         
     def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
         """
@@ -77,18 +80,19 @@ class SocketPool(object):
         NOTE: Shouldn't we close the socket we are removing here?
         NOTE-ANSWER: Yes.. maybe.. but that will not improve correctness
         """
-        for x in range(2): # Run through twice
-            for socket in self.sockets:
-                (srank, sreference, force_persistent) = self.metainfo[socket]
-                if force_persistent: # We do not remove persistent connections
-                    continue
-                
-                if sreference: # Mark second chance
-                    self.metainfo[socket] = (srank, False, force_persistent)
-                else: # Has already had its second chance
-                    self.sockets.remove(socket) # remove from socket pool
-                    del self.metainfo[socket] # delete metainfo
-                    break
+        with self.sockets_lock:
+            for x in range(2): # Run through twice
+                for socket in self.sockets:
+                    (srank, sreference, force_persistent) = self.metainfo[socket]
+                    if force_persistent: # We do not remove persistent connections
+                        continue
+                    
+                    if sreference: # Mark second chance
+                        self.metainfo[socket] = (srank, False, force_persistent)
+                    else: # Has already had its second chance
+                        self.sockets.remove(socket) # remove from socket pool
+                        del self.metainfo[socket] # delete metainfo
+                        break
 
         raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
     
@@ -106,6 +110,7 @@ class SocketPool(object):
         return None
     
     def _add(self, rank, socket, force_persistent):
-        self.metainfo[socket] = (rank, True, force_persistent)
-        self.sockets.append(socket)
+        with self.sockets_lock:
+            self.metainfo[socket] = (rank, True, force_persistent)
+            self.sockets.append(socket)
     
