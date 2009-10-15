@@ -143,8 +143,33 @@ class MPI(Thread):
         """
         Tries to match a pending request with something in
         the received data.
+        
+        If the received data is found we remove it from the
+        list.
+        
+        The request is updated with the data if found and this
+        status update returned from the function so it's possible
+        to remove the item from the list.
         """
-        pass
+        for data in self.received_data:
+            (sender, tag, communicator_id, message) = data
+            
+            # The first strict rule is that any communication must
+            # take part in the same communicator.
+            if request.communicator.id == communicator_id:
+                
+                # The participants must also match.That is the sender must
+                # have specified this rank and we're gonna accept a message
+                # from that rank or from any rank
+                if request.participant in (sender, constants.MPI_SOURCE_ANY):
+                    
+                    # The sender / receiver must agree on the tag, or
+                    # we must be ready to receive any tag
+                    if request.tag in (tag, constants.MPI_TAG_ANY):
+                        self.received_data.remove(data)
+                        request.update(status="ready", data=message)
+                        return True
+        return False
 
     def run(self):
 
@@ -172,9 +197,14 @@ class MPI(Thread):
                 # Think about optimal ordering
                 if self.pending_requests_has_work.is_set():
                     with self.pending_requests_lock:
+                        removal = []
                         for request in self.pending_requests:
-                            self.match_pending(request)
-
+                            if self.match_pending(request):
+                                # The matcher function does the request update
+                                # we only need to update our own queue
+                                removal.append(request)
+                                
+                        self.pending_requests = [ r for r in self.pending_requests if r not in removal]
                         self.pending_requests_has_work.clear()
                     
                             

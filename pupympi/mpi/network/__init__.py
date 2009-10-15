@@ -126,17 +126,12 @@ class CommunicationHandler(threading.Thread):
         else:
             self.socket_to_request[socket] = [ request ] # new socket, add the request in a singleton list
             
-    def remove_request(request):
+    def remove_request(socket, request):
         """
         For now we try to remove the request from all lists not just the right socket's list
         This is handled by except, but could be done nicer.    
         """
-        for socket in self.socket_to_request:
-            try:
-                self.socket_to_request[socket].remove(request)
-                break # only one socket is the right one, we found it
-            except ValueError:
-                pass # The request was just not in the list (aka. wrong socket try next one)
+        self.socket_to_request[socket].remove(request)
     
     def run(self):
         while self.shutdown_event.is_set():
@@ -154,8 +149,25 @@ class CommunicationHandler(threading.Thread):
                 self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
-                pass
-            
+                removal = []
+                request_list = self.socket_to_request[write_socket]
+                for request in request_list:
+                    if request.get_status() == "cancelled":
+                        removal.append((socket, request))
+                    elif request.get_status() == "new":
+                        # Send the data on the socket
+                        write_socket.send(request.data)
+                        removal.append((write_socket, request))
+                        request.update("ready")
+                    else:
+                        raise Exception("We got a status in the send socket select we don't handle.. it's there--> %s" % request.get_status())
+                
+                if removal:
+                    should_signal_work = True
+                    
+                for t in removal:
+                    self.remove_request(*t)
+                    
             # Signal to the MPI run() method that there is work to do
             if should_signal_work:
                 with self.network.mpi.has_work_cond:
