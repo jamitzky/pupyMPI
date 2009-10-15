@@ -55,60 +55,6 @@ class Communicator:
     def __repr__(self):
         return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
 
-    def update(self):
-        """
-        This method is responsible for listening on the TCP layer, receive
-        information on network requests and update the internal Requests 
-        objects that live in the request_queue.
-
-        FIXME: We need to have access to the network layer and receive all
-        the finished tasks for this communicator. We can then update the 
-        request status.
-        """
-        logger = Logger()
-        #logger.debug("Update by the mpi thread in communicator: %s" % self.name)
-
-        # Loook through all the request objects to see if there is anything we can do here
-        for request in self.request_queue.values():
-            # We will skip requests objects that are not possible to
-            # acquire a lock on right away. 
-            if not request.acquire(False):
-                continue
-
-            status = request.get_status()
-
-            # Just switch on the different status something can have
-            if status == 'cancelled':
-                # We remove the cancelled request, but I think we might need to
-                # cache it. What if there is a subsequent isend/irecv starting 
-                # receiving the data meant for this one. (the data might already
-                # be here)
-                self.request_remove( request )
-                Logger().info("Removing cancelled request")
-
-            elif status == 'ready':
-                # Ready means that we're waiting for the user to do something about
-                # it. We can't do anything.
-                pass
-
-            elif status == 'finished':
-                # All done, so it should be safe to remove. We're seperating this
-                # request from the cancelled so it's easier to make different in 
-                # the future
-                self.request_remove( request )
-                Logger().info("Removing finished request")
-        
-            elif status == 'new':
-                package = self.pop_unhandled_message(request.participant, request.tag)
-                if package:
-                    request.network_callback(lock=False, status='ready', data=package['data'])
-
-            else:
-                logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
-
-            # Release the lock after we're done
-            request.release()
-
     def have_rank(self, rank):
         return rank in self.comm_group.members
     
