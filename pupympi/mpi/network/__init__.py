@@ -59,16 +59,17 @@ class Network(object):
         
         # Pack the data with our special format
         data = (-1, -1, constants.TAG_INITIALIZING, data)
-        s_conn.send(prepare_message(data))
+        s_conn.send(prepare_message(data, internal_rank))
         
         # Receiving data about the communicator, by unpacking the head etc.
-        data = pickle.loads(get_raw_message(s_conn))
+        rank, raw_data = get_raw_message(s_conn)
+        data = pickle.loads(raw_data)
         (_, _, _, all_procs) = data
 
         s_conn.close()
 
         self.all_procs = {}
-        print all_procs
+
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
@@ -80,11 +81,6 @@ class Network(object):
         tree.up()
         tree.down()
         
-    def find_global_rank(self, hostname, portno):
-        for member in self.mpi.MPI_COMM_WORLD.group().members.values():
-            if member['host'] == hostname and member['port'] == portno:
-                return member['global_rank']
-
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
@@ -124,13 +120,15 @@ class CommunicationHandler(threading.Thread):
         # Find the global rank of other party
         global_rank = request.communicator.group().members[request.participant]['global_rank']
         
+        Logger().debug("Out-request found global rank %d" % global_rank)
+        
         # Find a socket and port of other party           
         host = self.network.all_procs[global_rank]['host']
         port = self.network.all_procs[global_rank]['port']
         
         # Create the proper data structure and pickle the data
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.data)
-        request.data = prepare_message(data)
+        request.data = prepare_message(data, request.communicator.rank())
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         if newly_created:
@@ -155,26 +153,25 @@ class CommunicationHandler(threading.Thread):
             
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
-            Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
+            #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
             should_signal_work = False
+            add_to_pool = False
             for read_socket in in_list:
                 Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
                     self.sockets_in.append(conn)
-                    
-                    # Look through our network details to find the rank of the
-                    # other side of this newly created socket. Then add it manually
-                    # to the socket pool.
-                    global_rank = self.network.find_global_rank(*sender_address)
-                    self.network.socket_pool.add_created_socket(conn, global_rank)
+                    add_to_pool = True
                 except socket.error:
                     conn = read_socket
 
                 should_signal_work = True
                 
-                raw_data = get_raw_message(conn)
-                
+                rank, raw_data = get_raw_message(conn)
+                data = pickle.loads(raw_data)
+                    
+                self.network.socket_pool.add_created_socket(conn, rank)
+
                 with self.network.mpi.raw_data_lock:
                     self.network.mpi.raw_data_queue.append(raw_data)
                 self.network.mpi.raw_data_event.set()
@@ -207,5 +204,5 @@ class CommunicationHandler(threading.Thread):
                     self.network.mpi.has_work_cond.notify()
             
     def finalize(self):
-        Logger().debug("Communication handler closed by finalize call")
         self.shutdown_event.set()
+        Logger().debug("Communication handler closed by finalize call")
