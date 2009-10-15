@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.6
+# meta-description: tests mpi_sendreceive(...). Runs with odd no. of processes
+# meta-expectedresult: 0
 
-# Simple pupympi program to test sendrecv.
 # This test is meant to be run with a odd number of processes
 
 from mpi import MPI

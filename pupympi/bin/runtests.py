@@ -68,7 +68,7 @@ def output_latex(datatuple):
     (name, execution_time, killed, returncode, meta) = datatuple
     
     description = meta["description"].replace("_", "\\_") if "description" in meta else ""
-    testname = name.replace("TEST_", "").replace("_", "\\_").replace(".py". "")
+    testname = name.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
     result = "success" if returncode == 0 and not killed else "failed"
     
     latex_output.write("%s & %s & %s \\\\ \n" % (testname, result, description))
