@@ -1,7 +1,7 @@
 import socket, threading
 
 from mpi.exceptions import MPIException
-from mpi.network.utils import get_socket
+from mpi.network.utils import get_socket, get_raw_message
 from mpi.network.socketpool import SocketPool
 
 class Network(object):
@@ -147,7 +147,7 @@ class CommunicationHandler(threading.Thread):
             for read_socket in in_list:
                 should_signal_work = True
                 
-                raw_data = None # Implement me
+                raw_data = get_raw_message(socket)
                 
                 with self.network.mpi.raw_data_lock:
                     self.network.mpi.raw_data.queue.append(raw_data)

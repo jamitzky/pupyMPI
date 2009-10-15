@@ -1,4 +1,4 @@
-import socket
+import socket, struct
 
 def get_socket(min=10000, max=30000):
     """
@@ -33,3 +33,12 @@ def get_socket(min=10000, max=30000):
         
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
+
+def get_raw_message(socket):
+    """
+    The first part of a message is the actual size (N) of the message. The
+    rest is N bytes of pickled data. So we start by receiving a long and
+    when using that value to unpack the remaining part.
+    """
+    header_size = struct.calcsize("l")
+    
