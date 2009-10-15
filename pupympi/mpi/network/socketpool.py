@@ -55,15 +55,15 @@ class SocketPool(object):
             # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
             newly_created = True
-        Logger().debug("SocketPool: Created (%s) socket connection for rank %d: %s" % (newly_created, rank, client_socket))
+        Logger().debug("SocketPool.get_socket: Created (%s) socket connection for rank %d: %s" % (newly_created, rank, client_socket))
         return client_socket, newly_created
     
     def add_created_socket(self, socket_connection, global_rank):
-        Logger().debug("SocketPool: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
+        Logger().debug("SocketPool.add_created_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
         known_socket = self._get_socket_for_rank(global_rank)
         
         if known_socket == socket_connection:
-            Logger().warning("We were very close to pushing a socket out and putting it in again. BAD")
+            Logger().warning("SocketPool.add_created_socket: We were very close to pushing a socket out and putting it in again. BAD")
             return
         
         if known_socket:
@@ -103,6 +103,7 @@ class SocketPool(object):
         Attempts to find an already created socket with a connection to a
         specific rank. If this does not exist we return None
         """
+        Logger().debug("SocketPool._get_socket_for_rank: Trying to fetch socket for rank %d" % rank)
         for client_socket in self.sockets:
             (srank, _, fp) = self.metainfo[client_socket]
             if srank == rank:
