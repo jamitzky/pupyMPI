@@ -29,11 +29,11 @@ class Network(object):
             self.t_out.daemon = True
             self.t_out.start()
         
-        (socket, hostname, port_no) = get_socket()
+        (client_socket, hostname, port_no) = get_socket()
         self.port = port_no
         self.hostname = hostname
         socket.listen(5)
-        self.main_receive_socket = socket
+        self.main_receive_socket = client_socket
         
         self.t_in.add_in_socket(self.main_receive_socket)
         
