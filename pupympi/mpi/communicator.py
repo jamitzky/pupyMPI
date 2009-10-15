@@ -23,7 +23,7 @@ class Communicator:
         self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
         
         self.attr = {}
-        if name == "MPI_COMM_WORLD": # FIXME Move to build_world
+        if name == "MPI_COMM_WORLD":
             self.attr = {   "MPI_TAG_UB": 2**30, \
                             "MPI_HOST": "TODO", \
                             "MPI_IO": rank, \
