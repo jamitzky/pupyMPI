@@ -10,7 +10,7 @@ from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
 from mpi import constants
-
+from mpi.network.utils import pickle
 
 class MPI(Thread):
     """
