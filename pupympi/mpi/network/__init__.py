@@ -158,22 +158,22 @@ class CommunicationHandler(threading.Thread):
     
     def run(self):
         while not self.shutdown_event.is_set():
-            
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
-            #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
+            Logger().debug("="*80)
+            Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
+            Logger().debug("In select loop sockets_in: %s  sockets_out: %s" % (self.sockets_in, self.sockets_out))
+            Logger().debug("="*80)
             should_signal_work = False
             for read_socket in in_list:
                 add_to_pool = False
                 Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
-                    Logger().debug("Select loop accepted socket")
 
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
-                    Logger().debug("Accepted statement complete")
                 except socket.error, e:
                     print e
                     conn = read_socket
@@ -193,7 +193,7 @@ class CommunicationHandler(threading.Thread):
                 self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
-                #Logger().debug("Found socket in out-list")
+                Logger().debug("Found socket in out-list")
                 removal = []
                 request_list = self.socket_to_request[write_socket]
                 for request in request_list:
