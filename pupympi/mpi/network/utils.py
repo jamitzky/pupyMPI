@@ -43,8 +43,8 @@ def get_raw_message(socket):
     NOTE: if we recieve to much we should pass on the remaining part
     """
     def receive_fixed(length):
-        message = ""
-        # Get just the header
+        """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes"""
+        message = ""        
         while length:
             data = socket.recv(min(length, 4096))
             length -= len(data)
