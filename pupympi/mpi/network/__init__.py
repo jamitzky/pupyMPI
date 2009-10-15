@@ -137,7 +137,7 @@ class CommunicationHandler(threading.Thread):
             self.network.t_in.add_in_socket(client_socket)
             self.network.t_out.add_out_socket(client_socket)
 
-        self.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+        self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
 
     def _ensure_socket_to_request_key(self, client_socket):
         self.socket_to_request[client_socket] = []
