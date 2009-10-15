@@ -35,7 +35,7 @@ class Network(object):
         socket.listen(5)
         self.main_receive_socket = socket
         
-        self.t_in.sockets_in.append(self.main_receive_socket)
+        self.t_in.add_in_socket(self.main_receive_socket)
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
@@ -132,10 +132,9 @@ class CommunicationHandler(threading.Thread):
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         if newly_created:
-            self.network.t_in.sockets_in.append(client_socket)
-            self.network.t_out.sockets_out.append(client_socket)
+            self.network.t_in.add_in_socket(client_socket)
+            self.network.t_out.add_out_socket(client_socket)
 
-        self._ensure_socket_to_request_key(client_socket)
         self.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
 
     def _ensure_socket_to_request_key(self, client_socket):
@@ -167,8 +166,8 @@ class CommunicationHandler(threading.Thread):
                 Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
-                    self.add_in_socket(conn)
-                    self.add_out_socket(conn)
+                    self.network.t_in.add_in_socket(conn)
+                    self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
                 except socket.error:
                     conn = read_socket
