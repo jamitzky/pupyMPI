@@ -147,8 +147,8 @@ class CommunicationHandler(threading.Thread):
         self.socket_to_request[socket].remove(request)
     
     def run(self):
-        while self.shutdown_event.is_set():
-            
+        while not self.shutdown_event.is_set():
+            Logger().debug("In select loop")
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
             should_signal_work = False
