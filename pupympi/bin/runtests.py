@@ -65,8 +65,13 @@ def output_console_nocolor(text, color = None, newline = True, block = "", outpu
 def output_latex(datatuple):
     """Adds one block/line of output as latex output"""
     global latex_output
-    (name, execution_time, killed, returncode) = datatuple
-    latex_output.write("%s & %s \\\\ \n" % (name, "success" if returncode == 0 and not killed else "failed"))
+    (name, execution_time, killed, returncode, meta) = datatuple
+    
+    description = meta["description"].replace("_", "\\_") if "description" in meta else ""
+    testname = name.replace("TEST_", "").replace("_", "\\_").replace(".py". "")
+    result = "success" if returncode == 0 and not killed else "failed"
+    
+    latex_output.write("%s & %s & %s \\\\ \n" % (testname, result, description))
             
 output = output_console
 
@@ -76,7 +81,7 @@ class RunTest(Thread):
 
     cmd = "bin/mpirun.py --process-io=localfile -q -c RUN_COUNT --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, primary_log, options):
+    def __init__(self, test, primary_log, options, meta):
         Thread.__init__(self)
         self.test = test
         self.primary_log = primary_log
@@ -89,6 +94,7 @@ class RunTest(Thread):
         output( "Launching %s: " % self.cmd, newline=False)
         self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
         self.killed = False
+        self.meta = meta
 
     def run(self):
         self.start = time.time()
@@ -138,7 +144,7 @@ def format_output(threads):
                                                     color=OKOFFWHITE if odd else OKBLACK,
                                                     block="Results table console")                                                    
         odd = True if odd == False else False
-        output_latex(( thread.test, round(thread.executiontime, 1), thread.killed, thread.returncode))                                                    
+        output_latex(( thread.test, round(thread.executiontime, 1), thread.killed, thread.returncode, thread.meta))                                                    
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
@@ -159,6 +165,19 @@ def combine_logs(logfile_prefix):
     combined.close()        
     print "Combined %d log files into %s.log" % (counter, logfile_prefix)
 
+def get_test_data(test):
+    """loads test data and filename"""
+    with open("tests/"+test) as testfile:
+        meta = {}
+        for lines in testfile.readlines():
+            if not lines.startswith("#"):
+                break
+                
+            if lines.startswith("# meta-"):
+                meta[lines[7:lines.find(":")]] = lines[lines.find(":")+1:].strip()
+        
+        return meta            
+
 def run_tests(test_files, options):
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
@@ -168,7 +187,7 @@ def run_tests(test_files, options):
         latex_output = latex
     
         for test in test_files:
-            t = RunTest(test, logfile_prefix, options)
+            t = RunTest(test, logfile_prefix, options, get_test_data(test))
             threadlist.append(t)
             t.start()
             t.join() # run sequentially until issue #19 is fixed
