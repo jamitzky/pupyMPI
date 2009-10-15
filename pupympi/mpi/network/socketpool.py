@@ -82,16 +82,16 @@ class SocketPool(object):
         """
         with self.sockets_lock:
             for x in range(2): # Run through twice
-                for socket in self.sockets:
-                    (srank, sreference, force_persistent) = self.metainfo[socket]
+                for client_socket in self.sockets:
+                    (srank, sreference, force_persistent) = self.metainfo[client_socket]
                     if force_persistent: # We do not remove persistent connections
                         continue
                     
                     if sreference: # Mark second chance
-                        self.metainfo[socket] = (srank, False, force_persistent)
+                        self.metainfo[client_socket] = (srank, False, force_persistent)
                     else: # Has already had its second chance
-                        self.sockets.remove(socket) # remove from socket pool
-                        del self.metainfo[socket] # delete metainfo
+                        self.sockets.remove(client_socket) # remove from socket pool
+                        del self.metainfo[client_socket] # delete metainfo
                         break
 
         raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
@@ -101,16 +101,16 @@ class SocketPool(object):
         Attempts to find an already created socket with a connection to a
         specific rank. If this does not exist we return None
         """
-        for socket in self.sockets:
-            (srank, _, fp) = self.metainfo[socket]
+        for client_socket in self.sockets:
+            (srank, _, fp) = self.metainfo[client_socket]
             if srank == rank:
-                self.metainfo[socket] = (srank, True, fp)
-                return socket
+                self.metainfo[client_socket] = (srank, True, fp)
+                return client_socket
         
         return None
     
-    def _add(self, rank, socket, force_persistent):
+    def _add(self, rank, client_socket, force_persistent):
         with self.sockets_lock:
-            self.metainfo[socket] = (rank, True, force_persistent)
-            self.sockets.append(socket)
+            self.metainfo[client_socket] = (rank, True, force_persistent)
+            self.sockets.append(client_socket)
     
