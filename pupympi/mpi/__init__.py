@@ -152,7 +152,7 @@ class MPI(Thread):
         to remove the item from the list.
         """
         for data in self.received_data:
-            (sender, tag, communicator_id, message) = data
+            (communicator_id, sender, tag, message) = data
             
             # The first strict rule is that any communication must
             # take part in the same communicator.
@@ -210,55 +210,18 @@ class MPI(Thread):
                             
     def schedule_request(self, request):
         # Add the request to the internal queue
-        with self.pending_requests_lock:
-            self.pending_requests.append(request)
-            self.pending_requests_has_work.set()
-            self.has_work_cond.notify()
-
-        # Start the network layer on a job as well
-        self.network.add_request(request)
+        if request.request_type == "recv":
+            with self.pending_requests_lock:
+                self.pending_requests.append(request)
+                self.pending_requests_has_work.set()
+                self.has_work_cond.notify()
+        else:
+            # Start the network layer on a job as well
+            self.network.t_out.add_out_request(request)
 
     def remove_pending_request(self, request):
         with self.pending_requests_lock:
             self.pending_requests.remove(request)
-            
-        # FIXME: Remove this from the network layout mapping
-        # asssss well. 
-
-    # FIXME: JUST MOVED FROM COMMUNICATOR
-    def pop_unhandled_message(self, participant, tag):
-        self.unhandled_messages_lock.acquire()
-        try:
-            package = self.unhandled_receives[tag][participant].pop(0)
-            self.unhandled_messages_lock.release()
-            return package
-        except (IndexError, KeyError):
-            pass
-        self.unhandled_messages_lock.release()
-    
-    # FIXME: JUST MOVED FROM COMMUNICATOR
-    def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
-        # Look for a request object right now. Otherwise we just put it on the queue and let the
-        # update handler do it.
-        
-        # Put it on unhandled requests
-        if tag not in self.unhandled_receives:
-            self.unhandled_receives[tag] = {}
-            
-        if not sender in self.unhandled_receives[tag]:
-            self.unhandled_receives[tag][sender] = []
-
-        self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
-        
-        Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
-        self.update()
-
-
-    def recv_callback(self, *args, **kwargs):
-        #Logger().debug("MPI layer recv_callback called")
-        
-        if "communicator" in kwargs:
-            self.communicators[ kwargs['communicator'] ].handle_receive(*args, **kwargs)
         
     def finalize(self):
         """
