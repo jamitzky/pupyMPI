@@ -51,8 +51,9 @@ def get_raw_message(socket):
     """
     def receive_fixed(length):
         """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes"""
-        message = ""        
+        message = ""
         while length:
+            Logger().debug("utils.receive_fixed(%d)" % length)
             data = socket.recv(min(length, 4096))
             length -= len(data)
             message += data

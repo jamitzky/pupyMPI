@@ -166,18 +166,25 @@ class CommunicationHandler(threading.Thread):
                 Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
+                    Logger().debug("Select loop accepted socket")
+
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
-                except socket.error:
+                    Logger().debug("Accepted statement complete")
+                except socket.error, e:
+                    print e
                     conn = read_socket
 
                 should_signal_work = True
                 
+                Logger().debug("Beginning receive")
                 rank, raw_data = get_raw_message(conn)
                 data = pickle.loads(raw_data)
-                    
-                self.network.socket_pool.add_created_socket(conn, rank)
+                Logger().debug("Ended")
+                
+                if add_to_pool:
+                    self.network.socket_pool.add_created_socket(conn, rank)
 
                 with self.network.mpi.raw_data_lock:
                     self.network.mpi.raw_data_queue.append(raw_data)
