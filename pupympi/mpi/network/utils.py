@@ -58,13 +58,13 @@ def get_raw_message(socket):
             message += data
         return message
 
-    header_size = struct.calcsize("l")
-    header = receive_fixed(header_size)   
-    message_size = struct.unpack("l", header)[0]
+    header_size = struct.calcsize("ll")
+    header = receive_fixed(header_size)
+    message_size, rank = struct.unpack("ll", header)
     
-    return receive_fixed(message_size)
-
-def prepare_message(data):
+    return rank, receive_fixed(message_size)
+    
+def prepare_message(data, rank):
     pickled_data = pickle.dumps(data)
-    header = struct.pack("l", len(pickled_data))
+    header = struct.pack("ll", len(pickled_data), rank)
     return header+pickled_data

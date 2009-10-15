@@ -195,7 +195,7 @@ if __name__ == "__main__":
         sender_conns.append( sender_conn )
         
         # Receiving data about the communicator, by unpacking the head etc.
-        data = get_raw_message(sender_conn)
+        rank, data = get_raw_message(sender_conn)
         data = pickle.loads(data)
         (communicator, sender, tag, message) = data
         
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
     data = (-1, -1, constants.TAG_INITIALIZING, all_procs)
-    message = prepare_message(data)
+    message = prepare_message(data, -1)
     for conn in sender_conns:
         conn.send(message)
         conn.close()
