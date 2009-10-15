@@ -6,7 +6,7 @@ import select, time
 import processloaders 
 from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
-from mpi.network import get_socket, pack_header, structured_read
+from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
@@ -198,19 +198,20 @@ if __name__ == "__main__":
         sender_conns.append( sender_conn )
         
         # Receiving data about the communicator, by unpacking the head etc.
-        tag, sender, communicator, recv_type, data = structured_read(sender_conn)
+        data = get_raw_message(sender_conn)
+        (communicator, sender, tag, message) = data
         
-        all_procs.append( data ) # add (rank,host,port) for process to the listing
+        all_procs.append( message ) # add (rank,host,port) for process to the listing
     #logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
-    pdata = pickle.dumps( all_procs, protocol=-1 )
+    data = (-1, -1, constants.TAG_INITIALIZING, all_procs)
+    message = prepare_message(data)
     for conn in sender_conns:
-        header = pack_header(-1, constants.TAG_INITIALIZING, len(pdata), 0, constants.JOB_INITIALIZING)
-        conn.send(header + pdata)
+        conn.send(message)
         conn.close()
     # Close own "server" socket
     s.close()

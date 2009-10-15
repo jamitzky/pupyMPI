@@ -7,7 +7,7 @@ except ImportError:
 from time import time
 
 from mpi.exceptions import MPIException
-from mpi.network.utils import get_socket, get_raw_message
+from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi.network.socketpool import SocketPool
 
 class Network(object):
@@ -56,12 +56,14 @@ class Network(object):
         s_conn.connect(recipient)
         
         # Pack the data with our special format
-        header = pack_header(internal_rank, constants.TAG_INITIALIZING, len(data), 0, constants.JOB_INITIALIZING)
-        s_conn.send(header + data)
+        data = (-1, -1, constants.TAG_INITIALIZING, data)
+        s_conn.send(prepare_message(data))
         
         # Receiving data about the communicator, by unpacking the head etc.
-        tag, sender, communicator, recv_type, all_procs = structured_read(s_conn)
-        #Logger().debug("handshake: Received information for all processes (%d)" % len(all_procs))
+        all_procs_raw = get_raw_message(s_conn)
+        data = pickle.loads(all_procs_raw)
+        (_, _, _, all_procs) = data
+
         s_conn.close()
 
         self.all_procs = {}
@@ -92,10 +94,6 @@ class Network(object):
             self.t_out.finalize()
         self.main_receive_socket.close()
         
-    def add_request(self, request):
-        if request.request_type in ("bcast_send", "send"):
-            self.t_out.add_out_request(request)
-
 class CommunicationHandler(threading.Thread):
     """
     This is a single thread doing both in and out or there are two threaded instances one for each
@@ -126,12 +124,8 @@ class CommunicationHandler(threading.Thread):
         port = self.network.all_procs[global_rank]['port']
         
         # Create the proper data structure and pickle the data
-        message = request.data
         data = (request.communicator.id, request.communicator.rank(), request.tag, message)
-        pickled = pickle.dumps(data)
-        
-        header = struct.pack("l", len(data))
-        request.data = header + pickled
+        request.data = prepare_message(data)
 
         socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         
