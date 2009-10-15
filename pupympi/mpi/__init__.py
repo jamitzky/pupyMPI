@@ -131,6 +131,11 @@ class MPI(Thread):
         self.raw_data_lock = threading.Lock()
         self.raw_data_event = threading.Event()
         
+        # Locks, queues etc for handling the reived data. There are no
+        # events as this is handled through the "pending_request_" event.
+        self.received_data = []
+        self.received_data_lock = threading.Lock()
+        
         self.daemon = True
         self.start()
 
@@ -140,15 +145,6 @@ class MPI(Thread):
             with self.has_work_cond:
                 self.has_work_cond.wait()
                 
-                # Think about optimal ordering
-                if self.pending_requests_has_work.is_set():
-                    with self.pending_requests_lock:
-                        for request in self.pending_requests:
-                            pass
-                            # FIXME
-
-                        self.pending_requests_has_work.clear()
-                    
                 if self.unstarted_requests_has_work.is_set():
                     with self.unstarted_requests_lock:
                         for request in self.unstarted_requests:
@@ -159,10 +155,22 @@ class MPI(Thread):
                 
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
-                        for raw_data in self.raw_data_queue:
-                            # FIXME: Do something with the raw data
-                            pass
+                        with self.received_data_lock:
+                            for raw_data in self.raw_data_queue:
+                                data = pickle.loads(raw_data)
+                                self.received_data.append(data)
+                                self.pending_requests_has_work.set()
                         self.raw_data_event.clear()
+                        
+                # Think about optimal ordering
+                if self.pending_requests_has_work.is_set():
+                    with self.pending_requests_lock:
+                        for request in self.pending_requests:
+                            pass
+                            # FIXME
+
+                        self.pending_requests_has_work.clear()
+                    
                             
     def schedule_request(self, request):
         # If we have a request object we might already have received the

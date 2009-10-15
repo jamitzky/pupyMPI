@@ -158,7 +158,8 @@ class CommunicationHandler(threading.Thread):
             
             # Signal to the MPI run() method that there is work to do
             if should_signal_work:
-                self.network.mpi.has_work_cond.notify()
+                with self.network.mpi.has_work_cond:
+                    self.network.mpi.has_work_cond.notify()
             
     def finalize(self):
         self.shutdown_event.set()
