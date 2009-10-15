@@ -75,7 +75,7 @@ class MPI(Thread):
         # First check for required Python version
         self._version_check()
 
-        self.network = Network(options)
+        self.network = Network(self, options)
         
         # Create the initial global Group, and assign the network all_procs as members
         world_Group = Group(options.rank)
@@ -125,6 +125,12 @@ class MPI(Thread):
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
         
+        # Locks, events, queues etc for handling the raw data the network
+        # passes to this thread
+        self.raw_data_queue = []
+        self.raw_data_lock = threading.Lock()
+        self.raw_data_event = threading.Event()
+        
         self.daemon = True
         self.start()
 
@@ -139,6 +145,7 @@ class MPI(Thread):
                     with self.pending_requests_lock:
                         for request in self.pending_requests:
                             pass
+                            # FIXME
 
                         self.pending_requests_has_work.clear()
                     
@@ -149,6 +156,13 @@ class MPI(Thread):
                             self.schedule_request(request)
                             
                         self.unstarted_requests_has_work.clear()
+                
+                if self.raw_data_event.is_set():
+                    with self.raw_data_lock:
+                        for raw_data in self.raw_data_queue:
+                            # FIXME: Do something with the raw data
+                            pass
+                        self.raw_data_event.clear()
                             
     def schedule_request(self, request):
         # If we have a request object we might already have received the

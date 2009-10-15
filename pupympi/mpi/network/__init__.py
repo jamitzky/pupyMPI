@@ -5,9 +5,10 @@ from mpi.network.utils import get_socket
 from mpi.network.socketpool import SocketPool
 
 class Network(object):
-    def __init__(self, options):
+    def __init__(self, mpi, options):
         self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
 
+        self.mpi = mpi
         self.options = options
         self.t_in = CommunicationHandler(self, rank, self.socket_pool)
         self.t_in.name = "t_in"
@@ -142,11 +143,22 @@ class CommunicationHandler(threading.Thread):
             
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
+            should_signal_work = False
             for read_socket in in_list:
-                pass
+                should_signal_work = True
+                
+                raw_data = None # Implement me
+                
+                with self.network.mpi.raw_data_lock:
+                    self.network.mpi.raw_data.queue.append(raw_data)
+                self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
                 pass
+            
+            # Signal to the MPI run() method that there is work to do
+            if should_signal_work:
+                self.network.mpi.has_work_cond.notify()
             
     def finalize(self):
         self.shutdown_event.set()
