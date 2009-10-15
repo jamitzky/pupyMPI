@@ -42,6 +42,7 @@ elif rank == 1:
     # Send
     print "Rank: %d sending to %d" % (rank,neighbour)
     mpi.MPI_COMM_WORLD.send(neighbour,content, DUMMY_TAG)
+    
 else: # rank == 1
     print "Im doing nothing"
 
