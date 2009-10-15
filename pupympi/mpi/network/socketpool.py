@@ -53,7 +53,22 @@ class SocketPool(object):
             newly_created = True
             
         return client_socket, newly_created
-
+    
+    def add_created_socket(self, socket_connection, global_rank):
+        known_socket = self._get_socket_for_rank(global_rank)
+        
+        if known_socket == socket_connection:
+            Logger().warning("We were very close to pushing a socket out and putting it in again. BAD")
+            return
+        
+        if known_socket:
+            Logger().warning("There is already a socket in the pool for a created connection.. Possible loop stuff.. ")
+            
+        if len(self.sockets) > self.max_size: # Throw one out if there are too many
+                self._remove_element()
+                
+        self._add(global_rank, socket_connection, False)
+    
     def _remove_element(self):
         """
         Finds the first element that already had it's second chance and
