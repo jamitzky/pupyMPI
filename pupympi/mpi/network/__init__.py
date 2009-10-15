@@ -154,7 +154,7 @@ class CommunicationHandler(threading.Thread):
         
     def add_out_socket(self, client_socket):
         self._ensure_socket_to_request_key(client_socket)
-        self.sockets_in.append(client_socket)
+        self.sockets_out.append(client_socket)
     
     def run(self):
         while not self.shutdown_event.is_set():
