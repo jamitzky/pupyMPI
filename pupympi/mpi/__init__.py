@@ -91,10 +91,6 @@ class MPI(Thread):
         # listen on the correcsponding network channels
         self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
         
-        # Set the default receive callback for handling those 
-        # receives. 
-        self.network.t_in.register_callback("recv", self.recv_callback)
-
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.
         user_options =[sys.argv[0], ] 
@@ -117,7 +113,7 @@ class MPI(Thread):
         self.pending_requests_lock = threading.Lock()
         self.pending_requests_has_work = threading.Event()
         
-        self.has_work_cond = Threading.Condition()
+        self.has_work_cond = threading.Condition()
 
         self.shutdown_event = threading.Event()
         
