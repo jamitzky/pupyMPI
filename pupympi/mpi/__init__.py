@@ -209,16 +209,6 @@ class MPI(Thread):
                     
                             
     def schedule_request(self, request):
-        # If we have a request object we might already have received the
-        # result. So we look into the internal queue to see. If so, we use the
-        # network_callback method to update all the internal structure.
-        if request.request_type == 'recv':
-            data = self.pop_unhandled_message(participant, tag)
-            if data:                
-                Logger().debug("Unhandled message had data") # DEBUG: This sometimes happen in TEST_cyclic
-                request.network_callback(lock=False, status="ready", data=data['data'], ffrom="Right-away-quick-fast-receive")
-                return
-
         # Add the request to the internal queue
         with self.pending_requests_lock:
             self.pending_requests.append(request)
