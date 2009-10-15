@@ -39,6 +39,21 @@ def get_raw_message(socket):
     The first part of a message is the actual size (N) of the message. The
     rest is N bytes of pickled data. So we start by receiving a long and
     when using that value to unpack the remaining part.
-    """
-    header_size = struct.calcsize("l")
     
+    NOTE: if we recieve to much we should pass on the remaining part
+    """
+    def receive_fixed(length):
+        message = ""
+        # Get just the header
+        while length:
+            data = socket.recv(min(length, 4096))
+            length -= len(data)
+            message += data
+        return message
+
+    header_size = struct.calcsize("l")
+    header = receive_fixed(header_size)   
+    
+    message_size = struct.unpack("l", header)
+    
+    return receive_fixed(message_size)
