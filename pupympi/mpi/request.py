@@ -52,31 +52,22 @@ class Request(BaseRequest):
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
 
         callbacks = [ self.network_callback, ]
+    
+    def update(status, data=None):
+        if self.status not in ("finished", "cancelled"): # No updating on dead requests
+            self.status = status
+        else:
+            raise Exception("Updating a request from %s to %s" % self.status, status)
         
-
-    def network_callback(self, lock=True, caller="from-nowhere", *args, **kwargs):
-        Logger().debug("Network callback in request called")
-
-        if lock:
-            Logger().info("REQUEST LOCKING %s" % caller)
-            self.acquire()
-            Logger().info("REQUEST LOCKED %s" % caller)
-
-        if "status" in kwargs:
-            Logger().info("Updating status in request from %s to %s <-- %s" % (self._m["status"], kwargs["status"], caller))
-            self._metadata["status"] = kwargs["status"]
-
-            if kwargs["status"] == "ready":
-                self._metadata['waitevent'].set()
+        # We only update if there is data (ie. a recv operation)
+        #NOTE: Even if a send includes the data parameter it is only a superflous overwrite
+        if data:
+            self.data = data
             
-        if "data" in kwargs:
-            Logger().info("Adding data to request object")
-            self.data = kwargs["data"]
-        
-        if lock:
-            Logger().info("REQUEST RELEASING %s" % caller)
-            self.release()
-            Logger().info("REQUEST RELEASED %s" % caller)
+        # If the status is ready we're enabling the wait operation
+        # to complete
+        if status in ("ready", "cancelled"):
+            self._metadata['waitevent'].set()
 
     def cancel(self):
         """
@@ -87,8 +78,7 @@ class Request(BaseRequest):
         """
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
-        self._metadata['status'] = 'cancelled'
-        self.communicator.mpi.remove_pending_request( self )
+        self.update("cancelled")
         
     def wait(self):
         """
@@ -117,9 +107,6 @@ class Request(BaseRequest):
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
         self._metadata['status'] = 'finished'
-
-        # Find the MPI object and removes this request object from the queue
-        self.communicator.mpi.remove_pending_request( self )
 
         # Return none or the data
         if self.request_type == 'recv':
