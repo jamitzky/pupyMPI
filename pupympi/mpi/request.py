@@ -97,7 +97,6 @@ class Request(BaseRequest):
         """
         Logger().info("Starting a %s wait" % self.request_type)
         
-        # See the second FIXME note in the docstring
         if self._metadata['status'] == "cancelled":
             Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
