@@ -11,10 +11,7 @@ from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+from mpi.network.utils import pickle
 
 def parse_options():
     usage = 'usage: %prog [options] arg'

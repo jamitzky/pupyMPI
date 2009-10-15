@@ -1,4 +1,4 @@
-import socket, threading, struct
+import socket, threading, struct, select
 
 try:
     import cPickle as pickle
@@ -10,6 +10,7 @@ from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
 from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
+from mpi.logger import Logger
 
 class Network(object):
     def __init__(self, mpi, options):
@@ -33,6 +34,8 @@ class Network(object):
         self.hostname = hostname
         socket.listen(5)
         self.main_receive_socket = socket
+        
+        self.t_in.sockets_in.append(self.main_receive_socket)
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
@@ -77,8 +80,8 @@ class Network(object):
         tree.up()
         tree.down()
         
-    def find_global_rank(hostname, portno):
-        for member in self.mpi.MPI_COMM_WORLD.members:
+    def find_global_rank(self, hostname, portno):
+        for member in self.mpi.MPI_COMM_WORLD.group().members.values():
             if member['host'] == hostname and member['port'] == portno:
                 return member['global_rank']
 
@@ -88,6 +91,7 @@ class Network(object):
         CommunicationHandler.finalize for a deeper description of
         the shutdown procedure. 
         """
+        Logger().debug("Network got finalize call")
         self.t_in.finalize()
         if not self.options.single_communication_thread:
             self.t_out.finalize()
@@ -139,7 +143,7 @@ class CommunicationHandler(threading.Thread):
         else:
             self.socket_to_request[client_socket] = [ request ] # new socket, add the request in a singleton list
             
-    def remove_request(socket, request):
+    def remove_request(self, socket, request):
         """
         For now we try to remove the request from all lists not just the right socket's list
         This is handled by except, but could be done nicer.    
@@ -148,11 +152,13 @@ class CommunicationHandler(threading.Thread):
     
     def run(self):
         while not self.shutdown_event.is_set():
-            Logger().debug("In select loop")
+            
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
+            Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
             should_signal_work = False
             for read_socket in in_list:
+                Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
                     self.sockets_in.append(conn)
@@ -170,17 +176,18 @@ class CommunicationHandler(threading.Thread):
                 raw_data = get_raw_message(conn)
                 
                 with self.network.mpi.raw_data_lock:
-                    self.network.mpi.raw_data.queue.append(raw_data)
+                    self.network.mpi.raw_data_queue.append(raw_data)
                 self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
-                Logger().debug("Found socket in out-list")
+                #Logger().debug("Found socket in out-list")
                 removal = []
                 request_list = self.socket_to_request[write_socket]
                 for request in request_list:
                     if request.status == "cancelled":
                         removal.append((socket, request))
                     elif request.status == "new":
+                        Logger().debug("Sending data on socket")
                         # Send the data on the socket
                         write_socket.send(request.data)
                         removal.append((write_socket, request))
@@ -200,4 +207,5 @@ class CommunicationHandler(threading.Thread):
                     self.network.mpi.has_work_cond.notify()
             
     def finalize(self):
+        Logger().debug("Communication handler closed by finalize call")
         self.shutdown_event.set()
