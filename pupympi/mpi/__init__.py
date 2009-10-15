@@ -139,6 +139,13 @@ class MPI(Thread):
         self.daemon = True
         self.start()
 
+    def match_pending(self, request):
+        """
+        Tries to match a pending request with something in
+        the received data.
+        """
+        pass
+
     def run(self):
 
         while not self.shutdown_event.is_set():
@@ -166,8 +173,7 @@ class MPI(Thread):
                 if self.pending_requests_has_work.is_set():
                     with self.pending_requests_lock:
                         for request in self.pending_requests:
-                            pass
-                            # FIXME
+                            self.match_pending(request)
 
                         self.pending_requests_has_work.clear()
                     
