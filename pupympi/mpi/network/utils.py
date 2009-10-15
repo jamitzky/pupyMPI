@@ -57,3 +57,6 @@ def get_raw_message(socket):
     message_size = struct.unpack("l", header)
     
     return receive_fixed(message_size)
+
+def prepare_message(data):
+    
