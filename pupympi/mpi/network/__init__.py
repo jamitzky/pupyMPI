@@ -1,4 +1,10 @@
-import socket, threading
+import socket, threading, struct
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+from time import time
 
 from mpi.exceptions import MPIException
 from mpi.network.utils import get_socket, get_raw_message
@@ -113,6 +119,14 @@ class CommunicationHandler(threading.Thread):
         # Find a socket and port of other party           
         host = self.network.all_procs[global_rank]['host']
         port = self.network.all_procs[global_rank]['port']
+        
+        # Create the proper data structure and pickle the data
+        message = request.data
+        data = (request.communicator.id, request.communicator.rank(), request.tag, message)
+        pickled = pickle.dumps(data)
+        
+        header = struct.pack("l", len(data))
+        request.data = header + pickled
 
         socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         
