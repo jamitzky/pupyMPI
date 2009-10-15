@@ -33,6 +33,7 @@ WARNING = '\033[93m'
 FAIL = '\033[91m'
 ENDC = '\033[0m'
 
+latex_output = None
 
 def output_console(text, color = None, newline = True, block = "", output=True):
     """Adds one block/line of output to console"""
@@ -61,10 +62,12 @@ def output_console_nocolor(text, color = None, newline = True, block = "", outpu
     return out
 
     
-def output_latex(text, color = None, newline = True, block = ""):
+def output_latex(datatuple):
     """Adds one block/line of output as latex output"""
-    pass
-    
+    global latex_output
+    (name, execution_time, killed, returncode) = datatuple
+    latex_output.write("%s & %s \\\\ \n" % (name, "success" if returncode == 0 and not killed else "failed"))
+            
 output = output_console
 
 
@@ -133,8 +136,9 @@ def format_output(threads):
                                                     "KILLED" if thread.killed else "no", \
                                                     _status_str(thread.returncode)),
                                                     color=OKOFFWHITE if odd else OKBLACK,
-                                                    block="Results table")                                                    
+                                                    block="Results table console")                                                    
         odd = True if odd == False else False
+        output_latex(( thread.test, round(thread.executiontime, 1), thread.killed, thread.returncode))                                                    
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
@@ -158,19 +162,24 @@ def combine_logs(logfile_prefix):
 def run_tests(test_files, options):
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
-    for test in test_files:
-        t = RunTest(test, logfile_prefix, options)
-        threadlist.append(t)
-        t.start()
-        t.join() # run sequentially until issue #19 is fixed
-        # TODO: Issue 19 is resolved, try fixing the above
-
-    # for t in threadlist:
-    #    t.join()
-    #    print "all done"
     
-    format_output(threadlist)
-    combine_logs(logfile_prefix)
+    with open("testrun.tex", "w") as latex:
+        global latex_output
+        latex_output = latex
+    
+        for test in test_files:
+            t = RunTest(test, logfile_prefix, options)
+            threadlist.append(t)
+            t.start()
+            t.join() # run sequentially until issue #19 is fixed
+            # TODO: Issue 19 is resolved, try fixing the above
+
+        # for t in threadlist:
+        #    t.join()
+        #    print "all done"
+    
+        format_output(threadlist)
+        combine_logs(logfile_prefix)
     
 class Usage(Exception):
     def __init__(self, msg):
