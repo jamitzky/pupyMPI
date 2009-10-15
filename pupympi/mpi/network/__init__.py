@@ -7,8 +7,8 @@ except ImportError:
 from time import time
 
 from mpi.exceptions import MPIException
-from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi.network.socketpool import SocketPool
+from mpi.network.utils import get_socket, get_raw_message, prepare_message
 
 class Network(object):
     def __init__(self, mpi, options):
