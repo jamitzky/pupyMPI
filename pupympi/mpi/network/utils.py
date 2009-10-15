@@ -1,5 +1,9 @@
 import socket, struct
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+    
 def get_socket(min=10000, max=30000):
     """
     A simple helper method for creating a socket,
@@ -59,4 +63,6 @@ def get_raw_message(socket):
     return receive_fixed(message_size)
 
 def prepare_message(data):
-    
+    pickled_data = pickle.dumps(data)
+    header = struct.pack("l", len(pickled_data))
+    return header+pickled_data
