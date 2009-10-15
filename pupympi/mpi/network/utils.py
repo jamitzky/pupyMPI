@@ -1,4 +1,7 @@
 import socket, struct
+from mpi.logger import Logger
+import random
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -57,8 +60,7 @@ def get_raw_message(socket):
 
     header_size = struct.calcsize("l")
     header = receive_fixed(header_size)   
-    
-    message_size = struct.unpack("l", header)
+    message_size = struct.unpack("l", header)[0]
     
     return receive_fixed(message_size)
 

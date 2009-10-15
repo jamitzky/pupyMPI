@@ -9,6 +9,7 @@ from time import time
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
 from mpi.network.utils import get_socket, get_raw_message, prepare_message
+from mpi import constants
 
 class Network(object):
     def __init__(self, mpi, options):
@@ -16,17 +17,15 @@ class Network(object):
 
         self.mpi = mpi
         self.options = options
-        self.t_in = CommunicationHandler(self, rank, self.socket_pool)
-        self.t_in.name = "t_in"
+        self.t_in = CommunicationHandler(self, options.rank, self.socket_pool)
         self.t_in.daemon = True
         self.t_in.start()
         
         if options.single_communication_thread:
             self.t_out = self.t_in
         else:
-            self.t_out = CommunicationHandler(self, rank, self.socket_pool)
+            self.t_out = CommunicationHandler(self, options.rank, self.socket_pool)
             self.t_out.daemon = True
-            self.t_out.name = "t_out"
             self.t_out.start()
         
         (socket, hostname, port_no) = get_socket()
@@ -47,7 +46,7 @@ class Network(object):
         from our own process. So we bind a socket. 
         """
         # Packing the data
-        data = pickle.dumps( (self.hostname, self.port, internal_rank ),protocol=-1 )
+        data = (self.hostname, self.port, internal_rank )
         
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,13 +59,13 @@ class Network(object):
         s_conn.send(prepare_message(data))
         
         # Receiving data about the communicator, by unpacking the head etc.
-        all_procs_raw = get_raw_message(s_conn)
-        data = pickle.loads(all_procs_raw)
+        data = pickle.loads(get_raw_message(s_conn))
         (_, _, _, all_procs) = data
 
         s_conn.close()
 
         self.all_procs = {}
+        print all_procs
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
@@ -99,6 +98,8 @@ class CommunicationHandler(threading.Thread):
     This is a single thread doing both in and out or there are two threaded instances one for each
     """
     def __init__(self,network, rank, socket_pool):
+        super(CommunicationHandler, self).__init__()
+        
         # Store all procs in the network for lookup
         self.network = network
         
@@ -117,14 +118,14 @@ class CommunicationHandler(threading.Thread):
     
     def add_out_request(self, request):
         # Find the global rank of other party
-        global_rank = request.communicator.group().members[request[participant]]['global_rank']
+        global_rank = request.communicator.group().members[request.participant]['global_rank']
         
         # Find a socket and port of other party           
         host = self.network.all_procs[global_rank]['host']
         port = self.network.all_procs[global_rank]['port']
         
         # Create the proper data structure and pickle the data
-        data = (request.communicator.id, request.communicator.rank(), request.tag, message)
+        data = (request.communicator.id, request.communicator.rank(), request.tag, request.data)
         request.data = prepare_message(data)
 
         socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)

@@ -50,8 +50,6 @@ class Request(BaseRequest):
         #                safely return from a test or wait call.
 
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
-
-        callbacks = [ self.network_callback, ]
     
     def update(status, data=None):
         if self.status not in ("finished", "cancelled"): # No updating on dead requests

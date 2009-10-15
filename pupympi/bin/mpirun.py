@@ -199,6 +199,7 @@ if __name__ == "__main__":
         
         # Receiving data about the communicator, by unpacking the head etc.
         data = get_raw_message(sender_conn)
+        data = pickle.loads(data)
         (communicator, sender, tag, message) = data
         
         all_procs.append( message ) # add (rank,host,port) for process to the listing
