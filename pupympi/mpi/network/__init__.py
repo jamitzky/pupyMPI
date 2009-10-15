@@ -102,6 +102,8 @@ class CommunicationHandler(threading.Thread):
         
         self.rank = rank
         self.socket_pool = socket_pool
+        
+        self.shutdown_event = threading.Event()
     
     def add_out_request(self, request):
         # Find the global rank of other party
@@ -134,3 +136,17 @@ class CommunicationHandler(threading.Thread):
                 break # only one socket is the right one, we found it
             except ValueError:
                 pass # The request was just not in the list (aka. wrong socket try next one)
+    
+    def run(self):
+        while self.shutdown_event.is_set():
+            
+            (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
+            
+            for read_socket in in_list:
+                pass
+            
+            for write_socket in out_list:
+                pass
+            
+    def finalize(self):
+        self.shutdown_event.set()
