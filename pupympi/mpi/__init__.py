@@ -189,11 +189,13 @@ class MPI(Thread):
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
                         with self.received_data_lock:
-                            for raw_data in self.raw_data_queue:
-                                data = pickle.loads(raw_data)
-                                self.raw_data_queue.remove(raw_data)
-                                self.received_data.append(data)
+                            if self.raw_data_queue:
+                                for raw_data in self.raw_data_queue:
+                                    data = pickle.loads(raw_data)
+                                    self.received_data.append(data)
+                                
                                 self.pending_requests_has_work.set()
+                                self.raw_data_queue = []
                         self.raw_data_event.clear()
                         
                 # Think about optimal ordering
