@@ -1,6 +1,8 @@
 import socket, struct
-from mpi.logger import Logger
 import random
+
+from mpi.logger import Logger
+from mpi.exceptions import MPIException
 
 try:
     import cPickle as pickle
@@ -53,7 +55,14 @@ def get_raw_message(client_socket):
         """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes"""
         message = ""
         while length:
-            data = client_socket.recv(min(length, 4096))
+            try:
+                data = client_socket.recv(min(length, 4096))
+            except socket.error, e:
+                Logger().error("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
+                raise MPIException("Connection broke or something")
+                # NTOE: We can maybe recover more gracefully here but that requires
+                # throwing status besides message and rank upwards. For now I just want
+                # to be aware of this error when it happens.
             length -= len(data)
             message += data
         return message

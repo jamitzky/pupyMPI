@@ -12,7 +12,7 @@ rank = world.rank()
 data = 50*"a"
 f = open("/tmp/mpi.local.rank%s.log" % rank, "w")
 
-max_iterations = 5
+max_iterations = 50
     
 
 for iterations in xrange(max_iterations):
