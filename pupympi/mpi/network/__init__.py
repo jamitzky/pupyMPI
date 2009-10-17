@@ -93,7 +93,7 @@ class Network(object):
         self.t_in.finalize()
         if not self.options.single_communication_thread:
             self.t_out.finalize()
-        self.main_receive_socket.close()
+        #self.main_receive_socket.close()
         
 class CommunicationHandler(threading.Thread):
     """
@@ -156,10 +156,25 @@ class CommunicationHandler(threading.Thread):
         self._ensure_socket_to_request_key(client_socket)
         self.sockets_out.append(client_socket)
     
+    def close_all_sockets(self):
+        for s in self.sockets_in:
+            s.close()
+        for s in self.sockets_out:
+            s.close()
+    
     def run(self):
         while not self.shutdown_event.is_set():
-            (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
-            
+            try:
+                (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
+            except: 
+                for s in self.sockets_in:
+                    print s
+                    
+                print "----- out ---------"
+                
+                for s in self.sockets_out:
+                    print s
+                    
             #Logger().debug("="*80)
             #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
             #Logger().debug("In select loop sockets_in: %s  sockets_out: %s" % (self.sockets_in, self.sockets_out))
@@ -193,7 +208,6 @@ class CommunicationHandler(threading.Thread):
                 self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
-                Logger().debug("Found socket in out-list")
                 removal = []
                 request_list = self.socket_to_request[write_socket]
                 for request in request_list:
@@ -218,7 +232,9 @@ class CommunicationHandler(threading.Thread):
             if should_signal_work:
                 with self.network.mpi.has_work_cond:
                     self.network.mpi.has_work_cond.notify()
-            
+                    
+        self.close_all_sockets()   
+
     def finalize(self):
         self.shutdown_event.set()
         Logger().debug("Communication handler closed by finalize call")
