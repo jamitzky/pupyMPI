@@ -160,10 +160,10 @@ class CommunicationHandler(threading.Thread):
         while not self.shutdown_event.is_set():
             (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
             
-            Logger().debug("="*80)
-            Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
-            Logger().debug("In select loop sockets_in: %s  sockets_out: %s" % (self.sockets_in, self.sockets_out))
-            Logger().debug("="*80)
+            #Logger().debug("="*80)
+            #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
+            #Logger().debug("In select loop sockets_in: %s  sockets_out: %s" % (self.sockets_in, self.sockets_out))
+            #Logger().debug("="*80)
             should_signal_work = False
             for read_socket in in_list:
                 add_to_pool = False

@@ -53,14 +53,11 @@ def get_raw_message(client_socket):
         """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes"""
         message = ""
         while length:
-            Logger().debug("utils.receive_fixed: Staring a recv for %d bytes" % length)
             data = client_socket.recv(min(length, 4096))
             length -= len(data)
             message += data
         return message
     
-    Logger().debug("utils.receive_fixed: Starting the call for socket %s" % client_socket)
-
     header_size = struct.calcsize("ll")
     header = receive_fixed(header_size)
     message_size, rank = struct.unpack("ll", header)
