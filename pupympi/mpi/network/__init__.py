@@ -174,20 +174,13 @@ class CommunicationHandler(threading.Thread):
                 print self.sockets_in
                 print self.sockets_out
                 print "----- done ---------"
-                    
-            if error_list:
-                print 30*"=" + " ERROR " + 30*"="
+                print in_list
+                print out_list
                 print error_list
-                print 67*"="
-                    
-            #Logger().debug("="*80)
-            #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
-            #Logger().debug("In select loop sockets_in: %s  sockets_out: %s" % (self.sockets_in, self.sockets_out))
-            #Logger().debug("="*80)
+                
             should_signal_work = False
             for read_socket in in_list:
                 add_to_pool = False
-                Logger().debug("In recieve loop")
                 try:
                     (conn, sender_address) = read_socket.accept()
 
@@ -198,13 +191,10 @@ class CommunicationHandler(threading.Thread):
                     Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
 
-
                 should_signal_work = True
                 
-                Logger().debug("Beginning receive")
                 rank, raw_data = get_raw_message(conn)
                 data = pickle.loads(raw_data)
-                Logger().debug("Ended")
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
@@ -220,7 +210,7 @@ class CommunicationHandler(threading.Thread):
                     if request.status == "cancelled":
                         removal.append((socket, request))
                     elif request.status == "new":
-                        Logger().debug("Sending data on socket")
+                        Logger().debug("Starting data-send on %s. data: %s" % (write_socket, request.data))
                         # Send the data on the socket
                         try:
                             write_socket.send(request.data)
