@@ -172,6 +172,11 @@ class MPI(Thread):
         while not self.shutdown_event.is_set():
             with self.has_work_cond:
                 self.has_work_cond.wait()
+                Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
+                        self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
+                Logger().debug("Contents of unstarted requests: %s" % self.unstarted_requests)
+                Logger().debug("Contents of raw data: %s" % self.raw_data_queue)
+                Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
                 if self.unstarted_requests_has_work.is_set():
                     with self.unstarted_requests_lock:
@@ -184,10 +189,13 @@ class MPI(Thread):
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
                         with self.received_data_lock:
-                            for raw_data in self.raw_data_queue:
-                                data = pickle.loads(raw_data)
-                                self.received_data.append(data)
+                            if self.raw_data_queue:
+                                for raw_data in self.raw_data_queue:
+                                    data = pickle.loads(raw_data)
+                                    self.received_data.append(data)
+                                
                                 self.pending_requests_has_work.set()
+                                self.raw_data_queue = []
                         self.raw_data_event.clear()
                         
                 # Think about optimal ordering

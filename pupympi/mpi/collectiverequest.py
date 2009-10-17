@@ -101,6 +101,8 @@ class CollectiveRequest(BaseRequest):
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
         tree = self.communicator.get_broadcast_tree(root=root)
+        
+        Logger().debug("collectiverequest.two_way_tree_traversal: Before the first way")
 
         # Step 3: Traverse the tree in the first direction. 
         if start_direction == "down":
@@ -109,6 +111,8 @@ class CollectiveRequest(BaseRequest):
         else:
             rt_first = up(initial_data, force_initial_data=True)
             other = down
+            
+        Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
         # Step 4: Run the other direction. This should also just have been
         #         done in the same if as before, but I seperated the cases
@@ -117,6 +121,8 @@ class CollectiveRequest(BaseRequest):
         #         any reason we need to traverse the entire tree in one 
         #         direction before we can start the second traversal?
         rt_second = other(rt_first)
+
+        Logger().debug("collectiverequest.two_way_tree_traversal: After the second way")
 
         if return_type == 'first':
             return rt_first

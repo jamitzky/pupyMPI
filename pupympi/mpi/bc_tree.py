@@ -20,7 +20,7 @@ class BroadCastTree:
 
         self.up = self.find_up()
         self.down = self.find_down()
-
+        
     def find_up(self):
         """
         Iterate from the root and down to find the parent
