@@ -165,7 +165,7 @@ class CommunicationHandler(threading.Thread):
     def run(self):
         while not self.shutdown_event.is_set():
             try:
-                (in_list, out_list, _) = select.select( self.sockets_in, self.sockets_out, [], 1)
+                (in_list, out_list, error_list) = select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
             except: 
                 for s in self.sockets_in:
                     print s
@@ -174,6 +174,11 @@ class CommunicationHandler(threading.Thread):
                 
                 for s in self.sockets_out:
                     print s
+                    
+            if error_list:
+                print 30*"=" + " ERROR " + 30*"="
+                print error_list
+                print 67*"="
                     
             #Logger().debug("="*80)
             #Logger().debug("In select loop inlist: %s  outlist: %s" % (in_list,out_list))
