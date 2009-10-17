@@ -208,8 +208,8 @@ class MPI(Thread):
                                 # we only need to update our own queue
                                 removal.append(request)
                                 
-                        self.pending_requests = [ r for r in self.pending_requests if r not in removal]
-                        self.pending_requests_has_work.clear()
+                        self.pending_requests = [ r for r in self.pending_requests if r not in removal]                        
+                        self.pending_requests_has_work.clear() # We can't match for now wait until further data recieved
                     
                             
     def schedule_request(self, request):
