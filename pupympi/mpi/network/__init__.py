@@ -119,12 +119,16 @@ class CommunicationHandler(threading.Thread):
         self.shutdown_event = threading.Event()
     
     def add_out_request(self, request):
-        # Find the global rank of other party
+        """
+        Put a requested out operation (eg. send) on the out list        
+        """
+        
+        # Find the global rank of recipient process
         global_rank = request.communicator.group().members[request.participant]['global_rank']
         
         Logger().debug("Out-request found global rank %d" % global_rank)
         
-        # Find a socket and port of other party           
+        # Find a socket and port of recipient process
         host = self.network.all_procs[global_rank]['host']
         port = self.network.all_procs[global_rank]['port']
         
@@ -133,27 +137,19 @@ class CommunicationHandler(threading.Thread):
         request.data = prepare_message(data, request.communicator.rank())
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
+        # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
             self.network.t_in.add_in_socket(client_socket)
             self.network.t_out.add_out_socket(client_socket)
 
         self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
 
-    def _ensure_socket_to_request_key(self, client_socket):
-        self.socket_to_request[client_socket] = []
-            
-    def remove_request(self, socket, request):
-        """
-        For now we try to remove the request from all lists not just the right socket's list
-        This is handled by except, but could be done nicer.    
-        """
-        self.socket_to_request[socket].remove(request)
-        
+
     def add_in_socket(self, client_socket):
         self.sockets_in.append(client_socket)
         
     def add_out_socket(self, client_socket):
-        self._ensure_socket_to_request_key(client_socket)
+        self.socket_to_request[client_socket] = []
         self.sockets_out.append(client_socket)
     
     def close_all_sockets(self):
@@ -177,8 +173,10 @@ class CommunicationHandler(threading.Thread):
                 print in_list
                 print out_list
                 print error_list
-                
-            should_signal_work = False
+            
+            # FIXME: Replace this with tighter lock+ signal under read loop
+            #should_signal_work = False
+            
             for read_socket in in_list:
                 add_to_pool = False
                 try:
@@ -191,17 +189,20 @@ class CommunicationHandler(threading.Thread):
                     Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
 
-                should_signal_work = True
+                #should_signal_work = True
                 
                 rank, raw_data = get_raw_message(conn)
                 data = pickle.loads(raw_data)
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
-
-                with self.network.mpi.raw_data_lock:
-                    self.network.mpi.raw_data_queue.append(raw_data)
-                self.network.mpi.raw_data_event.set()
+                
+                # Signal mpi thread that there is new receieved data
+                with self.network.mpi.has_work_cond:
+                    with self.network.mpi.raw_data_lock:
+                        self.network.mpi.has_work_cond.notify()
+                        self.network.mpi.raw_data_queue.append(raw_data)
+                        self.network.mpi.raw_data_event.set()
             
             for write_socket in out_list:
                 removal = []
@@ -220,20 +221,22 @@ class CommunicationHandler(threading.Thread):
                             continue
                             
                         removal.append((write_socket, request))
-                        request.update("ready")
+                        request.update("ready") # update status and signal anyone waiting on this request
                     else:
                         raise Exception("We got a status in the send socket select we don't handle.. it's there--> %s" % request.status)
                 
-                if removal:
-                    should_signal_work = True
-                    
-                for t in removal:
-                    self.remove_request(*t)
+                # Remove the requests (messages) that was successfully sent from the list for that socket
+                if removal:  
+                    for (write_socket,matched_request) in removal:
+                        self.socket_to_request[write_socket].remove(matched_request)
+                    ## Signal to MPI run() that new send requests are completed
+                    #with self.network.mpi.has_work_cond:
+                    #    self.network.mpi.has_work_cond.notify()
                     
             # Signal to the MPI run() method that there is work to do
-            if should_signal_work:
-                with self.network.mpi.has_work_cond:
-                    self.network.mpi.has_work_cond.notify()
+            #if should_signal_work:
+            #    with self.network.mpi.has_work_cond:
+            #        self.network.mpi.has_work_cond.notify()
                     
         self.close_all_sockets()   
 
