@@ -104,35 +104,42 @@ class MPI(Thread):
         # set up 'constants'
         constants.MPI_GROUP_EMPTY = Group()
         
-        # Initialising data structures for staring jobs.
+        # Initialising data structures for starting jobs.
+        # The locks are for guarding the data structures
+        # The events are for signalling change in data structures
+        
+        # Unstarted requests are both send and receive requests held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
         self.unstarted_requests_has_work = threading.Event()
         
+        # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
         self.pending_requests_lock = threading.Lock()
         self.pending_requests_has_work = threading.Event()
         
-        self.has_work_cond = threading.Condition()
+        # Raw data are messages that have arrived but not been unpickled yet
+        self.raw_data_queue = []
+        self.raw_data_lock = threading.Lock()
+        self.raw_data_event = threading.Event()
+        
+        # Recieved data are messages that have arrived and are unpickled
+        # (ie. ready for matching with a posted recv request)
+        #There are no events as this is handled through the "pending_request_" event.
+        self.received_data = []
+        self.received_data_lock = threading.Lock()
 
+        # General condition to wake up main mpi thread
+        self.has_work_cond = threading.Condition()
+        
+        # Kill signal
         self.shutdown_event = threading.Event()
         
         # Adding locks and initial information about the request queue
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
         
-        # Locks, events, queues etc for handling the raw data the network
-        # passes to this thread
-        self.raw_data_queue = []
-        self.raw_data_lock = threading.Lock()
-        self.raw_data_event = threading.Event()
-        
-        # Locks, queues etc for handling the reived data. There are no
-        # events as this is handled through the "pending_request_" event.
-        self.received_data = []
-        self.received_data_lock = threading.Lock()
-        
-        self.daemon = True
+        self.daemon = True # NOTE: Do we really want this? We could die before the network threads
         self.start()
 
     def match_pending(self, request):
@@ -168,16 +175,20 @@ class MPI(Thread):
         return False
 
     def run(self):
-
+    # NOTE: We should consider whether the 3 part division of labor in this loop is
+    # good and the ordering optimal
+    
         while not self.shutdown_event.is_set():
             with self.has_work_cond:
-                self.has_work_cond.wait()
+                self.has_work_cond.wait() # Wait until there is something to do
+                
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
                 Logger().debug("Contents of unstarted requests: %s" % self.unstarted_requests)
                 Logger().debug("Contents of raw data: %s" % self.raw_data_queue)
                 Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
+                # Schedule unstarted requests (may be in- or outbound)
                 if self.unstarted_requests_has_work.is_set():
                     with self.unstarted_requests_lock:
                         for request in self.unstarted_requests:
@@ -186,30 +197,30 @@ class MPI(Thread):
                             
                         self.unstarted_requests_has_work.clear()
                 
+                # Unpickle raw data (received messages) and put them in pending queue
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
                         with self.received_data_lock:
-                            if self.raw_data_queue:
-                                for raw_data in self.raw_data_queue:
-                                    data = pickle.loads(raw_data)
-                                    self.received_data.append(data)
-                                
-                                self.pending_requests_has_work.set()
-                                self.raw_data_queue = []
+                            for raw_data in self.raw_data_queue:
+                                data = pickle.loads(raw_data)
+                                self.received_data.append(data)
+                            
+                            self.pending_requests_has_work.set()
+                            self.raw_data_queue = []
                         self.raw_data_event.clear()
                         
-                # Think about optimal ordering
+                # Pending requests are received messages that may have a matching recv posted
                 if self.pending_requests_has_work.is_set():
                     with self.pending_requests_lock:
-                        removal = []
+                        removal = [] # Remember succesfully matched requests so we can remove them
                         for request in self.pending_requests:
                             if self.match_pending(request):
-                                # The matcher function does the request update
+                                # The matcher function does the actual request update
                                 # we only need to update our own queue
                                 removal.append(request)
                                 
                         self.pending_requests = [ r for r in self.pending_requests if r not in removal]                        
-                        self.pending_requests_has_work.clear() # We can't match for now wait until further data recieved
+                        self.pending_requests_has_work.clear() # We can't match for now wait until further data received
                     
                             
     def schedule_request(self, request):
@@ -219,14 +230,11 @@ class MPI(Thread):
             with self.pending_requests_lock:
                 self.pending_requests.append(request)
                 self.pending_requests_has_work.set()
-                self.has_work_cond.notify()
+                self.has_work_cond.notify() # We have the lock via caller and caller will release it later
         else:
-            # Start the network layer on a job as well
+            # If the request was outgoing we add to the out queue instead (on the out thread)
             self.network.t_out.add_out_request(request)
 
-    def remove_pending_request(self, request):
-        with self.pending_requests_lock:
-            self.pending_requests.remove(request)
         
     def finalize(self):
         """
