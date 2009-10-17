@@ -25,11 +25,12 @@ for iterations in xrange(max_iterations):
         # print "%s, %s done recv: %s" % (iterations, c_info.rank," str(recv)")
         msg =  "Iteration %s completed for rank %s\n" % (iterations, rank)
     else:
-        pass
+        continue
         
 
     f.write(msg)
     f.flush()
+    
 f.write( "Done for rank %d\n" % rank)
 #time.sleep(2)
 
