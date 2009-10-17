@@ -190,8 +190,9 @@ class CommunicationHandler(threading.Thread):
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
                 except socket.error, e:
-                    print e
+                    Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
+
 
                 should_signal_work = True
                 
@@ -216,7 +217,13 @@ class CommunicationHandler(threading.Thread):
                     elif request.status == "new":
                         Logger().debug("Sending data on socket")
                         # Send the data on the socket
-                        write_socket.send(request.data)
+                        try:
+                            write_socket.send(request.data)
+                        except socket.error, e:
+                            Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                            # Send went wrong, do not update, but hope for better luck next time
+                            continue
+                            
                         removal.append((write_socket, request))
                         request.update("ready")
                     else:
