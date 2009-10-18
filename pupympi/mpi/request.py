@@ -93,7 +93,7 @@ class Request(BaseRequest):
                as it's the best thing in python. Maybe it would make sense to return a
                tuple containing something like (status, data). 
         """
-        Logger().info("Starting a %s wait" % self.request_type)
+        #Logger().info("Starting a %s wait" % self.request_type)
         
         if self.status == "cancelled":
             Logger().debug("WAIT on cancel illegality")

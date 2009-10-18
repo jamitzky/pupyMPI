@@ -174,8 +174,6 @@ class CommunicationHandler(threading.Thread):
                 print out_list
                 print error_list
             
-            # FIXME: Replace this with tighter lock+ signal under read loop
-            #should_signal_work = False
             
             for read_socket in in_list:
                 add_to_pool = False
@@ -188,8 +186,6 @@ class CommunicationHandler(threading.Thread):
                 except socket.error, e:
                     Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
-
-                #should_signal_work = True
                 
                 rank, raw_data = get_raw_message(conn)
                 data = pickle.loads(raw_data)
@@ -229,14 +225,6 @@ class CommunicationHandler(threading.Thread):
                 if removal:  
                     for (write_socket,matched_request) in removal:
                         self.socket_to_request[write_socket].remove(matched_request)
-                    ## Signal to MPI run() that new send requests are completed
-                    #with self.network.mpi.has_work_cond:
-                    #    self.network.mpi.has_work_cond.notify()
-                    
-            # Signal to the MPI run() method that there is work to do
-            #if should_signal_work:
-            #    with self.network.mpi.has_work_cond:
-            #        self.network.mpi.has_work_cond.notify()
                     
         self.close_all_sockets()   
 

@@ -12,7 +12,7 @@ rank = world.rank()
 data = 50*"a"
 f = open("/tmp/mpi.local.rank%s.log" % rank, "w")
 
-max_iterations = 50
+max_iterations = 500
     
 
 for iterations in xrange(max_iterations):
@@ -32,7 +32,7 @@ for iterations in xrange(max_iterations):
     f.flush()
     
 f.write( "Done for rank %d\n" % rank)
-#time.sleep(2)
+#time.sleep(4)
 
 
 f.flush()

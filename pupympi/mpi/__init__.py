@@ -191,7 +191,12 @@ class MPI(Thread):
     
         while not self.shutdown_event.is_set():
             with self.has_work_cond:
-                self.has_work_cond.wait() # Wait until there is something to do
+                #self.has_work_cond.wait() # Wait until there is something to do
+                #NOTE To King of Code:
+                # Med timeout paa wait lykkes det reciever at ordne alle modtagne beskeder og lock_test VIRKER
+                # MEN vi gider ikke have timeout paa wait, at vi ellers blokerer her er symptom paa
+                # et underliggende problem hvor en has_work_cond.notify() mangler et eller andet sted
+                self.has_work_cond.wait(1) # Wait until there is something to do
                 
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
@@ -210,7 +215,7 @@ class MPI(Thread):
                         
                     self.unstarted_requests_has_work.clear()
                 
-                # Unpickle raw data (received messages) and put them in pending queue
+                # Unpickle raw data (received messages) and put them in received queue
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
                         with self.received_data_lock:
