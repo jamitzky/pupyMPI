@@ -191,12 +191,12 @@ class MPI(Thread):
     
         while not self.shutdown_event.is_set():
             with self.has_work_cond:
-                #self.has_work_cond.wait() # Wait until there is something to do
+                self.has_work_cond.wait() # Wait until there is something to do
                 #NOTE To King of Code:
                 # Med timeout paa wait lykkes det reciever at ordne alle modtagne beskeder og lock_test VIRKER
                 # MEN vi gider ikke have timeout paa wait, at vi ellers blokerer her er symptom paa
                 # et underliggende problem hvor en has_work_cond.notify() mangler et eller andet sted
-                self.has_work_cond.wait(1) # Wait until there is something to do
+                #self.has_work_cond.wait(1) # Wait until there is something to do
                 
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
@@ -206,19 +206,21 @@ class MPI(Thread):
                 Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
                 # Schedule unstarted requests (may be in- or outbound)
-                #if self.unstarted_requests_has_work.is_set():
-                #    with self.unstarted_requests_lock:
-                with self.unstarted_requests_lock:
-                    for request in self.unstarted_requests:
-                        self.unstarted_requests.remove(request)
-                        self.schedule_request(request)
-                        
-                    self.unstarted_requests_has_work.clear()
+                if self.unstarted_requests_has_work.is_set():
+                    with self.unstarted_requests_lock:
+                        Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
+                        for request in self.unstarted_requests:
+                            self.unstarted_requests.remove(request)
+                            self.schedule_request(request)
+                            
+                        self.unstarted_requests_has_work.clear()
                 
                 # Unpickle raw data (received messages) and put them in received queue
                 if self.raw_data_event.is_set():
                     with self.raw_data_lock:
+                        Logger().debug("Checking - got raw_data_lock")
                         with self.received_data_lock:
+                            Logger().debug("Checking received:%s " % self.received_data)
                             for raw_data in self.raw_data_queue:
                                 data = pickle.loads(raw_data)
                                 self.received_data.append(data)
@@ -230,6 +232,7 @@ class MPI(Thread):
                 # Pending requests are received messages that may have a matching recv posted
                 if self.pending_requests_has_work.is_set():
                     with self.pending_requests_lock:
+                        Logger().debug("Checking pending:%s " % self.pending_requests)
                         removal = [] # Remember succesfully matched requests so we can remove them
                         for request in self.pending_requests:
                             if self.match_pending(request):
