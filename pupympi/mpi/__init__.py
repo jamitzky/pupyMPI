@@ -201,13 +201,14 @@ class MPI(Thread):
                 Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
                 # Schedule unstarted requests (may be in- or outbound)
-                if self.unstarted_requests_has_work.is_set():
-                    with self.unstarted_requests_lock:
-                        for request in self.unstarted_requests:
-                            self.unstarted_requests.remove(request)
-                            self.schedule_request(request)
-                            
-                        self.unstarted_requests_has_work.clear()
+                #if self.unstarted_requests_has_work.is_set():
+                #    with self.unstarted_requests_lock:
+                with self.unstarted_requests_lock:
+                    for request in self.unstarted_requests:
+                        self.unstarted_requests.remove(request)
+                        self.schedule_request(request)
+                        
+                    self.unstarted_requests_has_work.clear()
                 
                 # Unpickle raw data (received messages) and put them in pending queue
                 if self.raw_data_event.is_set():

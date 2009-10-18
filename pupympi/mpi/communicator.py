@@ -316,7 +316,6 @@ class Communicator:
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
         with self.mpi.has_work_cond:
-            #NOTE: Shouldn't we lock the unstarted_requests queue here?
             with self.mpi.unstarted_requests_lock:
                 self.mpi.unstarted_requests.append( handle )
                 self.mpi.unstarted_requests_has_work.set()
