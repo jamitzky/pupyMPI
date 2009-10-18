@@ -153,26 +153,37 @@ class MPI(Thread):
         The request is updated with the data if found and this
         status update returned from the function so it's possible
         to remove the item from the list.
+        
+        FIXME: This function is called for all requests in the pending_requests list
+        so ideally we should find the data more effectively than linear search
+        OTOH: We like the fact that ordering is preserved via current methods
         """
-        for data in self.received_data:
-            (communicator_id, sender, tag, message) = data
-            
-            # The first strict rule is that any communication must
-            # take part in the same communicator.
-            if request.communicator.id == communicator_id:
+        match = False
+        remove = [] 
+        with self.received_data_lock:
+            for data in self.received_data:
+                (communicator_id, sender, tag, message) = data
                 
-                # The participants must also match.That is the sender must
-                # have specified this rank and we're gonna accept a message
-                # from that rank or from any rank
-                if request.participant in (sender, constants.MPI_SOURCE_ANY):
+                # The first strict rule is that any communication must
+                # take part in the same communicator.
+                if request.communicator.id == communicator_id:
                     
-                    # The sender / receiver must agree on the tag, or
-                    # we must be ready to receive any tag
-                    if request.tag in (tag, constants.MPI_TAG_ANY):
-                        self.received_data.remove(data)
-                        request.update(status="ready", data=message)
-                        return True
-        return False
+                    # The participants must also match.That is the sender must
+                    # have specified this rank and we're gonna accept a message
+                    # from that rank or from any rank
+                    if request.participant in (sender, constants.MPI_SOURCE_ANY):
+                        
+                        # The sender / receiver must agree on the tag, or
+                        # we must be ready to receive any tag
+                        if request.tag in (tag, constants.MPI_TAG_ANY):
+                            remove.append(data)                            
+                            request.update(status="ready", data=message)
+                            match = True
+                            break # We can only find matching data for one request and we have
+                        
+            for data in remove:
+                self.received_data.remove(data)
+        return match
 
     def run(self):
     # NOTE: We should consider whether the 3 part division of labor in this loop is
@@ -186,6 +197,7 @@ class MPI(Thread):
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
                 Logger().debug("Contents of unstarted requests: %s" % self.unstarted_requests)
                 Logger().debug("Contents of raw data: %s" % self.raw_data_queue)
+                Logger().debug("Contents of recieved data: %s" % self.received_data)
                 Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
                 # Schedule unstarted requests (may be in- or outbound)
@@ -216,6 +228,7 @@ class MPI(Thread):
                         for request in self.pending_requests:
                             if self.match_pending(request):
                                 # The matcher function does the actual request update
+                                # and will remove matched data from received_data queue
                                 # we only need to update our own queue
                                 removal.append(request)
                                 

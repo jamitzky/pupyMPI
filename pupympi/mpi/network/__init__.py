@@ -126,7 +126,7 @@ class CommunicationHandler(threading.Thread):
         # Find the global rank of recipient process
         global_rank = request.communicator.group().members[request.participant]['global_rank']
         
-        Logger().debug("Out-request found global rank %d" % global_rank)
+        #Logger().debug("Out-request found global rank %d" % global_rank)
         
         # Find a socket and port of recipient process
         host = self.network.all_procs[global_rank]['host']
