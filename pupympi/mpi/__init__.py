@@ -121,7 +121,7 @@ class MPI(Thread):
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
-        self.raw_data_event = threading.Event()
+        self.raw_data_event = threading.Event() #FIXME: Rename to _has_work for consistency
         
         # Recieved data are messages that have arrived and are unpickled
         # (ie. ready for matching with a posted recv request)
@@ -190,7 +190,9 @@ class MPI(Thread):
     # good and the ordering optimal
     
         while not self.shutdown_event.is_set():
+            #Logger().debug("Still going, try getting has work cond")
             with self.has_work_cond:
+                Logger().debug("Waiting for notify on has_work_cond")
                 self.has_work_cond.wait() # Wait until there is something to do
                 #NOTE To King of Code:
                 # Med timeout paa wait lykkes det reciever at ordne alle modtagne beskeder og lock_test VIRKER
@@ -253,6 +255,16 @@ class MPI(Thread):
                 self.pending_requests.append(request)
                 self.pending_requests_has_work.set()
                 self.has_work_cond.notify() # We have the lock via caller and caller will release it later
+                Logger().debug("Notified self about has_work_cond during schedule_request")
+        #if request.request_type == "recv":
+        #    self.has_work_cond.release()
+        #    self.has_work_cond.acquire()
+        #    with self.pending_requests_lock:
+        #        self.pending_requests.append(request)
+        #        self.pending_requests_has_work.set()
+        #        self.has_work_cond.notify() # We have the lock via caller and caller will release it later
+        #        Logger().debug("Notified self about has_work_cond during schedule_request")
+        #    self.has_work_cond.release()
         else:
             # If the request was outgoing we add to the out queue instead (on the out thread)
             self.network.t_out.add_out_request(request)
