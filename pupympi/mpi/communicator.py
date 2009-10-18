@@ -320,6 +320,8 @@ class Communicator:
                 self.mpi.unstarted_requests.append( handle )
                 self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_cond.notify()
+        
+        #Logger().debug("Irecv about to return - all locks released and notifies sent")
 
         return handle
 
