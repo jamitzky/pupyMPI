@@ -1,9 +1,7 @@
 #!/usr/bin/env python2.6
-
-# Simple pupympi program to test basic blocking communication between two processes
-# only works for two processes
-
-# first rank 0 sends then 1 recieves, then vice versa
+# meta-description: test basic blocking communication. first rank 0 sends then 1 recieves, then vice versa.
+# meta-expectedresult: 0
+# meta-minprocesses: 2
 
 import time
 from mpi import MPI

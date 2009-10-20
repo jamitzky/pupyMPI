@@ -1,12 +1,7 @@
 #!/usr/bin/env python2.6
-# META: SKIP
-# heavier-duty test
-
-# Processes communicate point to point with neighbours in lockstep
-# Evens send and odds recieve then vice versa
-# If uneven number of processes are specified the last ranking one is automatically
-# excluded so the lockstep scheme does not break down (deadlock)
-
+# meta-description: Multi-process version of stress_sr, still with 1000 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
+# meta-expectedresult: 0
+# meta-minprocesses: 5
 
 import time
 from mpi import MPI
