@@ -1,4 +1,7 @@
 #!/usr/bin/env python2.6
+# meta-description: tests simple groups functionality. 
+# meta-expectedresult: 0
+# meta-minprocesses: 2
 
 from mpi import MPI
 from mpi import constants
