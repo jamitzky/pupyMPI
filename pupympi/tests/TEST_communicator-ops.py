@@ -1,4 +1,7 @@
 #!/usr/bin/env python2.6
+# meta-description: Test if communicator operations function. 
+# meta-expectedresult: 0
+# meta-minprocesses: 2
 
 # Simple pupympi program to test all communicator ops
 

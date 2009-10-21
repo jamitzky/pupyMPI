@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.6
-
-# This program tests advanced groups functionality
-# NOTE: You tests should run minimum 4 processes
+# meta-description: tests advanced groups functionality. 
+# meta-expectedresult: 0
+# meta-minprocesses: 10
 
 from mpi import MPI
 from mpi import constants

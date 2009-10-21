@@ -1,8 +1,7 @@
 #!/usr/bin/env python2.6
 # meta-description: test if tags/sources are handled correctly. Rank 0 sends 5 messages to rank 1 which should receive the first 3 but not the last 2.
 # meta-expectedresult: 0
-#
-# This test is meant to run with 2 processes
+# meta-minprocesses: 2
 
 from mpi import MPI
 from mpi import constants

@@ -1,6 +1,10 @@
 #!/usr/bin/env python2.6
+# meta-description: Test if barriers work. 
+# meta-expectedresult: 0
+# meta-minprocesses: 11
 
 # Simple pupympi program to test barrier
+# FIXME: make the test automatic
 
 from mpi import MPI
 from sys import stderr
