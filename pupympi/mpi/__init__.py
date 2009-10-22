@@ -56,11 +56,15 @@ class MPI(Thread):
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
         parser.add_option('--single-communication-thread', dest='single_communication_thread')
         parser.add_option('--process-io', dest='process_io')
+        parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
+        parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
 
         options, args = parser.parse_args()
-    
+
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+
+        logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
             filename = '/tmp/mpi.local.rank%s.log' % options.rank
