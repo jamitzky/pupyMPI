@@ -32,6 +32,7 @@ class SocketPool(object):
     def __init__(self, max_size):
         self.sockets = []
         self.max_size = max_size
+        self.readonly = False
         self.metainfo = {}
         
         self.sockets_lock = threading.Lock()
@@ -44,6 +45,11 @@ class SocketPool(object):
         """
         client_socket = self._get_socket_for_rank(rank) # Try to find an existing socket connection
         newly_created = False
+
+        # It's not valid to not have a socket and a readonly pool
+        if self.readonly and not client_socket:
+            raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket")
+        
         if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,6 +65,9 @@ class SocketPool(object):
         return client_socket, newly_created
     
     def add_created_socket(self, socket_connection, global_rank):
+        if self.readonly:
+            raise Exception("Can't add created socket. We're in readonly mode")
+
         Logger().debug("SocketPool.add_created_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
         known_socket = self._get_socket_for_rank(global_rank)
         

@@ -47,6 +47,8 @@ class Network(object):
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
+        
+        self.full_network_startup = not options.disable_full_network_startup
 
     def _handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -80,6 +82,34 @@ class Network(object):
 
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
+
+    def full_network_startup(self):
+        if self.full_network_startup:
+            Logger().debug("Starting a full network startup")
+
+            # We make a full network startup by receiving from all with lower ranks and 
+            # send to higher ranks
+            our_rank = self.mpi.MPI_COMM_WORLD.rank()
+            size = self.mpi.MPI_COMM_WORLD.size()
+
+            receiver_ranks = [x for x in range(0, our_rank) if x != our_rank]
+            sender_ranks = range(our_rank+1, size)
+
+            recv_handles = []
+            # Start all the receive 
+            for r_rank in receiver_ranks:
+                handle = self.mpi.MPI_COMM_WORLD.recv(r_rank, constants.MPI_TAG_FULL_NETWORK)
+                recv_handles.append(handle)
+
+            # Send all
+            for s_rank in sender_ranks:
+                self.mpi.MPI_COMM_WORLD.send(s_rank, constants.MPI_TAG_FULL_NETWORK)
+
+            # Finish the receives
+            for handle in recv_handles:
+                handle.wait()
+            
+            self.socket_pool.readonly = True
 
     def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
         Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))
