@@ -21,7 +21,7 @@ class stuff():
 def run_pickle():
     """docstring for run_pickle"""
     iterations = 50000
-    data = {"int": 1, "float": 0.42, "string" : "mystring", "listofints": [1,2,3,4,5,6,7,8,9,10], "class": stuff(), "largedict": dict([ (str(n), n) for n in range(100) ])}
+    data = {"int": 1, "float": 0.42, "string" : "mystring", "listofints": [1,2,3,4,5,6,7,8,9,10], "class": stuff(), "largedict": dict([ (str(n), n) for n in range(100) ]), "3int tuple": (1,2,3), "3int list": [1,2,3], "3int dict": {"1": 1, "2":2,"3":3}}
     results = {}
 
     for d in data:

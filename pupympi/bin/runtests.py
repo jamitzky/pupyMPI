@@ -33,6 +33,7 @@ WARNING = '\033[93m'
 FAIL = '\033[91m'
 ENDC = '\033[0m'
 
+latex_output = None
 
 def output_console(text, color = None, newline = True, block = "", output=True):
     """Adds one block/line of output to console"""
@@ -61,23 +62,33 @@ def output_console_nocolor(text, color = None, newline = True, block = "", outpu
     return out
 
     
-def output_latex(text, color = None, newline = True, block = ""):
+def output_latex(test):
     """Adds one block/line of output as latex output"""
-    pass
+    global latex_output
+
     
+    description = test.meta["description"].replace("_", "\\_") if "description" in test.meta else ""
+    testname = test.test.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
+    result = "success" if test.returncode == test.expectedresult and not test.killed else "failed"
+    
+    latex_output.write("%s & %s & %s & %s \\\\ \n" % (testname, test.processes, result, description))
+            
 output = output_console
 
 
 path = os.path.dirname(os.path.abspath(__file__)) 
 class RunTest(Thread):
 
-    cmd = "bin/mpirun.py --process-io=filepipe -q -c RUN_COUNT --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, primary_log, options):
+    def __init__(self, test, primary_log, options, meta):
         Thread.__init__(self)
         self.test = test
+        self.meta = meta
         self.primary_log = primary_log
-        self.cmd = self.cmd.replace("RUN_COUNT", str(options.np))
+        self.processes = meta["minprocesses"] if "minprocesses" in meta else options.np
+        self.expectedresult = int(meta["expectedresult"]) if "expectedresult" in meta else 0
+        self.cmd = self.cmd.replace("PROCESSES_REQUIRED", str(self.processes))
         self.cmd = self.cmd.replace("LOG_VERBOSITY", str(options.verbosity))
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
@@ -88,6 +99,7 @@ class RunTest(Thread):
         self.killed = False
 
     def run(self):
+        """runs the testthread, logs realtime'ish results and kills the subprocess if it takes too long."""
         self.start = time.time()
         while time.time() < (self.start + TEST_MAX_RUNTIME): # HACK: Limit execution time
             if self.process.poll() is not None: # Has the process stopped running?
@@ -103,7 +115,7 @@ class RunTest(Thread):
             time.sleep(0.25)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
-        elif self.process.returncode is not 0:
+        elif self.process.returncode != self.expectedresult:
             output("Failed", OKRED)
         else:
             output("OK")  
@@ -111,10 +123,12 @@ class RunTest(Thread):
         self.returncode = self.process.returncode
 
 def get_testnames():
+    """returns a list of files that match our 'official' requirement to qualify as a pupympi™© test"""
     return sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
     
-def _status_str(ret):
-    if ret == 0:
+def _status_str(ret, expres):
+    """helper function to write human friendly status string"""
+    if ret == expres:
         return output("ok", newline=False, output=False)
     elif ret == -9 or ret == -15:
         return output("Timed Out", newline=False, output=False)
@@ -122,6 +136,7 @@ def _status_str(ret):
         return output("FAIL: %s" % ret, color=OKRED,newline=False, output=False)
         
 def format_output(threads):
+    """prints the final output in purty colors, and logs to latex for report inclusion"""
     total_time = 0
     odd = False
     output("TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE") 
@@ -131,14 +146,16 @@ def format_output(threads):
         output("%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, \
                                                     round(thread.executiontime, 1), \
                                                     "KILLED" if thread.killed else "no", \
-                                                    _status_str(thread.returncode)),
+                                                    _status_str(thread.returncode, thread.expectedresult)),
                                                     color=OKOFFWHITE if odd else OKBLACK,
-                                                    block="Results table")                                                    
+                                                    block="Results table console")                                                    
         odd = True if odd == False else False
+        output_latex(thread)                                                    
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
 def combine_logs(logfile_prefix):
+    """Logs are initially split to ease debugging. This function combines them, and deletes the original."""
     combined = open(logfile_prefix+".log", "w")
     counter = 0
     for log in sorted([f for f in os.listdir(".") if f.startswith(logfile_prefix+"_")]):
@@ -155,22 +172,41 @@ def combine_logs(logfile_prefix):
     combined.close()        
     print "Combined %d log files into %s.log" % (counter, logfile_prefix)
 
+def get_test_data(test):
+    """loads test metadata and filename"""
+    with open("tests/"+test) as testfile:
+        meta = {}
+        for lines in testfile.readlines():
+            if not lines.startswith("#"):
+                break
+                
+            if lines.startswith("# meta-"):
+                meta[lines[7:lines.find(":")]] = lines[lines.find(":")+1:].strip()
+        
+        return meta            
+
 def run_tests(test_files, options):
+    """for each test in tests directory, run the test"""
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
-    for test in test_files:
-        t = RunTest(test, logfile_prefix, options)
-        threadlist.append(t)
-        t.start()
-        t.join() # run sequentially until issue #19 is fixed
-        # TODO: Issue 19 is resolved, try fixing the above
-
-    # for t in threadlist:
-    #    t.join()
-    #    print "all done"
     
-    format_output(threadlist)
-    combine_logs(logfile_prefix)
+    with open("testrun.tex", "w") as latex:
+        global latex_output
+        latex_output = latex
+    
+        for test in test_files:
+            t = RunTest(test, logfile_prefix, options, get_test_data(test))
+            threadlist.append(t)
+            t.start()
+            t.join() # run sequentially until issue #19 is fixed
+            # TODO: Issue 19 is resolved, try fixing the above
+
+        # for t in threadlist:
+        #    t.join()
+        #    print "all done"
+    
+        format_output(threadlist)
+        combine_logs(logfile_prefix)
     
 class Usage(Exception):
     def __init__(self, msg):
@@ -181,7 +217,7 @@ def main():
     parser = OptionParser(usage=usage, version="Pupympi version 0.01 (dev)")
     parser.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
-    parser.add_option('-c', '--np', dest='np', default=4, type='int', help='The number of processes to start.')
+    parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--remote-python', '-r', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
 
     options, args = parser.parse_args()

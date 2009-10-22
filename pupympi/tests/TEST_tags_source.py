@@ -1,9 +1,7 @@
 #!/usr/bin/env python2.6
-
-# Simple pupympi program to test if tags are handled correctly
-# rank 0 sends 5 messages to rank 1 which should receive the first 3 but not the last 2.
-#
-# This test is meant to run with 2 processes
+# meta-description: test if tags/sources are handled correctly. Rank 0 sends 5 messages to rank 1 which should receive the first 3 but not the last 2.
+# meta-expectedresult: 0
+# meta-minprocesses: 2
 
 from mpi import MPI
 from mpi import constants

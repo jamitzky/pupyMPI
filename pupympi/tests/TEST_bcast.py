@@ -1,3 +1,8 @@
+#!/usr/bin/env python2.6
+# meta-description: Test if mpi_bcast work. 
+# meta-expectedresult: 0
+# meta-minprocesses: 11
+
 from mpi import MPI
 BCAST_MESSAGE = "Test message"
 mpi = MPI()
