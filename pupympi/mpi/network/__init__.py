@@ -14,7 +14,13 @@ from mpi.logger import Logger
 
 class Network(object):
     def __init__(self, mpi, options):
-        self.socket_pool = SocketPool(constants.SOCKET_POOL_SIZE)
+
+        if options.disable_full_network_startup:
+            socket_pool_size = options.socket_pool_size
+        else:
+            socket_pool_size = options.size
+
+        self.socket_pool = SocketPool(socket_pool_size)
 
         self.mpi = mpi
         self.options = options
