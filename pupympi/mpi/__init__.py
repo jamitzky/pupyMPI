@@ -146,6 +146,9 @@ class MPI(Thread):
         self.daemon = True # NOTE: Do we really want this? We could die before the network threads
         self.start()
 
+        # Makes every node connect to each other if the settings allow us to do that.
+        self.network.full_network_startup()
+
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
