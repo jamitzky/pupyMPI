@@ -1,4 +1,6 @@
 #!/usr/bin/env python2.6
+# meta-description: tests if crashes in MPI program are propagated back to initiator, ie is expected to actually crash.
+# meta-expectedresult: 1
 
 # Simple pupympi program to test if horribly broken scripts manage to return their stderr
 
