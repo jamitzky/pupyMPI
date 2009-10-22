@@ -83,7 +83,7 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
-    def full_network_startup(self):
+    def start_full_network(self):
         if self.full_network_startup:
             Logger().debug("Starting a full network startup")
 
@@ -95,15 +95,17 @@ class Network(object):
             receiver_ranks = [x for x in range(0, our_rank) if x != our_rank]
             sender_ranks = range(our_rank+1, size)
 
+            Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
+
             recv_handles = []
             # Start all the receive 
             for r_rank in receiver_ranks:
-                handle = self.mpi.MPI_COMM_WORLD.recv(r_rank, constants.MPI_TAG_FULL_NETWORK)
+                handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.MPI_TAG_FULL_NETWORK)
                 recv_handles.append(handle)
 
             # Send all
             for s_rank in sender_ranks:
-                self.mpi.MPI_COMM_WORLD.send(s_rank, constants.MPI_TAG_FULL_NETWORK)
+                self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.MPI_TAG_FULL_NETWORK)
 
             # Finish the receives
             for handle in recv_handles:

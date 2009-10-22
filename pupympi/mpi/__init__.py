@@ -147,7 +147,7 @@ class MPI(Thread):
         self.start()
 
         # Makes every node connect to each other if the settings allow us to do that.
-        self.network.full_network_startup()
+        self.network.start_full_network()
 
     def match_pending(self, request):
         """
