@@ -204,10 +204,10 @@ class MPI(Thread):
                 
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
-                Logger().debug("Contents of unstarted requests: %s" % self.unstarted_requests)
-                Logger().debug("Contents of raw data: %s" % self.raw_data_queue)
-                Logger().debug("Contents of recieved data: %s" % self.received_data)
-                Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
+                Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
+                Logger().debug("\traw data: %s" % self.raw_data_queue)
+                Logger().debug("\trecieved data: %s" % self.received_data)
+                Logger().debug("\tpending_requests: %s" % self.pending_requests)
                 
                 # Schedule unstarted requests (may be in- or outbound)
 #                if self.unstarted_requests_has_work.is_set():
