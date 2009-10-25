@@ -3,9 +3,16 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 11
 
+import time
+start_time = time.time()
+
 from mpi import MPI
 BCAST_MESSAGE = "Test message"
 mpi = MPI()
+init_time = time.time()
+
+print "Init time: %f" % (init_time-start_time)
+
 size = mpi.MPI_COMM_WORLD.size()
 assert size > 2
 
@@ -16,4 +23,15 @@ else:
     print message
     assert message == BCAST_MESSAGE
 
+logic_time = time.time()
+
 mpi.finalize()
+
+finalize_time = time.time()
+
+print """
+TIME INFORMATION
+    Initialization: %f 
+    Logic: %f
+    Finalization: %f
+    Total: %f """ % (init_time - start_time, logic_time - init_time, finalize_time - logic_time, finalize_time - start_time) 
