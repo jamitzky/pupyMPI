@@ -50,6 +50,10 @@ class Request(BaseRequest):
 
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
     
+    def __repr__(self):
+        orig_repr = super(Request, self).__repr__()
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d)>" % (self.request_type, self.participant, self.tag)
+    
     def update(self, status, data=None):
         Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))
         if self.status not in ("finished", "cancelled"): # No updating on dead requests
