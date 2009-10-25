@@ -5,7 +5,7 @@ tree.
 """
 import copy
 
-class BroadCastTree:
+class BroadCastTree(object):
     
     def __init__(self, nodes, rank, root):
         # Make sure the root is the first element in the list
@@ -17,9 +17,14 @@ class BroadCastTree:
         self.nodes = nodes
         self.rank = rank
         self.tree = self.generate_tree(copy.deepcopy(new_nodes))
+        self.root = root
 
         self.up = self.find_up()
         self.down = self.find_down()
+        
+    def __repr__(self):
+        repr = super(BroadCastTree, self).__repr__()
+        return repr[0:-1] + "root(%d), rank(%d) up(%s), down(%s)>" % (self.root, self.rank, self.up, self.down)
         
     def find_up(self):
         """
