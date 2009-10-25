@@ -129,7 +129,7 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(hosts, options.np,"rr") # TODO: This call should get scheduling option from args to replace "rr" parameter
     
-    s, mpi_run_hostname, mpi_run_port = get_free_socket() # Find an available socket
+    s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
     #logger.debug("Socket bound to port %d" % mpi_run_port)
 
