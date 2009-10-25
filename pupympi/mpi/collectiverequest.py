@@ -101,6 +101,8 @@ class CollectiveRequest(BaseRequest):
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
         tree = self.communicator.get_broadcast_tree(root=root)
+        
+        Logger().debug("collectiverequest.two_way_tree_traversal: Before the first way")
 
         # Step 3: Traverse the tree in the first direction. 
         if start_direction == "down":
@@ -109,6 +111,8 @@ class CollectiveRequest(BaseRequest):
         else:
             rt_first = up(initial_data, force_initial_data=True)
             other = down
+            
+        Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
         # Step 4: Run the other direction. This should also just have been
         #         done in the same if as before, but I seperated the cases
@@ -117,6 +121,8 @@ class CollectiveRequest(BaseRequest):
         #         any reason we need to traverse the entire tree in one 
         #         direction before we can start the second traversal?
         rt_second = other(rt_first)
+
+        Logger().debug("collectiverequest.two_way_tree_traversal: After the second way")
 
         if return_type == 'first':
             return rt_first
@@ -146,17 +152,6 @@ class CollectiveRequest(BaseRequest):
         self.data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, 
                 up_func=operation, start_direction="up", return_type="last")
 
-    def network_callback(self, lock=True, *args, **kwargs):
-        Logger().debug("Network callback in request called")
-
-        if lock:
-            self.acquire()
-
-        # FIXME: Handle stuff in here.. DO IT
-            
-        if lock:
-            self.release()
-
     def cancel(self):
         """
         Cancel a request. This can be used to free memory, but the request must be redone
@@ -166,14 +161,12 @@ class CollectiveRequest(BaseRequest):
         """
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
-        self._m['status'] = 'cancelled'
+        self._metadata['status'] = 'cancelled'
         Logger().debug("Cancelling a %s/%s request" % self.request_supertype, self.tag)
         
 
-    # FIXME Deleted test and wait until we know if they'll be needed (copy from Request then)
-
     def get_status(self):
-        return self._m['status']
+        return self._metadata['status']
 
     def wait(self):
         """
