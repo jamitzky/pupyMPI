@@ -275,8 +275,9 @@ class CommunicationHandler(threading.Thread):
                         # This seems to happen with the "finished" state a lot of times. It should not happen
                         # as it might conclude that a request is changing it's state when it's not supposed
                         # to
-                        Logger().warning("The socket select found an invalid request status: %s" % request.status)
-                
+                        Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" % 
+                                (request.status, request.request_type, request.tag, request.participant))
+                        
                 # Remove the requests (messages) that was successfully sent from the list for that socket
                 if removal:  
                     with self.socket_to_request_lock:
