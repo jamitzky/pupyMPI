@@ -52,7 +52,7 @@ class Request(BaseRequest):
     
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d)>" % (self.request_type, self.participant, self.tag)
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d) status(%s)>" % (self.request_type, self.participant, self.tag, self.status)
     
     def update(self, status, data=None):
         Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))
