@@ -199,7 +199,6 @@ class MPI(Thread):
         while not self.shutdown_event.is_set():
             #Logger().debug("Still going, try getting has work cond")
             with self.has_work_cond:
-                Logger().debug("Waiting for notify on has_work_cond")
                 self.has_work_cond.wait(0.5) 
                 
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
