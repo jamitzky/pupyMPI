@@ -156,6 +156,9 @@ class CommunicationHandler(threading.Thread):
         self.socket_pool = socket_pool
         
         self.shutdown_event = threading.Event()
+        
+        # Locks for proper access to the internal socket->request structure
+        self.socket_to_request_lock = threading.Lock()
     
     def add_out_request(self, request):
         """
@@ -181,14 +184,16 @@ class CommunicationHandler(threading.Thread):
             self.network.t_in.add_in_socket(client_socket)
             self.network.t_out.add_out_socket(client_socket)
 
-        self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+        with self.socket_to_request_lock:
+            self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
 
 
     def add_in_socket(self, client_socket):
         self.sockets_in.append(client_socket)
         
     def add_out_socket(self, client_socket):
-        self.socket_to_request[client_socket] = []
+        with self.socket_to_request_lock:
+            self.socket_to_request[client_socket] = []
         self.sockets_out.append(client_socket)
     
     def close_all_sockets(self):
@@ -241,7 +246,8 @@ class CommunicationHandler(threading.Thread):
             
             for write_socket in out_list:
                 removal = []
-                request_list = self.socket_to_request[write_socket]
+                with self.socket_to_request_lock:
+                    request_list = self.socket_to_request[write_socket]
                 for request in request_list:
                     if request.status == "cancelled":
                         removal.append((socket, request))
@@ -265,8 +271,9 @@ class CommunicationHandler(threading.Thread):
                 
                 # Remove the requests (messages) that was successfully sent from the list for that socket
                 if removal:  
-                    for (write_socket,matched_request) in removal:
-                        self.socket_to_request[write_socket].remove(matched_request)
+                    with self.socket_to_request_lock:
+                        for (write_socket,matched_request) in removal:
+                            self.socket_to_request[write_socket].remove(matched_request)
                     
         self.close_all_sockets()   
 
