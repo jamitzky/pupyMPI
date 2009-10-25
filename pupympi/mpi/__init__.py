@@ -210,43 +210,44 @@ class MPI(Thread):
                 Logger().debug("Contents of pending_requests: %s" % self.pending_requests)
                 
                 # Schedule unstarted requests (may be in- or outbound)
-                if self.unstarted_requests_has_work.is_set():
-                    with self.unstarted_requests_lock:
-                        Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
-                        for request in self.unstarted_requests:
-                            self.schedule_request(request)
-                        self.unstarted_requets = []
-                            
-                        self.unstarted_requests_has_work.clear()
-                
+#                if self.unstarted_requests_has_work.is_set():
+                with self.unstarted_requests_lock:
+                    Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
+                    for request in self.unstarted_requests:
+                        self.schedule_request(request)
+                    self.unstarted_requets = []
+                        
+                    self.unstarted_requests_has_work.clear()
+            
                 # Unpickle raw data (received messages) and put them in received queue
-                if self.raw_data_event.is_set():
-                    with self.raw_data_lock:
-                        Logger().debug("Checking - got raw_data_lock")
-                        with self.received_data_lock:
-                            Logger().debug("Checking received:%s " % self.received_data)
-                            for raw_data in self.raw_data_queue:
-                                data = pickle.loads(raw_data)
-                                self.received_data.append(data)
-                            
-                            self.pending_requests_has_work.set()
-                            self.raw_data_queue = []
-                        self.raw_data_event.clear()
+#                if self.raw_data_event.is_set():
+                with self.raw_data_lock:
+                    Logger().debug("Checking - got raw_data_lock")
+                    with self.received_data_lock:
+                        Logger().debug("Checking received:%s " % self.received_data)
+                        for raw_data in self.raw_data_queue:
+                            data = pickle.loads(raw_data)
+                            self.received_data.append(data)
+                        
+                        self.pending_requests_has_work.set()
+                        self.raw_data_queue = []
+                    self.raw_data_event.clear()
                         
                 # Pending requests are received messages that may have a matching recv posted
-                if self.pending_requests_has_work.is_set():
-                    with self.pending_requests_lock:
-                        Logger().debug("Checking pending:%s " % self.pending_requests)
-                        removal = [] # Remember succesfully matched requests so we can remove them
-                        for request in self.pending_requests:
-                            if self.match_pending(request):
-                                # The matcher function does the actual request update
-                                # and will remove matched data from received_data queue
-                                # we only need to update our own queue
-                                removal.append(request)
-                                
-                        self.pending_requests = [ r for r in self.pending_requests if r not in removal]                        
-                        self.pending_requests_has_work.clear() # We can't match for now wait until further data received
+#                if self.pending_requests_has_work.is_set():
+                with self.pending_requests_lock:
+                    Logger().debug("Checking pending:%s " % self.pending_requests)
+                    removal = [] # Remember succesfully matched requests so we can remove them
+                    for request in self.pending_requests:
+                        if self.match_pending(request):
+                            # The matcher function does the actual request update
+                            # and will remove matched data from received_data queue
+                            # we only need to update our own queue
+                            removal.append(request)
+                    
+                    for request in removal:
+                        self.pending_requests.remove(request)
+                    self.pending_requests_has_work.clear() # We can't match for now wait until further data received
                     
                             
     def schedule_request(self, request):
