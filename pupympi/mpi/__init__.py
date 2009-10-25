@@ -215,8 +215,7 @@ class MPI(Thread):
                     Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
                     for request in self.unstarted_requests:
                         self.schedule_request(request)
-                    self.unstarted_requets = []
-                        
+                    self.unstarted_requests = []
                     self.unstarted_requests_has_work.clear()
             
                 # Unpickle raw data (received messages) and put them in received queue
