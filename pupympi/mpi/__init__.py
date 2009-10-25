@@ -252,7 +252,7 @@ class MPI(Thread):
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
         
-        with self.has_work:
+        with self.has_work_cond:
             # Add the request to the internal queue
             if request.request_type == "recv":
                 with self.pending_requests_lock:
