@@ -159,6 +159,10 @@ class CommunicationHandler(threading.Thread):
         
         # Locks for proper access to the internal socket->request structure
         self.socket_to_request_lock = threading.Lock()
+        
+        # Locks for proper access to the socket lists
+        self.sockets_in_lock = threading.Lock()
+        self.sockets_out_lock = threading.Lock()
     
     def add_out_request(self, request):
         """
@@ -189,12 +193,15 @@ class CommunicationHandler(threading.Thread):
 
 
     def add_in_socket(self, client_socket):
-        self.sockets_in.append(client_socket)
+        with self.sockets_in_lock:
+            self.sockets_in.append(client_socket)
         
     def add_out_socket(self, client_socket):
         with self.socket_to_request_lock:
             self.socket_to_request[client_socket] = []
-        self.sockets_out.append(client_socket)
+            
+        with self.sockets_out_lock:
+            self.sockets_out.append(client_socket)
     
     def close_all_sockets(self):
         for s in self.sockets_in + self.sockets_out:
@@ -205,19 +212,20 @@ class CommunicationHandler(threading.Thread):
     
     def run(self):
         while not self.shutdown_event.is_set():
-            try:
-                (in_list, out_list, error_list) = select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
-            except Exception, e:
-                print "Got exception"
-                print e
-                print type(e)
-                print self.sockets_in
-                print self.sockets_out
-                print "----- done ---------"
-                print in_list
-                print out_list
-                print error_list
-            
+            with self.sockets_in_lock:
+                with self.sockets_out_lock:
+                    try:
+                        (in_list, out_list, error_list) = select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
+                    except Exception, e:
+                        print "Got exception"
+                        print e
+                        print type(e)
+                        print self.sockets_in
+                        print self.sockets_out
+                        print "----- done ---------"
+                        print in_list
+                        print out_list
+                        print error_list
             
             for read_socket in in_list:
                 add_to_pool = False
