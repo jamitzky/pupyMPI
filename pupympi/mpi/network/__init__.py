@@ -258,7 +258,10 @@ class CommunicationHandler(threading.Thread):
                         removal.append((write_socket, request))
                         request.update("ready") # update status and signal anyone waiting on this request
                     else:
-                        raise Exception("We got a status in the send socket select we don't handle.. it's there--> %s" % request.status)
+                        # This seems to happen with the "finished" state a lot of times. It should not happen
+                        # as it might conclude that a request is changing it's state when it's not supposed
+                        # to
+                        Logger().warning("The socket select found an invalid request status: %s" % request.status)
                 
                 # Remove the requests (messages) that was successfully sent from the list for that socket
                 if removal:  
