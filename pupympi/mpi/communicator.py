@@ -23,21 +23,13 @@ class Communicator:
         self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
         
         self.attr = {}
-        if name == "MPI_COMM_WORLD": # FIXME Move to build_world
+        if name == "MPI_COMM_WORLD":
             self.attr = {   "MPI_TAG_UB": 2**30, \
                             "MPI_HOST": "TODO", \
                             "MPI_IO": rank, \
                             "MPI_WTIME_IS_GLOBAL": False
                         }
 
-        # Adding locks and initial information about the request queue
-        self.current_request_id_lock = threading.Lock()
-        self.request_queue_lock = threading.Lock()
-        self.unhandled_messages_lock = threading.Lock()
-        self.current_request_id = 0
-        self.request_queue = {}
-        
-        self.unhandled_receives = {}
 
         # Setup a tree for this communicator. When this is done you can
         # use the "up" and "down" attributes on the tree to send messages
@@ -59,133 +51,9 @@ class Communicator:
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
         
         return self.bc_trees[root] 
-        
-    def pop_unhandled_message(self, participant, tag):
-        self.unhandled_messages_lock.acquire()
-        try:
-            package = self.unhandled_receives[tag][participant].pop(0)
-            self.unhandled_messages_lock.release()
-            return package
-        except (IndexError, KeyError):
-            pass
-        self.unhandled_messages_lock.release()
-        
-    def handle_receive(self, communicator=None, tag=None, data=None, sender=None, recv_type=None):
-        # Look for a request object right now. Otherwise we just put it on the queue and let the
-        # update handler do it.
-        
-        # Put it on unhandled requests
-        if tag not in self.unhandled_receives:
-            self.unhandled_receives[tag] = {}
-            
-        if not sender in self.unhandled_receives[tag]:
-            self.unhandled_receives[tag][sender] = []
-
-        self.unhandled_receives[tag][sender].append( {'data': data, 'recv_type' : recv_type })
-        
-        Logger().info("Added unhandled data with tag(%s), sender(%s), data(%s), recv_type(%s)" % (tag, sender, data, recv_type))
-        self.update()
-        
-    #def __repr__(self):
-    #    return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
-
-    def update(self):
-        """
-        This method is responsible for listening on the TCP layer, receive
-        information on network requests and update the internal Requests 
-        objects that live in the request_queue.
-
-        FIXME: We need to have access to the network layer and receive all
-        the finished tasks for this communicator. We can then update the 
-        request status.
-        """
-        logger = Logger()
-        #logger.debug("Update by the mpi thread in communicator: %s" % self.name)
-
-        # Loook through all the request objects to see if there is anything we can do here
-        for request in self.request_queue.values():
-            #logger.info("values in request queue: " + str(self.request_queue.values()))
-            
-            # We will skip requests objects that are not possible to
-            # acquire a lock on right away. 
-            if not request.acquire(False):
-                logger.info("Skipped a request object.")
-                continue
-
-            status = request.get_status()
-
-            # Just switch on the different status something can have
-            if status == 'cancelled':
-                # We remove the cancelled request, but I think we might need to
-                # cache it. What if there is a subsequent isend/irecv starting 
-                # receiving the data meant for this one. (the data might already
-                # be here)
-                self.request_remove( request )
-                Logger().info("Removing cancelled request")
-
-            elif status == 'ready':
-                # Ready means that we're waiting for the user to do something about
-                # it. We can't do anything.
-                pass
-
-            elif status == 'finished':
-                # All done, so it should be safe to remove. We're seperating this
-                # request from the cancelled so it's easier to make different in 
-                # the future
-                self.request_remove( request )
-                #Logger().info("Removing finished request")
-        
-            elif status == 'new':
-                package = self.pop_unhandled_message(request.participant, request.tag)
-                if package:
-                    request.network_callback(lock=False, status='ready', data=package['data'])
-
-            else:
-                logger.warning("Updating the request queue in communicator %s got a unknown status: %s" % (self.name, status))
-
-            # Release the lock after we're done
-            request.release()
-            Logger().info("Request object released.")
-
-    def request_remove(self, request_obj):
-        """
-        A request object can be removed from the queue but will live
-        in some user variable. This means that we can actually remove
-        it twice (or at least try to). 
-
-        So if we get a KeyError then we at least know that the object
-        is not in the queue. 
-        """
-        self.request_queue_lock.acquire()
-        try:
-            del self.request_queue[request_obj.queue_idx]
-        except KeyError, e:
-            pass
-        self.request_queue_lock.release()
-
-    def request_add(self, request_obj):
-        """
-        Add the request object to a queue so we can get a hold of it later.
-        Returns the lookup idx for later use.
-        """
-        logger = Logger()
-        logger.debug("Adding request object to the request queue")
-        
-        # Get a unique request object id
-        self.current_request_id_lock.acquire()
-        self.current_request_id += 1
-        idx = self.current_request_id
-        self.current_request_id_lock.release()
-
-        # Set the id on the request object so we can read it directly later
-        request_obj.queue_idx = idx
-        
-        # Put request in queue
-        self.request_queue_lock.acquire()
-        self.request_queue[idx] = request_obj
-        self.request_queue_lock.release()
-        logger.debug("Added request object to the queue with index %s. There are now %d items in the queue" % (idx, len(self.request_queue)))
-        return idx 
+                
+    def __repr__(self):
+        return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
 
     def have_rank(self, rank):
         return rank in self.comm_group.members
@@ -444,9 +312,16 @@ class Communicator:
         # Create a receive request object
         handle = Request("recv", self, sender, tag)
 
-        # Add request object to the queue unless it's ready already
-        if not handle.test():
-            self.request_add(handle)
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        with self.mpi.has_work_cond:
+            with self.mpi.unstarted_requests_lock:
+                self.mpi.unstarted_requests.append( handle )
+                self.mpi.unstarted_requests_has_work.set()
+            self.mpi.has_work_cond.notify()
+        
+        #Logger().debug("Irecv about to return - all locks released and notifies sent")
 
         return handle
 
@@ -462,10 +337,16 @@ class Communicator:
 
         # Create a receive request object
         handle = Request("send", self, destination_rank, tag, data=content)
+        
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        with self.mpi.has_work_cond:
+            with self.mpi.unstarted_requests_lock:
+                self.mpi.unstarted_requests.append( handle )
+                self.mpi.unstarted_requests_has_work.set()
+            self.mpi.has_work_cond.notify()
 
-        # Add request object to the queue unless it's ready already
-        if not handle.test():
-            self.request_add(handle)
         return handle
 
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):

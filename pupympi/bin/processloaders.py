@@ -89,6 +89,7 @@ def wait_for_shutdown(process_list):
     logger = Logger()
     exit_codes = []
     while process_list:
+        remove = []
         for p in process_list:
             returncode = p.poll()
             #logger.debug("Got return code: %s" % returncode)
@@ -96,13 +97,19 @@ def wait_for_shutdown(process_list):
             if returncode is None: # still alive
                 pass
             elif returncode == 0: # exited correctly
-                logger.debug("A process exited with a status of 0. And we have %i left." % ( len(process_list)-1))
                 exit_codes += [returncode]
-                process_list.remove( p )
+                remove.append(p)
+                #process_list.remove( p )
+                logger.debug("A process exited with a status of 0. And we have %i left." % ( len(process_list)-1))
             else: # error code
                 exit_codes += [returncode]
-                process_list.remove( p )
-                logger.debug("A process exited with return code %d. And we have %i left." % (returncode, len(process_list)-1 ))
+                remove.append(p)
+                #process_list.remove( p )
+                logger.debug("A process exited with return code %d. And we have %i left." % (returncode, len(process_list)-1))
+        
+        # We remove outside iteration over list just to be safe
+        for p in remove:
+            process_list.remove( p )
 
         time.sleep(1)
     for t in io_target_list:

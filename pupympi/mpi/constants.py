@@ -9,6 +9,7 @@ TAG_BARRIER = -512
 TAG_COMM_CREATE = -1024
 TAG_ALLREDUCE = -2048
 TAG_INITIALIZING = -4096 
+MPI_TAG_FULL_NETWORK = -8192 
 
 # NOT IMPLEMENTED:
 # MPI_COMM_SELF (MPI 2.x)
@@ -22,5 +23,3 @@ MPI_UNEQUAL     = -1    # Different
 MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutorials/MPI/alliance/communicators/MPI_Group_rank.html)
 
 JOB_INITIALIZING = -1
-
-SOCKET_POOL_SIZE = 20   # Allow the system to cache upto 10 sockets in a pool. This can probably be set higher without any complaints. 

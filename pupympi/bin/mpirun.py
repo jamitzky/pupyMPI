@@ -6,15 +6,12 @@ import select, time
 import processloaders 
 from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
-from mpi.network.tcp import get_free_socket, pack_header, structured_read
+from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+from mpi.network.utils import pickle
 
 def parse_options():
     usage = 'usage: %prog [options] arg'
@@ -36,6 +33,8 @@ def parse_options():
     parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", help='Path to Python 2.6 on remote hosts. Defaults to  %default')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh, rsh (not supported) and popen (local only). Defaults to %default')
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
+    parser_adv_group.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action='store_true', help="Do not initialize a socket connection between all pairs of processes. If not a second change socket pool algorithm will be used. See also --socket-pool-size")
+    parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=10, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser.add_option_group( parser_adv_group )
 
@@ -153,8 +152,12 @@ if __name__ == "__main__":
                 "--mpirun-conn-port=%d" % mpi_run_port, 
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
+                "--socket-pool-size=%d" % options.socket_pool_size, 
                 "--verbosity=%d" % options.verbosity, "--process-io=%s" % options.process_io] 
-        
+
+        if options.disable_full_network_startup:
+            run_options.append('--disable-full-network-startup')
+
         # Special options
         # TODO: This could be done nicer, no need for spec ops
         if options.quiet:
@@ -198,19 +201,21 @@ if __name__ == "__main__":
         sender_conns.append( sender_conn )
         
         # Receiving data about the communicator, by unpacking the head etc.
-        tag, sender, communicator, recv_type, data = structured_read(sender_conn)
+        rank, data = get_raw_message(sender_conn)
+        data = pickle.loads(data)
+        (communicator, sender, tag, message) = data
         
-        all_procs.append( data ) # add (rank,host,port) for process to the listing
+        all_procs.append( message ) # add (rank,host,port) for process to the listing
     #logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
-    pdata = pickle.dumps( all_procs, protocol=-1 )
+    data = (-1, -1, constants.TAG_INITIALIZING, all_procs)
+    message = prepare_message(data, -1)
     for conn in sender_conns:
-        header = pack_header(-1, constants.TAG_INITIALIZING, len(pdata), 0, constants.JOB_INITIALIZING)
-        conn.send(header + pdata)
+        conn.send(message)
         conn.close()
     # Close own "server" socket
     s.close()
