@@ -318,7 +318,7 @@ class Communicator:
         with self.mpi.has_work_cond:
             with self.mpi.unstarted_requests_lock:
                 self.mpi.unstarted_requests.append( handle )
-                self.mpi.unstarted_requests_has_work.set()
+                self.mpi_unstarted_requests_has_work.set()
             self.mpi.has_work_cond.notify()
         
         #Logger().debug("Irecv about to return - all locks released and notifies sent")
@@ -342,8 +342,9 @@ class Communicator:
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
         with self.mpi.has_work_cond:
-            self.mpi.unstarted_requests.append( handle )
-            self.mpi.unstarted_requests_has_work.set()
+            with self.mpi.unstarted_requests_lock:
+                self.mpi.unstarted_requests.append( handle )
+                self.mpi_unstarted_requests_has_work.set()
             self.mpi.has_work_cond.notify()
 
         return handle

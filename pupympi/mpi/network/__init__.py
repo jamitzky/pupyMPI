@@ -112,6 +112,7 @@ class Network(object):
                 handle.wait()
             
             self.socket_pool.readonly = True
+        Logger().debug("Network (fully) started")
 
     def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
         Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))

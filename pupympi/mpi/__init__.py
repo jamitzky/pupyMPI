@@ -200,8 +200,7 @@ class MPI(Thread):
             #Logger().debug("Still going, try getting has work cond")
             with self.has_work_cond:
                 Logger().debug("Waiting for notify on has_work_cond")
-                self.has_work_cond.wait() # Wait until there is something to do
-                #self.has_work_cond.wait(1) # Wait until there is something to do
+                self.has_work_cond.wait(0.5) 
                 
                 Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
                         self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
@@ -215,8 +214,8 @@ class MPI(Thread):
                     with self.unstarted_requests_lock:
                         Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
                         for request in self.unstarted_requests:
-                            self.unstarted_requests.remove(request)
                             self.schedule_request(request)
+                        self.unstarted_requets = []
                             
                         self.unstarted_requests_has_work.clear()
                 
@@ -252,27 +251,19 @@ class MPI(Thread):
                             
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
-        # Add the request to the internal queue
-        if request.request_type == "recv":
-            with self.pending_requests_lock:
-                self.pending_requests.append(request)
-                self.pending_requests_has_work.set()
-                self.has_work_cond.notify() # We have the lock via caller and caller will release it later
-                Logger().debug("Notified self about has_work_cond during schedule_request")
-        #if request.request_type == "recv":
-        #    self.has_work_cond.release()
-        #    self.has_work_cond.acquire()
-        #    with self.pending_requests_lock:
-        #        self.pending_requests.append(request)
-        #        self.pending_requests_has_work.set()
-        #        self.has_work_cond.notify() # We have the lock via caller and caller will release it later
-        #        Logger().debug("Notified self about has_work_cond during schedule_request")
-        #    self.has_work_cond.release()
-        else:
-            # If the request was outgoing we add to the out queue instead (on the out thread)
-            self.network.t_out.add_out_request(request)
-
         
+        with self.has_work:
+            # Add the request to the internal queue
+            if request.request_type == "recv":
+                with self.pending_requests_lock:
+                    self.pending_requests.append(request)
+                    self.pending_requests_has_work.set()
+                    self.has_work_cond.notify() # We have the lock via caller and caller will release it later
+                    Logger().debug("Notified self about has_work_cond during schedule_request")
+            else:
+                # If the request was outgoing we add to the out queue instead (on the out thread)
+                self.network.t_out.add_out_request(request)
+
     def finalize(self):
         """
         This method cleans up after a MPI run. Closes filehandles, 
