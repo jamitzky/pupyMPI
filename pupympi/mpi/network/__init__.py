@@ -129,6 +129,10 @@ class Network(object):
         the shutdown procedure. 
         """
         Logger().debug("Network got finalize call")
+        Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
+        Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
+        import time
+        time.sleep(5)
         self.t_in.finalize()
         if not self.options.single_communication_thread:
             self.t_out.finalize()
@@ -227,11 +231,13 @@ class CommunicationHandler(threading.Thread):
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
+                    Logger().debug("Accepted connection on the main socket")
                 except socket.error, e:
                     Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
                 
                 rank, raw_data = get_raw_message(conn)
+                Logger().debug("Received data from rank %d" % rank)
                 data = pickle.loads(raw_data)
                 
                 if add_to_pool:
@@ -281,4 +287,4 @@ class CommunicationHandler(threading.Thread):
 
     def finalize(self):
         self.shutdown_event.set()
-        Logger().debug("Communication handler closed by finalize call")
+        Logger().debug("Communication handler closed by finalize call: %s" % self.socket_to_request)
