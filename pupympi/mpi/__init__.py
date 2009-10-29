@@ -196,6 +196,17 @@ class MPI(Thread):
     # NOTE: We should consider whether the 3 part division of labor in this loop is
     # good and the ordering optimal
     
+        # create internal functions that will be used below
+        def _handle_unstarted(self):
+            # Schedule unstarted requests (may be in- or outbound)
+            #                if self.unstarted_requests_has_work.is_set():
+            with self.unstarted_requests_lock:
+                Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
+                for request in self.unstarted_requests:
+                    self.schedule_request(request)
+                self.unstarted_requests = []
+                self.unstarted_requests_has_work.clear()
+    
         while not self.shutdown_event.is_set():
             #Logger().debug("Still going, try getting has work cond")
             with self.has_work_cond:
@@ -207,15 +218,8 @@ class MPI(Thread):
                 Logger().debug("\traw data: %s" % self.raw_data_queue)
                 Logger().debug("\trecieved data: %s" % self.received_data)
                 Logger().debug("\tpending_requests: %s" % self.pending_requests)
-                
-                # Schedule unstarted requests (may be in- or outbound)
-#                if self.unstarted_requests_has_work.is_set():
-                with self.unstarted_requests_lock:
-                    Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
-                    for request in self.unstarted_requests:
-                        self.schedule_request(request)
-                    self.unstarted_requests = []
-                    self.unstarted_requests_has_work.clear()
+
+                self._handle_unstarted()
             
                 # Unpickle raw data (received messages) and put them in received queue
 #                if self.raw_data_event.is_set():
@@ -246,7 +250,10 @@ class MPI(Thread):
                     for request in removal:
                         self.pending_requests.remove(request)
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
-                    
+
+        # The main loop is now done. We flush all the messages so there are not any outbound messages
+        # stuck in the pipline.
+        self._handle_unstarted()
                             
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
