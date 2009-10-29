@@ -209,9 +209,10 @@ class CommunicationHandler(threading.Thread):
                 Logger.debug("Got error when closing socket: %s" % e)
     
     def run(self):
-        while not self.shutdown_event.is_set():
+        
+        def _select():
             try:
-                (in_list, out_list, error_list) = select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
+                return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
             except Exception, e:
                 print "Got exception"
                 print e
@@ -222,8 +223,9 @@ class CommunicationHandler(threading.Thread):
                 print in_list
                 print out_list
                 print error_list
-            
-            for read_socket in in_list:
+        
+        def _handle_readlist(readlist):
+            for read_socket in readlist:
                 add_to_pool = False
                 try:
                     (conn, sender_address) = read_socket.accept()
@@ -249,8 +251,9 @@ class CommunicationHandler(threading.Thread):
                         self.network.mpi.has_work_cond.notify()
                         self.network.mpi.raw_data_queue.append(raw_data)
                         self.network.mpi.raw_data_event.set()
-            
-            for write_socket in out_list:
+         
+        def _handle_writelist(writelist):
+            for write_socket in writelist:
                 removal = []
                 with self.socket_to_request_lock:
                     request_list = self.socket_to_request[write_socket]
@@ -282,7 +285,29 @@ class CommunicationHandler(threading.Thread):
                     with self.socket_to_request_lock:
                         for (write_socket,matched_request) in removal:
                             self.socket_to_request[write_socket].remove(matched_request)
-                    
+
+        while not self.shutdown_event.is_set():
+            (in_list, out_list, error_list) = _select()
+ 
+            _handle_readlist(in_list)
+            _handle_writelist(out_list)
+        
+        # The shutdown events is called, so we're finishing the network. This means
+        # flushing all the send jobs we have and then close the sockets.
+        while self.socket_to_request:
+            (in_list, out_list, error_list) = _select()
+            _handle_writelist(out_list)
+
+            removeal = []
+            for wsocket in self.socket_to_request:
+                if not self.socket_to_request[wsocket]:
+                    removal.append(wsocket)
+            
+            for r in removal:
+                del self.socket_to_request[r]
+        
+        # The above loop only breaks when the send structure is empty, ie there are no more
+        # requests to be send. We can therefore close the sockets. 
         self.close_all_sockets()   
 
     def finalize(self):

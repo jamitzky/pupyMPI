@@ -197,7 +197,7 @@ class MPI(Thread):
     # good and the ordering optimal
     
         # create internal functions that will be used below
-        def _handle_unstarted(self):
+        def _handle_unstarted():
             # Schedule unstarted requests (may be in- or outbound)
             #                if self.unstarted_requests_has_work.is_set():
             with self.unstarted_requests_lock:
@@ -219,7 +219,7 @@ class MPI(Thread):
                 Logger().debug("\trecieved data: %s" % self.received_data)
                 Logger().debug("\tpending_requests: %s" % self.pending_requests)
 
-                self._handle_unstarted()
+                _handle_unstarted()
             
                 # Unpickle raw data (received messages) and put them in received queue
 #                if self.raw_data_event.is_set():
@@ -253,7 +253,7 @@ class MPI(Thread):
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
-        self._handle_unstarted()
+        _handle_unstarted()
                             
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
