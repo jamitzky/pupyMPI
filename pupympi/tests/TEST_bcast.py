@@ -11,7 +11,7 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-BCAST_ROOT = random.randint(0, size-1)
+BCAST_ROOT = 3
 BCAST_MESSAGE = "Test message for rank %d" % BCAST_ROOT
 
 if rank == BCAST_ROOT:
