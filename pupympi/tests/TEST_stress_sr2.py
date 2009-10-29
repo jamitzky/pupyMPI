@@ -2,6 +2,7 @@
 # meta-description: Multi-process version of stress_sr, still with 1000 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
 # meta-expectedresult: 0
 # meta-minprocesses: 5
+# meta-max_runtime: 200
 
 import time
 from mpi import MPI
@@ -10,7 +11,7 @@ mpi = MPI()
 dummydata = ''.join(["a"] * 50)
 # Everybody log now
 f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
-maxIterations = 10
+maxIterations = 500
 
 size = mpi.MPI_COMM_WORLD.size()
 
