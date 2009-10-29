@@ -4,6 +4,7 @@
 # meta-minprocesses: 2
 
 from mpi import MPI
+import sys
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -15,30 +16,30 @@ world.barrier()
 max_iterations = 1000
 t1 = world.Wtime()    
 
-for iterations in xrange(max_iterations):
-    if rank == 0: 
-        world.send(1, "rank%s,iterations%s" %(rank, iterations), 1)
-        # print "%s: %s done sending" % (iterations, c_info.rank)
-        recv = world.recv(1, 1)
-        assert recv == data
-        # print "%s: %s done receiving %s" % (iterations, c_info.rank, "str(recv)")
-        # FIXME Verify data if enabled
-        msg =  "Iteration %s completed for rank %s\n" % (iterations, rank)
-    elif rank == 1: 
-        recv = world.recv(0, 1)
-        assert recv == data
-        # print "%s, %s done recv: %s" % (iterations, c_info.rank," str(recv)")
-        world.send(0, "rank%s,iterations%s" %(rank, iterations), 1)
-        # print "%s: %s done sending" % (iterations, c_info.rank)
-        # FIXME Verify data if enabled
-        msg =  "Iteration %s completed for rank %s\n" % (iterations, rank)
-    else: 
-        raise Exception("Broken state, too many participating processes.")
+TAG = 13
 
-    f.write(msg)
-    f.flush()
+def gen_msg(rank, iteration):
+    return "rank%s,iterations%s" % (rank, iteration)
+
+if rank <= 1:
+    other = 1
+    if rank == 1:
+        other = 0
+
+    for it in xrange(max_iterations):
+        if rank == 0: 
+            world.send(other, gen_msg(rank, it), TAG)
+
+        recv = world.recv(other, TAG)
+
+        if rank == 1: 
+            world.send(other, gen_msg(rank, it), TAG)
+
+        assert recv == gen_msg(other, it)
+
+        f.write("Iteration %s completed for rank %s\n" % (it, rank))
+        f.flush()
 f.write( "Done for rank %d\n" % rank)
-
 
 t2 = world.Wtime()
 time = (t2 - t1) 
