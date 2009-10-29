@@ -20,7 +20,7 @@ Read the source, lazy bum.
 
 # settings
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
-TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take.
+TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take, if not otherwise specified
 
 
 HEADER = '\033[95m'
@@ -95,13 +95,14 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
         output( "Launching %s: " % self.cmd, newline=False)
-        self.process = subprocess.Popen(self.cmd.split(" "), stdout=subprocess.PIPE)
+        self.process = subprocess.Popen(self.cmd.split(" "))
         self.killed = False
+        self.time_to_get_result_or_die = int(meta["max_runtime"]) if "max_runtime" in meta else TEST_MAX_RUNTIME
 
     def run(self):
         """runs the testthread, logs realtime'ish results and kills the subprocess if it takes too long."""
         self.start = time.time()
-        while time.time() < (self.start + TEST_MAX_RUNTIME): # HACK: Limit execution time
+        while time.time() < (self.start + self.time_to_get_result_or_die): # Limit execution time
             if self.process.poll() is not None: # Has the process stopped running?
                 break
             time.sleep(TEST_EXECUTION_TIME_GRANULARITY)

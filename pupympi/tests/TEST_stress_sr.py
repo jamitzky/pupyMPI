@@ -2,6 +2,7 @@
 # meta-description: Cyclic blocking send/receive between two processes. Runs 1000 iterations, and verifies that the data received are correct.
 # meta-expectedresult: 0
 # meta-minprocesses: 2
+# meta-max_runtime: 200
 
 from mpi import MPI
 import sys
@@ -13,7 +14,7 @@ rank = world.rank()
 data = 50*"a"
 f = open("/tmp/cyclic%s.log" % rank, "w")
 world.barrier()
-max_iterations = 10
+max_iterations = 500
 t1 = world.Wtime()    
 
 TAG = 13
