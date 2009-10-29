@@ -13,7 +13,7 @@ rank = world.rank()
 data = 50*"a"
 f = open("/tmp/cyclic%s.log" % rank, "w")
 world.barrier()
-max_iterations = 1000
+max_iterations = 10
 t1 = world.Wtime()    
 
 TAG = 13
