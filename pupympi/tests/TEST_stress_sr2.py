@@ -10,7 +10,7 @@ mpi = MPI()
 dummydata = ''.join(["a"] * 50)
 # Everybody log now
 f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
-maxIterations = 1000
+maxIterations = 10
 
 size = mpi.MPI_COMM_WORLD.size()
 
@@ -32,19 +32,19 @@ elif rank % 2 == 0: # evens
     upper = (rank + 1) % adjSize
     lower = (rank - 1) % adjSize
     for iterations in xrange(maxIterations):
-        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.write("%s: Sending upper to %s " % (rank, upper))
         f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
-        f.write("%s: Receiving lower to %s" % (rank, lower))
+        f.write("%s: Receiving lower to %s " % (rank, lower))
         f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
-        f.write("%s: Sending lower to %s" % (rank, lower))
+        f.write("%s: Sending lower to %s " % (rank, lower))
         f.flush()
         mpi.MPI_COMM_WORLD.send(lower, data, 1)
 
-        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.write("%s: Receiving upper to %s " % (rank, upper))
         f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
@@ -59,15 +59,15 @@ else: # odds
         f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(lower, 1)
 
-        f.write("%s: Sending upper to %s" % (rank, upper))
+        f.write("%s: Sending upper to %s " % (rank, upper))
         f.flush()
         mpi.MPI_COMM_WORLD.send(upper, data, 1)
 
-        f.write("%s: Receiving upper to %s" % (rank, upper))
+        f.write("%s: Receiving upper to %s " % (rank, upper))
         f.flush()
         recv = mpi.MPI_COMM_WORLD.recv(upper, 1)
 
-        f.write("%s: Sending lower to %s" % (rank, lower))
+        f.write("%s: Sending lower to %s " % (rank, lower))
         f.flush()
         mpi.MPI_COMM_WORLD.send(lower, data, 1)
 
