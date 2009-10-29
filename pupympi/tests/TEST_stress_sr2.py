@@ -10,7 +10,7 @@ mpi = MPI()
 dummydata = ''.join(["a"] * 50)
 # Everybody log now
 f = open("/tmp/rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
-maxIterations = 10
+maxIterations = 1000
 
 size = mpi.MPI_COMM_WORLD.size()
 
