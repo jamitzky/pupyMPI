@@ -255,12 +255,6 @@ class MPI(Thread):
         # stuck in the pipline.
         _handle_unstarted()
         
-        # We have now flushed all messages to the network layer. So we signal that it's time
-        # to close
-        self.network.finalize()
-        
-
-                            
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
         
@@ -287,6 +281,10 @@ class MPI(Thread):
         # Signal shutdown to the system (look in main while loop in
         # the run method)
         self.shutdown_event.set()
+        
+        # We have now flushed all messages to the network layer. So we signal that it's time
+        # to close
+        self.network.finalize()
 
     @classmethod
     def initialized(cls):
