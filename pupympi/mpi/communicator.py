@@ -51,7 +51,7 @@ class Communicator:
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
             self.bc_trees[root]
         
-        return Logger().debug(self.bc_trees[root]) 
+        return self.bc_trees[root] 
                 
     def __repr__(self):
         return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
