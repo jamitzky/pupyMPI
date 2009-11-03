@@ -98,7 +98,7 @@ class MPI(Thread):
         # Change the contents of sys.argv runtime, so the user processes 
         # can't see all the mpi specific junk parameters we start with.
         user_options =[sys.argv[0], ] 
-        user_options.append(sys.argv[sys.argv.index("--")+1:])
+        user_options.extend(sys.argv[sys.argv.index("--")+1:])
         sys.argv = user_options
 
         # Set a static attribute on the class so we know it is initialised.
