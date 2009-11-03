@@ -8,7 +8,6 @@ from mpi import MPI
 mpi = MPI()
 
 import sys
-print sys.argv
 
 # We don't consider the first argument as this will be this script
 # it's hard for us to take into account the paths and other stuff
