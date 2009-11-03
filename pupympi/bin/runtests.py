@@ -86,14 +86,19 @@ class RunTest(Thread):
         self.test = test
         self.meta = meta
         self.primary_log = primary_log
-        self.processes = meta["minprocesses"] if "minprocesses" in meta else options.np
-        self.expectedresult = int(meta["expectedresult"]) if "expectedresult" in meta else 0
+        self.processes = meta.get("minprocesses", options.np)
+        self.expectedresult = int(meta.get("expectedresult", 0))
         self.cmd = self.cmd.replace("PROCESSES_REQUIRED", str(self.processes))
         self.cmd = self.cmd.replace("LOG_VERBOSITY", str(options.verbosity))
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
+        
+        # Adds user arguments to the test if there are meta descriptions for it. 
+        if "userargs" in meta:
+            self.cmd += " -- " + meta['userargs']
+        
         output( "Launching %s: " % self.cmd, newline=False)
         self.process = subprocess.Popen(self.cmd.split(" "))
         self.killed = False
