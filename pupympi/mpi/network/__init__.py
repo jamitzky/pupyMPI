@@ -4,7 +4,8 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-from time import time
+#from time import time
+import time
 
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
@@ -131,8 +132,7 @@ class Network(object):
         Logger().debug("Network got finalize call")
         Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
         Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
-        import time
-        time.sleep(5)
+        time.sleep(5) # FIXME: We want to try without this one!
         self.t_in.finalize()
         if not self.options.single_communication_thread:
             self.t_out.finalize()
