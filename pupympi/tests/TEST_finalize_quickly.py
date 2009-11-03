@@ -5,6 +5,7 @@
 
 from mpi import MPI
 
+mpi = MPI()
 # Close the sockets down nicely
 mpi.finalize()
 
