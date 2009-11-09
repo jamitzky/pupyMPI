@@ -100,12 +100,12 @@ def wait_for_shutdown(process_list):
                 exit_codes += [returncode]
                 remove.append(p)
                 #process_list.remove( p )
-                logger.debug("A process exited with a status of 0. And we have %i left." % ( len(process_list)-1))
+                logger.debug("A process exited with a status of 0. And we have %i left." % ( len(process_list)-len(remove)))
             else: # error code
                 exit_codes += [returncode]
                 remove.append(p)
                 #process_list.remove( p )
-                logger.debug("A process exited with return code %d. And we have %i left." % (returncode, len(process_list)-1))
+                logger.debug("A process exited with return code %d. And we have %i left." % (returncode, len(process_list)-len(remove)))
         
         # We remove outside iteration over list just to be safe
         for p in remove:

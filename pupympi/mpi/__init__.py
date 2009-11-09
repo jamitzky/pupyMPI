@@ -282,6 +282,10 @@ class MPI(Thread):
         # the run method)
         self.shutdown_event.set()
         
+        # DEBUG
+        # Sleeping here helps a lot but does not cure serious wounds
+        time.sleep(2)
+        
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
