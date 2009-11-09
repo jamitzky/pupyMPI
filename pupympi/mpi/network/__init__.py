@@ -132,10 +132,15 @@ class Network(object):
         Logger().debug("Network got finalize call")
         Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
         Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
-        time.sleep(5) # FIXME: We want to try without this one!
+        #time.sleep(10) # FIXME: We want to try without this one!
         self.t_in.finalize()
+
         if not self.options.single_communication_thread:
             self.t_out.finalize()
+            
+        # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
+        #time.sleep(2)
+        
         #self.main_receive_socket.close()
         
 class CommunicationHandler(threading.Thread):
@@ -298,7 +303,7 @@ class CommunicationHandler(threading.Thread):
             (in_list, out_list, error_list) = _select()
             _handle_writelist(out_list)
 
-            removeal = []
+            removal = []
             for wsocket in self.socket_to_request:
                 if not self.socket_to_request[wsocket]:
                     removal.append(wsocket)
