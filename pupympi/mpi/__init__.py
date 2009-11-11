@@ -197,11 +197,11 @@ class MPI(Thread):
     # good and the ordering optimal
     
         # create internal functions that will be used below
-        def _handle_unstarted():
+        def _handle_unstarted(debugarg=""):
             # Schedule unstarted requests (may be in- or outbound)
             #                if self.unstarted_requests_has_work.is_set():
             with self.unstarted_requests_lock:
-                Logger().debug("Checking unstarted:%s " % self.unstarted_requests)
+                Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
                 for request in self.unstarted_requests:
                     self.schedule_request(request)
                 self.unstarted_requests = []
@@ -253,7 +253,12 @@ class MPI(Thread):
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
-        _handle_unstarted()
+        Logger().debug("GOING FOR FINAL PURGE")
+        _handle_unstarted("FINAL PURGE ")
+        Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
+        Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
+        Logger().debug("QUITTING: recieved data: %s" % self.received_data)
+        Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
         
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
@@ -280,11 +285,13 @@ class MPI(Thread):
         """
         # Signal shutdown to the system (look in main while loop in
         # the run method)
+        Logger().debug("--- Calling shutdown ---")
         self.shutdown_event.set()
         
         # DEBUG
+        Logger().debug("--- Shutdown called, now for network finalizing --")
         # Sleeping here helps a lot but does not cure serious wounds
-        time.sleep(2)
+        #time.sleep(2)
         
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
