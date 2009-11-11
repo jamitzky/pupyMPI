@@ -148,18 +148,18 @@ if __name__ == "__main__":
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
                 "--socket-pool-size=%d" % options.socket_pool_size, 
-                "--verbosity=%d" % options.verbosity, "--process-io=%s" % options.process_io] 
+                "--verbosity=%d" % options.verbosity, 
+                "--process-io=%s" % options.process_io,
+                "--log-file=%s" % options.logfile,
+            ] 
 
         if options.disable_full_network_startup:
             run_options.append('--disable-full-network-startup')
 
-        # Special options
-        # TODO: This could be done nicer, no need for spec ops
-        if options.quiet:
-            run_options.append('--quiet')
-        if options.debug:
-            run_options.append('--debug')
-        run_options.append('--log-file=%s' % options.logfile)
+        for flag in ("quiet", "debug"):
+            value = getattr(options, flag, None)
+            if value:
+                run_options.append("--"+value)
 
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     # Listing of socket connections to all the processes
     sender_conns = []
 
-    #logger.debug("Waiting for %d processes" % options.np)
+    logger.debug("Waiting for %d processes" % options.np)
     
     # Recieve listings from newly started proccesses phoning in
     # TODO: This initial communication should be more robust
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         (communicator, sender, tag, message) = data
         
         all_procs.append( message ) # add (rank,host,port) for process to the listing
-    #logger.debug("Received information for all %d processes" % options.np)
+    logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
