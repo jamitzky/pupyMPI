@@ -169,7 +169,7 @@ if __name__ == "__main__":
         p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
             
-        #logger.debug("Process with rank %d started" % rank)
+        logger.debug("Process with rank %d started" % rank)
 
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
