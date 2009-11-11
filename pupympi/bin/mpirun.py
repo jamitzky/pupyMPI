@@ -39,22 +39,25 @@ def parse_options():
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser.add_option_group( parser_adv_group )
 
-    options, args = parser.parse_args()
-
-    if options.debug and options.quiet:
-        parser.error("options --debug and -quiet are mutually exclusive")
-        
-    if args is None or len(args) == 0: 
-        parser.error("You need to specify a positional argument: the user program to run".)
-
-    executeable = args[0]
-
     try:
-        user_options = sys.argv[sys.argv.index("--")+1:]
-    except ValueError:
-        user_options = []
+        options, args = parser.parse_args()
 
-    return options, args, user_options, executeable
+        if options.debug and options.quiet:
+            parser.error("options --debug and -quiet are mutually exclusive")
+            
+        if args is None or len(args) == 0: 
+            parser.error("You need to specify a positional argument: the user program to run.")
+
+        executeable = args[0]
+
+        try:
+            user_options = sys.argv[sys.argv.index("--")+1:]
+        except ValueError:
+            user_options = []
+
+        return options, args, user_options, executeable
+    except Exception, e:
+        print "It's was not possible to parse the arguments. Error received: %s" % e
 
 def io_forwarder(process_list):
     """
@@ -87,7 +90,7 @@ def io_forwarder(process_list):
                     print >> sys.stdout, line.strip()
             
             # Check if shutdown is in progress    
-            if io_shutdown_event.is_set()
+            if io_shutdown_event.is_set():
                 logger.debug("IO forwarder got the signal !.. breaking")
                 break
     
@@ -106,7 +109,7 @@ def io_forwarder(process_list):
             else:
                 break
 
-    #logger.debug("IO forwarder finished")
+    logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
     options, args, user_options, executeable = parse_options() # Get options from cli
@@ -114,15 +117,8 @@ if __name__ == "__main__":
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
-    # Parse the hostfile.
-    try:
-        hosts = parse_hostfile(options.hostfile)
-    except IOError,ex:
-        logger.error("Something bad happended when we tried to read the hostfile: ",ex)
-        sys.exit()
-    
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts, options.np, options.hostmap_schedule_method) 
+    mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
     s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
