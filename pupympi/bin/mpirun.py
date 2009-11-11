@@ -242,5 +242,6 @@ if __name__ == "__main__":
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
-        
+    
+    #time.sleep(5)    
     sys.exit(1 if any_failures else 0)
