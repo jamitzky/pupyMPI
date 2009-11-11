@@ -87,12 +87,9 @@ def io_forwarder(process_list):
                     print >> sys.stdout, line.strip()
             
             # Check if shutdown is in progress    
-            if io_shutdown_lock.acquire(False):
-                logger.debug("IO forwarder got the lock!.. breaking")
-                io_shutdown_lock.release()
+            if io_shutdown_event.is_set()
+                logger.debug("IO forwarder got the signal !.. breaking")
                 break
-            else:
-                logger.debug("IO forwarder could not get the lock")
     
             time.sleep(1)
         except KeyboardInterrupt:
@@ -174,8 +171,11 @@ if __name__ == "__main__":
     # NOTE: Why is this not started before the remote processes?
     # Start a thread to handle io forwarding from processes
     if options.process_io == "asyncdirect":
-        io_shutdown_lock = threading.Lock() # lock used to signal shutdown
-        io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
+
+        # Declare an event for proper shutdown. When the system is ready to
+        # shutdown we signal the event. People looking at the signal will catch
+        # it and shutdown.
+        io_shutdown_event = threading.Event() 
         t = threading.Thread(target=io_forwarder, args=(process_list,))
         t.start()
         
@@ -224,7 +224,8 @@ if __name__ == "__main__":
         
     if options.process_io == "pipe":        
         # Signal shutdown to io_forwarder thread
-        io_shutdown_lock.release()    
+        io_shutdown_event.set()
+
         # Wait for the IO_forwarder thread to stop
         t.join()
         #logger.debug("IO forward thread joined")
