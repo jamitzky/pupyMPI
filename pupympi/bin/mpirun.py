@@ -44,16 +44,17 @@ def parse_options():
     if options.debug and options.quiet:
         parser.error("options --debug and -quiet are mutually exclusive")
         
-    # if len(args) != 1:
-    #     parser.error("There should only be one argument to mpirun. The program to execute ('%s' was parsed)" % args)
+    if args is None or len(args) == 0: 
+        parser.error("You need to specify a positional argument: the user program to run".)
 
-    # Trying to find user args
+    executeable = args[0]
+
     try:
         user_options = sys.argv[sys.argv.index("--")+1:]
     except ValueError:
         user_options = []
 
-    return options, args, user_options
+    return options, args, user_options, executeable
 
 def io_forwarder(process_list):
     """
@@ -111,11 +112,7 @@ def io_forwarder(process_list):
     #logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
-    options, args, user_options = parse_options() # Get options from cli
-    if args is None or len(args) == 0: # TODO hack-handle no options
-        print "Please use --help for help with options"
-        sys.exit()
-    executeable = args[0]
+    options, args, user_options, executeable = parse_options() # Get options from cli
 
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
