@@ -4,7 +4,6 @@ from optparse import OptionParser, OptionGroup
 import select, time
 
 import processloaders 
-from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
 from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
@@ -58,6 +57,7 @@ def parse_options():
         return options, args, user_options, executeable
     except Exception, e:
         print "It's was not possible to parse the arguments. Error received: %s" % e
+        sys.exit(1)
 
 def io_forwarder(process_list):
     """
@@ -73,7 +73,7 @@ def io_forwarder(process_list):
     pipes.extend( [p.stdout for p in process_list] ) # Put all stdout pipes in process_list
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
-    #logger.debug("Starting the IO forwarder")
+    logger.debug("Starting the IO forwarder")
     
     # Main loop, select, output, check for shutdown - repeat
     while True:
@@ -213,13 +213,14 @@ if __name__ == "__main__":
     s.close()
     
     # Wait for all started processes to die
-    exit_codes = wait_for_shutdown(process_list)    
+    exit_codes = processloaders.wait_for_shutdown(process_list)    
+
     # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
         
-    if options.process_io == "pipe":        
+    if options.process_io == "asyncdirect":        
         # Signal shutdown to io_forwarder thread
         io_shutdown_event.set()
 
