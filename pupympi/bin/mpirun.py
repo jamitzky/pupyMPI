@@ -131,7 +131,6 @@ if __name__ == "__main__":
     
     s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
-    #logger.debug("Socket bound to port %d" % mpi_run_port)
 
     # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
     remote_start = getattr(processloaders, options.startup_method)
@@ -141,8 +140,6 @@ if __name__ == "__main__":
 
     # Start a process for each rank on the host 
     for (host, rank, port) in mappedHosts:
-        port = port+rank
-
         # Make sure we have a full path
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), executeable)
