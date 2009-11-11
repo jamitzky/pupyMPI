@@ -262,7 +262,7 @@ class MPI(Thread):
         
         # DEBUG
         if sys.stdout is not None:
-            sys.stdout.flush() # Dirty hack to get output out if logger isn't enabled
+            sys.stdout.flush() # Dirty hack to get the rest of the output out
 
         
     def schedule_request(self, request):
@@ -301,6 +301,7 @@ class MPI(Thread):
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
+        Logger().debug("--- Network finally finalized --")
 
     @classmethod
     def initialized(cls):

@@ -112,6 +112,9 @@ def wait_for_shutdown(process_list):
             process_list.remove( p )
 
         time.sleep(1)
+        
+    # Target list is empty unless the option process_io=localfile is specified, in
+    # which case we close the filedescriptors of all the log files made
     for t in io_target_list:
         t.close()
         
