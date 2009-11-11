@@ -103,16 +103,23 @@ class Network(object):
             for r_rank in receiver_ranks:
                 handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.MPI_TAG_FULL_NETWORK)
                 recv_handles.append(handle)
+            
+            #Logger().debug("Start_full_network: All recieves posted")
 
             # Send all
             for s_rank in sender_ranks:
                 self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.MPI_TAG_FULL_NETWORK)
+
+            #Logger().debug("Start_full_network: All sends done")
 
             # Finish the receives
             for handle in recv_handles:
                 handle.wait()
             
             self.socket_pool.readonly = True
+        
+        # DEBUG NOTE
+        # Procs that hang never get to here, they hang while finishing the recieves
         Logger().debug("Network (fully) started")
 
     def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
