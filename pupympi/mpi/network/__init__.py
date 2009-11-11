@@ -144,7 +144,13 @@ class Network(object):
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
-            
+        
+        # DEBUG TEST
+        # Try to make them die thread die
+        self.t_in.join()
+        self.t_out.join()
+        
+        Logger().debug("network.finalize: DONE Finalize")
         # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
         #time.sleep(2)
         

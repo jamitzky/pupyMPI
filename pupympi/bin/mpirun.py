@@ -151,7 +151,7 @@ if __name__ == "__main__":
         for flag in ("quiet", "debug"):
             value = getattr(options, flag, None)
             if value:
-                run_options.append("--"+value)
+                run_options.append("--"+flag)
 
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
