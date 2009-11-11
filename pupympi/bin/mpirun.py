@@ -98,7 +98,6 @@ def io_forwarder(process_list):
         except KeyboardInterrupt:
             logger.debug("IO forwarder was manually interrupted")
             break
-        
 
     # Go through the pipes manually to see if there is anything
     for pipe in pipes:
@@ -203,12 +202,14 @@ if __name__ == "__main__":
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
-    data = (-1, -1, constants.TAG_INITIALIZING, all_procs)
+    COMM_ID = -1
+    COMM_RANK = -1
+    data = (COMM_ID, COMM_RANK, constants.TAG_INITIALIZING, all_procs)
     message = prepare_message(data, -1)
     for conn in sender_conns:
         conn.send(message)
         conn.close()
-    # Close own "server" socket
+
     s.close()
     
     # Wait for all started processes to die
@@ -224,6 +225,6 @@ if __name__ == "__main__":
 
         # Wait for the IO_forwarder thread to stop
         t.join()
-        #logger.debug("IO forward thread joined")
+        logger.debug("IO forward thread joined")
         
     sys.exit(1 if any_failures else 0)
