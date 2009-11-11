@@ -260,6 +260,11 @@ class MPI(Thread):
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
         Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
         
+        # DEBUG
+        if sys.stdout is not None:
+            sys.stdout.flush() # Dirty hack to get output out if logger isn't enabled
+
+        
     def schedule_request(self, request):
         Logger().debug("Schedule request for: %s" % (request.request_type))
         

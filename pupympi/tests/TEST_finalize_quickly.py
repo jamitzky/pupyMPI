@@ -21,3 +21,5 @@ f.write( "Finalized for rank %d\n" % rank)
 f.flush()
 
 f.close()
+
+#print "\tCLOSED!"
