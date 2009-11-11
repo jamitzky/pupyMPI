@@ -4,7 +4,6 @@ from optparse import OptionParser, OptionGroup
 import select, time
 
 import processloaders 
-from processloaders import wait_for_shutdown 
 from mpi.logger import Logger
 from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
@@ -36,23 +35,29 @@ def parse_options():
     parser_adv_group.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action='store_true', help="Do not initialize a socket connection between all pairs of processes. If not a second change socket pool algorithm will be used. See also --socket-pool-size")
     parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=10, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
+    parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser.add_option_group( parser_adv_group )
 
-    options, args = parser.parse_args()
-
-    if options.debug and options.quiet:
-        parser.error("options --debug and -quiet are mutually exclusive")
-        
-    # if len(args) != 1:
-    #     parser.error("There should only be one argument to mpirun. The program to execute ('%s' was parsed)" % args)
-
-    # Trying to find user args
     try:
-        user_options = sys.argv[sys.argv.index("--")+1:]
-    except ValueError:
-        user_options = []
+        options, args = parser.parse_args()
 
-    return options, args, user_options
+        if options.debug and options.quiet:
+            parser.error("options --debug and -quiet are mutually exclusive")
+            
+        if args is None or len(args) == 0: 
+            parser.error("You need to specify a positional argument: the user program to run.")
+
+        executeable = args[0]
+
+        try:
+            user_options = sys.argv[sys.argv.index("--")+1:]
+        except ValueError:
+            user_options = []
+
+        return options, args, user_options, executeable
+    except Exception, e:
+        print "It's was not possible to parse the arguments. Error received: %s" % e
+        sys.exit(1)
 
 def io_forwarder(process_list):
     """
@@ -68,7 +73,7 @@ def io_forwarder(process_list):
     pipes.extend( [p.stdout for p in process_list] ) # Put all stdout pipes in process_list
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
-    #logger.debug("Starting the IO forwarder")
+    logger.debug("Starting the IO forwarder")
     
     # Main loop, select, output, check for shutdown - repeat
     while True:
@@ -85,18 +90,14 @@ def io_forwarder(process_list):
                     print >> sys.stdout, line.strip()
             
             # Check if shutdown is in progress    
-            if io_shutdown_lock.acquire(False):
-                logger.debug("IO forwarder got the lock!.. breaking")
-                io_shutdown_lock.release()
+            if io_shutdown_event.is_set():
+                logger.debug("IO forwarder got the signal !.. breaking")
                 break
-            else:
-                logger.debug("IO forwarder could not get the lock")
     
             time.sleep(1)
         except KeyboardInterrupt:
             logger.debug("IO forwarder was manually interrupted")
             break
-        
 
     # Go through the pipes manually to see if there is anything
     for pipe in pipes:
@@ -107,31 +108,19 @@ def io_forwarder(process_list):
             else:
                 break
 
-    #logger.debug("IO forwarder finished")
+    logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
-    options, args, user_options = parse_options() # Get options from cli
-    if args is None or len(args) == 0: # TODO hack-handle no options
-        print "Please use --help for help with options"
-        sys.exit()
-    executeable = args[0]
+    options, args, user_options, executeable = parse_options() # Get options from cli
 
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
-    # Parse the hostfile.
-    try:
-        hosts = parse_hostfile(options.hostfile)
-    except IOError,ex:
-        logger.error("Something bad happended when we tried to read the hostfile: ",ex)
-        sys.exit()
-    
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(hosts, options.np,"rr") # TODO: This call should get scheduling option from args to replace "rr" parameter
+    mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
     s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
     s.listen(5)
-    #logger.debug("Socket bound to port %d" % mpi_run_port)
 
     # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
     remote_start = getattr(processloaders, options.startup_method)
@@ -141,8 +130,6 @@ if __name__ == "__main__":
 
     # Start a process for each rank on the host 
     for (host, rank, port) in mappedHosts:
-        port = port+rank
-
         # Make sure we have a full path
         if not executeable.startswith("/"):
             executeable = os.path.join( os.getcwd(), executeable)
@@ -153,18 +140,18 @@ if __name__ == "__main__":
                 "--rank=%d" % rank, 
                 "--size=%d" % options.np, 
                 "--socket-pool-size=%d" % options.socket_pool_size, 
-                "--verbosity=%d" % options.verbosity, "--process-io=%s" % options.process_io] 
+                "--verbosity=%d" % options.verbosity, 
+                "--process-io=%s" % options.process_io,
+                "--log-file=%s" % options.logfile,
+            ] 
 
         if options.disable_full_network_startup:
             run_options.append('--disable-full-network-startup')
 
-        # Special options
-        # TODO: This could be done nicer, no need for spec ops
-        if options.quiet:
-            run_options.append('--quiet')
-        if options.debug:
-            run_options.append('--debug')
-        run_options.append('--log-file=%s' % options.logfile)
+        for flag in ("quiet", "debug"):
+            value = getattr(options, flag, None)
+            if value:
+                run_options.append("--"+value)
 
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
@@ -174,7 +161,7 @@ if __name__ == "__main__":
         p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
             
-        #logger.debug("Process with rank %d started" % rank)
+        logger.debug("Process with rank %d started" % rank)
 
     """
     NOTE: Now we have a proccess list and can start the io forwarder if needed
@@ -186,8 +173,11 @@ if __name__ == "__main__":
     """
     # Start a thread to handle io forwarding from processes
     if options.process_io == "asyncdirect":
-        io_shutdown_lock = threading.Lock() # lock used to signal shutdown
-        io_shutdown_lock.acquire() # make sure no one thinks we are shutting down yet
+
+        # Declare an event for proper shutdown. When the system is ready to
+        # shutdown we signal the event. People looking at the signal will catch
+        # it and shutdown.
+        io_shutdown_event = threading.Event() 
         t = threading.Thread(target=io_forwarder, args=(process_list,))
         t.start()
         
@@ -196,7 +186,7 @@ if __name__ == "__main__":
     # Listing of socket connections to all the processes
     sender_conns = []
 
-    #logger.debug("Waiting for %d processes" % options.np)
+    logger.debug("Waiting for %d processes" % options.np)
     
     # Recieve listings from newly started proccesses phoning in
     # TODO: This initial communication should be more robust
@@ -213,32 +203,36 @@ if __name__ == "__main__":
         (communicator, sender, tag, message) = data
         
         all_procs.append( message ) # add (rank,host,port) for process to the listing
-    #logger.debug("Received information for all %d processes" % options.np)
+    logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     # TODO: This initial communication should also be more robust
     # - if a proc does not recieve proper info all bets are off
     # - if a proc is not there to recieve we hang (at what timeout?)
-    data = (-1, -1, constants.TAG_INITIALIZING, all_procs)
+    COMM_ID = -1
+    COMM_RANK = -1
+    data = (COMM_ID, COMM_RANK, constants.TAG_INITIALIZING, all_procs)
     message = prepare_message(data, -1)
     for conn in sender_conns:
         conn.send(message)
         conn.close()
-    # Close own "server" socket
+
     s.close()
     
     # Wait for all started processes to die
-    exit_codes = wait_for_shutdown(process_list)    
+    exit_codes = processloaders.wait_for_shutdown(process_list)    
+
     # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
-    
+   
     logger.debug("Check IO forward")    
     if options.process_io == "asyncdirect":
         logger.debug("IO forward thread will be stopped")
         # Signal shutdown to io_forwarder thread
-        io_shutdown_lock.release()    
+        io_shutdown_event.set()
+
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
