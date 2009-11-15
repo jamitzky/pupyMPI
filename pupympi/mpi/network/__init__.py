@@ -255,7 +255,7 @@ class CommunicationHandler(threading.Thread):
                 except socket.error, e:
                     # We try to accept on all sockets, even ones that are already in use.
                     # This means that if accept fails it is normally just data coming in
-                    Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
+                    #Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
                 
                 try:
