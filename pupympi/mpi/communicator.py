@@ -9,7 +9,11 @@ from mpi import constants
 
 class Communicator:
     """
-    This class represents an MPI communicator.
+    This class represents an MPI communicator. The communicator holds information
+    about a 'group' of processes and allows for inter communication between these. 
+
+    It's not possible from within a communicator to talk with processes outside. Remember
+    you have the MPI_COMM_WORLD communicator holding ALL the started proceses. 
     """
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.mpi = mpi 
