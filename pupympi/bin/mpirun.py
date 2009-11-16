@@ -151,7 +151,7 @@ if __name__ == "__main__":
         for flag in ("quiet", "debug"):
             value = getattr(options, flag, None)
             if value:
-                run_options.append("--"+value)
+                run_options.append("--"+flag)
 
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
@@ -163,7 +163,14 @@ if __name__ == "__main__":
             
         logger.debug("Process with rank %d started" % rank)
 
-    # NOTE: Why is this not started before the remote processes?
+    """
+    NOTE: Now we have a proccess list and can start the io forwarder if needed
+    At this point processes are of course already running meaning we could
+    theoretically miss a bit of the first output. The solution is a bit bothersome
+    since we would need to delay actually starting the remotely created processes
+    and it does not matter a whole lot since they all have to phone in to mother
+    before really doing anything.
+    """
     # Start a thread to handle io forwarding from processes
     if options.process_io == "asyncdirect":
 
@@ -219,13 +226,16 @@ if __name__ == "__main__":
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
-        
-    if options.process_io == "asyncdirect":        
+   
+    logger.debug("Check IO forward")    
+    if options.process_io == "asyncdirect":
+        logger.debug("IO forward thread will be stopped")
         # Signal shutdown to io_forwarder thread
         io_shutdown_event.set()
 
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
-        
+    
+    #time.sleep(5)    
     sys.exit(1 if any_failures else 0)

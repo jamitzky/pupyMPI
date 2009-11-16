@@ -1,8 +1,8 @@
 #!/usr/bin/env python2.6
-# meta-description: Multi-process version of stress_sr, still with 100 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
+# meta-description: Multi-process version of stress_sr, with 100 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
 # meta-expectedresult: 0
 # meta-minprocesses: 5
-# meta-max_runtime: 200
+# meta-max_runtime: 500
 
 import time
 from mpi import MPI
@@ -80,7 +80,7 @@ else: # odds
 t2 = mpi.MPI_COMM_WORLD.Wtime()
 time = (t2 - t1) 
 
-f.write( "Timings were %s for data length %s'n with %i processes participating" % (time, len(data), adjSize))
+f.write( "Total time was %s with data length %s, for %i iterations with %i processes participating" % (time, len(data), maxIterations, adjSize))
 f.flush()
 f.close()
 mpi.finalize()

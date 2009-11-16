@@ -103,16 +103,23 @@ class Network(object):
             for r_rank in receiver_ranks:
                 handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.MPI_TAG_FULL_NETWORK)
                 recv_handles.append(handle)
+            
+            #Logger().debug("Start_full_network: All recieves posted")
 
             # Send all
             for s_rank in sender_ranks:
                 self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.MPI_TAG_FULL_NETWORK)
+
+            #Logger().debug("Start_full_network: All sends done")
 
             # Finish the receives
             for handle in recv_handles:
                 handle.wait()
             
             self.socket_pool.readonly = True
+        
+        # DEBUG NOTE
+        # Procs that hang never get to here, they hang while finishing the recieves
         Logger().debug("Network (fully) started")
 
     def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
@@ -137,7 +144,13 @@ class Network(object):
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
-            
+        
+        # DEBUG TEST
+        # Try to make them die thread die
+        self.t_in.join()
+        self.t_out.join()
+        
+        Logger().debug("network.finalize: DONE Finalize")
         # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
         #time.sleep(2)
         
@@ -240,10 +253,22 @@ class CommunicationHandler(threading.Thread):
                     add_to_pool = True
                     Logger().debug("Accepted connection on the main socket")
                 except socket.error, e:
+                    # We try to accept on all sockets, even ones that are already in use.
+                    # This means that if accept fails it is normally just data coming in
                     Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
                 
-                rank, raw_data = get_raw_message(conn)
+                try:
+                    rank, raw_data = get_raw_message(conn)
+                except MPIException, e:
+                    # Broken connection is ok when shutdown is going on
+                    if self.shutdown_event.is_set():
+                        continue
+                    else:
+                        Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
+                except Exception, e:
+                    Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
+                    
                 Logger().debug("Received data from rank %d" % rank)
                 data = pickle.loads(raw_data)
                 
