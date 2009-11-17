@@ -168,7 +168,7 @@ class Communicator:
             raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
         
         # wait for answer on id
-        cr = CollectiveRequest("comm_create", constants.TAG_COMM_CREATE, self, new_id)
+        cr = CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
         
         # FIXME validate that received group was identical to my worldview
 
@@ -465,7 +465,7 @@ class Communicator:
             mpi.finalize()
 
         """
-        cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
+        cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
         
     def bcast(self, root, data=None):
@@ -494,7 +494,7 @@ class Communicator:
             if not data:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
-        cr = CollectiveRequest("bcast", constants.TAG_BCAST, self, data, root=root)
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
     def abort(self, arg):
@@ -560,28 +560,18 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
 
-        cr = CollectiveRequest("reduce", constants.TAG_ALLREDUCE, self, data=data)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data)
         cr.start_allreduce(op)
         return cr.wait()
         
-    def alltoall(self, sendbuf, sendcount, recvbuf, recvcount):
+    def alltoall(self, data):
         """
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcount number of elements sent to each process (integer) 
-        IN recvcount number of elements received from any process (integer) 
-        IN comm communicator (handle) 
-        OUT recvbuf address of receive buffer (choice) 
-        
-        MPI ALLTOALL is an extension of MPI ALLGATHER to the case where each process 
-        sends distinct data to each of the receivers. The jth block sent from process i is received 
-        by process j and is placed in the ith block of recvbuf...
-        
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html
-        Example: http://mpi.deino.net/mpi_functions/MPI_Alltoall.html
+        Insert end-user documentation here
         """
+#        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
+#        cr.start_allreduce(op)
+#        return cr.wait()
 
-        Logger().warn("Non-Implemented method 'alltoall' called.")
-        
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """
         Each process (root process included) sends the contents of its send buffer to the root 
@@ -608,7 +598,7 @@ class Communicator:
         # that's it's a regular reduce. We should send some flag to the
         # CollectiveRequest that it can discard the final value for nodes
         # other than the root. 
-        cr = CollectiveRequest("reduce", constants.TAG_REDUCE, self, data=data)
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
 

@@ -7,15 +7,12 @@ from mpi.logger import Logger
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, request_supertype, tag, communicator, data=None, root=0):
+    def __init__(self, tag, communicator, data=None, root=0):
         # Note about the super types. How about we define them depending on how many 
         # participants get the data? Or just remove them alltoghter. Added a reduce
         # for now just to handle the allreduce implementation.
         super(CollectiveRequest, self).__init__()
-        if request_supertype not in ('bcast','reduce'): # TODO more needed here
-            raise MPIException("Invalid request supertype in collective request creation. This should never happen. ")
 
-        self.request_supertype = request_supertype
         self.communicator = communicator
         self.tag = tag
         self.initial_data = data
@@ -31,17 +28,9 @@ class CollectiveRequest(BaseRequest):
         #                  safely return from a test or wait call.
         self._m = {'status' : 'new' }
 
-        Logger().debug("CollectiveRequest object created for communicator %s and supertype %s" % (self.communicator.name, self.request_supertype))
+        Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
 
-        if self.request_supertype == "bcast":
-            if self.tag in (constants.TAG_BCAST, constants.TAG_COMM_CREATE):
-                self.start_bcast(root, data, self.tag)
-            elif self.tag in (constants.TAG_BARRIER,):
-                self.start_barrier(self.tag)
-            else:
-                raise MPIException("Unsupported collective request tag %s" % self.tag)
-
-    def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
+     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def safehead(data_list):
             if data_list:
                 return data_list.pop()
@@ -161,7 +150,7 @@ class CollectiveRequest(BaseRequest):
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._metadata['status'] = 'cancelled'
-        Logger().debug("Cancelling a %s/%s request" % self.request_supertype, self.tag)
+        Logger().debug("Cancelling a request with tag" % self.tag)
         
 
     def get_status(self):
