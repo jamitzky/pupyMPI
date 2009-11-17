@@ -30,7 +30,7 @@ class CollectiveRequest(BaseRequest):
 
         Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
 
-     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
+    def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def safehead(data_list):
             if data_list:
                 return data_list.pop()
@@ -64,10 +64,10 @@ class CollectiveRequest(BaseRequest):
             have_data = initial_data not in (None, [])
                 
             if have_data and force_initial_data:
-                data_list.append(initial_data)
+                data_list.append({self.communicator.rank() : initial_data})
             
             if not data_list:
-                data_list = [initial_data]
+                data_list = [{self.communicator.rank() : initial_data}]
             data = data_func(data_list)
 
             # Send the data upwards in the tree. 
@@ -139,6 +139,10 @@ class CollectiveRequest(BaseRequest):
         
         self.data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, 
                 up_func=operation, start_direction="up", return_type="last")
+
+    def start_alltoall(self):
+        # FIMXE: Implement me
+        pass
 
     def cancel(self):
         """

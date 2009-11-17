@@ -466,6 +466,7 @@ class Communicator:
 
         """
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
+        cr.start_barrier()
         return cr.wait()
         
     def bcast(self, root, data=None):
@@ -568,9 +569,9 @@ class Communicator:
         """
         Insert end-user documentation here
         """
-#        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
-#        cr.start_allreduce(op)
-#        return cr.wait()
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
+        cr.start_alltoall()
+        return cr.wait()
 
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """
