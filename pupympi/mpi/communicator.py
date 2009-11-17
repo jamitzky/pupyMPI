@@ -629,31 +629,51 @@ class Communicator:
         """
         Logger().warn("Non-Implemented method 'gather' called.")
         
-    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, displs, root):
+    def gatherv(self, data, root):
         """
-        MPI GATHERV extends the functionality of MPI GATHER by allowing a varying count 
-        of data from each process, since recvcounts is now an array. It also allows more flexibility 
-        as to where the data is placed on the root, by providing the new argument, displs. 
-
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcount number of elements in send buffer (integer) 
-        IN sendtype data type of send buffer elements (handle) 
-        OUT recvbuf address of receive buffer (choice, significant only at root) 
-        IN recvcount number of elements for any single receive (integer, significant only at root) 
-        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
-        IN displs integer array (of length group size). Entry i specifies the displacement relative to recvbuf at which to place 
-        the incoming data from process i (significant only at root) 
+        Gatherv() receives data from all the members of the communicator can stores the
+        data in a list indexed by the rank of the sender. 
         
-        IN root rank of receiving process (integer) 
-        IN comm communicator (handle) 
+        An simple example would be::
 
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+            from mpi import MPI
+
+            mpi = MPI()
+            root = 3
+            rank = mpi.MPI_COMM_WORLD.rank()
+            local_data = "Data from rank: %d" % rank
+
+            data = mpi.MPI_COMM_WORLD.gatherv(local_data, root=root)
+
+            if rank == root:
+                print data
+
+            mpi.finalize()
+
+        The above would result in the following output (for a size of 4)::
+        
+            write testoutput
+        
+        Se also the :func:`reduce` function
+        
+        .. note::
+            The above example only works with a size of 4 or above.
         """
-        Logger().warn("Non-Implemented method 'gatherv' called.")
         
-    def reduce(self, arg):
-        # FIXME
-        pass
+    def reduce(self, data, op, root=0):
+        """
+        FIXME: Write end-user documentation for this method
+        """
+        # FIXME: This is only a allreduce with a specific tag to indicate
+        # that's it's a regular reduce. We should send some flag to the
+        # CollectiveRequest that it can discard the final value for nodes
+        # other than the root. 
+        cr = CollectiveRequest("reduce", constants.TAG_REDUCE, self, data=data)
+        cr.start_allreduce(op)
+        data = cr.wait()
+
+        if self.rank() == root:
+            return data
     
     def reduce_scatter(self, arg):
         # FIXME
