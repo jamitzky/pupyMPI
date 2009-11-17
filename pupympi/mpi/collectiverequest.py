@@ -146,8 +146,20 @@ class CollectiveRequest(BaseRequest):
                 up_func=operation, start_direction="up", return_type="last")
 
     def start_alltoall(self):
-        # FIMXE: Implement me
-        pass
+        # Make the inner functionality append all the data from all the processes
+        # and return it. We'll just extract the data we need. 
+        data = self.two_way_tree_traversal(self.TAG, initial_data=self.initial_data, up_func=id, start_direction="up", return_type="last")
+        
+        # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
+        # the N'th data in the inner list where N is our rank
+        rank = self.communicator.rank()
+        size = self.communicator.size()
+        final_data = []
+        
+        for r in range(size):
+            final_data.append( data[r][rank] )
+        
+        self.data = final_data
 
     def cancel(self):
         """
