@@ -121,7 +121,12 @@ class CollectiveRequest(BaseRequest):
         self.two_way_tree_traversal(tag)
 
     def start_bcast(self, root, data, tag):
-        self.data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+        data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+        
+        # The result of a broadcast will be a list with one element which is a 
+        # dict. It's a list of length one as we do not give a function so it
+        # defaults to safeheade -> (None |Ê[ element ])
+        self.data = data.values().pop()
 
     def start_allreduce(self, operation):
         """
