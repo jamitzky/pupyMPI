@@ -529,17 +529,6 @@ class Communicator:
         # TODO return recvbuf
         Logger().warn("Non-Implemented method 'allgather' called.")
 
-    def allgatherv(self, sendbuf, sendcount, recvcount, displs):
-        """
-        MPI_ALLGATHERV can be thought of as MPI_GATHERV, but where all processes receive the result, instead of just the root. The  jth block of data sent from each process is received by every process and placed in the  jth block of the buffer recvbuf. These blocks need not all be the same size. 
-        
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
-        
-        Examples: http://mpi.deino.net/mpi_functions/MPI_Allgatherv.html        
-        """
-        # TODO return recvbuf
-        Logger().warn("Non-Implemented method 'allgatherv' called.")
-
     def allreduce(self, data, op):
         """
         Combines values from all the processes with the op-function. You can write
@@ -593,24 +582,6 @@ class Communicator:
 
         Logger().warn("Non-Implemented method 'alltoall' called.")
         
-    def alltoallv(self, sendbuf, sendcount, sdispls, recvbuf, recvcount, rdispls):
-        """
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcounts integer array equal to the group size specifying the number of elements to send to each processor 
-        IN sdispls integer array (of length group size). Entry j specifies the displacement (relative to sendbuf from which to take the outgoing data destined for process j 
-        IN sendtype data type of send buffer elements (handle) 
-        OUT recvbuf address of receive buffer (choice) 
-        IN recvcounts integer array equal to the group size specifying the number of elements that can be received from each processor 
-        IN rdispls integer array (of length group size). Entry i specifies the displacement (relative to recvbuf at which to place the incoming data from process i) 
-        
-        MPI_ALLTOALLV adds flexibility to MPI_ALLTOALL in that the location of data for the send is specified by sdispls
-        and the location of the placement of the data on the receive side is specified by rdispls. 
-        
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html    
-        """
-        
-        Logger().warn("Non-Implemented method 'alltoallv' called.")
-        
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """
         Each process (root process included) sends the contents of its send buffer to the root 
@@ -628,37 +599,6 @@ class Communicator:
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
         """
         Logger().warn("Non-Implemented method 'gather' called.")
-        
-    def gatherv(self, data, root):
-        """
-        Gatherv() receives data from all the members of the communicator can stores the
-        data in a list indexed by the rank of the sender. 
-        
-        An simple example would be::
-
-            from mpi import MPI
-
-            mpi = MPI()
-            root = 3
-            rank = mpi.MPI_COMM_WORLD.rank()
-            local_data = "Data from rank: %d" % rank
-
-            data = mpi.MPI_COMM_WORLD.gatherv(local_data, root=root)
-
-            if rank == root:
-                print data
-
-            mpi.finalize()
-
-        The above would result in the following output (for a size of 4)::
-        
-            write testoutput
-        
-        Se also the :func:`reduce` function
-        
-        .. note::
-            The above example only works with a size of 4 or above.
-        """
         
     def reduce(self, data, op, root=0):
         """
@@ -687,10 +627,6 @@ class Communicator:
         # FIXME
         pass
         
-    def scatterv(self, arg):
-        # FIXME
-        pass        
-
     def test_cancelled(self):
         pass
     
