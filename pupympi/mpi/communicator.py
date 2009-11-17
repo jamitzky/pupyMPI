@@ -567,7 +567,32 @@ class Communicator:
         
     def alltoall(self, data):
         """
-        Insert end-user documentation here
+        This meethod extends the allgather in the situation where you need
+        to send distinct data to each process. 
+        
+        The input data should be list with the same number of elements as
+        the size of the communicator. If you supply something else an 
+        Exception is raised. 
+        
+        If for example a process wants to send a string prefixed by the
+        sending AND the recipient rank we could use the following code::
+        
+            from mpi import MPI
+            
+            mpi = MPI()
+            
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.rank()
+            
+            send_data = ["%d --> %d" % (rank, x) for x in range(size)]
+            # For size of 4 and rank 2 this looks like
+            # ['2 --> 0', '2 --> 1', '2 --> 2', '2 --> 3']
+            
+            recv_data = mpi.alltoall(send_data)
+            
+            # This will then look like the following (maybe not 
+            # in this order). We're still rank 2
+            # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
         """
         cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
         cr.start_alltoall()
