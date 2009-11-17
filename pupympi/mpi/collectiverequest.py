@@ -125,7 +125,7 @@ class CollectiveRequest(BaseRequest):
         
         # The result of a broadcast will be a list with one element which is a 
         # dict. It's a list of length one as we do not give a function so it
-        # defaults to safeheade -> (None |Ê[ element ])
+        # defaults to safeheade -> (None | [ element ])
         self.data = data.values().pop()
 
     def start_allreduce(self, operation):
