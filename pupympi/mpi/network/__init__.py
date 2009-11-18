@@ -277,9 +277,10 @@ class CommunicationHandler(threading.Thread):
                 
                 try:
                     rank, raw_data = get_raw_message(conn)
-                except MPIException, e:
+                except MPIException, e:                    
                     # Broken connection is ok when shutdown is going on
                     if self.shutdown_event.is_set():
+                        Logger().debug("_handle_readlist -> get_raw_message -> recieve_fixed -> recv (SHOT DOWN) threw: %s" % e)
                         continue
                     else:
                         Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)

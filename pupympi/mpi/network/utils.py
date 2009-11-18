@@ -54,15 +54,13 @@ def get_raw_message(client_socket):
     def receive_fixed(length):
         """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         
-        Throws this too much:
-        recieve_fixed: recv() threw:[Errno 9] Bad file descriptor for socket:<socket._socketobject object at 0x901e144> length:8 message:
         """
         message = ""
         while length:
             try:
                 data = client_socket.recv(min(length, 4096))
             except socket.error, e:
-                Logger().error("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
+                Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("Connection broke or something")
                 # NOTE: We can maybe recover more gracefully here but that requires
                 # throwing status besides message and rank upwards. For now I just want
