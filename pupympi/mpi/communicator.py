@@ -9,7 +9,11 @@ from mpi import constants
 
 class Communicator:
     """
-    This class represents an MPI communicator.
+    This class represents an MPI communicator. The communicator holds information
+    about a 'group' of processes and allows for inter communication between these. 
+
+    It's not possible from within a communicator to talk with processes outside. Remember
+    you have the MPI_COMM_WORLD communicator holding ALL the started proceses. 
     """
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.mpi = mpi 
@@ -164,7 +168,7 @@ class Communicator:
             raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
         
         # wait for answer on id
-        cr = CollectiveRequest("comm_create", constants.TAG_COMM_CREATE, self, new_id)
+        cr = CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
         
         # FIXME validate that received group was identical to my worldview
 
@@ -461,7 +465,8 @@ class Communicator:
             mpi.finalize()
 
         """
-        cr = CollectiveRequest("bcast", constants.TAG_BARRIER, self)
+        cr = CollectiveRequest(constants.TAG_BARRIER, self)
+        cr.start_barrier()
         return cr.wait()
         
     def bcast(self, root, data=None):
@@ -490,7 +495,7 @@ class Communicator:
             if not data:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
-        cr = CollectiveRequest("bcast", constants.TAG_BCAST, self, data, root=root)
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
     def abort(self, arg):
@@ -525,17 +530,6 @@ class Communicator:
         # TODO return recvbuf
         Logger().warn("Non-Implemented method 'allgather' called.")
 
-    def allgatherv(self, sendbuf, sendcount, recvcount, displs):
-        """
-        MPI_ALLGATHERV can be thought of as MPI_GATHERV, but where all processes receive the result, instead of just the root. The  jth block of data sent from each process is received by every process and placed in the  jth block of the buffer recvbuf. These blocks need not all be the same size. 
-        
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
-        
-        Examples: http://mpi.deino.net/mpi_functions/MPI_Allgatherv.html        
-        """
-        # TODO return recvbuf
-        Logger().warn("Non-Implemented method 'allgatherv' called.")
-
     def allreduce(self, data, op):
         """
         Combines values from all the processes with the op-function. You can write
@@ -567,46 +561,43 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
 
-        cr = CollectiveRequest("reduce", constants.TAG_ALLREDUCE, self, data=data)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data)
         cr.start_allreduce(op)
         return cr.wait()
         
-    def alltoall(self, sendbuf, sendcount, recvbuf, recvcount):
+    def alltoall(self, data):
         """
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcount number of elements sent to each process (integer) 
-        IN recvcount number of elements received from any process (integer) 
-        IN comm communicator (handle) 
-        OUT recvbuf address of receive buffer (choice) 
+        This meethod extends the allgather in the situation where you need
+        to send distinct data to each process. 
         
-        MPI ALLTOALL is an extension of MPI ALLGATHER to the case where each process 
-        sends distinct data to each of the receivers. The jth block sent from process i is received 
-        by process j and is placed in the ith block of recvbuf...
+        The input data should be list with the same number of elements as
+        the size of the communicator. If you supply something else an 
+        Exception is raised. 
         
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html
-        Example: http://mpi.deino.net/mpi_functions/MPI_Alltoall.html
+        If for example a process wants to send a string prefixed by the
+        sending AND the recipient rank we could use the following code::
+        
+            from mpi import MPI
+            
+            mpi = MPI()
+            
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.rank()
+            
+            send_data = ["%d --> %d" % (rank, x) for x in range(size)]
+            # For size of 4 and rank 2 this looks like
+            # ['2 --> 0', '2 --> 1', '2 --> 2', '2 --> 3']
+            
+            recv_data = mpi.alltoall(send_data)
+            
+            # This will then look like the following (maybe not 
+            # in this order). We're still rank 2
+            # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
         """
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
+        cr.start_alltoall()
+        return cr.wait()
 
-        Logger().warn("Non-Implemented method 'alltoall' called.")
-        
-    def alltoallv(self, sendbuf, sendcount, sdispls, recvbuf, recvcount, rdispls):
-        """
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcounts integer array equal to the group size specifying the number of elements to send to each processor 
-        IN sdispls integer array (of length group size). Entry j specifies the displacement (relative to sendbuf from which to take the outgoing data destined for process j 
-        IN sendtype data type of send buffer elements (handle) 
-        OUT recvbuf address of receive buffer (choice) 
-        IN recvcounts integer array equal to the group size specifying the number of elements that can be received from each processor 
-        IN rdispls integer array (of length group size). Entry i specifies the displacement (relative to recvbuf at which to place the incoming data from process i) 
-        
-        MPI_ALLTOALLV adds flexibility to MPI_ALLTOALL in that the location of data for the send is specified by sdispls
-        and the location of the placement of the data on the receive side is specified by rdispls. 
-        
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node75.html    
-        """
-        
-        Logger().warn("Non-Implemented method 'alltoallv' called.")
-        
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
         """
         Each process (root process included) sends the contents of its send buffer to the root 
@@ -625,31 +616,20 @@ class Communicator:
         """
         Logger().warn("Non-Implemented method 'gather' called.")
         
-    def gatherv(self, sendbuf, sendcount, recvbuf, recvcount, displs, root):
+    def reduce(self, data, op, root=0):
         """
-        MPI GATHERV extends the functionality of MPI GATHER by allowing a varying count 
-        of data from each process, since recvcounts is now an array. It also allows more flexibility 
-        as to where the data is placed on the root, by providing the new argument, displs. 
-
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcount number of elements in send buffer (integer) 
-        IN sendtype data type of send buffer elements (handle) 
-        OUT recvbuf address of receive buffer (choice, significant only at root) 
-        IN recvcount number of elements for any single receive (integer, significant only at root) 
-        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
-        IN displs integer array (of length group size). Entry i specifies the displacement relative to recvbuf at which to place 
-        the incoming data from process i (significant only at root) 
-        
-        IN root rank of receiving process (integer) 
-        IN comm communicator (handle) 
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+        FIXME: Write end-user documentation for this method
         """
-        Logger().warn("Non-Implemented method 'gatherv' called.")
-        
-    def reduce(self, arg):
-        # FIXME
-        pass
+        # FIXME: This is only a allreduce with a specific tag to indicate
+        # that's it's a regular reduce. We should send some flag to the
+        # CollectiveRequest that it can discard the final value for nodes
+        # other than the root. 
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
+        cr.start_allreduce(op)
+        data = cr.wait()
+
+        if self.rank() == root:
+            return data
     
     def reduce_scatter(self, arg):
         # FIXME
@@ -663,10 +643,6 @@ class Communicator:
         # FIXME
         pass
         
-    def scatterv(self, arg):
-        # FIXME
-        pass        
-
     def test_cancelled(self):
         pass
     
