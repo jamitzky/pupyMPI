@@ -235,7 +235,7 @@ class MPI(Thread):
                         self.raw_data_queue = []
                     self.raw_data_event.clear()
                         
-                # Pending requests are received messages that may have a matching recv posted
+                # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
 #                if self.pending_requests_has_work.is_set():
                 with self.pending_requests_lock:
                     Logger().debug("Checking pending:%s " % self.pending_requests)
