@@ -7,15 +7,12 @@ from mpi.logger import Logger
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, request_supertype, tag, communicator, data=None, root=0):
+    def __init__(self, tag, communicator, data=None, root=0):
         # Note about the super types. How about we define them depending on how many 
         # participants get the data? Or just remove them alltoghter. Added a reduce
         # for now just to handle the allreduce implementation.
         super(CollectiveRequest, self).__init__()
-        if request_supertype not in ('bcast','reduce'): # TODO more needed here
-            raise MPIException("Invalid request supertype in collective request creation. This should never happen. ")
 
-        self.request_supertype = request_supertype
         self.communicator = communicator
         self.tag = tag
         self.initial_data = data
@@ -31,15 +28,7 @@ class CollectiveRequest(BaseRequest):
         #                  safely return from a test or wait call.
         self._m = {'status' : 'new' }
 
-        Logger().debug("CollectiveRequest object created for communicator %s and supertype %s" % (self.communicator.name, self.request_supertype))
-
-        if self.request_supertype == "bcast":
-            if self.tag in (constants.TAG_BCAST, constants.TAG_COMM_CREATE):
-                self.start_bcast(root, data, self.tag)
-            elif self.tag in (constants.TAG_BARRIER,):
-                self.start_barrier(self.tag)
-            else:
-                raise MPIException("Unsupported collective request tag %s" % self.tag)
+        Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
 
     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def safehead(data_list):
@@ -75,10 +64,10 @@ class CollectiveRequest(BaseRequest):
             have_data = initial_data not in (None, [])
                 
             if have_data and force_initial_data:
-                data_list.append(initial_data)
+                data_list.append({self.communicator.rank() : initial_data})
             
             if not data_list:
-                data_list = [initial_data]
+                data_list = [{self.communicator.rank() : initial_data}]
             data = data_func(data_list)
 
             # Send the data upwards in the tree. 
@@ -132,7 +121,12 @@ class CollectiveRequest(BaseRequest):
         self.two_way_tree_traversal(tag)
 
     def start_bcast(self, root, data, tag):
-        self.data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+        data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+        
+        # The result of a broadcast will be a list with one element which is a 
+        # dict. It's a list of length one as we do not give a function so it
+        # defaults to safeheade -> (None | [ element ])
+        self.data = data.values().pop()
 
     def start_allreduce(self, operation):
         """
@@ -151,6 +145,22 @@ class CollectiveRequest(BaseRequest):
         self.data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, 
                 up_func=operation, start_direction="up", return_type="last")
 
+    def start_alltoall(self):
+        # Make the inner functionality append all the data from all the processes
+        # and return it. We'll just extract the data we need. 
+        data = self.two_way_tree_traversal(self.TAG, initial_data=self.initial_data, up_func=id, start_direction="up", return_type="last")
+        
+        # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
+        # the N'th data in the inner list where N is our rank
+        rank = self.communicator.rank()
+        size = self.communicator.size()
+        final_data = []
+        
+        for r in range(size):
+            final_data.append( data[r][rank] )
+        
+        self.data = final_data
+
     def cancel(self):
         """
         Cancel a request. This can be used to free memory, but the request must be redone
@@ -161,7 +171,7 @@ class CollectiveRequest(BaseRequest):
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self._metadata['status'] = 'cancelled'
-        Logger().debug("Cancelling a %s/%s request" % self.request_supertype, self.tag)
+        Logger().debug("Cancelling a request with tag" % self.tag)
         
 
     def get_status(self):
