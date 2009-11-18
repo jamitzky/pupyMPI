@@ -2,6 +2,7 @@
 # meta-description: tests advanced groups functionality. 
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# meta-max_runtime: 25
 
 from mpi import MPI
 from mpi import constants
@@ -9,9 +10,6 @@ from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPI
 
 import random
 
-class TestException(Exception): 
-    """Custom exception for tests"""
-    pass
 
 mpi = MPI()
 
@@ -20,8 +18,8 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-# Take this print out in final version
-print "---> PROCESS %d/%d" % (rank,size)
+
+f = open("/tmp/mpi.groups2.rank%s.log" % rank, "w")
 
 #### Test prerequisites ####
 
@@ -31,7 +29,6 @@ assert size > 8
 #### Set up groups for tests ####
 
 cwG = mpi.MPI_COMM_WORLD.group()
-#print "Group of MPI_COMM_WORLD: %s" % cwG
 
 rip = range(size)
 
@@ -59,6 +56,10 @@ allButLastAndFirst = cwG.incl(rip[1:-1])
 
 # Make an empty group
 emptyGroup = cwG.excl(rip)
+
+
+f.write( "Setup done for rank %d\n" % rank)
+f.flush()
 
 
 #### Compare tests #####
@@ -137,6 +138,9 @@ assert same1 is constants.MPI_IDENT
 emptyUnionAllShuffled = emptyGroup.union(allShuffled)
 same2 = emptyUnionAllShuffled.compare(allShuffled)
 assert same2 is constants.MPI_IDENT
+
+f.write( "More than halfway done for rank %d\n" % rank)
+f.flush()
 
 
 #### Intersection tests #####
@@ -229,6 +233,11 @@ try:
 except MPIInvalidStrideException, e:
     pass
 
+
+f.write( "Done for rank %d\n" % rank)
+
+f.flush()
+f.close()
 
 # Close the sockets down nicely
 mpi.finalize()
