@@ -1,12 +1,8 @@
 #!/usr/bin/env python2.6
 # meta-description: The minimal correct pupyMPI program is allowed
 # meta-expectedresult: 0
-# meta-minprocesses: 4
+# meta-minprocesses: 8
 
-"""
-This test program currently has a tendency for one or two of the procs to hang
-when run with 4 or more procs.
-"""
 
 from mpi import MPI
 
