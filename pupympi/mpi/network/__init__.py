@@ -220,11 +220,28 @@ class CommunicationHandler(threading.Thread):
         self.sockets_out.append(client_socket)
     
     def close_all_sockets(self):
-        for s in self.sockets_in + self.sockets_out:
+        # DEBUG
+        n = 0
+        m = 0
+        # NOTE:
+        # Maybe we should only attempt to close either outgoing OR ingoing sockets
+        time.sleep(4)
+        for s in self.sockets_in + self.sockets_out:            
             try:
+                #s.shutdown(0)   # Further receives are disallowed
+                #s.shutdown(1)   # Further sends are disallowed.
+                #s.shutdown(2)   # Further sends and receives are disallowed.
                 s.close()
+                n += 1
             except Exception, e:
-                Logger.debug("Got error when closing socket: %s" % e)
+                m += 1
+                Logger().debug("Got error when closing socket: %s" % e)
+         
+        # DEBUG
+        # sleeping here does not really help
+        #time.sleep(4)
+        
+        Logger().debug("close_all_sockets: %i sockets closed, %i sockets gave exception. Ins: %i, Outs: %i" % (n,m, len(self.sockets_in), len(self.sockets_out) ))
     
     def run(self):
         
@@ -342,4 +359,4 @@ class CommunicationHandler(threading.Thread):
 
     def finalize(self):
         self.shutdown_event.set()
-        Logger().debug("Communication handler closed by finalize call: %s" % self.socket_to_request)
+        Logger().debug("Communication handler closed by finalize call, socket_to_request: %s" % self.socket_to_request)
