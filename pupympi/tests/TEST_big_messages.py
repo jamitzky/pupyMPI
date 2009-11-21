@@ -41,6 +41,10 @@ heftyMsg = 1024*1024*string
 # You can make a string longer than this but python (pickle) gets in trouble, you can't repr it and it takes up a lot of RAM :)
 # max for python2.5 on my machine is about 350*1024*1024 chars.. let's stay below that
 
+
+
+#### Test message passing ####
+
 # One way comm: 0 sends, 1 recives, the rest do nothing
 if rank == 0:
     mpi.MPI_COMM_WORLD.send(1,largeMsg,FIRST_TAG)
@@ -95,7 +99,58 @@ else:
     pass
 
 
-#### Test message passing ####
+# Two way comm immediate
+if rank == 0:
+    s1 = mpi.MPI_COMM_WORLD.isend(1,largerMsg,SECOND_TAG)
+    s2 = mpi.MPI_COMM_WORLD.isend(1,heftyMsg,THIRD_TAG)
+    
+    f.write( "Immediate send done - rank %d\n" % rank)
+    f.flush()
+    
+    r1 = mpi.MPI_COMM_WORLD.irecv(1,SECOND_TAG)
+    r2 = mpi.MPI_COMM_WORLD.irecv(1,THIRD_TAG)
+        
+    recieve1 = r1.wait()
+    recieve2 = r2.wait()
+
+    f.write( "Recv wait done - rank %d\n" % rank)
+    f.flush()
+    
+    assert recieve1 == largerMsg
+    assert recieve2 == heftyMsg
+
+    s1.wait()
+    s2.wait()
+
+    f.write( "Send wait done - rank %d\n" % rank)
+    f.flush()   
+elif rank == 1:
+    s1 = mpi.MPI_COMM_WORLD.isend(0,largerMsg,SECOND_TAG)
+    s2 = mpi.MPI_COMM_WORLD.isend(0,heftyMsg,THIRD_TAG)
+    
+    f.write( "Immediate send done - rank %d\n" % rank)
+    f.flush()
+    
+    r1 = mpi.MPI_COMM_WORLD.irecv(0,SECOND_TAG)
+    r2 = mpi.MPI_COMM_WORLD.irecv(0,THIRD_TAG)
+    
+    recieve1 = r1.wait()
+    recieve2 = r2.wait()
+
+    f.write( "Recv wait done - rank %d\n" % rank)
+    f.flush()
+    
+    assert recieve1 == largerMsg
+    assert recieve2 == heftyMsg
+
+    s1.wait()
+    s2.wait()
+
+    f.write( "Send wait done - rank %d\n" % rank)
+    f.flush()
+
+else:
+    pass
 
 
 f.write( "Done for rank %d\n" % rank)
