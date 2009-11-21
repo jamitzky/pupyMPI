@@ -116,6 +116,7 @@ class Network(object):
             for handle in recv_handles:
                 handle.wait()
             
+            # NOTE: What is the effect of this? Doesn't it make the socketpool static?
             self.socket_pool.readonly = True
         
         # DEBUG NOTE
@@ -312,6 +313,7 @@ class CommunicationHandler(threading.Thread):
                         Logger().debug("Starting data-send on %s. data: %s" % (write_socket, request.data))
                         # Send the data on the socket
                         try:
+                            # TODO: We should loop here 
                             write_socket.send(request.data)
                         except socket.error, e:
                             Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )

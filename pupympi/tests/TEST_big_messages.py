@@ -4,51 +4,50 @@
 # meta-minprocesses: 2
 # meta-max_runtime: 25
 
+# NOTE: You do not want to call this test with debugging that print the message content active.
+# Outputting the big messages take a _long_ time
+
 from mpi import MPI
 from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
 
 
-
-
 mpi = MPI()
-
 
 # we expect the group of MPI_COMM_WORLD to match with the communicator itself
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 
-#f = open("/tmp/mpi.big_messages.rank%s.log" % rank, "w")
-
-
+# Log stuff so progress is easier followed
+f = open("/tmp/mpi.big_messages.rank%s.log" % rank, "w")
 
 
 # Test does not make sense for 1
 assert size > 1
+
 
 #### Setup prerequisites ####
 FIRST_TAG = 111
 SECOND_TAG = 222
 THIRD_TAG = 333
 
-#NOTE: Consider doing this with other data structures for realism
+# NOTE: Consider doing this with other data structures for realism
 string = "abcdefghijklmnopqrst" # 20 chars
 
 largeMsg = 256*string
 largerMsg = 1024*string
 heftyMsg = 1024*1024*string
 # You can make a string longer than this but python (pickle) gets in trouble, you can't repr it and it takes up a lot of RAM :)
-# max for python2.5 on my machine is about 350*1024*1024 .. let's stay below that
+# max for python2.5 on my machine is about 350*1024*1024 chars.. let's stay below that
 
-# 0 send, 1 recives, the rest do nothing
+# One way comm: 0 sends, 1 recives, the rest do nothing
 if rank == 0:
     mpi.MPI_COMM_WORLD.send(1,largeMsg,FIRST_TAG)
-    #mpi.MPI_COMM_WORLD.send(1,("test",4),FIRST_TAG) # Fails when some debug line tries to string convert the tuple
     mpi.MPI_COMM_WORLD.send(1,largerMsg,SECOND_TAG)
     mpi.MPI_COMM_WORLD.send(1,heftyMsg,THIRD_TAG)    
-    #DEBUG
-    print "msgs sent"    
+    f.write( "Done sending big messages - rank %d\n" % rank)
+    f.flush()
 elif rank == 1:
     msg = mpi.MPI_COMM_WORLD.recv(0,FIRST_TAG)
     assert msg == largeMsg
@@ -58,19 +57,50 @@ elif rank == 1:
 
     msg = mpi.MPI_COMM_WORLD.recv(0,THIRD_TAG)
     assert msg == heftyMsg
-    assert len(msg) == 1024*1024*20 # Check that stuff isn't mangled
-    #print str(len(msg) == 1024*1024*20)
-    
+    assert len(msg) == 1024*1024*20 # Check actual length
+    f.write( "Recieved all three big messages - rank %d\n" % rank)
+    f.flush()    
 else:
     pass
+
+
+# Two way comm blocking
+if rank == 0:
+    mpi.MPI_COMM_WORLD.send(1,largerMsg,SECOND_TAG)
+
+    msg = mpi.MPI_COMM_WORLD.recv(1,THIRD_TAG)
+    assert msg == heftyMsg
+    
+    msg = mpi.MPI_COMM_WORLD.recv(1,SECOND_TAG)
+    assert msg == largerMsg
+
+    mpi.MPI_COMM_WORLD.send(1,heftyMsg,THIRD_TAG)
+    
+    f.write( "Blocking two-way passing of big messages done - rank %d\n" % rank)
+    f.flush()
+    
+elif rank == 1:
+    msg = mpi.MPI_COMM_WORLD.recv(0,SECOND_TAG)
+    assert msg == largerMsg
+
+    mpi.MPI_COMM_WORLD.send(0,heftyMsg,THIRD_TAG)    
+    mpi.MPI_COMM_WORLD.send(0,largerMsg,SECOND_TAG)
+
+    msg = mpi.MPI_COMM_WORLD.recv(0,THIRD_TAG)
+    assert msg == heftyMsg
+
+    f.write( "Blocking two-way passing of big messages done - rank %d\n" % rank)
+    f.flush()
+else:
+    pass
+
 
 #### Test message passing ####
 
 
-#f.write( "Done for rank %d\n" % rank)
-
-#f.flush()
-#f.close()
+f.write( "Done for rank %d\n" % rank)
+f.flush()
+f.close()
 
 # Close the sockets down nicely
 mpi.finalize()
