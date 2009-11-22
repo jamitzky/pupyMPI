@@ -2,7 +2,7 @@
 # meta-description: tests how we deal with transmitting very large messages
 # meta-expectedresult: 0
 # meta-minprocesses: 2
-# meta-max_runtime: 25
+# meta-max_runtime: 30
 
 # NOTE: You do not want to call this test with debugging that print the message content active.
 # Outputting the big messages take a _long_ time
