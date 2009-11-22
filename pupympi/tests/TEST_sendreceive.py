@@ -4,7 +4,7 @@
 # meta-minprocesses: 5
 
 # This test is meant to be run with a odd number of processes
-#
+# as of 22/11-09 this test has serious problems with more than 9 procs
 
 from mpi import MPI
 

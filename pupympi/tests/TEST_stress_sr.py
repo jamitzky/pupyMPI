@@ -11,10 +11,10 @@ mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 
-data = 50*"a"
-f = open("/tmp/cyclic%s.log" % rank, "w")
-world.barrier()
+f = open("/tmp/mpi.stress_sr.rank%s.log" % rank, "w")
+
 max_iterations = 500
+
 t1 = world.Wtime()    
 
 TAG = 13
@@ -45,8 +45,9 @@ f.write( "Done for rank %d\n" % rank)
 t2 = world.Wtime()
 time = (t2 - t1) 
 
-f.write( "Total time was %s  with data length %s, for %i iterations with %i processes participating" % (time, len(data), maxIterations, adjSize))
+f.write( "Total time was %s for %i iterations" % (time, max_iterations))
 f.flush()
 f.close()
+
 mpi.finalize()
 
