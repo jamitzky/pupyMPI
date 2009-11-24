@@ -79,3 +79,31 @@ def prepare_message(data, rank):
     pickled_data = pickle.dumps(data)
     header = struct.pack("ll", len(pickled_data), rank)
     return header+pickled_data
+
+def _nice_data(data):
+    """
+    Internal function to allow safer printing/logging of raw data
+    Tries to eliminate the hex (?) ASCII symbols that appear as tcp-like
+    control packets.
+    
+    NOTE: If we one day find something useful to do based on the control codes,
+    we should convert them nicely to string instead, but for now this will do.
+    """
+    if data == None:
+        return None
+    
+    # This is a hackish way of detecting if data is pickled or not
+    # We try to unpickle and if it fails it is probably not pickled
+    try:
+        unpickled = pickle.loads(data)
+        return unpickled
+    except Exception, e:
+        # This is an equally hackish way of removing nasty printing chars
+        # a nicer way would be to use str.translate with appropriate mappings
+        sdata = str(data)
+        hexysymbols, sep, rest = sdata.partition("(I")
+        # Now tcp control chars garble garble has been removed
+        data = (sep+rest).replace("\n","<n>")
+        
+        return data
+            
