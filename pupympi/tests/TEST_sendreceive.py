@@ -38,7 +38,7 @@ content = "conch"
 DUMMY_TAG = 1
 
 # Log stuff so progress is easier followed
-f = open("/tmp/mpi.sendrecv.rank%s.log" % rank, "w")
+f = open("/tmp/mpi.sendreceive.rank%s.log" % rank, "w")
 
 
 # Send up in chain, recv from lower (with usual wrap around)
@@ -55,9 +55,10 @@ f.flush()
 f.close()
 
 # Three seperate sleeps for superstition
-time.sleep(3)
-time.sleep(3)
-time.sleep(3)
+# FIXME: The below is currently needed when going much over 5 procs on this test
+#time.sleep(3)
+#time.sleep(3)
+#time.sleep(3)
 
 # Close the sockets down nicely
 mpi.finalize()

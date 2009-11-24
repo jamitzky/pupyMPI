@@ -28,7 +28,7 @@ def get_socket(min=10000, max=30000):
     while True:
         port_no = random.randint(min, max) 
         if port_no in used:
-            logger.debug("get_socket: Port %d is already in use %d" % port_no)
+            logger.debug("get_socket: We know port %d is already in use, try a new one" % port_no)
             continue
 
         try:
@@ -36,9 +36,13 @@ def get_socket(min=10000, max=30000):
             sock.bind( (hostname, port_no) )
             break
         except socket.error, e:
-            logger.debug("get_socket: Permission error on port %d" % port_no)
+            logger.debug("get_socket: Permission error on port %d, trying a new one" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
-            raise e
+            continue
+            # NOTE: I am quite sure we should not raise further here or at least not in the normal
+            # exception case where we happen to hit a used socket. Instead we go on
+            # and that actually means we can potentially use the used-list for something.
+            #raise e
         
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
