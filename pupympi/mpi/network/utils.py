@@ -88,6 +88,9 @@ def _nice_data(data):
     
     NOTE: If we one day find something useful to do based on the control codes,
     we should convert them nicely to string instead, but for now this will do.
+    
+    There are some nice functions here to accomplish conversion of the byte-strings
+    http://docs.python.org/c-api/string.html#string-bytes-objects
     """
     if data == None:
         return None
@@ -106,4 +109,17 @@ def _nice_data(data):
         data = (sep+rest).replace("\n","<n>")
         
         return data
-            
+
+def robust_send(socket, message):
+    """
+    Python docs state that using socket.send the application is responsible for
+    handling any unsent bytes. Even though we have not really seen it yet we use
+    this wrapper to ensure that it all really gets sent.
+    """
+    # FIXME: Decide whether to catch errors here and reraise or as now let caller handle
+    
+    remainder = len(message) # how many bytes to send
+    while remainder > 0:
+        transmitted_bytes = socket.send(message)
+        remainder -= transmitted_bytes
+        

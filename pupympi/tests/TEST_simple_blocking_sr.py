@@ -46,7 +46,8 @@ elif rank == 1:
     mpi.MPI_COMM_WORLD.send(neighbour, get_content(rank), DUMMY_TAG)
     
 else: # rank == 1
-    print "Im doing nothing"
+    #print "Im doing nothing"
+    pass
 
 print "Sending/recieving done rank %d of %d after %d seconds sleep" % (rank, size, size-rank)
 
