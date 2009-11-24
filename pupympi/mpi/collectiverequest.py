@@ -37,7 +37,14 @@ class CollectiveRequest(BaseRequest):
             else:
                 return None
     
-        def traverse(nodes_from, nodes_to, data_func, initial_data, force_initial_data=False):
+        def traverse(nodes_from, nodes_to, data_func, initial_data, pack=True):
+            Logger().debug("""
+            Starting a traverse with:
+            \tNodes from: %s
+            \tNodes to: %s
+            \tInitial data: %s
+            \tPack: %s
+            """ % (nodes_from, nodes_to, initial_data, pack))
             # If The direction is up, so we find the result of all our children
             # and execute som function on these data. The result of the function
             # is passed on to our parent. The result is also returned from the
@@ -56,32 +63,58 @@ class CollectiveRequest(BaseRequest):
 
             for handle in request_list:
                 data = handle.wait()
-                data_list.append(data)
+                for data_item in data:
+                    data_list.append(data_item)
+            
+            Logger().debug("Received data for traverse (first round: %s): %s" % (pack, data_list))
+
 
             # Aggreate the data list to a single item (maybe?). The data list
             # should probably we curried with the sender rank for operations 
             # like Allgatherv
-            have_data = initial_data not in (None, [])
+            #
+            # The following lines is a bit of a hack. When we pack data, wrap it in 
+            # lists should be through over.  
+            if pack:
+                d = {'rank' : self.communicator.rank(), 'value' : initial_data }
+            else:
+                d = initial_data
                 
-            d = {'rank' : self.communicator.rank(), 'value' : initial_data}
-            if have_data and force_initial_data:
-                data_list.append(d)
+            if initial_data:
+                if pack:
+                    data_list.append(d)
+                else:
+                    data_list = d
             
             if not data_list:
-                data_list = [d]
+                data_list = d
+            
             data = data_func(data_list)
 
             # Send the data upwards in the tree. 
             for rank in nodes_to:
                 self.communicator.send(rank, data, tag)
 
+            Logger().debug("Return data for traverse (first round: %s): %s" % (pack, data))
             return data
 
-        def up(data=None, force_initial_data=False):
-            return traverse(tree.down, tree.up, up_func, data, force_initial_data=force_initial_data)
-
-        def down(data=None, force_initial_data=False):
-            return traverse(tree.up, tree.down, down_func, data, force_initial_data=force_initial_data)
+        def start_traverse(direction, tree, data=None, first=True):
+            if direction == "up":
+                nodes_from = tree.down
+                nodes_to = tree.up
+            else:
+                nodes_from = tree.up
+                nodes_to = tree.down
+            
+            if not first and nodes_from:
+                # In the second way down we should only use the data
+                # from the first run if we were the last nodes in the
+                # tree. That is the "not first" logic is to ensure
+                # we're on the second iteration and "nodes_from" mean
+                # we were not the last nodes.
+                data = None
+            
+            return traverse(nodes_from, nodes_to, up_func, data, pack=first)
 
         # Step 1: Setup safe methods for propergating data through the tree if
         #         the callee didn't give us any.
@@ -94,12 +127,14 @@ class CollectiveRequest(BaseRequest):
         Logger().debug("collectiverequest.two_way_tree_traversal: Before the first way. Got bc_tree for root %d: %s" % (root, tree))
 
         # Step 3: Traverse the tree in the first direction. 
+        rt_first = start_traverse(start_direction, tree, initial_data)
+        
+        if self.communicator.rank() == tree.root:
+            Logger().debug("Root of the tree got a list with %d elements: %s" % (len(rt_first), rt_first))
+            
+        end_direction = "down"
         if start_direction == "down":
-            rt_first = down(initial_data)
-            other = up
-        else:
-            rt_first = up(initial_data, force_initial_data=True)
-            other = down
+            end_direction = "up"
             
         Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
@@ -109,7 +144,7 @@ class CollectiveRequest(BaseRequest):
         #         do stuff right here (ie. this is no correct yet). Is there
         #         any reason we need to traverse the entire tree in one 
         #         direction before we can start the second traversal?
-        rt_second = other(rt_first)
+        rt_second = start_traverse(end_direction, tree, rt_first, first=False)
 
         Logger().debug("collectiverequest.two_way_tree_traversal: After the second way")
 
@@ -150,18 +185,19 @@ class CollectiveRequest(BaseRequest):
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
         identity = lambda x : x
-        data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, up_func=identity, down_func=identity, start_direction="up", return_type="last")
+        data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, up_func=identity, start_direction="up", return_type="last")
+        
+        Logger().info("Received data: %d: %s" % (len(data), data))
         
         # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
         # the N'th data in the inner list where N is our rank
         rank = self.communicator.rank()
         size = self.communicator.size()
-        final_data = []
+        final_data = [None for x in range(size)]
 
-        print data
-
-        for r in range(size):
-            final_data.append( data[r][rank] )
+        for item in data:
+            sender_rank = item['rank']
+            final_data[item['rank']] = item['value'][rank]
         
         self.data = final_data
 
