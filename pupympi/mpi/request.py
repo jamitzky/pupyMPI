@@ -1,5 +1,7 @@
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
+from mpi.network.utils import _nice_data
+
 import threading, time
 
 class BaseRequest(object):
@@ -50,9 +52,10 @@ class Request(BaseRequest):
 
         Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
     
-    def __repr__(self):
+    def __repr__(self):        
+        
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d) status(%s)>" % (self.request_type, self.participant, self.tag, self.status)
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.status, _nice_data(self.data) )
     
     def update(self, status, data=None):
         Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))
@@ -104,7 +107,7 @@ class Request(BaseRequest):
             raise MPIException("Illegal to wait on a cancelled request object")
         
         self._waitevent.wait()
-        Logger().debug("Waiting done for request with data:%s" % self.data)
+        Logger().debug("Waiting done for request with data:%s" % _nice_data(self.data) )
         
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
