@@ -63,11 +63,12 @@ class CollectiveRequest(BaseRequest):
             # like Allgatherv
             have_data = initial_data not in (None, [])
                 
+            d = {'rank' : self.communicator.rank(), 'value' : initial_data}
             if have_data and force_initial_data:
-                data_list.append({self.communicator.rank() : initial_data})
+                data_list.append(d)
             
             if not data_list:
-                data_list = [{self.communicator.rank() : initial_data}]
+                data_list = [d]
             data = data_func(data_list)
 
             # Send the data upwards in the tree. 
@@ -143,19 +144,22 @@ class CollectiveRequest(BaseRequest):
         """
         
         self.data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, 
-                up_func=operation, start_direction="up", return_type="last")
+                    up_func=operation, start_direction="up", return_type="last")
 
     def start_alltoall(self):
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
-        data = self.two_way_tree_traversal(self.TAG, initial_data=self.initial_data, up_func=id, start_direction="up", return_type="last")
+        identity = lambda x : x
+        data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, up_func=identity, down_func=identity, start_direction="up", return_type="last")
         
         # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
         # the N'th data in the inner list where N is our rank
         rank = self.communicator.rank()
         size = self.communicator.size()
         final_data = []
-        
+
+        print data
+
         for r in range(size):
             final_data.append( data[r][rank] )
         

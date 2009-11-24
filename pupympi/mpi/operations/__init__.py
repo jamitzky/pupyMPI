@@ -28,7 +28,12 @@ def prod(input_list):
         mpi.finalize()
     """
     p = 1
-    for e in input_list:
+
+    # The input list is a list of dictionaries. We're only interested in
+    # looking through the actual values.
+
+    for d in input_list:
+        e = d['value']
         p *= e
     return p
 
