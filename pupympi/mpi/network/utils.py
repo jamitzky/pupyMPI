@@ -110,11 +110,15 @@ def _nice_data(data):
         
         return data
 
-def _robust_send(socket, message):
+def robust_send(socket, message):
+    """
+    Python docs state that using socket.send the application is responsible for
+    handling any unsent bytes. Even though we have not really seen it yet we use
+    this wrapper to ensure that it all really gets sent.
+    """
     # FIXME: Decide whether to catch errors here and reraise or as now let caller handle
     
-    remainder = len(message) # Measuring in bytes
-    #remainder = struct.calcsize(message) # Measuring in bytes
+    remainder = len(message) # how many bytes to send
     while remainder > 0:
         transmitted_bytes = socket.send(message)
         remainder -= transmitted_bytes
