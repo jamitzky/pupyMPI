@@ -4,7 +4,9 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-#from time import time
+
+from mpi.network.utils import _robust_send
+
 import time
 
 from mpi.exceptions import MPIException
@@ -314,7 +316,8 @@ class CommunicationHandler(threading.Thread):
                         # Send the data on the socket
                         try:
                             # TODO: We should loop here 
-                            write_socket.send(request.data)
+                            #write_socket.send(request.data)
+                            _robust_send(write_socket,request.data)
                         except socket.error, e:
                             Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                             # Send went wrong, do not update, but hope for better luck next time
