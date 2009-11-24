@@ -2,7 +2,7 @@
 # meta-description: basic send and recive over many iterations where communicating parties should be in sync
 # meta-expectedresult: 0
 # meta-minprocesses: 2
-# meta-max_runtime: 20
+# meta-max_runtime: 120
 
 from mpi import MPI
 import time
