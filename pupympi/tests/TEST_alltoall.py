@@ -14,3 +14,5 @@ recv_data = world.alltoall(send_data)
 expected_data = [ '%d --> %d' % (x, rank) for x in range(size)]
 
 assert sorted(recv_data) == sorted(expected_data)
+
+mpi.finalize()
