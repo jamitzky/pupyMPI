@@ -88,6 +88,9 @@ def _nice_data(data):
     
     NOTE: If we one day find something useful to do based on the control codes,
     we should convert them nicely to string instead, but for now this will do.
+    
+    There are some nice functions here to accomplish conversion of the byte-strings
+    http://docs.python.org/c-api/string.html#string-bytes-objects
     """
     if data == None:
         return None
@@ -106,4 +109,13 @@ def _nice_data(data):
         data = (sep+rest).replace("\n","<n>")
         
         return data
-            
+
+def _robust_send(socket, message):
+    # FIXME: Decide whether to catch errors here and reraise or as now let caller handle
+    
+    remainder = len(message) # Measuring in bytes
+    #remainder = struct.calcsize(message) # Measuring in bytes
+    while remainder > 0:
+        transmitted_bytes = socket.send(message)
+        remainder -= transmitted_bytes
+        
