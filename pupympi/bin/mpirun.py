@@ -5,6 +5,7 @@ import select, time
 
 import processloaders 
 from mpi.logger import Logger
+from mpi.network import utils
 from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     data = (COMM_ID, COMM_RANK, constants.TAG_INITIALIZING, all_procs)
     message = prepare_message(data, -1)
     for conn in sender_conns:
-        conn.send(message)
+        utils.robust_send(conn, message)
         conn.close()
 
     s.close()

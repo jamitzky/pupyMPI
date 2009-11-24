@@ -11,8 +11,8 @@ import time
 
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
-from mpi.network import utils
-from mpi.network.utils import get_socket, get_raw_message, prepare_message#, robust_send
+from mpi.network import utils # Some would like the rest of the utils to be more explicitly used ... maybe later
+from mpi.network.utils import get_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.logger import Logger
 
@@ -73,7 +73,7 @@ class Network(object):
         
         # Pack the data with our special format
         data = (-1, -1, constants.TAG_INITIALIZING, data)
-        s_conn.send(prepare_message(data, internal_rank))
+        utils.robust_send(s_conn, prepare_message(data, internal_rank))        
         
         # Receiving data about the communicator, by unpacking the head etc.
         rank, raw_data = get_raw_message(s_conn)
