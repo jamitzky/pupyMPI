@@ -1,6 +1,6 @@
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
-from mpi.network.utils import _nice_data
+from mpi.network.utils import _nice_data # FIXME: up import level to make explicit
 
 import threading, time
 
