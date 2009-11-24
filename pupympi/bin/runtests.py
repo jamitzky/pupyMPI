@@ -118,7 +118,7 @@ class RunTest(Thread):
             self.killed = True
             output( "Timed out" )
             self.process.terminate() # Try SIGTERM
-            time.sleep(0.25)
+            time.sleep(0.5)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
         elif self.process.returncode != self.expectedresult:
@@ -200,16 +200,15 @@ def run_tests(test_files, options):
         global latex_output
         latex_output = latex
     
+        # We run tests sequentially since many of them are rather hefty and may
+        # interfere with others. Also breakage can lead to side effects and so
+        # non-breaking tests may appear to break when in fact the cause is another
+        # test running at the same time
         for test in test_files:
             t = RunTest(test, logfile_prefix, options, get_test_data(test))
             threadlist.append(t)
             t.start()
-            t.join() # run sequentially until issue #19 is fixed
-            # TODO: Issue 19 is resolved, try fixing the above
-
-        # for t in threadlist:
-        #    t.join()
-        #    print "all done"
+            t.join()
     
         format_output(threadlist)
         combine_logs(logfile_prefix)

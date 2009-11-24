@@ -86,7 +86,7 @@ class Network(object):
 
     def start_full_network(self):
         if self.full_network_startup:
-            Logger().debug("Starting a full network startup")
+            #Logger().debug("Starting a full network startup")
 
             # We make a full network startup by receiving from all with lower ranks and 
             # send to higher ranks
@@ -137,7 +137,7 @@ class Network(object):
         CommunicationHandler.finalize for a deeper description of
         the shutdown procedure. 
         """
-        Logger().debug("Network got finalize call")
+        #Logger().debug("Network got finalize call")
         Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
         Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
         #time.sleep(10) # FIXME: We want to try without this one!
@@ -242,7 +242,7 @@ class CommunicationHandler(threading.Thread):
         # sleeping here does not really help
         #time.sleep(4)
         
-        Logger().debug("close_all_sockets: %i sockets closed, %i sockets gave exception. Ins: %i, Outs: %i" % (n,m, len(self.sockets_in), len(self.sockets_out) ))
+        #Logger().debug("close_all_sockets: %i sockets closed, %i sockets gave exception. Ins: %i, Outs: %i" % (n,m, len(self.sockets_in), len(self.sockets_out) ))
     
     def run(self):
         
@@ -309,8 +309,8 @@ class CommunicationHandler(threading.Thread):
                 for request in request_list:
                     if request.status == "cancelled":
                         removal.append((socket, request))
-                    elif request.status == "new":
-                        Logger().debug("Starting data-send on %s. data: %s" % (write_socket, request.data))
+                    elif request.status == "new":                        
+                        Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                         # Send the data on the socket
                         try:
                             # TODO: We should loop here 
