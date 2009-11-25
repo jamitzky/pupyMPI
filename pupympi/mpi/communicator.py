@@ -618,12 +618,25 @@ class Communicator:
         
     def reduce(self, data, op, root=0):
         """
-        FIXME: Write end-user documentation for this method
+        Reduces the data given by each process by the "op" operator. As with
+        the allreduce method you can "for example" use this to calculate the
+        factorial number of size::
+        
+            from mpi import MPI
+            from mpi.operations import prod
+            
+            mpi = MPI()
+            
+            root = 4
+            
+            # We start n processes, and try to calculate n!
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+            
+            dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, prod, root=root)
+                
+            mpi.finalize()
         """
-        # FIXME: This is only a allreduce with a specific tag to indicate
-        # that's it's a regular reduce. We should send some flag to the
-        # CollectiveRequest that it can discard the final value for nodes
-        # other than the root. 
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
