@@ -9,7 +9,7 @@ identity = lambda x : x
 
 class CollectiveRequest(BaseRequest):
 
-    def __init__(self, tag, communicator, data=None, root=0):
+    def __init__(self, tag, communicator, data=None, root=0, start=True):
         # Note about the super types. How about we define them depending on how many 
         # participants get the data? Or just remove them alltoghter. Added a reduce
         # for now just to handle the allreduce implementation.
@@ -19,6 +19,7 @@ class CollectiveRequest(BaseRequest):
         self.tag = tag
         self.initial_data = data
         self.root = root
+        self.start = start
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -32,6 +33,9 @@ class CollectiveRequest(BaseRequest):
         self._m = {'status' : 'new' }
 
         Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
+        
+        if start:
+            self.data = self.two_way_tree_traversal()
 
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def traverse(nodes_from, nodes_to, data_func, initial_data, iteration=1):
@@ -108,10 +112,21 @@ class CollectiveRequest(BaseRequest):
             if direction == "up":
                 nodes_from = tree.down
                 nodes_to = tree.up
+                
+                if iteration == 1:
+                    operation = up_func
+                else:
+                    operation = down_func
+                
             else:
                 nodes_from = tree.up
                 nodes_to = tree.down
-            
+
+                if iteration == 2:
+                    operation = up_func
+                else:
+                    operation = down_func
+                
             if iteration == 2 and nodes_from:
                 # In the second way down we should only use the data
                 # from the first run if we were the last nodes in the
@@ -120,7 +135,7 @@ class CollectiveRequest(BaseRequest):
                 # we were not the last nodes.
                 data = None
             
-            return traverse(nodes_from, nodes_to, up_func, data, iteration=iteration)
+            return traverse(nodes_from, nodes_to, operation, data, iteration=iteration)
 
         # Creates reasonable defaults 
         if start_direction == "down":
@@ -162,38 +177,27 @@ class CollectiveRequest(BaseRequest):
         else:
             return rt_second
 
-    def start_barrier(self):
-        self.two_way_tree_traversal()
-
-    def start_bcast(self):
-        data = self.two_way_tree_traversal()
-        # The result of a broadcast will be a list with one element which is a 
-        # dict. It's a list of length one as we do not give a function so it
-        # defaults to safeheade -> (None | [ element ])
-        Logger().warn("Broadcast data from two_way_tree: %s" % data)
-        self.data = data.pop()['value']
+    def complete_bcast(self):
+        """
+        The data from the two_way_tree_traveral will be a list with possible
+        multiple items of the packed message. The items will be identical,
+        so we simply pick the first and return the value of the message.
+        
+        FIXME: A more optimal solution would be to ensure that only one
+            of the messages got send. 
+        """
+        self.data = self.data.pop()['value']
 
     def start_allreduce(self, operation):
         """
-        Take a tree containing all the nodes. We start from the bottom up doing the
-        operation collecting the final result at the root of the node. This decudes that
-
-            up_func = operation
-            start_direction = up
-
-        We then take the result and pass it though to the nodes. This gives:
-
-            down_func = id = None
-            return_type = 'last'
+        Document me
         """
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
 
-    def start_alltoall(self):
+    def complete_alltoall(self):
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
-        data = self.two_way_tree_traversal(start_direction="up", return_type="last")
-        
-        Logger().info("Received data: %d: %s" % (len(data), data))
+        Logger().info("Received data: %d: %s" % (len(self.data), self.data))
         
         # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
         # the N'th data in the inner list where N is our rank
@@ -201,7 +205,7 @@ class CollectiveRequest(BaseRequest):
         size = self.communicator.size()
         final_data = [None for x in range(size)]
 
-        for item in data:
+        for item in self.data:
             sender_rank = item['rank']
             final_data[item['rank']] = item['value'][rank]
         

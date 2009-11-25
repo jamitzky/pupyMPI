@@ -466,7 +466,6 @@ class Communicator:
 
         """
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
-        cr.start_barrier()
         return cr.wait()
         
     def bcast(self, root, data=None):
@@ -496,7 +495,7 @@ class Communicator:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
-        cr.start_bcast()
+        cr.complete_bcast()
         return cr.wait()
 
     def abort(self, arg):
@@ -562,7 +561,7 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
         cr.start_allreduce(op)
         return cr.wait()
         
@@ -596,7 +595,7 @@ class Communicator:
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
         """
         cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
-        cr.start_alltoall()
+        cr.complete_alltoall()
         return cr.wait()
 
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
