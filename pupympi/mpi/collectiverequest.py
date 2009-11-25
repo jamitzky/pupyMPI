@@ -194,7 +194,9 @@ class CollectiveRequest(BaseRequest):
         """
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
 
-    def complete_alltoall(self):
+    def start_alltoall(self):
+        self.data = self.two_way_tree_traversal(start_direction="up", return_type="last")
+
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
         Logger().info("Received data: %d: %s" % (len(self.data), self.data))

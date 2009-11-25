@@ -594,8 +594,8 @@ class Communicator:
             # in this order). We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
         """
-        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
-        cr.complete_alltoall()
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
+        cr.start_alltoall()
         return cr.wait()
 
     def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
