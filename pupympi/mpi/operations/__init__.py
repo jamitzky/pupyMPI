@@ -1,11 +1,11 @@
-def avg(input_list):
-    """
-    Calculate the average of the numbers given by the processes. This is 
-    an example of an operation that can't calculate intermediate results,
-    but must wait until all the numbers have been gathered. 
-    """
-    # FIXME: See doc note of why this is wrong
-    return sum(input_list)/len(input_list)
+"""
+Operations for collective requests. These will take a
+list and do something and return the result. There are
+a number of settings you can set on the function itself
+that will control the behaviour.
+
+See the documentation for more information.
+"""
 
 def prod(input_list):
     """
@@ -32,8 +32,8 @@ def prod(input_list):
     # The input list is a list of dictionaries. We're only interested in
     # looking through the actual values.
 
-    for d in input_list:
-        e = d['value']
+    for e in input_list:
         p *= e
     return p
 
+prod.partial_data = True

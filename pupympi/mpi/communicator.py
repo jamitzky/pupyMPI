@@ -1,4 +1,4 @@
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable, MPIException
 from mpi.logger import Logger
 import threading,sys,copy,time
 from mpi.request import Request
@@ -499,7 +499,6 @@ class Communicator:
 
         """
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
-        cr.start_barrier()
         return cr.wait()
         
     def bcast(self, root, data=None):
@@ -529,6 +528,7 @@ class Communicator:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
+        cr.complete_bcast()
         return cr.wait()
 
     def abort(self, arg):
@@ -594,7 +594,7 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
         cr.start_allreduce(op)
         return cr.wait()
         
@@ -627,7 +627,7 @@ class Communicator:
             # in this order). We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
         """
-        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
         cr.start_alltoall()
         return cr.wait()
 
@@ -651,12 +651,25 @@ class Communicator:
         
     def reduce(self, data, op, root=0):
         """
-        FIXME: Write end-user documentation for this method
+        Reduces the data given by each process by the "op" operator. As with
+        the allreduce method you can "for example" use this to calculate the
+        factorial number of size::
+        
+            from mpi import MPI
+            from mpi.operations import prod
+            
+            mpi = MPI()
+            
+            root = 4
+            
+            # We start n processes, and try to calculate n!
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+            
+            dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, prod, root=root)
+                
+            mpi.finalize()
         """
-        # FIXME: This is only a allreduce with a specific tag to indicate
-        # that's it's a regular reduce. We should send some flag to the
-        # CollectiveRequest that it can discard the final value for nodes
-        # other than the root. 
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
@@ -672,9 +685,21 @@ class Communicator:
         # FIXME
         pass
         
-    def scatter(self, arg):
-        # FIXME
-        pass
+    def scatter(self, data=None, root=0):
+        """
+        Takes a SIZE list at the root and distibutes
+        this to all the other processes in this communicator. The j'th
+        element in the list will go to the process with rank j. 
+        """
+        if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
+            raise MPIException("Scatter used with invalid arguments.")
+        
+        identity = lambda x : x
+        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        cr.complete_bcast()
+        data = cr.wait()
+
+        return data[self.rank()]
         
     def test_cancelled(self):
         pass
