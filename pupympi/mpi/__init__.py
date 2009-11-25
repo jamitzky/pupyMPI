@@ -270,13 +270,17 @@ class MPI(Thread):
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
+        # NOTE: I don't think this flushing can work for acks if the network thread doesn't get a slice
+        
         #Logger().debug("GOING FOR FINAL PURGE")
+        Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
+        Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
         _handle_unstarted()
         Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
         Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
-        
+        Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
         # DEBUG
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
