@@ -229,7 +229,11 @@ class CommunicationHandler(threading.Thread):
         m = 0
         # NOTE:
         # Maybe we should only attempt to close either outgoing OR ingoing sockets
-        time.sleep(4)
+        # FIXME: This sleep is a hack, which we need when dynamic socket pool is not enabled
+        #time.sleep(4)
+        #time.sleep(2)
+        
+        
         for s in self.sockets_in + self.sockets_out:            
             try:
                 #s.shutdown(0)   # Further receives are disallowed
