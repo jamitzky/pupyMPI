@@ -5,6 +5,8 @@ from mpi.request import BaseRequest, Request
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 
+identity = lambda x : x
+
 class CollectiveRequest(BaseRequest):
 
     def __init__(self, tag, communicator, data=None, root=0):
@@ -33,14 +35,6 @@ class CollectiveRequest(BaseRequest):
         Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
 
     def two_way_tree_traversal(self, tag, root=0, initial_data=None, up_func=None, down_func=None, start_direction="down", return_type='first'):
-        def safehead(data_list):
-            if data_list:
-                return data_list.pop()
-            else:
-                return None
-            
-        identity = lambda x : x
-    
         def traverse(nodes_from, nodes_to, data_func, initial_data, pack=True):
             Logger().debug("""
             Starting a traverse with:
@@ -120,10 +114,17 @@ class CollectiveRequest(BaseRequest):
             
             return traverse(nodes_from, nodes_to, up_func, data, pack=first)
 
+        # Creates reasonable defaults 
+        if start_direction == "down":
+            end_direction = "up"
+        else:
+            end_direction = "down"
+            
         # Step 1: Setup safe methods for propergating data through the tree if
         #         the callee didn't give us any.
-        up_func = up_func or identity
+        #up_func = up_func or CollectiveRequest.Datafunctions.safehead
         down_func = down_func or identity
+        up_func = up_func or identity
 
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
@@ -135,10 +136,6 @@ class CollectiveRequest(BaseRequest):
         
         if self.communicator.rank() == tree.root:
             Logger().debug("Root of the tree got a list with %d elements: %s" % (len(rt_first), rt_first))
-            
-        end_direction = "down"
-        if start_direction == "down":
-            end_direction = "up"
             
         Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
@@ -157,8 +154,8 @@ class CollectiveRequest(BaseRequest):
         else:
             return rt_second
 
-    def start_barrier(self, tag):
-        self.two_way_tree_traversal(tag)
+    def start_barrier(self):
+        self.two_way_tree_traversal(self.tag)
 
     def start_bcast(self):
         data = self.two_way_tree_traversal(self.tag, root=self.root, initial_data=self.initial_data)
