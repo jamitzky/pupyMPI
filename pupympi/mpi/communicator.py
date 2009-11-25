@@ -496,6 +496,7 @@ class Communicator:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
+        cr.start_bcast()
         return cr.wait()
 
     def abort(self, arg):

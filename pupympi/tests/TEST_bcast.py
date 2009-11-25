@@ -8,17 +8,22 @@ from mpi import MPI
 
 mpi = MPI()
 
-rank = mpi.MPI_COMM_WORLD.rank()
-size = mpi.MPI_COMM_WORLD.size()
+world = mpi.MPI_COMM_WORLD
+
+rank = world.rank()
+size = world.size()
 
 BCAST_ROOT = 3
 BCAST_MESSAGE = "Test message for rank %d" % BCAST_ROOT
 
 if rank == BCAST_ROOT:
-    mpi.MPI_COMM_WORLD.bcast(BCAST_ROOT, BCAST_MESSAGE)
+    world.bcast(BCAST_ROOT, BCAST_MESSAGE)
 else:
-    message = mpi.MPI_COMM_WORLD.bcast(BCAST_ROOT)
-    print message
-    assert message == BCAST_MESSAGE
-
+    message = world.bcast(BCAST_ROOT)
+    try:
+        assert message == BCAST_MESSAGE
+    except AssertionError, e:
+        print "Excepted data:", BCAST_MESSAGE
+        print "Received data:", message
+        raise e
 mpi.finalize()
