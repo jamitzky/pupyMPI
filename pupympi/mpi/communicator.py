@@ -1,4 +1,4 @@
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable, MPIException
 from mpi.logger import Logger
 import threading,sys,copy,time
 from mpi.request import Request
@@ -652,9 +652,21 @@ class Communicator:
         # FIXME
         pass
         
-    def scatter(self, arg):
-        # FIXME
-        pass
+    def scatter(self, data=None, root=0):
+        """
+        Takes a SIZE list at the root and distibutes
+        this to all the other processes in this communicator. The j'th
+        element in the list will go to the process with rank j. 
+        """
+        if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
+            raise MPIException("Scatter used with invalid arguments.")
+        
+        identity = lambda x : x
+        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        cr.complete_bcast()
+        data = cr.wait()
+
+        return data[self.rank()]
         
     def test_cancelled(self):
         pass
