@@ -34,10 +34,13 @@ class Network(object):
         
         if options.single_communication_thread:
             self.t_out = self.t_in
+            self.t_out.type = "combo"
         else:
             self.t_out = CommunicationHandler(self, options.rank, self.socket_pool)
             self.t_out.daemon = True
             self.t_out.start()
+            self.t_out.type = "out"
+            self.t_in.type = "in"
         
         (server_socket, hostname, port_no) = get_socket()
         self.port = port_no
@@ -181,7 +184,9 @@ class CommunicationHandler(threading.Thread):
         self.rank = rank
         self.socket_pool = socket_pool
         
-        self.shutdown_event = threading.Event()
+        self.type = "unset" # Will be set to "in","out" or "combo" and allow easy way of detecting role
+        
+        self.shutdown_event = threading.Event()            
         
         # Locks for proper access to the internal socket->request structure
         self.socket_to_request_lock = threading.Lock()
@@ -211,7 +216,10 @@ class CommunicationHandler(threading.Thread):
             self.network.t_out.add_out_socket(client_socket)
 
         with self.socket_to_request_lock:
-            self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+            try:
+                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+            except Exception, e: # This should not happen
+                Logger().error("Network-thread (%s) got error: %s of type: %s, socket_to_request was: %s" % (self.type, e, type(e), self.network.t_out.socket_to_request ) )
 
 
     def add_in_socket(self, client_socket):
@@ -258,15 +266,8 @@ class CommunicationHandler(threading.Thread):
             try:
                 return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
             except Exception, e:
-                print "Got exception"
-                print e
-                print type(e)
-                print self.sockets_in
-                print self.sockets_out
-                print "----- done ---------"
-                print in_list
-                print out_list
-                print error_list
+                Logger().debug("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
+                Logger().debug("sockets_in: %s, sockets_out: %s \n in_list: %s, out_list: %s, error_list: %s" % (self.sockets_in, self.sockets_out, in_list, out_list, error_list) )
         
         def _handle_readlist(readlist):
             for read_socket in readlist:
@@ -356,6 +357,8 @@ class CommunicationHandler(threading.Thread):
             _handle_readlist(in_list)
             _handle_writelist(out_list)
         
+        Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
+   
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then close the sockets.
         while self.socket_to_request:
@@ -369,6 +372,9 @@ class CommunicationHandler(threading.Thread):
             
             for r in removal:
                 del self.socket_to_request[r]
+
+        if self.type != "in":
+            Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
         
         # The above loop only breaks when the send structure is empty, ie there are no more
         # requests to be send. We can therefore close the sockets. 
