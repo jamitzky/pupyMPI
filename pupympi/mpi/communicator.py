@@ -340,8 +340,8 @@ class Communicator:
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
 
-        # Create a receive request object
-        handle = Request("send", self, destination_rank, tag, data=content)
+        # Create a send request object
+        handle = Request("send", self, destination_rank, tag, False, data=content)
         
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
@@ -354,6 +354,42 @@ class Communicator:
 
         return handle
 
+    def issend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
+        """Synchronous send"""
+        logger = Logger()
+        # Check that destination exists
+        if not self.have_rank(destination_rank):
+            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+
+        # Check that tag is valid
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
+
+        # Create a send request object
+        dummyhandle = Request("send", self, destination_rank, tag, True, data=content)
+        
+        # Create a recv request object to catch the acknowledgement message coming in
+        # when this request is matched it also triggers the unacked->ready transition on the request handle
+        handle = Request("recv", self, destination_rank, constants.TAG_ACK)
+        #self.irecv(destination_rank, constants.TAG_ACK)
+        
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        with self.mpi.has_work_cond:
+            with self.mpi.unstarted_requests_lock:
+                self.mpi.unstarted_requests.append( dummyhandle )
+                self.mpi.unstarted_requests.append( handle )
+                self.mpi.unstarted_requests_has_work.set()
+            self.mpi.has_work_cond.notify()
+
+        return handle
+        
+
+    def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
+        """Synchronous send"""
+        return self.issend(destination, content, tag).wait()
+        
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -439,10 +475,7 @@ class Communicator:
             
         return None           
                 
-    def ssend(self):
-        """Synchroneous send"""
-        Logger().warn("Non-Implemented method 'ssend' called.")
-        
+
     def probe(self):
         Logger().warn("Non-Implemented method 'probe' called.")
         

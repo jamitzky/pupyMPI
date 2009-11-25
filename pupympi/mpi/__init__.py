@@ -12,6 +12,8 @@ from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle
 
+from mpi.request import Request
+
 class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
@@ -169,7 +171,7 @@ class MPI(Thread):
         remove = [] 
         with self.received_data_lock:
             for data in self.received_data:
-                (communicator_id, sender, tag, message) = data
+                (communicator_id, sender, tag, acknowledge, message) = data
                 
                 # The first strict rule is that any communication must
                 # take part in the same communicator.
@@ -181,11 +183,23 @@ class MPI(Thread):
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
                         
                         # The sender / receiver must agree on the tag, or
-                        # we must be ready to receive any tag
-                        if request.tag in (tag, constants.MPI_TAG_ANY):
+                        # we must be ready to receive any tag or
+                        # it should be an acknowledgement
+                        if request.tag in (tag, constants.MPI_TAG_ANY, constants.TAG_ACK):
                             remove.append(data)                            
                             request.update(status="ready", data=message)
                             match = True
+                            # Synchronized communication requires acknowledgement
+                            if acknowledge:
+                                Logger().debug("SSEND RECIEVED request: %s" % request)
+                                # Generate an acknowledge message
+                                # TODO: Consider using an empty message string, to save resources
+                                self.communicators[communicator_id].isend(sender, "ACKNOWLEDGEMENT", constants.TAG_ACK)
+                            # System message: Acknowledge receive of ssend
+                            elif request.tag == constants.TAG_ACK:
+                                Logger().debug("ACK RECIEVED request: %s" % request)
+
+                            
                             break # We can only find matching data for one request and we have
                         
             for data in remove:
@@ -197,7 +211,7 @@ class MPI(Thread):
     # good and the ordering optimal
     
         # create internal functions that will be used below
-        def _handle_unstarted(debugarg=""):
+        def _handle_unstarted():
             # Schedule unstarted requests (may be in- or outbound)
             #                if self.unstarted_requests_has_work.is_set():
             with self.unstarted_requests_lock:
@@ -242,6 +256,9 @@ class MPI(Thread):
                     removal = [] # Remember succesfully matched requests so we can remove them
                     for request in self.pending_requests:
                         if self.match_pending(request):
+                            # FIXME: Either here or in the match_pending we need to
+                            # issue a send with a reciept
+                            
                             # The matcher function does the actual request update
                             # and will remove matched data from received_data queue
                             # we only need to update our own queue
@@ -254,7 +271,7 @@ class MPI(Thread):
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
         #Logger().debug("GOING FOR FINAL PURGE")
-        _handle_unstarted("FINAL PURGE ")
+        _handle_unstarted()
         Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
@@ -279,6 +296,9 @@ class MPI(Thread):
             else:
                 # If the request was outgoing we add to the out queue instead (on the out thread)
                 self.network.t_out.add_out_request(request)
+                
+                #For synchronized sends we also need to add a recieve receipt request
+                # FIXME: Implement here or in add_out_request
 
     def finalize(self):
         """
