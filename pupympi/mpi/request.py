@@ -31,7 +31,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, data=None):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -40,22 +40,25 @@ class Request(BaseRequest):
         self.communicator = communicator
         self.participant = participant # The other process' rank
         self.tag = tag
+        self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
         # 'new' ->       The object is newly created. If this is send the lower layer can start to 
         #                do stuff with the data
-        # 'cancelled' -> The user cancelled the request. A some later point this will be removed
+        # 'unacked'   -> An ssend that has not been acknowledged yet.
         # 'ready'     -> Means we have the data (in receive) or pickled the data (send) and can
-        #                safely return from a test or wait call.
+        #                safely return from a test or wait call. For an ssend this means that the
+        #                reciever has acknowledged receiving.
+        # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
-        Logger().debug("Request object created for communicator %s, tag %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.request_type, self.participant))
+        Logger().debug("Request object created for communicator %s, tag %s, data %s, ack %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
     
     def __repr__(self):        
         
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.status, _nice_data(self.data) )
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
     
     def update(self, status, data=None):
         Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))

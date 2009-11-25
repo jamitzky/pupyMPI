@@ -201,7 +201,7 @@ class CommunicationHandler(threading.Thread):
         port = self.network.all_procs[global_rank]['port']
         
         # Create the proper data structure and pickle the data
-        data = (request.communicator.id, request.communicator.rank(), request.tag, request.data)
+        data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
         request.data = prepare_message(data, request.communicator.rank())
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
@@ -229,6 +229,7 @@ class CommunicationHandler(threading.Thread):
         m = 0
         # NOTE:
         # Maybe we should only attempt to close either outgoing OR ingoing sockets
+        
         # FIXME: This sleep is a hack, which we need when dynamic socket pool is not enabled
         #time.sleep(4)
         #time.sleep(2)
@@ -239,10 +240,10 @@ class CommunicationHandler(threading.Thread):
                 #s.shutdown(0)   # Further receives are disallowed
                 #s.shutdown(1)   # Further sends are disallowed.
                 #s.shutdown(2)   # Further sends and receives are disallowed.
-                s.close()
-                n += 1
+                s.close()                
+                n += 1 # For debugging
             except Exception, e:
-                m += 1
+                m += 1 # For debugging
                 Logger().debug("Got error when closing socket: %s" % e)
          
         # DEBUG
@@ -296,7 +297,6 @@ class CommunicationHandler(threading.Thread):
                     Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                     
                 Logger().debug("Received data from rank %d" % rank)
-                data = pickle.loads(raw_data)
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
@@ -327,9 +327,15 @@ class CommunicationHandler(threading.Thread):
                             Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                             # Send went wrong, do not update, but hope for better luck next time
                             continue
-                            
+                        
+                        # NOTE: Do we want to remove even if it is an unacked?    
                         removal.append((write_socket, request))
-                        request.update("ready") # update status and signal anyone waiting on this request
+                        
+                        if request.acknowledge:
+                            request.update("unacked") # update status to wait for acknowledgement
+                            Logger().debug("Ssend done, status set to unacked")
+                        else:                            
+                            request.update("ready") # update status and signal anyone waiting on this request                            
                     else:
                         # This seems to happen with the "finished" state a lot of times. It should not happen
                         # as it might conclude that a request is changing it's state when it's not supposed

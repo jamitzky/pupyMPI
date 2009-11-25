@@ -7,8 +7,8 @@
 # This test is meant to be run with a odd number of processes
 # With debugging on 13 procs can throw around the token in just under a minute, so if 5 can't do it in 1.5 minutes something is wrong
 """
-as of 22/11-09 this test has serious problems with more than 9 procs. Often the
-first run is fine but even with a few seconds to cool of the next runs often hang
+This test has serious problems with more than 9 procs when using the static socketpool.
+Often the first run is fine but even with a few seconds to cool of the next runs often hang
 
 - seems like sometimes a proccess recieves the token, but has not recieved all
 the start up messages from lower ranking processes. Therefore it has not left
@@ -18,9 +18,6 @@ from lower, send off to all uppers and the recieve and pass on the token AND the
 shutdown sleeping for 4 secs and die and break socket before a higher gets the
 startup message?
 
-Sleep(9) does help a lot ... :/
-
-If we had a barrier we could test it
 """
 
 from mpi import MPI
