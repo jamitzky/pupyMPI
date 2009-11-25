@@ -5,6 +5,7 @@
 
 from mpi import MPI
 from mpi.operations import prod
+from datetime import datetime
 
 def fact(n):
     if n == 0:
@@ -13,22 +14,21 @@ def fact(n):
         return n * fact(n-1)
     
 mpi = MPI()
-from datetime import datetime
+world = mpi.MPI_COMM_WORLD
 n = datetime.now()
+
 # We start n processes, and try to calculate n!
-rank = mpi.MPI_COMM_WORLD.rank()
-size = mpi.MPI_COMM_WORLD.size()
-dist_fact = mpi.MPI_COMM_WORLD.allreduce(rank+1, prod)
+rank = world.rank()
+size = world.size()
 
-time_taken = datetime.now()-n
+dist_fact = world.allreduce(rank+1, prod)
 
-print "I'm rank %d and I also got the result %d. So cool. Took %s" % (rank, dist_fact, time_taken)
-
-max_time  = mpi.MPI_COMM_WORLD.allreduce(time_taken, max)
-
-if rank == 0:
-    print "Maximum time for the first allreduce was", max_time
-
-assert fact(size) == dist_fact
+try:
+    assert fact(size) == dist_fact
+except AssertionError, e:
+    print "Got AssertionError"
+    print "\tExpected data: %s" % fact(size)
+    print "\tReceived: %s" % dist_fact
+    raise e
 
 mpi.finalize()

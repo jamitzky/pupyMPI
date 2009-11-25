@@ -32,9 +32,8 @@ def prod(input_list):
     # The input list is a list of dictionaries. We're only interested in
     # looking through the actual values.
 
-    for d in input_list:
-        e = d['value']
+    for e in input_list:
         p *= e
     return p
 
-product.partial_data = True
+prod.partial_data = True

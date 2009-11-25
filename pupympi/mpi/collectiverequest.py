@@ -38,7 +38,7 @@ class CollectiveRequest(BaseRequest):
             self.data = self.two_way_tree_traversal()
 
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
-        def traverse(nodes_from, nodes_to, data_func, initial_data, iteration=1):
+        def traverse(direction, nodes_from, nodes_to, data_func, initial_data, iteration=1):
             Logger().debug("""
             Starting a traverse with:
             \tNodes from: %s
@@ -64,10 +64,12 @@ class CollectiveRequest(BaseRequest):
 
             for handle in request_list:
                 data = handle.wait()
-                if data:
+                if data and isinstance(data, list):
                     for data_item in data:
                         data_list.append(data_item)
-            
+                else:
+                    data_list.append(data)
+             
             Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
 
             if iteration == 1:
@@ -86,10 +88,10 @@ class CollectiveRequest(BaseRequest):
                     full_meta = getattr(data_func, "full_meta", False)
                     
                     if not full_meta:
-                        data_list = [x['value'] for x in data_list]
+                        data_list =  [x['value'] for x in data_list]
                 
-                    data_list = data_func(data_list)
-                
+                    data_list = {'rank' : self.communicator.rank(), 'value' : data_func(data_list) }
+                    
             elif iteration == 2:
                 # Second iteration should just pass the data through the pipeline
                 # we might develop something more clever here to enable filtering
@@ -97,11 +99,13 @@ class CollectiveRequest(BaseRequest):
                 d = initial_data
                 if not data_list:
                     data_list = d
-    
+
             else:
                 raise Exception("Collective request got invalid iteration: %s" % iteration)
             
-            # Send the data upwards in the tree. 
+            # Pack the data a special way so we can put it into the right stucture later
+            # on. 
+             
             for rank in nodes_to:
                 self.communicator.send(rank, data_list, self.tag)
 
@@ -135,7 +139,7 @@ class CollectiveRequest(BaseRequest):
                 # we were not the last nodes.
                 data = None
             
-            return traverse(nodes_from, nodes_to, operation, data, iteration=iteration)
+            return traverse(direction, nodes_from, nodes_to, operation, data, iteration=iteration)
 
         # Creates reasonable defaults 
         if start_direction == "down":
@@ -157,9 +161,6 @@ class CollectiveRequest(BaseRequest):
         # Step 3: Traverse the tree in the first direction. 
         rt_first = start_traverse(start_direction, tree, self.initial_data)
         
-        if self.communicator.rank() == tree.root:
-            Logger().debug("Root of the tree got a list with %d elements: %s" % (len(rt_first), rt_first))
-            
         Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
         # Step 4: Run the other direction. This should also just have been
@@ -186,6 +187,7 @@ class CollectiveRequest(BaseRequest):
         FIXME: A more optimal solution would be to ensure that only one
             of the messages got send. 
         """
+        print self.communicator.rank(), self.data
         self.data = self.data.pop()['value']
 
     def start_allreduce(self, operation):
@@ -193,7 +195,16 @@ class CollectiveRequest(BaseRequest):
         Document me
         """
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
-
+        
+        # FIXME: Currently we're looking at the type of self.data as the collective
+        # operations will wrap things in to many lists. We need some way to ensure
+        # this does not happen. Also to test the system with lists as the primary 
+        # datatype, as our system might crash on this. 
+        if isinstance(self.data, list):
+            self.data = self.data.pop()['value']
+        else:
+            self.data = self.data['value']
+        
     def start_alltoall(self):
         self.data = self.two_way_tree_traversal(start_direction="up", return_type="last")
 
