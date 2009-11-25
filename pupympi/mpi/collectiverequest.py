@@ -17,6 +17,8 @@ class CollectiveRequest(BaseRequest):
         self.tag = tag
         self.initial_data = data
 
+        self.root = root
+
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
         # 
@@ -36,6 +38,8 @@ class CollectiveRequest(BaseRequest):
                 return data_list.pop()
             else:
                 return None
+            
+        identity = lambda x : x
     
         def traverse(nodes_from, nodes_to, data_func, initial_data, pack=True):
             Logger().debug("""
@@ -118,8 +122,8 @@ class CollectiveRequest(BaseRequest):
 
         # Step 1: Setup safe methods for propergating data through the tree if
         #         the callee didn't give us any.
-        up_func = up_func or safehead
-        down_func = down_func or safehead
+        up_func = up_func or identity
+        down_func = down_func or identity
 
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
@@ -156,13 +160,14 @@ class CollectiveRequest(BaseRequest):
     def start_barrier(self, tag):
         self.two_way_tree_traversal(tag)
 
-    def start_bcast(self, root, data, tag):
-        data = self.two_way_tree_traversal(tag, root=root, initial_data=data)
+    def start_bcast(self):
+        data = self.two_way_tree_traversal(self.tag, root=self.root, initial_data=self.initial_data)
         
         # The result of a broadcast will be a list with one element which is a 
         # dict. It's a list of length one as we do not give a function so it
         # defaults to safeheade -> (None | [ element ])
-        self.data = data.values().pop()
+        Logger().warn("Broadcast data from two_way_tree: %s" % data)
+        self.data = data.pop()['value']
 
     def start_allreduce(self, operation):
         """
@@ -184,8 +189,7 @@ class CollectiveRequest(BaseRequest):
     def start_alltoall(self):
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
-        identity = lambda x : x
-        data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, up_func=identity, start_direction="up", return_type="last")
+        data = self.two_way_tree_traversal(self.tag, initial_data=self.initial_data, start_direction="up", return_type="last")
         
         Logger().info("Received data: %d: %s" % (len(data), data))
         
