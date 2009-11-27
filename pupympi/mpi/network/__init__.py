@@ -157,10 +157,7 @@ class Network(object):
         self.t_in.join()
         self.t_out.join()
         
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/network/__init__.py
-=======
         Logger().debug("network.finalize: Closing sockets")
->>>>>>> /tmp/__init__.py~other.Ao2wrH
         # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
         #time.sleep(2)
         

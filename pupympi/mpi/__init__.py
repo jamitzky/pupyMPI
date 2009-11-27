@@ -268,13 +268,10 @@ class MPI(Thread):
                     for request in removal:
                         self.pending_requests.remove(request)
                         
-                    Logger().error("pending_requests_has_work: %s"% (self.pending_requests_has_work))    
+                    Logger().debug("pending_requests_has_work: %s"% (self.pending_requests_has_work))    
                         
-                    try:
-                        Logger().debug("Gonna try clearing")
-                        self.pending_requests_has_work.clear() # We can't match for now wait until further data received
-                    except Exception, e:
-                        pass
+                    Logger().debug("Gonna try clearing")
+                    self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
@@ -289,9 +286,7 @@ class MPI(Thread):
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
         Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
         Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
-<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/__init__.py
         Logger().info("MPI environment shutting down.")
-=======
         
         # Eksperimental
         self.network.finalize()
@@ -300,7 +295,6 @@ class MPI(Thread):
         #time.sleep(1)
         #time.sleep(2)
         
->>>>>>> /tmp/__init__.py~other.k4VE7E
         # DEBUG
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
