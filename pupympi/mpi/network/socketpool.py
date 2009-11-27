@@ -125,4 +125,19 @@ class SocketPool(object):
         with self.sockets_lock:
             self.metainfo[client_socket] = (rank, True, force_persistent)
             self.sockets.append(client_socket)
-    
+                
+    def close_all_sockets(self):
+        """
+        Close all sockets in the socketpool
+        """
+        # DEBUG
+        n = 0
+        m = 0
+        
+        for s in self.sockets:            
+            try:
+                s.close()                
+                n += 1 # For debugging
+            except Exception, e:
+                m += 1 # For debugging
+                Logger().debug("Got error when closing socket: %s" % e)

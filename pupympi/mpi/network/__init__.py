@@ -122,7 +122,7 @@ class Network(object):
             for handle in recv_handles:
                 handle.wait()
             
-            # NOTE: What is the effect of this? Doesn't it make the socketpool static?
+            # Full network start up means a static socket pool
             self.socket_pool.readonly = True
         
         # DEBUG NOTE
@@ -157,10 +157,21 @@ class Network(object):
         self.t_in.join()
         self.t_out.join()
         
+<<<<<<< /home/fred/Diku/ppmpi/code/pupympi/mpi/network/__init__.py
+=======
+        Logger().debug("network.finalize: Closing sockets")
+>>>>>>> /tmp/__init__.py~other.Ao2wrH
         # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
         #time.sleep(2)
         
-        #self.main_receive_socket.close()
+        
+        # Experimental
+        # Network threads are dead now.
+        # Close socketpool
+        self.socket_pool.close_all_sockets()
+        
+        Logger().debug("network.finalize: DONE Finalize")
+        
         
 class CommunicationHandler(threading.Thread):
     """
@@ -378,7 +389,7 @@ class CommunicationHandler(threading.Thread):
         
         # The above loop only breaks when the send structure is empty, ie there are no more
         # requests to be send. We can therefore close the sockets. 
-        self.close_all_sockets()   
+        #self.close_all_sockets()   
 
     def finalize(self):
         self.shutdown_event.set()
