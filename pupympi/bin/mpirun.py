@@ -228,7 +228,7 @@ if __name__ == "__main__":
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
    
-    logger.debug("Check IO forward")    
+    logger.debug("Checking IO forward")    
     if options.process_io == "asyncdirect":
         logger.debug("IO forward thread will be stopped")
         # Signal shutdown to io_forwarder thread
