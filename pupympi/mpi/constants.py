@@ -3,8 +3,8 @@
 MPI_TAG_ANY = -1 # public, this and below
 MPI_SOURCE_ANY = -2 # to be recognizable
 
-# internal tags below. Note they do not have to be powers of two, but Rune is being silly.
-TAG_ACK     = -3 # Max Power's
+# internal tags below. 
+TAG_ACK     = -3 
 TAG_BCAST   = -4 
 TAG_EMPTY   = -5
 TAG_BARRIER = -6
@@ -12,7 +12,7 @@ TAG_COMM_CREATE = -7
 TAG_ALLREDUCE = -8
 TAG_REDUCE = -9
 TAG_INITIALIZING = -10
-MPI_TAG_FULL_NETWORK = -11 # WHY IS THIS PREFIXED WITH MPI_?
+TAG_FULL_NETWORK = -11 
 TAG_ALLTOALL = -12
 TAG_SCATTER = -13
 TAG_ALLGATHER = -14
