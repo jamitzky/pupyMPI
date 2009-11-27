@@ -107,14 +107,14 @@ class Network(object):
             recv_handles = []
             # Start all the receive 
             for r_rank in receiver_ranks:
-                handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.MPI_TAG_FULL_NETWORK)
+                handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
                 recv_handles.append(handle)
             
             #Logger().debug("Start_full_network: All recieves posted")
 
             # Send all
             for s_rank in sender_ranks:
-                self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.MPI_TAG_FULL_NETWORK)
+                self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.TAG_FULL_NETWORK)
 
             #Logger().debug("Start_full_network: All sends done")
 
