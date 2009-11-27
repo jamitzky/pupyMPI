@@ -189,6 +189,14 @@ class CollectiveRequest(BaseRequest):
         """
         print self.communicator.rank(), self.data
         self.data = self.data.pop()['value']
+    
+    def start_allgather(self):
+        data = self.two_way_tree_traversal(start_direction="up", return_type="last")
+        final_data = range(self.communicator.size())
+        for item in data:
+            final_data[item['rank']] = item['value']
+        
+        self.data = final_data
 
     def start_allreduce(self, operation):
         """
