@@ -266,8 +266,8 @@ class CommunicationHandler(threading.Thread):
             try:
                 return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
             except Exception, e:
-                Logger().debug("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
-                Logger().debug("sockets_in: %s, sockets_out: %s \n in_list: %s, out_list: %s, error_list: %s" % (self.sockets_in, self.sockets_out, in_list, out_list, error_list) )
+                Logger().error("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
+                Logger().error("sockets_in: %s, sockets_out: %s \n in_list: %s, out_list: %s, error_list: %s" % (self.sockets_in, self.sockets_out, in_list, out_list, error_list) )
         
         def _handle_readlist(readlist):
             for read_socket in readlist:
