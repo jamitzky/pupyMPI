@@ -692,11 +692,19 @@ class Communicator:
             return data
     
     def reduce_scatter(self, arg):
-        # FIXME
+        """
+        MPI_REDUCE_SCATTER is functionally equivalent to MPI_REDUCE with count
+        equal to the sum of recvcounts[i] followed by MPI_SCATTERV with sendcounts
+        equal to recvcounts.
+        """
         pass
         
     def scan(self, arg):
-        # FIXME
+        """
+        The scan function can be through of a partial reducing involving
+        process 0 to i, where i is the rank of any given process in this
+        communicator. 
+        """
         pass
         
     def scatter(self, data=None, root=0):
