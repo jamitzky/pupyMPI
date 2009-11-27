@@ -150,6 +150,7 @@ class MPI(Thread):
 
         # Makes every node connect to each other if the settings allow us to do that.
         self.network.start_full_network()
+        logger.info("MPI environment is up and running.")
 
     def match_pending(self, request):
         """
@@ -281,6 +282,7 @@ class MPI(Thread):
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
         Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
         Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
+        Logger().info("MPI environment shutting down.")
         # DEBUG
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out

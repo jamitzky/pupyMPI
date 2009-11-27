@@ -157,7 +157,6 @@ class Network(object):
         self.t_in.join()
         self.t_out.join()
         
-        Logger().debug("network.finalize: DONE Finalize")
         # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
         #time.sleep(2)
         
@@ -375,6 +374,7 @@ class CommunicationHandler(threading.Thread):
 
         if self.type != "in":
             Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
+        Logger().info("Shutting down thread type '%s'." % self.type)
         
         # The above loop only breaks when the send structure is empty, ie there are no more
         # requests to be send. We can therefore close the sockets. 
