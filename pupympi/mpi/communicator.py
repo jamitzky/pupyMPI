@@ -531,26 +531,6 @@ class Communicator:
         cr.complete_bcast()
         return cr.wait()
 
-    def abort(self, arg):
-        """
-        This routine makes a "best attempt" to abort all tasks in the group of comm.
-        http://www.mpi-forum.org/docs/mpi-11-html/node151.html
-        
-        .. code-block:: c
-        
-            // Example C code
-            #include <mpi.h>
-            int main(int argc, char *argv[])
-            {
-                MPI_Init(NULL, NULL);
-                MPI_Abort(MPI_COMM_WORLD, 911);
-                /* No further code will execute */
-                MPI_Finalize();
-                return 0;
-            }
-        """
-        Logger().warn("Non-Implemented method 'abort' called.")
-
     def allgather(self, sendbuf, sendcount, recvcount):
         """
         MPI_ALLGATHER can be thought of as MPI_GATHER, but where all processes receive the result, instead of just the root. 

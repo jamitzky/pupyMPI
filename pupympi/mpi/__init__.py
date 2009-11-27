@@ -318,6 +318,26 @@ class MPI(Thread):
                 #For synchronized sends we also need to add a recieve receipt request
                 # FIXME: Implement here or in add_out_request
 
+    def abort(self, arg):
+        """
+        This routine makes a "best attempt" to abort all tasks in the group of comm.
+        http://www.mpi-forum.org/docs/mpi-11-html/node151.html
+        
+        .. code-block:: c
+        
+            // Example C code
+            #include <mpi.h>
+            int main(int argc, char *argv[])
+            {
+                MPI_Init(NULL, NULL);
+                MPI_Abort(MPI_COMM_WORLD, 911);
+                /* No further code will execute */
+                MPI_Finalize();
+                return 0;
+            }
+        """
+        Logger().warn("Non-Implemented method 'abort' called.")
+
     def finalize(self):
         """
         This method cleans up after a MPI run. Closes filehandles, 
