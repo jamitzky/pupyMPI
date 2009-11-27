@@ -531,17 +531,32 @@ class Communicator:
         cr.complete_bcast()
         return cr.wait()
 
-    def allgather(self, sendbuf, sendcount, recvcount):
+    def allgather(self, data):
         """
-        MPI_ALLGATHER can be thought of as MPI_GATHER, but where all processes receive the result, instead of just the root. 
-        The block of data sent from the jth process is received by every process and placed in the jth block of the buffer recvbuf. 
+        The allgather function will gather all the data variables from the
+        participants and return it in a rank-order. All the involced processes
+        will receive the result.
         
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node73.html#Node73
+        As an example each process can send it's rank::
         
-        Examples: http://mpi.deino.net/mpi_functions/MPI_Allgather.html        
+            from mpi import MPI
+            mpi = MPI()
+            
+            world = mpi.MPI_COMM_WORLD
+            
+            rank = world.rank()
+            size = world.size()
+            
+            received = world.allgather(rank+1)
+            
+            assert received == range(1,size+1)
+                
+            mpi.finalize()
+            
         """
-        # TODO return recvbuf
-        Logger().warn("Non-Implemented method 'allgather' called.")
+        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
+        cr.start_allgather()
+        return cr.wait()
 
     def allreduce(self, data, op):
         """
@@ -611,24 +626,43 @@ class Communicator:
         cr.start_alltoall()
         return cr.wait()
 
-    def gather(self, sendbuf, sendcount, recvbuf, recvcount, root):
+    def gather(self, data, root=0):
         """
         Each process (root process included) sends the contents of its send buffer to the root 
-        process. The root process receives the messages and stores them in rank order. 
+        process. The root process receives the messages and stores them in rank order.
         
-        IN sendbuf starting address of send buffer (choice) 
-        IN sendcount number of elements in send buffer (integer) 
-        IN sendtype data type of send buffer elements (handle) 
-        OUT recvbuf address of receive buffer (choice, significant only at root) 
-        IN recvcount number of elements for any single receive (integer, significant only at root) 
-        IN recvtype data type of recv buffer elements (significant only at root) (handle) 
-        IN root rank of receiving process (integer) 
-        IN comm communicator (handle) 
+        As an example each of the processes could send their rank to the root::
         
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node69.html
+            from mpi import MPI
+            mpi = MPI()
+            
+            world = mpi.MPI_COMM_WORLD
+            
+            rank = world.rank()
+            size = world.size()
+            
+            # Make every processes send their rank to the root. 
+            
+            ROOT = 3
+            
+            received = world.gather(rank+1, root=ROOT)
+            
+            if ROOT == rank:
+                assert received == range(1, size+1)
+            else:
+                assert received == None
+                
+            mpi.finalize()
+            
+        ..note:: 
+            If you need all the processes to receive the result you should look at allgather.  
         """
-        Logger().warn("Non-Implemented method 'gather' called.")
-        
+        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
+        cr.start_allgather()
+        data = cr.wait()
+        if self.rank() == root:
+            return data
+         
     def reduce(self, data, op, root=0):
         """
         Reduces the data given by each process by the "op" operator. As with
