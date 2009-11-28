@@ -93,6 +93,9 @@ class MPI(Thread):
         # The members are filled out after the network is initialized.
         self.communicators = {}
         self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
+        """
+        Testing docstrings for attributes
+        """
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
