@@ -194,7 +194,6 @@ class Communicator:
 
         # thats it....dont do anything more. This deviates from the MPI standard.
 
-
     def comm_split(self, existing_communicator, color, key = None):
         """
         This function partitions the group associated with comm into disjoint subgroups, one for each value of color. 
@@ -385,7 +384,6 @@ class Communicator:
 
         return handle
         
-
     def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
         """Synchronous send"""
         return self.issend(destination, content, tag).wait()
@@ -475,7 +473,6 @@ class Communicator:
             
         return None           
                 
-
     def probe(self):
         Logger().warn("Non-Implemented method 'probe' called.")
         
@@ -728,7 +725,6 @@ class Communicator:
         cr.start_scan(operation)
         return cr.wait()
 
-        
     def scatter(self, data=None, root=0):
         """
         Takes a SIZE list at the root and distibutes
@@ -807,6 +803,7 @@ class Communicator:
         
     def topo_test(self):
         """docstring for topo_test"""
+        # FIXME: Is this method still on our roadmap? 
         pass
         
     def waitall(self, request_list):
@@ -928,7 +925,8 @@ class Communicator:
             pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
         """
         
-        return time.time() # TODO Improve clock function
+        return time.time() 
+        # TODO Improve clock function
         
     def Wtick(self):
 
@@ -938,7 +936,8 @@ class Communicator:
         example, if the clock is implemented by the hardware as a counter that is incremented
         every millisecond, the value returned by wtick() should be 10 to the power of -3.
         """
-        return 1.0 # TODO improve resolution detection
+        return 1.0 
+        # TODO improve resolution detection
         
     ################################################################################################################
     # LOCAL OPERATIONS
