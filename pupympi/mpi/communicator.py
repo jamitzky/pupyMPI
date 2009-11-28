@@ -699,13 +699,35 @@ class Communicator:
         """
         pass
         
-    def scan(self, arg):
+    def scan(self, data, operation):
         """
         The scan function can be through of a partial reducing involving
         process 0 to i, where i is the rank of any given process in this
         communicator. 
+        
+        To calculate the partial sum of the ranks upto the process self
+        the following code could be used::
+            
+            from mpi import MPI
+            mpi = MPI()
+            
+            world = mpi.MPI_COMM_WORLD
+            
+            rank = world.rank()
+            size = world.size()
+            
+            partial_sum = world.scan(rank, sum)
+            
+            print "%d: Got partial sum of %d" % (rank, partial_sum)
+            
+            assert partial_sum == sum(range(rank+1))
+            
+            mpi.finalize()
         """
-        pass
+        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
+        cr.start_scan(operation)
+        return cr.wait()
+
         
     def scatter(self, data=None, root=0):
         """
