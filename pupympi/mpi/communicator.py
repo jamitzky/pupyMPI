@@ -745,9 +745,6 @@ class Communicator:
 
         return data[self.rank()]
         
-    def test_cancelled(self):
-        pass
-    
     def testall(self, request_list):
         """
         Test if all the requests in the request list are finished. 

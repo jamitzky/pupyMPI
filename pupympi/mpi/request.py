@@ -16,7 +16,6 @@ class BaseRequest(object):
         # Start an event for waiting on the request
         self._waitevent = threading.Event()
         
-
     def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
@@ -88,6 +87,12 @@ class Request(BaseRequest):
         # at a later point
         self.update("cancelled")
         
+    def test_cancelled(self):
+        """
+        Returns True if this request was cancelled. 
+        """
+        return self.status == "cancelled"
+    
     def wait(self):
         """
         Blocks until the request data can be garbage collected. This method can be used
