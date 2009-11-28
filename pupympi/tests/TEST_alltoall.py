@@ -1,3 +1,8 @@
+#!/usr/bin/env python2.6
+# meta-description: alltoall. Sends individual data from all to all.
+# meta-expectedresult: 0
+# meta-minprocesses: 10
+
 from mpi import MPI
 
 mpi = MPI()
