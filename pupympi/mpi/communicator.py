@@ -690,14 +690,6 @@ class Communicator:
         if self.rank() == root:
             return data
     
-    def reduce_scatter(self, arg):
-        """
-        MPI_REDUCE_SCATTER is functionally equivalent to MPI_REDUCE with count
-        equal to the sum of recvcounts[i] followed by MPI_SCATTERV with sendcounts
-        equal to recvcounts.
-        """
-        pass
-        
     def scan(self, data, operation):
         """
         The scan function can be through of a partial reducing involving
