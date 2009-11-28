@@ -16,6 +16,7 @@ Table of contents
     The request objects <api_request>
     Communicators <api_communicator>
     Operations <api_operations>
+    Tag rules <tagrules>
 
 The main MPI object
 ======================================================================================
