@@ -1,3 +1,8 @@
+#!/usr/bin/env python2.6
+# meta-description: scan, makes a partial reduce
+# meta-expectedresult: 0
+# meta-minprocesses: 10
+
 from mpi import MPI
 
 mpi = MPI()
