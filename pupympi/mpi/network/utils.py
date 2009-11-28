@@ -73,15 +73,16 @@ def get_raw_message(client_socket):
             message += data
         return message
     
-    header_size = struct.calcsize("ll")
+    header_size = struct.calcsize("lll")
     header = receive_fixed(header_size)
-    message_size, rank = struct.unpack("ll", header)
+    message_size, rank, cmd = struct.unpack("lll", header)
     
-    return rank, receive_fixed(message_size)
+    return rank, cmd, receive_fixed(message_size)
     
-def prepare_message(data, rank):
+def prepare_message(data, rank, cmd=0):
+    print "Preparing message with command: %d" % cmd
     pickled_data = pickle.dumps(data)
-    header = struct.pack("ll", len(pickled_data), rank)
+    header = struct.pack("lll", len(pickled_data), rank, cmd)
     return header+pickled_data
 
 def _nice_data(data):

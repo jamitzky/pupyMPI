@@ -23,6 +23,7 @@ class Communicator:
         self.id = id
         self.id_ceiling = sys.maxint # for local communicator creation, can be deleted otherwise.
         self.MPI_COMM_WORLD = comm_root or self
+        self.cmd = constants.CMD_USER
         
         self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
         
@@ -327,9 +328,17 @@ class Communicator:
                 self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_cond.notify()
         
-        #Logger().debug("Irecv about to return - all locks released and notifies sent")
-
         return handle
+
+    def _add_unstarted_request(self, requests):
+        with self.mpi.has_work_cond:
+            with self.mpi.unstarted_requests_lock:
+                if isinstance(requests, list):
+                    self.mpi.unstarted_requests.extend( requests )
+                else:
+                    self.mpi.unstarted_requests.append( requests )
+                self.mpi.unstarted_requests_has_work.set()
+            self.mpi.has_work_cond.notify()
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
         logger = Logger()
@@ -347,11 +356,7 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        with self.mpi.has_work_cond:
-            with self.mpi.unstarted_requests_lock:
-                self.mpi.unstarted_requests.append( handle )
-                self.mpi.unstarted_requests_has_work.set()
-            self.mpi.has_work_cond.notify()
+        self._add_unstarted_request(handle)
 
         return handle
 
@@ -377,12 +382,7 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        with self.mpi.has_work_cond:
-            with self.mpi.unstarted_requests_lock:
-                self.mpi.unstarted_requests.append( dummyhandle )
-                self.mpi.unstarted_requests.append( handle )
-                self.mpi.unstarted_requests_has_work.set()
-            self.mpi.has_work_cond.notify()
+        self._add_unstarted_request([dummyhandle, handle])
 
         return handle
         

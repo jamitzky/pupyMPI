@@ -31,3 +31,8 @@ MPI_UNEQUAL     = -1    # Different
 MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutorials/MPI/alliance/communicators/MPI_Group_rank.html)
 
 JOB_INITIALIZING = -1
+
+# commands used for indicating is this is a system
+# message.
+CMD_USER = 0
+CMD_ABORT = 1

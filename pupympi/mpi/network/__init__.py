@@ -79,7 +79,7 @@ class Network(object):
         utils.robust_send(s_conn, prepare_message(data, internal_rank))        
         
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, raw_data = get_raw_message(s_conn)
+        rank, _, raw_data = get_raw_message(s_conn)
         data = pickle.loads(raw_data)
         (_, _, _, all_procs) = data
 
@@ -214,7 +214,8 @@ class CommunicationHandler(threading.Thread):
         
         # Create the proper data structure and pickle the data
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
-        request.data = prepare_message(data, request.communicator.rank())
+        print "We found cmd: %d" % request.cmd
+        request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
@@ -293,7 +294,7 @@ class CommunicationHandler(threading.Thread):
                     conn = read_socket
                 
                 try:
-                    rank, raw_data = get_raw_message(conn)
+                    rank, msg_command, raw_data = get_raw_message(conn)
                 except MPIException, e:                    
                     # Broken connection is ok when shutdown is going on
                     if self.shutdown_event.is_set():
@@ -309,12 +310,16 @@ class CommunicationHandler(threading.Thread):
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
                 
-                # Signal mpi thread that there is new receieved data
-                with self.network.mpi.has_work_cond:
-                    with self.network.mpi.raw_data_lock:
-                        self.network.mpi.has_work_cond.notify()
-                        self.network.mpi.raw_data_queue.append(raw_data)
-                        self.network.mpi.raw_data_event.set()
+                Logger().info("Received message with command: %d" % msg_command)
+                if msg_command == constants.CMD_USER:
+                    # Signal mpi thread that there is new receieved data
+                    with self.network.mpi.has_work_cond:
+                        with self.network.mpi.raw_data_lock:
+                            self.network.mpi.has_work_cond.notify()
+                            self.network.mpi.raw_data_queue.append(raw_data)
+                            self.network.mpi.raw_data_event.set()
+                else:
+                    self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
         def _handle_writelist(writelist):
             for write_socket in writelist:
