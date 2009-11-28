@@ -198,6 +198,24 @@ class CollectiveRequest(BaseRequest):
         
         self.data = final_data
 
+    def start_scan(self, operation):
+        data = self.two_way_tree_traversal(start_direction="up", return_type="last")
+        
+        our_data = []
+        our_rank = self.communicator.rank()
+        
+        for item in data:
+            if item['rank'] <= our_rank:
+                our_data.append(item)
+
+        # Look into the operation
+        full_meta = getattr(operation, "full_meta", False)
+        if not full_meta:
+            our_data =  [x['value'] for x in our_data]
+                
+        # Apply the operation on the data.
+        self.data = operation(our_data) 
+
     def start_allreduce(self, operation):
         """
         Document me
