@@ -117,11 +117,13 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
 
-        .. note::This call is internally implemented either locally, in which case only 32 new communicators 
-        can be created across the lifespan of your MPI application, or collective with no (realistic) limit on 
-        the amount of created communicators but is significantly slower. 
-        **FIXME** There is presently no way to determine which implementation is in effect. 
+        .. note::
+            This call is internally implemented either locally, in which case only 32 new communicators 
+            can be created across the lifespan of your MPI application, or collective with no (realistic) limit on 
+            the amount of created communicators but is significantly slower. 
+        
         """
+        # FIXME There is presently no way to determine which implementation is in effect.
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
