@@ -13,3 +13,7 @@
    communicator
       Holds information about a specific rank execution along with communication
       information used to reach other ranks part of the same communicator. 
+
+   tag
+      A integer you specify on a message allowing you do filter the kind of
+      messages you wan't to receive. 
