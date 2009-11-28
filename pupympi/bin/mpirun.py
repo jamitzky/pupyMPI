@@ -199,7 +199,7 @@ if __name__ == "__main__":
         sender_conns.append( sender_conn )
         
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, data = get_raw_message(sender_conn)
+        rank, command, data = get_raw_message(sender_conn)
         data = pickle.loads(data)
         (communicator, sender, tag, message) = data
         

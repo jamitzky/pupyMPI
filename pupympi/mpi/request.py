@@ -1,6 +1,7 @@
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 from mpi.network.utils import _nice_data # FIXME: up import level to make explicit
+from mpi import constants
 
 import threading, time
 
@@ -41,6 +42,8 @@ class Request(BaseRequest):
         self.tag = tag
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data
+
+        self.cmd = constants.CMD_USER
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:

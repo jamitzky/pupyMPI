@@ -1,5 +1,6 @@
 __version__ = 0.2 # It bumps the version or else it gets the hose again!
 
+import sys
 from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time
 from threading import Thread
@@ -127,7 +128,9 @@ class MPI(Thread):
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
-        self.raw_data_event = threading.Event() #FIXME: Rename to _has_work for consistency
+        
+        #FIXME: Rename to _has_work for consistency
+        self.raw_data_event = threading.Event() 
         
         # Recieved data are messages that have arrived and are unpickled
         # (ie. ready for matching with a posted recv request)
@@ -318,25 +321,44 @@ class MPI(Thread):
                 #For synchronized sends we also need to add a recieve receipt request
                 # FIXME: Implement here or in add_out_request
 
-    def abort(self, arg):
+    def abort(self):
         """
-        This routine makes a "best attempt" to abort all tasks in the group of comm.
-        http://www.mpi-forum.org/docs/mpi-11-html/node151.html
-        
-        .. code-block:: c
-        
-            // Example C code
-            #include <mpi.h>
-            int main(int argc, char *argv[])
-            {
-                MPI_Init(NULL, NULL);
-                MPI_Abort(MPI_COMM_WORLD, 911);
-                /* No further code will execute */
-                MPI_Finalize();
-                return 0;
-            }
+        Makes a best attempt to cancel all the tasks in the world
+        communicator and makes every process shut down. Don't expect
+        anything to behave nicely after this call. 
         """
-        Logger().warn("Non-Implemented method 'abort' called.")
+        world = self.MPI_COMM_WORLD
+        rank = world.rank()
+        size = world.size()
+
+        request_list = []
+        for r in range(size):
+            if r == rank:
+                continue
+
+            # send about message to the process with rank r. 
+            # Create a send request object
+            handle = Request("send", world, r, constants.MPI_TAG_ANY, False)
+            handle.cmd = constants.CMD_ABORT 
+
+            # Add the request to the MPI layer unstarted requests queue. We
+            # signal the condition variable to wake the MPI thread and have
+            # it handle the request start. 
+            world._add_unstarted_request(handle)
+            request_list.append(handle)
+
+        world.waitall(request_list)
+
+        # We have tried to signal every process so we can "safely" exit.
+        sys.exit(1)
+
+    def handle_system_message(self, rank, command, raw_data):
+        if command == constants.CMD_ABORT:
+            Logger().info("Got abort command!")
+
+            # FIXME: This might not actually delay all the threads. We
+            # need something more conclusive in the test cases. 
+            sys.exit(1)
 
     def finalize(self):
         """
