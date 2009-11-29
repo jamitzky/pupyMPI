@@ -144,6 +144,9 @@ class MPI(Thread):
         # General condition to wake up main mpi thread
         self.has_work_cond = threading.Condition()
         
+        # General signal saying queues are flushed and shutting down network threads can begin
+        self.unstarted_flushed = threading.Event()
+        
         # Kill signal
         self.shutdown_event = threading.Event()
         
@@ -152,6 +155,7 @@ class MPI(Thread):
         self.current_request_id = 0
         
         self.daemon = True # NOTE: Do we really want this? We could die before the network threads
+        #self.daemon = False # NOTE: Do we really want this? We could die before the network threads
         self.start()
 
         # Makes every node connect to each other if the settings allow us to do that.
@@ -229,7 +233,7 @@ class MPI(Thread):
                 self.unstarted_requests_has_work.clear()
     
         while not self.shutdown_event.is_set():
-            #Logger().debug("Still going, try getting has work cond")
+            Logger().debug("Still going, try getting has work cond")
             with self.has_work_cond:
                 self.has_work_cond.wait() 
                 
@@ -274,14 +278,17 @@ class MPI(Thread):
                     for request in removal:
                         self.pending_requests.remove(request)
                         
-                    Logger().debug("pending_requests_has_work: %s"% (self.pending_requests_has_work))    
+                    #Logger().debug("pending_requests_has_work: %s"% (self.pending_requests_has_work))    
                         
-                    Logger().debug("Gonna try clearing")
+                    #Logger().debug("Gonna try clearing")
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
         # NOTE: I don't think this flushing can work for acks if the network thread doesn't get a slice
+        
+        #Logger().debug("round and round")
+        #time.sleep(10)
         
         #Logger().debug("GOING FOR FINAL PURGE")
         Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
@@ -294,12 +301,16 @@ class MPI(Thread):
         Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
         Logger().info("MPI environment shutting down.")
         
+        #time.sleep(10)
         # Eksperimental
-        self.network.finalize()
-        
+        #self.network.finalize()
+
+
+        self.unstarted_flushed.set()
+
         # DEBUG
         #time.sleep(1)
-        #time.sleep(2)
+        #time.sleep(10)
         
         # DEBUG
         if sys.stdout is not None:
@@ -373,17 +384,21 @@ class MPI(Thread):
         """
         # Signal shutdown to the system (look in main while loop in
         # the run method)
-        #Logger().debug("--- Calling shutdown ---")
+        Logger().debug("--- Calling shutdown ---")
         self.shutdown_event.set()
         
         # DEBUG
-        #Logger().debug("--- Shutdown called, now for network finalizing --")
+        Logger().debug("--- Shutdown called, now for network finalizing --")
         # Sleeping here helps a lot but does not cure serious wounds
         #time.sleep(2)
-        
+
+        while not self.unstarted_flushed.is_set():
+            time.sleep(1)
+            Logger().debug("--- Waiting for flush --")
+            
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
-        #self.network.finalize()
+        self.network.finalize()
         #Logger().debug("--- Network finally finalized --")
 
     @classmethod
