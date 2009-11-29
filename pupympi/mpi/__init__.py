@@ -145,7 +145,7 @@ class MPI(Thread):
         self.has_work_cond = threading.Condition()
         
         # General signal saying queues are flushed and shutting down network threads can begin
-        self.unstarted_flushed = threading.Event()
+        self.queues_flushed_cond = threading.Condition()
         
         # Kill signal
         self.shutdown_event = threading.Event()
@@ -243,11 +243,11 @@ class MPI(Thread):
                 Logger().debug("\traw data: %s" % self.raw_data_queue)
                 Logger().debug("\trecieved data: %s" % self.received_data)
                 Logger().debug("\tpending_requests: %s" % self.pending_requests)
-
+    
                 _handle_unstarted()
             
                 # Unpickle raw data (received messages) and put them in received queue
-#                if self.raw_data_event.is_set():
+    #                if self.raw_data_event.is_set():
                 with self.raw_data_lock:
                     #Logger().debug("Checking - got raw_data_lock")
                     with self.received_data_lock:
@@ -261,7 +261,7 @@ class MPI(Thread):
                     self.raw_data_event.clear()
                         
                 # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
-#                if self.pending_requests_has_work.is_set():
+    #                if self.pending_requests_has_work.is_set():
                 with self.pending_requests_lock:
                     #Logger().debug("Checking pending:%s " % self.pending_requests)
                     removal = [] # Remember succesfully matched requests so we can remove them
@@ -305,9 +305,10 @@ class MPI(Thread):
         # Eksperimental
         #self.network.finalize()
 
+        with self.queues_flushed_cond:
+            self.queues_flushed_cond.notify()
 
-        self.unstarted_flushed.set()
-
+        Logger().debug("Queues flushed and user thread has been signalled.")
         # DEBUG
         #time.sleep(1)
         #time.sleep(10)
@@ -384,17 +385,23 @@ class MPI(Thread):
         """
         # Signal shutdown to the system (look in main while loop in
         # the run method)
-        Logger().debug("--- Calling shutdown ---")
-        self.shutdown_event.set()
+        Logger().debug("--- Setting shutdown event ---")
+        
+        self.shutdown_event.set() # signal shutdown to mpi thread
+        
+        with self.has_work_cond:
+            self.has_work_cond.notify() # let mpi thread once through the run loop in case it is stalled waiting for work        
         
         # DEBUG
-        Logger().debug("--- Shutdown called, now for network finalizing --")
+        Logger().debug("--- Waiting for mpi thread to flush --")
         # Sleeping here helps a lot but does not cure serious wounds
         #time.sleep(2)
 
-        while not self.unstarted_flushed.is_set():
-            time.sleep(1)
-            Logger().debug("--- Waiting for flush --")
+        with self.queues_flushed_cond:
+            self.queues_flushed_cond.wait()
+        
+        Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
+
             
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
