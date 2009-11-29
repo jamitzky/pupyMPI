@@ -145,7 +145,7 @@ class MPI(Thread):
         self.has_work_cond = threading.Condition()
         
         # General signal saying queues are flushed and shutting down network threads can begin
-        self.queues_flushed_cond = threading.Condition()
+        self.queues_flushed = threading.Event()
         
         # Kill signal
         self.shutdown_event = threading.Event()
@@ -305,8 +305,8 @@ class MPI(Thread):
         # Eksperimental
         #self.network.finalize()
 
-        with self.queues_flushed_cond:
-            self.queues_flushed_cond.notify()
+        
+        self.queues_flushed.set()
 
         Logger().debug("Queues flushed and user thread has been signalled.")
         # DEBUG
@@ -397,8 +397,8 @@ class MPI(Thread):
         # Sleeping here helps a lot but does not cure serious wounds
         #time.sleep(2)
 
-        with self.queues_flushed_cond:
-            self.queues_flushed_cond.wait()
+        
+        self.queues_flushed.wait()
         
         Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
 
