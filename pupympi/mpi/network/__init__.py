@@ -214,7 +214,7 @@ class CommunicationHandler(threading.Thread):
         
         # Create the proper data structure and pickle the data
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
-        print "We found cmd: %d" % request.cmd
+        #print "We found cmd: %d" % request.cmd
         request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
@@ -310,7 +310,7 @@ class CommunicationHandler(threading.Thread):
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
                 
-                Logger().info("Received message with command: %d" % msg_command)
+                #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
                     # Signal mpi thread that there is new receieved data
                     with self.network.mpi.has_work_cond:
@@ -391,7 +391,11 @@ class CommunicationHandler(threading.Thread):
         
         # The above loop only breaks when the send structure is empty, ie there are no more
         # requests to be send. We can therefore close the sockets. 
-        #self.close_all_sockets()   
+        #self.close_all_sockets()
+        
+        # DEBUG
+        #if sys.stdout is not None:
+        #    sys.stdout.flush() # Dirty hack to get the rest of the output out
 
     def finalize(self):
         self.shutdown_event.set()
