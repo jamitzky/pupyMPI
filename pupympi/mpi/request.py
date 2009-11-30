@@ -118,7 +118,7 @@ class Request(BaseRequest):
             raise MPIException("Illegal to wait on a cancelled request object")
         
         self._waitevent.wait()
-        Logger().debug("Waiting done for request with data:%s" % _nice_data(self.data) )
+        #Logger().debug("Waiting done for request with data:%s" % _nice_data(self.data) )
         
         # We're done at this point. Set the request to be completed so it can be removed
         # later.

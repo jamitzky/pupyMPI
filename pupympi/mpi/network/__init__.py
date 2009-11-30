@@ -278,7 +278,12 @@ class CommunicationHandler(threading.Thread):
                 Logger().error("sockets_in: %s, sockets_out: %s \n in_list: %s, out_list: %s, error_list: %s" % (self.sockets_in, self.sockets_out, in_list, out_list, error_list) )
         
         def _handle_readlist(readlist):
+            #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
+            if self.shutdown_event.is_set():
+                Logger().debug("... and shutdown is in progress!!!")
             for read_socket in readlist:
+                if self.shutdown_event.is_set():
+                    Logger().debug("... readlist -  and shutdown is in progress!!!")
                 add_to_pool = False
                 try:
                     (conn, sender_address) = read_socket.accept()
@@ -292,14 +297,19 @@ class CommunicationHandler(threading.Thread):
                     # This means that if accept fails it is normally just data coming in
                     #Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
                     conn = read_socket
+                except Exception, e:
+                    Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
+
+                if self.shutdown_event.is_set():
+                    Logger().debug("... get_raw_message -  and shutdown is in progress!!!")
                 
                 try:
-                    rank, msg_command, raw_data = get_raw_message(conn)
+                    rank, msg_command, raw_data = get_raw_message(conn, self.shutdown_event.is_set() )
                 except MPIException, e:                    
                     # Broken connection is ok when shutdown is going on
                     if self.shutdown_event.is_set():
                         Logger().debug("_handle_readlist -> get_raw_message -> recieve_fixed -> recv (SHOT DOWN) threw: %s" % e)
-                        continue
+                        break # We don't care about incoming during shutdown
                     else:
                         Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
                 except Exception, e:
@@ -309,6 +319,10 @@ class CommunicationHandler(threading.Thread):
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
+
+                if self.shutdown_event.is_set():
+                    Logger().debug("... checking command -  and shutdown is in progress!!!")
+
                 
                 #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
@@ -364,10 +378,17 @@ class CommunicationHandler(threading.Thread):
                             self.socket_to_request[write_socket].remove(matched_request)
 
         while not self.shutdown_event.is_set():
+            if self.type == "in":
+                Logger().debug("CYCLING %s-thread" % self.type)
             (in_list, out_list, error_list) = _select()
- 
+            if self.type == "in":
+                Logger().debug("CYCLING handle readlist")
             _handle_readlist(in_list)
+            if self.type == "in":
+                Logger().debug("CYCLING handle writelist")
             _handle_writelist(out_list)
+            if self.type == "in":
+                Logger().debug("CYCLING done")
         
         Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
    
@@ -385,9 +406,9 @@ class CommunicationHandler(threading.Thread):
             for r in removal:
                 del self.socket_to_request[r]
 
-        if self.type != "in":
-            Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
-        Logger().info("Shutting down thread type '%s'." % self.type)
+        
+        Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
+        #Logger().info("Shutting down thread type '%s'." % self.type)
         
         # The above loop only breaks when the send structure is empty, ie there are no more
         # requests to be send. We can therefore close the sockets. 
@@ -398,5 +419,5 @@ class CommunicationHandler(threading.Thread):
         #    sys.stdout.flush() # Dirty hack to get the rest of the output out
 
     def finalize(self):
-        self.shutdown_event.set()
-        Logger().debug("Communication handler closed by finalize call, socket_to_request: %s" % self.socket_to_request)
+        self.shutdown_event.set()        
+        Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )

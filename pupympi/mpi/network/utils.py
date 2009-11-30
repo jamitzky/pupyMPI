@@ -47,34 +47,70 @@ def get_socket(min=10000, max=30000):
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
-def get_raw_message(client_socket):
+def get_raw_message(client_socket, shutdown=False):
     """
     The first part of a message is the actual size (N) of the message. The
     rest is N bytes of pickled data. So we start by receiving a long and
     when using that value to unpack the remaining part.
-    
-    NOTE: if we recieve to much we should pass on the remaining part
     """
     def receive_fixed(length):
-        """Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
+        """
+        Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         
+        NOTE: In certain cases (during shutdown) we risk trying to recieve from
+        a socket where the other end is dead.
+        - We cannot pass a shutdown flag since shutdown could happen between calling
+        get_raw_message and trying client_socket.recv.
+        - We cannot use a timeout since recv actually returns within timeout.
+        - We the recv does not throw an exception so our try: is useless in this case
+        - Only useable characteristic is that recv returns data with length 0
+        (this is also why we never break out in this case since length is never
+        decremented)
+        -> We should consider if normal situations could result in recv of 0 bytes
+        -> or we could try to close sockets after out thread is done, which would
+        maybe help?
+        
+        
+        I've tried fixing this with 
         """
         message = ""
-        while length:
+        bad_recieves = 0
+        if shutdown:            
+            Logger().debug("... length was: %s -  and shutdown is in progress!!!" % length)
+            #if self.shutdown_event.is_set():
+            #    Logger().debug("... FEDT")
+        while length and bad_recieves < 10:
             try:
+                #client_socket.settimeout(3.0)
                 data = client_socket.recv(min(length, 4096))
+                # DEBUG
+                #if shutdown:
+                #    Logger().debug("... recv gave something -  and shutdown is in progress!!!")
             except socket.error, e:
                 Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("Connection broke or something")
                 # NOTE: We can maybe recover more gracefully here but that requires
                 # throwing status besides message and rank upwards. For now I just want
                 # to be aware of this error when it happens.
+            except Exception, e:
+                Logger().error("get_raw_message: Raised error: %s" %e)
+                raise MPIException("Connection broke or something")
             length -= len(data)
             message += data
-        return message
+            if message == "":
+                bad_recieves += 1
+                
+        if message == "":
+            raise MPIException("Connection broke or something - bad_recieves: %i" % bad_recieves)
+        else:
+            return message
     
     header_size = struct.calcsize("lll")
+    if shutdown:
+        Logger().debug("... trying to recieve fixed -  and shutdown is in progress!!!")
     header = receive_fixed(header_size)
+    if shutdown:
+        Logger().debug("... recieved fixed -  and shutdown is in progress!!!")
     message_size, rank, cmd = struct.unpack("lll", header)
     
     return rank, cmd, receive_fixed(message_size)

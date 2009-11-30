@@ -136,6 +136,7 @@ class SocketPool(object):
         
         for s in self.sockets:            
             try:
+                #s.shutdown(2)
                 s.close()                
                 n += 1 # For debugging
             except Exception, e:
