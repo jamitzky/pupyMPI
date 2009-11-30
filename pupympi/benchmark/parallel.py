@@ -10,10 +10,33 @@ import comm_info as ci
 import common
 from mpi import constants
 
-meta_size_array = (1,8,1024) # just to test if this works at all
-#meta_size_array = (1,2,4,8,32,64,128,512,1024,4096,16384,32768, 65536) # should go to 4mb
-
-def test_Sendrecv(size, iteration_schedule = None):
+meta_schedule = {
+    0: 1000,
+    1: 1000,
+    2: 1000,
+    4: 1000,
+    8: 1000,
+    16: 1000,
+    32: 1000,
+    64: 1000,
+    128: 1000,
+    256: 1000,
+    512: 1000,
+    1024: 1000,
+    2048: 1000,
+    4096: 1000,
+    8192: 1000,
+    16384: 1000,
+    32768: 1000,
+    65536: 640,
+    131072: 320,
+    262144: 160,
+    524288: 80,
+    1048576: 40,
+    2097152: 20,
+    4194304: 10
+}
+def test_Sendrecv(size):
     def get_srcdest_chained():
         dest   = (ci.rank + 1) % ci.num_procs
         source = (ci.rank + ci.num_procs-1) % ci.num_procs
@@ -43,7 +66,7 @@ def test_Sendrecv(size, iteration_schedule = None):
 
     return time
 
-def test_Exchange(size, iteration_schedule = None):
+def test_Exchange(size):
     def get_leftright_chained():
         if ci.rank < ci.num_procs-1:
             right = ci.rank+1

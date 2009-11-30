@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python2.6
 # encoding: utf-8
 """
@@ -12,7 +13,6 @@ import sys,pprint,getopt
 from mpi import MPI
 
 import comm_info as ci
-import common
 import single
 import collective
 import parallel
@@ -24,7 +24,8 @@ The help message goes here.
 
 def testrunner(fixed_module = None):
     """
-    Initializes MPI, the shared context object and runs the tests in sequential order
+    Initializes MPI, the shared context object and runs the tests in sequential order.
+    The fixed_module parameter forces the benchmark to run just that one benchmark module
     """
     modules = [single, parallel, collective]
     testlist = []
@@ -33,27 +34,37 @@ def testrunner(fixed_module = None):
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
 
-    def test_per_size(module, test):
+    def run_benchmark(module, test):
+        """Runs one specific benchmark in one specific module, and saves the timing results."""
         results = []
-        for size in module.meta_size_array:
-            timing = test(size, None)
-            results.append((size, round(timing, 5)))
+        for size in module.meta_schedule:
+            timing = test(size, module.meta_schedule[size])
+            # haxing the output a bit
+            if len(timing) == 1:
+                print "%-10s\t%-10s\t%-10s" % (size, round(timing*1000,2), size/timing)
+            results.append((size, timing))
 
         return results
         
-    def _setupCI(mpi, module):
+    def _set_up_environment(mpi, module):
+        """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
         ci.w_rank = mpi.MPI_COMM_WORLD.rank()
 
-        ci.select_source = True # required until support implemented in pupympi
-        ci.select_tag = True# required until support implemented in pupympi
+        ci.select_source = True # required until support for SOURCE_ANY implemented in pupympi
+        ci.select_tag = True # required until support for TAG_ANY implemented in pupympi
+        
 
         new_comm = mpi.MPI_COMM_WORLD
         if hasattr(module, "meta_has_meta"):
             if module.meta_separate_communicator:
                 new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
                 new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
+
+            ci.data = ci.gen_testset(max(module.meta_schedule)) 
+        else:
+            raise Exception("Module must have metadata at present, otherwise you'll get a race condition and other errors.")
 
         ci.communicator = new_comm
         # FIXME new_comm will be MPI_COMM_NULL for non participating communicators when we get around to it
@@ -64,16 +75,16 @@ def testrunner(fixed_module = None):
         if fixed_module is not None and module.__name__ != fixed_module:
             continue
 
-        _setupCI(mpi, module)
+        _set_up_environment(mpi, module)
         
-        if ci.rank == -1: # skip unless THIS process participates
+        if ci.rank == -1: # skip unless THIS process participates - we need the environment ready to determine that.
             continue
-        #print "%s Setting up for %s" % (ci.rank, module.__name__)
+        print "%s Setting up for %s" % (ci.rank, module.__name__)
         for test in dir(module):
             if test.startswith("test_"):
                 f = getattr(module, test)
                 #print "module %s, function %s" % (module, f)
-                result = test_per_size(module, f)
+                result = run_benchmark(module, f)
                 #result = 0.0
                 resultlist[test] = result
 
@@ -117,6 +128,7 @@ def main(argv=None):
     
     # FIXME: haxx it for now (I need the option to run individual modules because everything is too broken to get anywhere)
     
+    module = None
     for arg in sys.argv:
         if arg.startswith("--module="):
             module = arg.split("=")[1]
