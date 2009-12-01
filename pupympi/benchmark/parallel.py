@@ -7,9 +7,11 @@ Created by Jan Wiberg on 2009-08-13.
 """
 
 import comm_info as ci
-import common
 from mpi import constants
 
+meta_has_meta = True
+meta_processes_required = 2
+meta_separate_communicator = True
 meta_schedule = {
     0: 1000,
     1: 1000,
@@ -36,22 +38,21 @@ meta_schedule = {
     2097152: 20,
     4194304: 10
 }
-def test_Sendrecv(size):
+def test_Sendrecv(size, max_iterations):
     def get_srcdest_chained():
         dest   = (ci.rank + 1) % ci.num_procs
         source = (ci.rank + ci.num_procs-1) % ci.num_procs
         return (source, dest)
 
     def Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):        
-        #print "%s -> [%s] -> %s" % (source, ci.rank, dest)
-        for r in max_iterations:
+        print "%s -> [%s] -> %s" % (source, ci.rank, dest)
+        for r in xrange(max_iterations):
             recvdata = ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
             # FIXME: check for defects
     # end of test
 
     (s_tag, r_tag) = ci.get_tags_single()
-    data = common.gen_testset(size)
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
+    data = ci.data[0:size]
     ci.synchronize_processes()
 
     (source, dest) = get_srcdest_chained()        
@@ -62,11 +63,11 @@ def test_Sendrecv(size):
     Sendrecv(s_tag, r_tag, source, dest, data, max_iterations)
     
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)
 
     return time
 
-def test_Exchange(size):
+def test_Exchange(size, max_iterations):
     def get_leftright_chained():
         if ci.rank < ci.num_procs-1:
             right = ci.rank+1
@@ -81,7 +82,7 @@ def test_Exchange(size):
         return (left, right)
             
     def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
-        for r in max_iterations:
+        for r in xrange(max_iterations):
             # FIXME: check for defects
             ci.communicator.isend(right, data, s_tag)
             ci.communicator.isend(left, data, s_tag)
@@ -90,8 +91,7 @@ def test_Exchange(size):
 
     # end of test
     (s_tag, r_tag) = ci.get_tags_single()
-    data = common.gen_testset(size)
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
+    data = ci.data[0:size]
     ci.synchronize_processes()
 
     (left, right) = get_leftright_chained()        
@@ -102,7 +102,7 @@ def test_Exchange(size):
     Exchange(s_tag, r_tag, left, right, data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)
 
     return time
  
