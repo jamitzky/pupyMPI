@@ -3,14 +3,16 @@
 """
 comm_info.py
 
-per process settings
+per process settings at top, and assist functions at bottom
 
 Created by Jan Wiberg on 2009-08-13.
 Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
-import time
-from common import gen_testset, gen_reductionset, N_BARR
+import time, array, random
 from mpi import constants
+ 
+N_BARR = 2
+
  
 mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
@@ -27,17 +29,16 @@ rank = None                 # rank of actual process in communicator
 
 s_data_type = 'b'           # data type of sent data                    
 r_data_type = 'b'           # data type of received data                
-s_data_generator = gen_testset # NEW: generator function
 
 red_data_type = 'f'         # data type of reduced data                
 op_type = None              # operation type                           
-s_data_generator = gen_reductionset # NEW: generator function
 
 pair0, pair1 = (0, 1)       # process pair                             
 select_tag = False          # 0/1 for tag selection off/on             
 select_source = False       # 0/1 for sender selection off/on          
 
-clock_function = time.clock # set this to communicator.Wtime() for MPI time
+clock_function = time.clock # NEW: set this to communicator.Wtime() for MPI time
+data = None                 # NEW: Stores fixed data set
 
 sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops FIXME snd-, and reccnt not presently used.
                       
@@ -77,5 +78,15 @@ def synchronize_processes():
     for b in xrange(N_BARR):
         communicator.barrier()
     
-def get_iter_single(iteration_schedule, size):
-    return xrange(iteration_schedule[size] if iteration_schedule is not None else 50)
+baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+def gen_testset(size):
+    """Generates a test message byte array of asked-for size. Used for single and parallel ops."""
+    print "Generating testdata of size %s" % size
+    data = array.array('b')
+    for x in xrange(0, size):
+        data.append(ord(baseset[x % len(baseset)])) # Original and fast
+        # data.append(ord(baseset[random.randint(0,len(baseset) - 1)])) # Very nifty but takes 7 ages of man
+    print "...done generating data."
+    return data
+
+    

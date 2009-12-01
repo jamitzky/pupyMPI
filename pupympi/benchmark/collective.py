@@ -16,10 +16,33 @@ from mpi import constants
 # meta_min_processes = 4
 # meta_min_data = 4
 
-meta_size_array = (1,8,1024) # just to test if this works at all
-#meta_size_array = (1,2,4,8,32,64,128,512,1024,4096,16384,32768, 65536) # should go to 4mb
-
-def test_Bcast(size, iteration_schedule = None):
+meta_schedule = {
+    0: 1000,
+    1: 1000,
+    2: 1000,
+    4: 1000,
+    8: 1000,
+    16: 1000,
+    32: 1000,
+    64: 1000,
+    128: 1000,
+    256: 1000,
+    512: 1000,
+    1024: 1000,
+    2048: 1000,
+    4096: 1000,
+    8192: 1000,
+    16384: 1000,
+    32768: 1000,
+    65536: 640,
+    131072: 320,
+    262144: 160,
+    524288: 80,
+    1048576: 40,
+    2097152: 20,
+    4194304: 10
+}
+def test_Bcast(size):
     def Bcast(data, max_iterations):
         """docstring for Bcast"""
         root = 0
@@ -50,7 +73,7 @@ def test_Bcast(size, iteration_schedule = None):
 
     return time
     
-def test_Allgather(size, iteration_schedule = None):
+def test_Allgather(size):
     def Allgather(data, datalen, max_iterations):
         """docstring for Allgather"""
         for r in max_iterations:
@@ -75,7 +98,7 @@ def test_Allgather(size, iteration_schedule = None):
     return time
 
     
-def test_Allgatherv(size, iteration_schedule = None):
+def test_Allgatherv(size):
     def Allgatherv(data, datalen, max_iterations):
         """docstring for Allgather"""
         for r in max_iterations:
@@ -106,7 +129,7 @@ def test_Allgatherv(size, iteration_schedule = None):
 
     return time
     
-def test_Alltoall(size, iteration_schedule = None):
+def test_Alltoall(size):
     def Alltoall(data, datalen, max_iterations):
         """docstring for Alltoall"""
         for r in max_iterations:
@@ -134,37 +157,37 @@ def test_Alltoall(size, iteration_schedule = None):
 
     return time 
        
-def test_Alltoallv(size, iteration_schedule = None):
+def test_Alltoallv(size):
     def Alltoallv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Scatter(size, iteration_schedule = None):
+def test_Scatter(size):
     def Scatter(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Scatterv(size, iteration_schedule = None):
+def test_Scatterv(size):
     def Scatterv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Gather(size, iteration_schedule = None):
+def test_Gather(size):
     def Gather(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Gatherv(size, iteration_schedule = None):
+def test_Gatherv(size):
     def Gatherv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Reduce(size, iteration_schedule = None):
+def test_Reduce(size):
     def Reduce(data, datalen, max_iterations):
         """docstring for Reduce"""
         for r in max_iterations:
@@ -207,19 +230,19 @@ def test_Reduce(size, iteration_schedule = None):
     return time    
 
 
-def test_Reduce_scatter(size, iteration_schedule = None):
+def test_Reduce_scatter(size):
     def Reduce_scatter(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Allreduce(size, iteration_schedule = None):
+def test_Allreduce(size):
     def Allreduce(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Barrier(size, iteration_schedule = None):
+def test_Barrier(size):
     def Barrier(max_iterations):
         """docstring for Barrier"""
         for r in max_iterations:
