@@ -39,15 +39,11 @@ def get_socket(min=10000, max=30000):
             logger.debug("get_socket: Permission error on port %d, trying a new one" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
             continue
-            # NOTE: I am quite sure we should not raise further here or at least not in the normal
-            # exception case where we happen to hit a used socket. Instead we go on
-            # and that actually means we can potentially use the used-list for something.
-            #raise e
         
     #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
-def get_raw_message(client_socket, shutdown=False):
+def get_raw_message(client_socket):
     """
     The first part of a message is the actual size (N) of the message. The
     rest is N bytes of pickled data. So we start by receiving a long and
@@ -59,19 +55,11 @@ def get_raw_message(client_socket, shutdown=False):
         """
         message = ""
         bad_recieves = 0
-        #if shutdown:            
-        #    Logger().debug("... length was: %s -  and shutdown is in progress!!!" % length)
-            #if self.shutdown_event.is_set():
-            #    Logger().debug("... FEDT")
         # FIXME: Try lowering to only one bad recieve and see if it isn't just normal
         # operation for a closed socket
         while length and bad_recieves < 10:
             try:
-                #client_socket.settimeout(3.0)
                 data = client_socket.recv(min(length, 4096))
-                # DEBUG
-                #if shutdown:
-                #    Logger().debug("... recv gave something -  and shutdown is in progress!!!")
             except socket.error, e:
                 Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("Connection broke or something")
@@ -92,11 +80,7 @@ def get_raw_message(client_socket, shutdown=False):
             return message
     
     header_size = struct.calcsize("lll")
-    if shutdown:
-        Logger().debug("... trying to recieve fixed -  and shutdown is in progress!!!")
     header = receive_fixed(header_size)
-    if shutdown:
-        Logger().debug("... recieved fixed -  and shutdown is in progress!!!")
     message_size, rank, cmd = struct.unpack("lll", header)
     
     return rank, cmd, receive_fixed(message_size)
