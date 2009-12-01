@@ -152,18 +152,13 @@ class Network(object):
         if not self.options.single_communication_thread:
             self.t_out.finalize()
         
-        # DEBUG TEST
-        # Try to make them die thread die
+        # Wait for network threads to die
+        # FIXME: Test if this works on single thread network also
         self.t_in.join()
         self.t_out.join()
         
         Logger().debug("network.finalize: Closing sockets")
-        # NOTE: Why does this fail a lot in TEST_finalize_quickly? Why can we not afford to be "interrupted" here?
-        #time.sleep(2)
         
-        
-        # Experimental
-        # Network threads are dead now.
         # Close socketpool
         self.socket_pool.close_all_sockets()
         
@@ -239,18 +234,7 @@ class CommunicationHandler(threading.Thread):
             
         self.sockets_out.append(client_socket)
     
-    def close_all_sockets(self):
-        # DEBUG
-        n = 0
-        m = 0
-        # NOTE:
-        # Maybe we should only attempt to close either outgoing OR ingoing sockets
-        
-        # FIXME: This sleep is a hack, which we need when dynamic socket pool is not enabled
-        #time.sleep(4)
-        #time.sleep(2)
-        
-        
+    def close_all_sockets(self):        
         for s in self.sockets_in + self.sockets_out:            
             try:
                 #s.shutdown(0)   # Further receives are disallowed
@@ -261,13 +245,7 @@ class CommunicationHandler(threading.Thread):
             except Exception, e:
                 m += 1 # For debugging
                 Logger().debug("Got error when closing socket: %s" % e)
-         
-        # DEBUG
-        # sleeping here does not really help
-        #time.sleep(4)
-        
-        #Logger().debug("close_all_sockets: %i sockets closed, %i sockets gave exception. Ins: %i, Outs: %i" % (n,m, len(self.sockets_in), len(self.sockets_out) ))
-    
+
     def run(self):
         
         def _select():
