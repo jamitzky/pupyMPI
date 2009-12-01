@@ -11,6 +11,7 @@ Created by Jan Wiberg on 2009-08-13.
 
 import sys,pprint,getopt
 from mpi import MPI
+from mpi import constants
 
 import comm_info as ci
 import single
@@ -22,7 +23,7 @@ help_message = '''
 The help message goes here.
 '''
 
-def testrunner(fixed_module = None):
+def testrunner(fixed_module = None, fixed_test = None):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     The fixed_module parameter forces the benchmark to run just that one benchmark module
@@ -33,16 +34,24 @@ def testrunner(fixed_module = None):
 
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
+    
+    # print ("Limitation parameters, fixed_module = %s and fixed_test = %s" % (fixed_module, fixed_test))
 
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
         results = []
-        for size in module.meta_schedule:
-            timing = test(size, module.meta_schedule[size])
-            # haxing the output a bit
-            if len(timing) == 1:
-                print "%-10s\t%-10s\t%-10s" % (size, round(timing*1000,2), size/timing)
-            results.append((size, timing))
+        ci.log("%s - %s" % (module.__name__, test.__name__)) 
+        ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))
+        ci.log("--------------------------------------------------------------------------")
+        
+        sizekeys = module.meta_schedule.keys()
+        sizekeys.sort()
+        for size in sizekeys:
+            total = test(size, module.meta_schedule[size])
+            per_it = total / module.meta_schedule[size]
+            mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
+            ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
+            results.append((size, module.meta_schedule[size], total, per_it, mbsec))
 
         return results
         
@@ -59,17 +68,19 @@ def testrunner(fixed_module = None):
         new_comm = mpi.MPI_COMM_WORLD
         if hasattr(module, "meta_has_meta"):
             if module.meta_separate_communicator:
+                if ci.w_num_procs < module.meta_processes_required:
+                    raise Exception("Not enough processes active to invoke module %s" % module.__name__)
+                    
                 new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
                 new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
 
             ci.data = ci.gen_testset(max(module.meta_schedule)) 
         else:
-            raise Exception("Module must have metadata at present, otherwise you'll get a race condition and other errors.")
+            raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
         ci.communicator = new_comm
-        # FIXME new_comm will be MPI_COMM_NULL for non participating communicators when we get around to it
-        ci.num_procs = new_comm.size()
-        ci.rank = new_comm.rank()
+        ci.num_procs = new_comm.size() if new_comm is not constants.MPI_COMM_NULL else -1
+        ci.rank = new_comm.rank() if new_comm is not constants.MPI_COMM_NULL else -1
             
     for module in modules:
         if fixed_module is not None and module.__name__ != fixed_module:
@@ -79,20 +90,20 @@ def testrunner(fixed_module = None):
         
         if ci.rank == -1: # skip unless THIS process participates - we need the environment ready to determine that.
             continue
-        print "%s Setting up for %s" % (ci.rank, module.__name__)
-        for test in dir(module):
-            if test.startswith("test_"):
-                f = getattr(module, test)
-                #print "module %s, function %s" % (module, f)
+
+        for function in dir(module):
+            if (fixed_test is None and function.startswith("test_")) or (fixed_test is not None and function.endswith(fixed_test)):
+                f = getattr(module, function)
                 result = run_benchmark(module, f)
-                #result = 0.0
-                resultlist[test] = result
+                resultlist[function] = result
 
     mpi.finalize()
     
     if root:
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(resultlist)
+        pass
+        # Works but need to save as CSV or something instead.
+        # pp = pprint.PrettyPrinter(indent=4)
+        # pp.pprint(resultlist)
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -129,11 +140,14 @@ def main(argv=None):
     # FIXME: haxx it for now (I need the option to run individual modules because everything is too broken to get anywhere)
     
     module = None
+    test = None
     for arg in sys.argv:
         if arg.startswith("--module="):
             module = arg.split("=")[1]
+        if arg.startswith("--test="):
+            test = arg.split("=")[1]
         
-    testrunner(module)
+    testrunner(module, test)
     
 
 if __name__ == "__main__":
