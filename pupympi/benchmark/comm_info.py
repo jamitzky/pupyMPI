@@ -37,7 +37,7 @@ pair0, pair1 = (0, 1)       # process pair
 select_tag = False          # 0/1 for tag selection off/on             
 select_source = False       # 0/1 for sender selection off/on          
 
-clock_function = time.clock # NEW: set this to communicator.Wtime() for MPI time
+clock_function = time.time # NEW: set this to communicator.Wtime() for MPI time, or time.time() for an alternative timer.
 data = None                 # NEW: Stores fixed data set
 
 sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops FIXME snd-, and reccnt not presently used.
@@ -56,6 +56,10 @@ sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global o
 # int* g_ranks;              # w_ranks constituting the groups          
 # 
 
+def log(str):
+    if rank == 0:
+        print str
+
 def get_srcdest_paired():
     if rank == pair0:
         dest = pair1
@@ -63,8 +67,7 @@ def get_srcdest_paired():
         dest = pair0
     else:
         raise Exception("Pair values not as expected, pair0 %s, pair1 %s and rank %s" % (pair0, pair1, rank))
-        
-        
+                
     source = dest if select_source else constants.MPI_SOURCE_ANY 
     
     return (source, dest)
@@ -81,12 +84,13 @@ def synchronize_processes():
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 def gen_testset(size):
     """Generates a test message byte array of asked-for size. Used for single and parallel ops."""
-    print "Generating testdata of size %s" % size
+    log( "Generating testdata of size %s" % size)
     data = array.array('b')
     for x in xrange(0, size):
         data.append(ord(baseset[x % len(baseset)])) # Original and fast
         # data.append(ord(baseset[random.randint(0,len(baseset) - 1)])) # Very nifty but takes 7 ages of man
-    print "...done generating data."
+    log( "...done generating data.")
     return data
+
 
     
