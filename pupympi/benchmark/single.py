@@ -7,7 +7,6 @@ Created by Jan Wiberg on 2009-08-13.
 """
 
 import comm_info as ci
-import common
 from mpi import constants
 
 meta_has_meta = True
@@ -44,7 +43,7 @@ meta_schedule = {
 def test_PingPing(size, max_iterations):
     def PingPing(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
-            print "pingping: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
+            #print "pingping: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
             # FIXME error handling for all statements
             request = ci.communicator.isend(dest, data)
             recv_data = ci.communicator.recv(source)
@@ -64,7 +63,7 @@ def test_PingPing(size, max_iterations):
     PingPing(s_tag, r_tag, source, dest, data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)
 
     return time
 
@@ -72,7 +71,7 @@ def test_PingPing(size, max_iterations):
 def test_PingPong(size, max_iterations):
     def PingPong(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
-            print "pingpong: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
+            #print "pingpong: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
             if ci.rank == ci.pair0: 
                 ci.communicator.send(dest, data, s_tag)
                 recv = ci.communicator.recv(source, r_tag)
@@ -97,7 +96,7 @@ def test_PingPong(size, max_iterations):
     PingPong(s_tag, r_tag, source, dest, data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)
 
     return time
 

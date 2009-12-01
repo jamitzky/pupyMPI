@@ -7,7 +7,6 @@ Created by Jan Wiberg on 2009-08-13.
 """
 
 import comm_info as ci
-import common
 from mpi import constants
 
 # meta_has_meta = True
@@ -42,7 +41,7 @@ meta_schedule = {
     2097152: 20,
     4194304: 10
 }
-def test_Bcast(size):
+def test_Bcast(size, max_iterations):
     def Bcast(data, max_iterations):
         """docstring for Bcast"""
         root = 0
@@ -69,11 +68,11 @@ def test_Bcast(size):
     Bcast(data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time
     
-def test_Allgather(size):
+def test_Allgather(size, max_iterations):
     def Allgather(data, datalen, max_iterations):
         """docstring for Allgather"""
         for r in max_iterations:
@@ -93,12 +92,12 @@ def test_Allgather(size):
     Allgather(data, size, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time
 
     
-def test_Allgatherv(size):
+def test_Allgatherv(size, max_iterations):
     def Allgatherv(data, datalen, max_iterations):
         """docstring for Allgather"""
         for r in max_iterations:
@@ -125,11 +124,11 @@ def test_Allgatherv(size):
     Allgatherv(data, size, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time
     
-def test_Alltoall(size):
+def test_Alltoall(size, max_iterations):
     def Alltoall(data, datalen, max_iterations):
         """docstring for Alltoall"""
         for r in max_iterations:
@@ -153,41 +152,41 @@ def test_Alltoall(size):
     Allgatherv(data, size, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time 
        
-def test_Alltoallv(size):
+def test_Alltoallv(size, max_iterations):
     def Alltoallv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Scatter(size):
+def test_Scatter(size, max_iterations):
     def Scatter(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Scatterv(size):
+def test_Scatterv(size, max_iterations):
     def Scatterv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Gather(size):
+def test_Gather(size, max_iterations):
     def Gather(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Gatherv(size):
+def test_Gatherv(size, max_iterations):
     def Gatherv(data, datalen, max_iterations):
         pass
     # end of test
     pass
 
-def test_Reduce(size):
+def test_Reduce(size, max_iterations):
     def Reduce(data, datalen, max_iterations):
         """docstring for Reduce"""
         for r in max_iterations:
@@ -214,8 +213,10 @@ def test_Reduce(size):
     # end of test
 
     # end of test
+    if size > 0 or size < 4:
+        return 0 # hack to modify schedule for reduce operations
+        
     data = common.gen_testset(size)*ci.num_procs
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.rdispl = 1 # FIXME not necessarily best
     ci.synchronize_processes()
 
@@ -225,31 +226,37 @@ def test_Reduce(size):
     Reduce(data, size, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time    
 
 
-def test_Reduce_scatter(size):
+def test_Reduce_scatter(size, max_iterations):
     def Reduce_scatter(data, datalen, max_iterations):
         pass
     # end of test
+    if size > 0 or size < 4:
+        return 0 # hack to modify schedule for reduce operations
     pass
 
-def test_Allreduce(size):
+def test_Allreduce(size, max_iterations):
     def Allreduce(data, datalen, max_iterations):
         pass
     # end of test
+    if size > 0 or size < 4:
+        return 0 # hack to modify schedule for reduce operations
     pass
 
-def test_Barrier(size):
+def test_Barrier(size, max_iterations):
     def Barrier(max_iterations):
         """docstring for Barrier"""
         for r in max_iterations:
             ci.communicator.barrier()
     # end of test
+
+    if size is not 0: 
+        return 0 # hack to modify schedule for barrier
     
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -258,6 +265,6 @@ def test_Barrier(size):
     barrier(max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/len(max_iterations) 
+    time = (t2 - t1)/max_iterations
 
     return time

@@ -125,11 +125,15 @@ class Communicator:
         
         """
         # FIXME There is presently no way to determine which implementation is in effect.
+        
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
 
+        if group.rank() == -1:
+            return constants.MPI_COMM_NULL
+            
         #return self._comm_create_coll(group)        
         new_comm = self._comm_create_local(group)        
         return new_comm
