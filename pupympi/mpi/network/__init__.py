@@ -329,16 +329,10 @@ class CommunicationHandler(threading.Thread):
                 
                 #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
-                    # Signal mpi thread that there is new receieved data
-                    #with self.network.mpi.has_work_cond:
-                    #    with self.network.mpi.raw_data_lock:
-                    #        self.network.mpi.has_work_cond.notify()
-                    #        self.network.mpi.raw_data_queue.append(raw_data)
-                    #        self.network.mpi.raw_data_event.set()
                     with self.network.mpi.raw_data_lock:
                         self.network.mpi.has_work_event.set()
                         self.network.mpi.raw_data_queue.append(raw_data)
-                        self.network.mpi.raw_data_event.set()                        
+                        self.network.mpi.raw_data_has_work.set()                        
                 else:
                     self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
@@ -417,13 +411,6 @@ class CommunicationHandler(threading.Thread):
         Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
         #Logger().info("Shutting down thread type '%s'." % self.type)
         
-        # The above loop only breaks when the send structure is empty, ie there are no more
-        # requests to be send. We can therefore close the sockets. 
-        #self.close_all_sockets()
-        
-        # DEBUG
-        #if sys.stdout is not None:
-        #    sys.stdout.flush() # Dirty hack to get the rest of the output out
 
     def finalize(self):
         self.shutdown_event.set()        

@@ -322,11 +322,6 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        #with self.mpi.has_work_cond:
-        #    with self.mpi.unstarted_requests_lock:
-        #        self.mpi.unstarted_requests.append( handle )
-        #        self.mpi.unstarted_requests_has_work.set()
-        #    self.mpi.has_work_cond.notify()
         with self.mpi.unstarted_requests_lock:
             self.mpi.unstarted_requests.append( handle )
             self.mpi.unstarted_requests_has_work.set()
@@ -335,14 +330,6 @@ class Communicator:
         return handle
 
     def _add_unstarted_request(self, requests):
-        #with self.mpi.has_work_cond:
-        #    with self.mpi.unstarted_requests_lock:
-        #        if isinstance(requests, list):
-        #            self.mpi.unstarted_requests.extend( requests )
-        #        else:
-        #            self.mpi.unstarted_requests.append( requests )
-        #        self.mpi.unstarted_requests_has_work.set()
-        #    self.mpi.has_work_cond.notify()
         with self.mpi.unstarted_requests_lock:
             # NOTE: Why do we have to check isinstace here?
             if isinstance(requests, list):

@@ -56,29 +56,15 @@ def get_raw_message(client_socket, shutdown=False):
     def receive_fixed(length):
         """
         Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
-        
-        NOTE: In certain cases (during shutdown) we risk trying to recieve from
-        a socket where the other end is dead.
-        - We cannot pass a shutdown flag since shutdown could happen between calling
-        get_raw_message and trying client_socket.recv.
-        - We cannot use a timeout since recv actually returns within timeout.
-        - We the recv does not throw an exception so our try: is useless in this case
-        - Only useable characteristic is that recv returns data with length 0
-        (this is also why we never break out in this case since length is never
-        decremented)
-        -> We should consider if normal situations could result in recv of 0 bytes
-        -> or we could try to close sockets after out thread is done, which would
-        maybe help?
-        
-        
-        I've tried fixing this with 
         """
         message = ""
         bad_recieves = 0
-        if shutdown:            
-            Logger().debug("... length was: %s -  and shutdown is in progress!!!" % length)
+        #if shutdown:            
+        #    Logger().debug("... length was: %s -  and shutdown is in progress!!!" % length)
             #if self.shutdown_event.is_set():
             #    Logger().debug("... FEDT")
+        # FIXME: Try lowering to only one bad recieve and see if it isn't just normal
+        # operation for a closed socket
         while length and bad_recieves < 10:
             try:
                 #client_socket.settimeout(3.0)

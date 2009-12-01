@@ -109,9 +109,8 @@ class MPI(Thread):
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
-        #logger.debug("Set the MPI environment to initialised")
         
-        # set up 'constants'
+        # Set up the global mpi constants
         constants.MPI_GROUP_EMPTY = Group()
         
         # Initialising data structures for starting jobs.
@@ -133,7 +132,7 @@ class MPI(Thread):
         self.raw_data_lock = threading.Lock()
         
         #FIXME: Rename to _has_work for consistency
-        self.raw_data_event = threading.Event() 
+        self.raw_data_has_work = threading.Event() 
         
         # Recieved data are messages that have arrived and are unpickled
         # (ie. ready for matching with a posted recv request)
@@ -234,26 +233,22 @@ class MPI(Thread):
                 self.unstarted_requests_has_work.clear()
     
         while not self.shutdown_event.is_set():
-            Logger().debug("has_work_cond not notified yet. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
-                    self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
+            Logger().debug("has_work_cond not notified yet. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
+                    self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
             Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
             Logger().debug("\traw data: %s" % self.raw_data_queue)
             Logger().debug("\trecieved data: %s" % self.received_data)
             Logger().debug("\tpending_requests: %s" % self.pending_requests)
             Logger().debug("Still going, try getting has work cond")
-            #with self.has_work_cond:
-            #    self.has_work_cond.wait() 
             
             # NOTE: If someone sets this event between the wait and the clear that
-            # signal will be missed, possibly leading to a race condition.
-            # However after a wait this thread should normally run for some hundred
-            # bytecode instructions and thus always get to clear before another
-            # thread signals
+            # signal will be missed, but that is just fine since we are about to
+            # check the queues anyway :)
             self.has_work_event.wait()
             self.has_work_event.clear()
             
-            Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_event(%s) & pending_requests_has_work (%s)" % (
-                    self.unstarted_requests_has_work.is_set(), self.raw_data_event.is_set(), self.pending_requests_has_work.is_set() ))
+            Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
+                    self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
             Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
             Logger().debug("\traw data: %s" % self.raw_data_queue)
             Logger().debug("\trecieved data: %s" % self.received_data)
@@ -262,7 +257,7 @@ class MPI(Thread):
             _handle_unstarted()
         
             # Unpickle raw data (received messages) and put them in received queue
-#                if self.raw_data_event.is_set():
+#                if self.raw_data_has_work.is_set():
             with self.raw_data_lock:
                 #Logger().debug("Checking - got raw_data_lock")
                 with self.received_data_lock:
@@ -273,7 +268,7 @@ class MPI(Thread):
                     
                     self.pending_requests_has_work.set()
                     self.raw_data_queue = []
-                self.raw_data_event.clear()
+                self.raw_data_has_work.clear()
                     
             # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
 #                if self.pending_requests_has_work.is_set():
@@ -292,10 +287,7 @@ class MPI(Thread):
                 
                 for request in removal:
                     self.pending_requests.remove(request)
-                    
-                #Logger().debug("pending_requests_has_work: %s"% (self.pending_requests_has_work))    
-                    
-                #Logger().debug("Gonna try clearing")
+
                 self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
@@ -330,18 +322,6 @@ class MPI(Thread):
         
     def schedule_request(self, request):
         #Logger().debug("Schedule request for: %s" % (request.request_type))
-        
-        #with self.has_work_cond:
-        #    # Add the request to the internal queue
-        #    if request.request_type == "recv":
-        #        with self.pending_requests_lock:
-        #            self.pending_requests.append(request)
-        #            self.pending_requests_has_work.set()
-        #            self.has_work_cond.notify() # We have the lock via caller and caller will release it later
-        #            Logger().debug("Notified self about has_work_cond during schedule_request")
-        #    else:
-        #        # If the request was outgoing we add to the out queue instead (on the out thread)
-        #        self.network.t_out.add_out_request(request)
         # Add the request to the internal queue
         if request.request_type == "recv":
             with self.pending_requests_lock:
@@ -406,25 +386,16 @@ class MPI(Thread):
         """
         # Signal shutdown to the system (look in main while loop in
         # the run method)
-        Logger().debug("--- Setting shutdown event ---")
+        #Logger().debug("--- Setting shutdown event ---")
         
         self.shutdown_event.set() # signal shutdown to mpi thread
-        
-        #with self.has_work_cond:
-        #    self.has_work_cond.notify() # let mpi thread once through the run loop in case it is stalled waiting for work        
-
         self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work        
         
-        # DEBUG
-        Logger().debug("--- Waiting for mpi thread to flush --")
-        # Sleeping here helps a lot but does not cure serious wounds
-        #time.sleep(2)
-
+        #Logger().debug("--- Waiting for mpi thread to flush --")
         
         self.queues_flushed.wait()
         
         Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
-
             
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
