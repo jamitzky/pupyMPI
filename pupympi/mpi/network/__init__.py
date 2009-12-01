@@ -279,11 +279,7 @@ class CommunicationHandler(threading.Thread):
         
         def _handle_readlist(readlist):
             #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
-            #if self.shutdown_event.is_set():
-            #    Logger().debug("... and shutdown is in progress!!!")
             for read_socket in readlist:
-                if self.shutdown_event.is_set():
-                    Logger().debug("... readlist -  and shutdown is in progress!!!")
                 add_to_pool = False
                 try:
                     (conn, sender_address) = read_socket.accept()
@@ -299,12 +295,9 @@ class CommunicationHandler(threading.Thread):
                     conn = read_socket
                 except Exception, e:
                     Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
-
-                if self.shutdown_event.is_set():
-                    Logger().debug("... get_raw_message -  and shutdown is in progress!!!")
                 
                 try:
-                    rank, msg_command, raw_data = get_raw_message(conn, self.shutdown_event.is_set() )
+                    rank, msg_command, raw_data = get_raw_message(conn)
                 except MPIException, e:                    
                     # Broken connection is ok when shutdown is going on
                     if self.shutdown_event.is_set():
@@ -322,10 +315,6 @@ class CommunicationHandler(threading.Thread):
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)
-
-                if self.shutdown_event.is_set():
-                    Logger().debug("... checking command -  and shutdown is in progress!!!")
-
                 
                 #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
@@ -365,9 +354,6 @@ class CommunicationHandler(threading.Thread):
                         else:                            
                             request.update("ready") # update status and signal anyone waiting on this request                            
                     else:
-                        # This seems to happen with the "finished" state a lot of times. It should not happen
-                        # as it might conclude that a request is changing it's state when it's not supposed
-                        # to
                         pass
                         #Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" % 
                         #        (request.status, request.request_type, request.tag, request.participant))
@@ -377,19 +363,12 @@ class CommunicationHandler(threading.Thread):
                     with self.socket_to_request_lock:
                         for (write_socket,matched_request) in removal:
                             self.socket_to_request[write_socket].remove(matched_request)
-
+        
+        # Main loop
         while not self.shutdown_event.is_set():
-            #if self.type == "in":
-            #    Logger().debug("Thread(%s) CYCLING select" % self.type)
             (in_list, out_list, error_list) = _select()
-            #if self.type == "in":
-            #    Logger().debug("Thread(%s) CYCLING handle readlist" % self.type)
             _handle_readlist(in_list)
-            #if self.type == "in":
-            #    Logger().debug("Thread(%s) CYCLING handle writelist" % self.type)
             _handle_writelist(out_list)
-            #if self.type == "in":
-            #    Logger().debug("Thread(%s) CYCLING done" % self.type)
         
         Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
    

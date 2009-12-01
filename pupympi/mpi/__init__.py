@@ -113,7 +113,7 @@ class MPI(Thread):
         # Set up the global mpi constants
         constants.MPI_GROUP_EMPTY = Group()
         
-        # Initialising data structures for starting jobs.
+        # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
         
@@ -130,8 +130,6 @@ class MPI(Thread):
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
-        
-        #FIXME: Rename to _has_work for consistency
         self.raw_data_has_work = threading.Event() 
         
         # Recieved data are messages that have arrived and are unpickled
@@ -140,18 +138,14 @@ class MPI(Thread):
         self.received_data = []
         self.received_data_lock = threading.Lock()
 
-        # General condition to wake up main mpi thread
-        self.has_work_cond = threading.Condition()
         # General event to wake up main mpi thread
         self.has_work_event = threading.Event()
         
-        # General signal saying queues are flushed and shutting down network threads can begin
-        self.queues_flushed = threading.Event()
+        # Shutdown signals
+        self.shutdown_event = threading.Event() # MPI finalize has been called, shutdown in progress
+        self.queues_flushed = threading.Event() # Queues are flushed, shutting down network threads can begin
         
-        # Kill signal
-        self.shutdown_event = threading.Event()
-        
-        # Adding locks and initial information about the request queue
+        # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
         
@@ -184,32 +178,27 @@ class MPI(Thread):
             for data in self.received_data:
                 (communicator_id, sender, tag, acknowledge, message) = data
                 
-                # The first strict rule is that any communication must
-                # take part in the same communicator.
+                # Any communication must take place within the same communicator
                 if request.communicator.id == communicator_id:
                     
-                    # The participants must also match.That is the sender must
-                    # have specified this rank and we're gonna accept a message
-                    # from that rank or from any rank
+                    # The participant must match or any rank have been specified
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
                         
-                        # The sender / receiver must agree on the tag, or
-                        # we must be ready to receive any tag or
-                        # it should be an acknowledgement
+                        # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
                         if request.tag in (tag, constants.MPI_TAG_ANY, constants.TAG_ACK):
                             remove.append(data)                            
                             request.update(status="ready", data=message)
                             match = True
-                            # Synchronized communication requires acknowledgement
+                            # Outgoing synchronized communication requires acknowledgement
                             if acknowledge:
                                 Logger().debug("SSEND RECIEVED request: %s" % request)
-                                # Generate an acknowledge message
+                                # Generate an acknowledge message as an isend
                                 # TODO: Consider using an empty message string, to save resources
                                 self.communicators[communicator_id].isend(sender, "ACKNOWLEDGEMENT", constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
+                                # FIXME: We should also change state on outgoing request here?
                                 Logger().debug("ACK RECIEVED request: %s" % request)
-
                             
                             break # We can only find matching data for one request and we have
                         
@@ -218,10 +207,8 @@ class MPI(Thread):
         return match
 
     def run(self):
-    # NOTE: We should consider whether the 3 part division of labor in this loop is
-    # good and the ordering optimal
-    
-        # create internal functions that will be used below
+        # internal function that will be used below
+        # FIXME: Rewrite for clarity
         def _handle_unstarted():
             # Schedule unstarted requests (may be in- or outbound)
             #                if self.unstarted_requests_has_work.is_set():
@@ -243,7 +230,7 @@ class MPI(Thread):
             
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
-            # check the queues anyway :)
+            # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
             
@@ -294,10 +281,6 @@ class MPI(Thread):
         # stuck in the pipline.
         # NOTE: I don't think this flushing can work for acks if the network thread doesn't get a slice
         
-        #Logger().debug("round and round")
-        #time.sleep(10)
-        
-        #Logger().debug("GOING FOR FINAL PURGE")
         Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
         _handle_unstarted()
@@ -311,11 +294,9 @@ class MPI(Thread):
         self.queues_flushed.set()
 
         Logger().debug("Queues flushed and user thread has been signalled.")
-        # DEBUG
-        #time.sleep(1)
-        #time.sleep(10)
         
         # DEBUG
+        # FIXME: Check if this has any effect
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
 
@@ -384,8 +365,6 @@ class MPI(Thread):
         Remember to always end your MPI program with this call. Otherwise proper 
         shutdown is not guaranteed. 
         """
-        # Signal shutdown to the system (look in main while loop in
-        # the run method)
         #Logger().debug("--- Setting shutdown event ---")
         
         self.shutdown_event.set() # signal shutdown to mpi thread
