@@ -220,7 +220,7 @@ class MPI(Thread):
                 self.unstarted_requests_has_work.clear()
     
         while not self.shutdown_event.is_set():
-            Logger().debug("has_work_cond not notified yet. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
+            Logger().debug("has_work_event not notified yet. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
                     self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
             Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
             Logger().debug("\traw data: %s" % self.raw_data_queue)
@@ -234,48 +234,57 @@ class MPI(Thread):
             self.has_work_event.wait()
             self.has_work_event.clear()
             
-            Logger().debug("Somebody notified has_work_cond. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
+            Logger().debug("Somebody notified has_work_event. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
                     self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
             Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
             Logger().debug("\traw data: %s" % self.raw_data_queue)
             Logger().debug("\trecieved data: %s" % self.received_data)
             Logger().debug("\tpending_requests: %s" % self.pending_requests)
 
-            _handle_unstarted()
-        
+            #_handle_unstarted()
+            
+            # Schedule unstarted requests (may be in- or outbound)
+            if self.unstarted_requests_has_work.is_set():
+                with self.unstarted_requests_lock:
+                    #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
+                    for request in self.unstarted_requests:
+                        self.schedule_request(request)
+                    self.unstarted_requests = []
+                    self.unstarted_requests_has_work.clear()
+                
             # Unpickle raw data (received messages) and put them in received queue
-#                if self.raw_data_has_work.is_set():
-            with self.raw_data_lock:
-                #Logger().debug("Checking - got raw_data_lock")
-                with self.received_data_lock:
-                    #Logger().debug("Checking received:%s " % self.received_data)
-                    for raw_data in self.raw_data_queue:
-                        data = pickle.loads(raw_data)
-                        self.received_data.append(data)
-                    
-                    self.pending_requests_has_work.set()
-                    self.raw_data_queue = []
-                self.raw_data_has_work.clear()
+            if self.raw_data_has_work.is_set():
+                with self.raw_data_lock:
+                    #Logger().debug("Checking - got raw_data_lock")
+                    with self.received_data_lock:
+                        #Logger().debug("Checking received:%s " % self.received_data)
+                        for raw_data in self.raw_data_queue:
+                            data = pickle.loads(raw_data)
+                            self.received_data.append(data)
+                        
+                        self.pending_requests_has_work.set()
+                        self.raw_data_queue = []
+                    self.raw_data_has_work.clear()
                     
             # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
-#                if self.pending_requests_has_work.is_set():
-            with self.pending_requests_lock:
-                #Logger().debug("Checking pending:%s " % self.pending_requests)
-                removal = [] # Remember succesfully matched requests so we can remove them
-                for request in self.pending_requests:
-                    if self.match_pending(request):
-                        # FIXME: Either here or in the match_pending we need to
-                        # issue a send with a reciept
-                        
-                        # The matcher function does the actual request update
-                        # and will remove matched data from received_data queue
-                        # we only need to update our own queue
-                        removal.append(request)
-                
-                for request in removal:
-                    self.pending_requests.remove(request)
+            if self.pending_requests_has_work.is_set():
+                with self.pending_requests_lock:
+                    #Logger().debug("Checking pending:%s " % self.pending_requests)
+                    removal = [] # Remember succesfully matched requests so we can remove them
+                    for request in self.pending_requests:
+                        if self.match_pending(request):
+                            # FIXME: Either here or in the match_pending we need to
+                            # issue a send with a reciept
+                            
+                            # The matcher function does the actual request update
+                            # and will remove matched data from received_data queue
+                            # we only need to update our own queue
+                            removal.append(request)
+                    
+                    for request in removal:
+                        self.pending_requests.remove(request)
 
-                self.pending_requests_has_work.clear() # We can't match for now wait until further data received
+                    self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
@@ -283,7 +292,14 @@ class MPI(Thread):
         
         Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
-        _handle_unstarted()
+        #_handle_unstarted()
+        with self.unstarted_requests_lock:
+            #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
+            for request in self.unstarted_requests:
+                self.schedule_request(request)
+            self.unstarted_requests = []
+            self.unstarted_requests_has_work.clear()
+            
         Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
         Logger().debug("QUITTING: recieved data: %s" % self.received_data)
