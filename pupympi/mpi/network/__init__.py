@@ -279,8 +279,8 @@ class CommunicationHandler(threading.Thread):
         
         def _handle_readlist(readlist):
             #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
-            if self.shutdown_event.is_set():
-                Logger().debug("... and shutdown is in progress!!!")
+            #if self.shutdown_event.is_set():
+            #    Logger().debug("... and shutdown is in progress!!!")
             for read_socket in readlist:
                 if self.shutdown_event.is_set():
                     Logger().debug("... readlist -  and shutdown is in progress!!!")
@@ -308,10 +308,13 @@ class CommunicationHandler(threading.Thread):
                 except MPIException, e:                    
                     # Broken connection is ok when shutdown is going on
                     if self.shutdown_event.is_set():
-                        Logger().debug("_handle_readlist -> get_raw_message -> recieve_fixed -> recv (SHOT DOWN) threw: %s" % e)
+                        Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
                         break # We don't care about incoming during shutdown
                     else:
+                        # We have no way of knowing whether other party has reached shutdown or this was indeed an error
+                        # so we just try listening to next socket
                         Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
+                        continue
                 except Exception, e:
                     Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                     
@@ -327,11 +330,15 @@ class CommunicationHandler(threading.Thread):
                 #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
                     # Signal mpi thread that there is new receieved data
-                    with self.network.mpi.has_work_cond:
-                        with self.network.mpi.raw_data_lock:
-                            self.network.mpi.has_work_cond.notify()
-                            self.network.mpi.raw_data_queue.append(raw_data)
-                            self.network.mpi.raw_data_event.set()
+                    #with self.network.mpi.has_work_cond:
+                    #    with self.network.mpi.raw_data_lock:
+                    #        self.network.mpi.has_work_cond.notify()
+                    #        self.network.mpi.raw_data_queue.append(raw_data)
+                    #        self.network.mpi.raw_data_event.set()
+                    with self.network.mpi.raw_data_lock:
+                        self.network.mpi.has_work_event.set()
+                        self.network.mpi.raw_data_queue.append(raw_data)
+                        self.network.mpi.raw_data_event.set()                        
                 else:
                     self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
@@ -378,17 +385,17 @@ class CommunicationHandler(threading.Thread):
                             self.socket_to_request[write_socket].remove(matched_request)
 
         while not self.shutdown_event.is_set():
-            if self.type == "in":
-                Logger().debug("CYCLING %s-thread" % self.type)
+            #if self.type == "in":
+            #    Logger().debug("Thread(%s) CYCLING select" % self.type)
             (in_list, out_list, error_list) = _select()
-            if self.type == "in":
-                Logger().debug("CYCLING handle readlist")
+            #if self.type == "in":
+            #    Logger().debug("Thread(%s) CYCLING handle readlist" % self.type)
             _handle_readlist(in_list)
-            if self.type == "in":
-                Logger().debug("CYCLING handle writelist")
+            #if self.type == "in":
+            #    Logger().debug("Thread(%s) CYCLING handle writelist" % self.type)
             _handle_writelist(out_list)
-            if self.type == "in":
-                Logger().debug("CYCLING done")
+            #if self.type == "in":
+            #    Logger().debug("Thread(%s) CYCLING done" % self.type)
         
         Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
    

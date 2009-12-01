@@ -2,7 +2,7 @@
 # meta-description: Multi-process version of stress_sr, with 200 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
 # meta-expectedresult: 0
 # meta-minprocesses: 5
-# meta-max_runtime: 500
+# meta-max_runtime: 50
 
 import time
 from mpi import MPI

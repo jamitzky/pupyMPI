@@ -12,7 +12,6 @@ mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 
-data = 50*"a"
 DUMMY_TAG = 1
 
 f = open("/tmp/mpi.lock_trouble.rank%s.log" % rank, "w")

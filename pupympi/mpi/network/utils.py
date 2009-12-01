@@ -116,7 +116,7 @@ def get_raw_message(client_socket, shutdown=False):
     return rank, cmd, receive_fixed(message_size)
     
 def prepare_message(data, rank, cmd=0):
-    print "Preparing message with command: %d" % cmd
+    Logger().debug("Preparing message with command: %d" % cmd)
     pickled_data = pickle.dumps(data)
     header = struct.pack("lll", len(pickled_data), rank, cmd)
     return header+pickled_data
