@@ -83,7 +83,9 @@ def synchronize_processes():
     
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 def gen_testset(size):
-    """Generates a test message byte array of asked-for size. Used for single and parallel ops."""
+    """Generates a test message byte array of asked-for size. Used for single and parallel ops.
+    Current implementation is really slow - even without random.
+    """
     log( "Generating testdata of size %s" % size)
     data = array.array('b')
     for x in xrange(0, size):
