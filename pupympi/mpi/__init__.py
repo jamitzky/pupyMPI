@@ -46,7 +46,6 @@ class MPI(Thread):
             
         """
         
-        
         parser = OptionParser()
         parser.add_option('--rank', type='int')
         parser.add_option('--size', type='int')

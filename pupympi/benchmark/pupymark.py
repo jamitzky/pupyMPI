@@ -23,7 +23,7 @@ help_message = '''
 The help message goes here.
 '''
 
-def testrunner(fixed_module = None, fixed_test = None):
+def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     The fixed_module parameter forces the benchmark to run just that one benchmark module
@@ -47,6 +47,9 @@ def testrunner(fixed_module = None, fixed_test = None):
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
         for size in sizekeys:
+            if size > limit:
+                continue
+                
             total = test(size, module.meta_schedule[size])
             per_it = total / module.meta_schedule[size]
             mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
@@ -74,7 +77,7 @@ def testrunner(fixed_module = None, fixed_test = None):
                 new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
                 new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
 
-            ci.data = ci.gen_testset(max(module.meta_schedule)) 
+            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule))) 
         else:
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
@@ -141,13 +144,16 @@ def main(argv=None):
     
     module = None
     test = None
+    limit = 2**32
     for arg in sys.argv:
-        if arg.startswith("--module="):
+        if arg.startswith("--module="): # forces a specific test module
             module = arg.split("=")[1]
-        if arg.startswith("--test="):
+        if arg.startswith("--test="): # forces one specific test - can be combined with module
             test = arg.split("=")[1]
+        if arg.startswith("--limit="): # forces an upper limit on the test data size
+            limit = int(arg.split("=")[1])
         
-    testrunner(module, test)
+    testrunner(module, test, limit)
     
 
 if __name__ == "__main__":
