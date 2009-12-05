@@ -296,7 +296,7 @@ class CommunicationHandler(threading.Thread):
                 
                 #Logger().info("Received message with command: %d" % msg_command)
                 if msg_command == constants.CMD_USER:
-                    with self.network.mpi.raw_data_lock:                        
+                    with self.network.mpi.raw_data_lock:
                         self.network.mpi.raw_data_queue.append(raw_data)
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
