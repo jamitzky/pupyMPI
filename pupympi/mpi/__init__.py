@@ -351,7 +351,7 @@ class MPI(Thread):
             # send about message to the process with rank r. 
             # Create a send request object
             handle = Request("send", world, r, constants.MPI_TAG_ANY, False)
-            handle.cmd = constants.CMD_ABORT 
+            handle.cmd = constants.CMD_ABORT
 
             # Add the request to the MPI layer unstarted requests queue. We
             # signal the condition variable to wake the MPI thread and have
