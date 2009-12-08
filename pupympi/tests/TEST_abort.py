@@ -15,7 +15,7 @@ else:
     import time, sys
     time.sleep(4)
 
-    print "We're about to sys exit with a positive return value"
+    #print "We're about to sys exit with a positive return value"
 
     # If we get to this line the abort stuff has not worked
     # so we actually return nicely, which is not expected.

@@ -5,6 +5,7 @@
 
 import time
 from mpi import MPI
+from mpi import constants
 
 mpi = MPI()
 
@@ -13,7 +14,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 assert size == 2
 
-f = open("/tmp/mpi.simple_synchronized_sr.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.simple_synchronized_sr.rank%s.log" % rank, "w")
 
 message = "Just a basic message from %d" % (rank)
 

@@ -20,7 +20,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 
 # Log stuff so progress is easier followed
-f = open("/tmp/mpi.big_messages.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.big_messages.rank%s.log" % rank, "w")
 
 
 # Test does not make sense for 1

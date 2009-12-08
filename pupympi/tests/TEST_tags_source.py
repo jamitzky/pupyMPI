@@ -21,7 +21,7 @@ an_unreal_tag = 2 # not supposed to receive this
 if rank == 0:
     # Send
     neighbour = 1
-    print "Rank: %d sending to %d - test of any_tag, specific source" % (rank,neighbour)
+    #print "Rank: %d sending to %d - test of any_tag, specific source" % (rank,neighbour)
     mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
     #print "Rank: %d sending to %d - test of any_tag, any_source" % (rank,neighbour)
     #mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
@@ -36,7 +36,7 @@ if rank == 0:
 elif rank == 1: 
     # Recieve
     neighbour = 0    
-    print "rank: %d recieving from %d - test of any_tag, specific source" % (rank,neighbour)
+    #print "rank: %d recieving from %d - test of any_tag, specific source" % (rank,neighbour)
     #recieved = mpi.MPI_COMM_WORLD.recv(neighbour,constants.MPI_TAG_ANY)
     recieved = mpi.MPI_COMM_WORLD.recv(neighbour,a_real_tag)    
     
@@ -56,8 +56,9 @@ elif rank == 1:
     #    raise "rank 1 received something that it shouldnt have."        
     
 else:
-    print "I'm rank %d and I'm not doing anything in this test" % rank
+    #print "I'm rank %d and I'm not doing anything in this test" % rank
+    pass
 
-print "Rank %s All done" % rank
+#print "Rank %s All done" % rank
 
 mpi.finalize()

@@ -23,7 +23,7 @@ else:
     try:
         assert message == BCAST_MESSAGE
     except AssertionError, e:
-        print "Excepted data:", BCAST_MESSAGE
-        print "Received data:", message
+        #print "Expected data:", BCAST_MESSAGE
+        #print "Received data:", message
         raise e
 mpi.finalize()
