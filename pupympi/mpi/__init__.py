@@ -69,7 +69,7 @@ class MPI(Thread):
         logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
-            filename = '/tmp/mpi.local.rank%s.log' % options.rank
+            filename = logdir+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
             output = open(filename, "w")
             sys.stdout = output

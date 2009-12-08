@@ -5,6 +5,7 @@
 # meta-max_runtime: 120
 
 from mpi import MPI
+from mpi import constants
 import time
 
 
@@ -14,7 +15,7 @@ rank = world.rank()
 
 DUMMY_TAG = 1
 
-f = open("/tmp/mpi.lock_trouble.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.lock_trouble.rank%s.log" % rank, "w")
 
 max_iterations = 500
 

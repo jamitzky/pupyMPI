@@ -1,9 +1,15 @@
+import os
+
+# Auxillary tags
+# TODO: This is a nasty way of going to dirs up and down into logs. There must be a prettier way
+#       Maybe we shouldn't be afraid of changing current working directory
+LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below
 MPI_SOURCE_ANY = -2 # to be recognizable
 
-# Other constants. NOTE: These are advisery only
+# Other constants. NOTE: These are advisory only
 MPI_COMM_NULL = None
 
 # internal tags below. 

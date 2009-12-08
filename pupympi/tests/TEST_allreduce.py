@@ -26,9 +26,9 @@ dist_fact = world.allreduce(rank+1, prod)
 try:
     assert fact(size) == dist_fact
 except AssertionError, e:
-    print "Got AssertionError"
-    print "\tExpected data: %s" % fact(size)
-    print "\tReceived: %s" % dist_fact
+    #print "Got AssertionError"
+    #print "\tExpected data: %s" % fact(size)
+    #print "\tReceived: %s" % dist_fact
     raise e
 
 mpi.finalize()

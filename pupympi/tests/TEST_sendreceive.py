@@ -4,23 +4,10 @@
 # meta-minprocesses: 5
 # meta-max_runtime: 90
 
-# This test is meant to be run with a odd number of processes
-# With debugging on 13 procs can throw around the token in just under a minute, so if 5 can't do it in 1.5 minutes something is wrong
-"""
-This test has serious problems with more than 9 procs when using the static socketpool.
-Often the first run is fine but even with a few seconds to cool of the next runs often hang
-
-- seems like sometimes a proccess recieves the token, but has not recieved all
-the start up messages from lower ranking processes. Therefore it has not left
-initialization and so does not pass on the token to the neighbour.
-Can it be that some of the lower ranks can actually manage to start up, recieve
-from lower, send off to all uppers and the recieve and pass on the token AND then
-shutdown sleeping for 4 secs and die and break socket before a higher gets the
-startup message?
-
-"""
 
 from mpi import MPI
+from mpi import constants
+
 import time
 
 mpi = MPI()
@@ -35,7 +22,7 @@ content = "conch"
 DUMMY_TAG = 1
 
 # Log stuff so progress is easier followed
-f = open("/tmp/mpi.sendreceive.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.sendreceive.rank%s.log" % rank, "w")
 
 
 # Send up in chain, recv from lower (with usual wrap around)
@@ -50,12 +37,6 @@ f.flush()
 f.write("Done for rank %d\n" % rank)
 f.flush()
 f.close()
-
-# Three seperate sleeps for superstition
-# FIXME: The below is currently needed when going much over 5 procs on this test
-#time.sleep(3)
-#time.sleep(3)
-#time.sleep(3)
 
 # Close the sockets down nicely
 mpi.finalize()

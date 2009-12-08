@@ -5,12 +5,15 @@
 
 
 from mpi import MPI
+from mpi import constants
+import os
 
 mpi = MPI()
 
 world = mpi.MPI_COMM_WORLD
 rank = world.rank()
-f = open("/tmp/mpi.local.finalize.rank%s.log" % rank, "w")
+
+f = open(constants.LOGDIR+"mpi.local.finalize.rank%s.log" % rank, "w")
 
 f.write( "Gonna finalize - rank %d\n" % rank)
 f.flush()

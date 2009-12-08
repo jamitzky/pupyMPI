@@ -7,6 +7,7 @@
 
 import time
 from mpi import MPI
+from mpi import constants
 
 mpi = MPI()
 
@@ -22,7 +23,7 @@ SECOND_TAG = 222
 THIRD_TAG = 333
 
 # Log stuff so progress is easier followed
-f = open("/tmp/mpi.isend_to_irecv.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.isend_to_irecv.rank%s.log" % rank, "w")
 
 # Rank 0 posts isends and irecvs in order and waits in reverse order
 if rank == 0:

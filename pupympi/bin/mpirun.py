@@ -17,7 +17,7 @@ def parse_options():
     usage = 'usage: %prog [options] arg'
     parser = OptionParser(usage=usage, version="Pupympi version 0.2 (dev)")
     parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
-    parser.add_option('--host-file', dest='hostfile', help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
+    parser.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
     # Add a logging and debugging
     parser_debug_group = OptionGroup(parser, "Logging and debugging", 
@@ -37,7 +37,7 @@ def parse_options():
     parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=20, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
-    parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in /tmp/pupympi.profiling.rank<rank>. Defaults to off.")
+    parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
     parser.add_option_group( parser_adv_group )
 
     try:
@@ -115,6 +115,9 @@ def io_forwarder(process_list):
 if __name__ == "__main__":
     options, args, user_options, executeable = parse_options() # Get options from cli
 
+    # Set log dir
+    logdir = constants.LOGDIR # NOTE: This could be command line option
+    
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 

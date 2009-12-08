@@ -5,13 +5,14 @@
 # meta-max_runtime: 60
 
 from mpi import MPI
+from mpi import constants
 import sys
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 
-f = open("/tmp/mpi.stress_sr.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.stress_sr.rank%s.log" % rank, "w")
 
 max_iterations = 500
 

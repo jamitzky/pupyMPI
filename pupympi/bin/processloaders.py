@@ -1,6 +1,7 @@
 import sys, os, subprocess, select, time
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
+from mpi import constants
 
 # TODO Output redirect. Log files?
 
@@ -33,7 +34,7 @@ def ssh(host, arguments, process_io, rank):
     elif process_io == 'asyncdirect': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
-        target = open("/tmp/mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
@@ -56,7 +57,7 @@ def rsh(host, arguments, process_io, rank):
     elif process_io == 'pipe': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'filepipe': # writes to a file on the mpirun machine only
-        target = open("/tmp/mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)

@@ -7,9 +7,6 @@ from mpi import MPI
 from mpi import constants
 import time
 
-class TestException(Exception): 
-    """Custom exception for tests"""
-    pass
 
 mpi = MPI()
 
@@ -18,17 +15,17 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-print "---> PROCESS %d/%d" % (rank,size)
+#print "---> PROCESS %d/%d" % (rank,size)
 
 cwG = mpi.MPI_COMM_WORLD.group()
-print "Group of MPI_COMM_WORLD: %s" % cwG
+#print "Group of MPI_COMM_WORLD: %s" % cwG
 
 assert rank is cwG.rank()
 assert size is cwG.size()
 
 newG = cwG.incl([rank])
 assert newG is not None
-print "Incl group %s." % newG
+#print "Incl group %s." % newG
 
 newG = cwG.excl([rank])
 assert newG is not None
@@ -36,7 +33,7 @@ assert newG.rank() == -1
 
 newG = cwG.excl([0 if rank is 1 else 1])
 assert newG is not None
-print "Excl group %s." % newG
+#print "Excl group %s." % newG
 
 emptyG = cwG.incl([])
 assert emptyG is not None

@@ -9,14 +9,12 @@ def parse_hostfile(hostfile): # {{{1
     logger = Logger()
 
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
+    # TODO: Something must be intended with the malformed flag but I can't find usage,
+    #       what do we do about malformed hostfiles?
     malformed = False # Flag bad hostfile
     hosts = []
     
-    if not hostfile:
-        logger.info("No hostfile specified - all processes will run on default machines (typically localhost)")
-        # If no hostfile is specified, default is localhost with default parameters
-        hosts = [("localhost",defaults)]
-    else:
+    try:
         fh = open(hostfile, "r")
         for line in fh.readlines():
             pseudo_list = line.split( "#", 1 )            
@@ -42,15 +40,12 @@ def parse_hostfile(hostfile): # {{{1
                 hosts += [(hostname, specified)]
 
         fh.close()
-
-    if len(hosts):
-        # uncomment below if you wanna see the format
-        #for (hName, hDict) in hosts:
-        #   print hName
-        #   print hDict
-        return hosts
-    else:
-        raise IOError("No lines in your hostfile, or something else went wrong")
+    except:
+        logger.info("No hostfile specified or hostfile invalid - all processes will run on default machines (typically localhost)")
+        hosts = [("localhost",defaults)]
+    
+    return hosts
+            
 
 def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
     """
