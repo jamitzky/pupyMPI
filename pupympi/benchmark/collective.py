@@ -7,13 +7,12 @@ Created by Jan Wiberg on 2009-08-13.
 """
 
 import comm_info as ci
-from mpi import constants
 
-# meta_has_meta = True
-# meta_separate_communicator = False
-# meta_requires_data_ranks_adjunct = False
-# meta_min_processes = 4
-# meta_min_data = 4
+meta_has_meta = True
+meta_separate_communicator = False
+meta_requires_data_ranks_adjunct = False
+meta_min_processes = 4
+meta_min_data = 4
 
 meta_schedule = {
     0: 1000,

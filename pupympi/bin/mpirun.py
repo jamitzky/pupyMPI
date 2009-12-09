@@ -140,7 +140,7 @@ if __name__ == "__main__":
             executeable = os.path.join( os.getcwd(), executeable)
         
         logger.debug("enable_profiling %s" % options.enable_profiling)
-        profiler = (" -m cProfile -o /tmp/pupympi.profiling.rank%s" %rank) if options.enable_profiling else ""
+        profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
         # Mimic our cli call structure also for remotely started processes
         run_options = [options.remote_python, "-u", profiler, executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
                 "--mpirun-conn-port=%d" % mpi_run_port, 
