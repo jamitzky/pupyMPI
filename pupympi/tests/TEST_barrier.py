@@ -31,7 +31,7 @@ mpi.MPI_COMM_WORLD.barrier()
 
 t2 = time.time()
 
-assert (t2 - t1) > 4
+assert (t2 - t1) > 5
 #print "%s: I am the process with rank %d of %d processes, past barrier" % (datetime.now(), rank, size)
 
 # Close the sockets down nicely
