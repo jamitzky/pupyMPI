@@ -4,25 +4,32 @@
 # meta-minprocesses: 11
 
 # Simple pupympi program to test barrier
-# FIXME: make the test automatic
+# Rank 0 sleeps for 5 seconds before joining the barrier
+# all ranks should see at least a 4 second interval between t1 and t2 caused
+# by waiting at the barrier.
 
 from mpi import MPI
-from sys import stderr
+
 import time
 from datetime import datetime
 
 mpi = MPI()
 
 rank = mpi.MPI_COMM_WORLD.rank()
-
 size = mpi.MPI_COMM_WORLD.size()
 
 #print "%s: I am the process with rank %d of %d processes, now barrier'ing" % (datetime.now(), rank, size)
 
+t1 = time.time()
+
 if rank == 0:
-    time.sleep(4)
+    time.sleep(5)
 
 mpi.MPI_COMM_WORLD.barrier()
+
+t2 = time.time()
+
+assert (t2 - t1) > 4
 #print "%s: I am the process with rank %d of %d processes, past barrier" % (datetime.now(), rank, size)
 
 # Close the sockets down nicely

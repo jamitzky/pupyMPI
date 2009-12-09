@@ -9,3 +9,13 @@ node2.serverpark.local   cpu=4 max_cpu=16
 busynode.escience.dk     cpu=2 port=12001 # I hate those guys and their friggin fancy ports
 tyr.diku.dk max_cpu=1
 localhost max_cpu=1 port=10020# This dude seems cool though
+
+# PROTIP: Just let lines below stand when using the cluster
+n0  cpu=2 max_cpu=16
+n1  cpu=2 max_cpu=16
+n2  cpu=2 max_cpu=16
+n3  cpu=2 max_cpu=16
+n4  cpu=2 max_cpu=16
+n5  cpu=2 max_cpu=16
+n6  cpu=2 max_cpu=16
+n7  cpu=2 max_cpu=16
