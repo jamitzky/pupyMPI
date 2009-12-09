@@ -57,7 +57,7 @@ def get_raw_message(client_socket):
         bad_recieves = 0
         # FIXME: Try lowering to only one bad recieve and see if it isn't just normal
         # operation for a closed socket
-        while length and bad_recieves < 10:
+        while length and bad_recieves < 1:
             try:
                 data = client_socket.recv(min(length, 4096))
             except socket.error, e:
