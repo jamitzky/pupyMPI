@@ -8,8 +8,6 @@
 # Rank 0 sleeps for 5 seconds before joining the next barrier
 # all ranks should see at least a 4 second interval between t1 and t2 caused
 # by waiting for rank 0 at the second barrier.
-# NOTE: Ideally we would have at least 5 second interval but it sees too tight
-# for the cluster.
 
 from mpi import MPI
 
