@@ -53,7 +53,16 @@ class SocketPool(object):
         if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
+            
             client_socket.connect( receiver )
+            # DEBUG - TESTING SOCKET OPTIONS
+            #print "OPTIONS"
+            #print str(client_socket.getsockopt(socket.SOL_TCP,socket.SOCK_STREAM))
+            #print str(client_socket.getsockopt(socket.SOL_TCP,socket.AF_INET))
+            #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
+            ##client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+            #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
             
             if len(self.sockets) > self.max_size: # Throw one out if there are too many
                 self._remove_element()

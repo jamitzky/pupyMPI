@@ -56,6 +56,14 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
             results.append((size, module.meta_schedule[size], total, per_it, mbsec))
 
+        alltotal = 0.0
+        iterationtime = 0.0
+        for r in results:
+            alltotal += r[2]
+            iterationtime += r[3]
+            
+        ci.log("--------------------------------------------------------------------------")
+        ci.log("(Accumulated)\t   total[sec]:\t%-10s\t%-10s \n" % ( round(alltotal, 2), round(iterationtime * 1000000, 2)))
         return results
         
     def _set_up_environment(mpi, module):
