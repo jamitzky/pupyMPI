@@ -11,11 +11,11 @@ tyr.diku.dk max_cpu=1
 localhost max_cpu=1 port=10020# This dude seems cool though
 
 # PROTIP: Just let lines below stand when using the cluster
-n0  cpu=2 max_cpu=16
-n1  cpu=2 max_cpu=16
-n2  cpu=2 max_cpu=16
-n3  cpu=2 max_cpu=16
-n4  cpu=2 max_cpu=16
-n5  cpu=2 max_cpu=16
-n6  cpu=2 max_cpu=16
-n7  cpu=2 max_cpu=16
+n0  cpu=1 max_cpu=16
+n1  cpu=1 max_cpu=16
+n2  cpu=1 max_cpu=16
+n3  cpu=1 max_cpu=16
+n4  cpu=1 max_cpu=16
+n5  cpu=1 max_cpu=16
+n6  cpu=1 max_cpu=16
+n7  cpu=1 max_cpu=16
