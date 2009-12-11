@@ -6,7 +6,7 @@ import select, time
 import processloaders 
 from mpi.logger import Logger
 from mpi.network import utils
-from mpi.network.utils import get_socket, get_raw_message, prepare_message
+from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
 import threading
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
-    s, mpi_run_hostname, mpi_run_port = get_socket() # Find an available socket
+    s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
     s.listen(5)
 
     # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)

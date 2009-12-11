@@ -12,7 +12,7 @@ import time
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
 from mpi.network import utils # Some would like the rest of the utils to be more explicitly used ... maybe later
-from mpi.network.utils import get_socket, get_raw_message, prepare_message
+from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.logger import Logger
 
@@ -42,7 +42,7 @@ class Network(object):
             self.t_out.type = "out"
             self.t_in.type = "in"
         
-        (server_socket, hostname, port_no) = get_socket()
+        (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
         self.hostname = hostname
         server_socket.listen(5)

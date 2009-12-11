@@ -9,7 +9,7 @@ try:
 except ImportError:
     import pickle
     
-def get_socket(min=10000, max=30000):
+def create_random_socket(min=10000, max=30000):
     """
     A simple helper method for creating a socket,
     binding it to a random free port within the specified range. 
