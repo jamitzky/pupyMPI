@@ -6,8 +6,11 @@
 # Simple pupympi program to test barrier
 # All ranks synchronize at barrier
 # Rank 0 sleeps for 5 seconds before joining the next barrier
-# all ranks should see at least a 4 second interval between t1 and t2 caused
-# by waiting for rank 0 at the second barrier.
+# all ranks should see at least a 5 second interval between t1 and t2 caused
+# by waiting for rank 0 at the second barrier
+# NOTE: The interval could be slightly less as discussed in issue 65
+# http://bitbucket.org/bromer/python-mpi/issue/65/
+# For this reason we currently allow a 0.05 variance
 
 from mpi import MPI
 
@@ -31,7 +34,12 @@ mpi.MPI_COMM_WORLD.barrier()
 
 t2 = time.time()
 
-assert (t2 - t1) > 5.0
+assert ((t2 - t1) > 4.95), " Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t1))
+
+#if not (t2 - t1) > 5.0:
+#    print "Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t1))
+#else:
+#    print "Ok for rank %i with (t2 - t1) = %s " % (rank, (t2-t1))
 #print "%s: I am the process with rank %d of %d processes, past barrier" % (datetime.now(), rank, size)
 
 # Close the sockets down nicely
