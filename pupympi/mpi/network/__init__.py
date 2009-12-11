@@ -241,9 +241,7 @@ class CommunicationHandler(threading.Thread):
                 #s.shutdown(1)   # Further sends are disallowed.
                 #s.shutdown(2)   # Further sends and receives are disallowed.
                 s.close()                
-                n += 1 # For debugging
             except Exception, e:
-                m += 1 # For debugging
                 Logger().debug("Got error when closing socket: %s" % e)
 
     def run(self):
