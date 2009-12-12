@@ -126,8 +126,13 @@ def robust_send(socket, message):
     """
     # FIXME: Decide whether to catch errors here and reraise or as now let caller handle
     
-    remainder = len(message) # how many bytes to send
-    while remainder > 0:
+    target = len(message) # how many bytes to send
+    transmitted_bytes = 0
+    while target > transmitted_bytes:        
         transmitted_bytes = socket.send(message)
-        remainder -= transmitted_bytes
+        transmitted_bytes += transmitted_bytes
+        
+        if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
+            message = message[transmitted_bytes:]
+            Logger().info("WHOA NELLY once around the block")
         
