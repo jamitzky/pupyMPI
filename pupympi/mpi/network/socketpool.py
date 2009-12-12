@@ -53,7 +53,7 @@ class SocketPool(object):
         if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            #client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
+            client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
             
             client_socket.connect( receiver )
             # DEBUG - TESTING SOCKET OPTIONS
