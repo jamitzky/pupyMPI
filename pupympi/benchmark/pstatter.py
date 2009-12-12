@@ -12,6 +12,6 @@ p.strip_dirs() # Remove superflous directory paths
 
 #p.sort_stats('time').print_stats(10)
 p.sort_stats('cum', 'time')
-p.print_callers(20)
+p.print_callers(200)
 
 

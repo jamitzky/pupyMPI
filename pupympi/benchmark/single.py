@@ -54,7 +54,9 @@ def test_PingPing(size, max_iterations):
     (s_tag, r_tag) = ci.get_tags_single()
     (source, dest) = ci.get_srcdest_paired() # source for purposes of recv, rank-relative
     data = ci.data[0:size]
-
+    # DEBUG
+    #print "data:",data
+    #return 0.1
     ci.synchronize_processes()
 
     t1 = ci.clock_function()

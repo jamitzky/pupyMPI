@@ -187,7 +187,7 @@ class CollectiveRequest(BaseRequest):
         FIXME: A more optimal solution would be to ensure that only one
             of the messages got send. 
         """
-        print self.communicator.rank(), self.data
+        Logger().debug("Rank: %i, data: %s" % (self.communicator.rank(), self.data) )
         self.data = self.data.pop()['value']
     
     def start_allgather(self):
