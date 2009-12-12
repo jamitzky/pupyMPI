@@ -54,30 +54,27 @@ def get_raw_message(client_socket):
         Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         """
         message = ""
-        bad_recieves = 0
-        # FIXME: Try lowering to only one bad recieve and see if it isn't just normal
-        # operation for a closed socket
-        while length and bad_recieves < 1:
+        while length > 0:
             try:
                 data = client_socket.recv(min(length, 4096))
             except socket.error, e:
                 Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
-                raise MPIException("Connection broke or something")
+                raise MPIException("recieve_fixed threw socket error: %s" % e)
                 # NOTE: We can maybe recover more gracefully here but that requires
                 # throwing status besides message and rank upwards. For now I just want
                 # to be aware of this error when it happens.
             except Exception, e:
                 Logger().error("get_raw_message: Raised error: %s" %e)
-                raise MPIException("Connection broke or something")
+                raise MPIException("recieve_fixed threw other error: %s" % e)
+            
+            # Other side closed NOTE: Make sure this does not mask any "normal" errors
+            if len(data) == 0:
+                raise MPIException("Connection broke or something recieved empty")
+
             length -= len(data)
             message += data
-            if message == "":
-                bad_recieves += 1
                 
-        if message == "":
-            raise MPIException("Connection broke or something - bad_recieves: %i" % bad_recieves)
-        else:
-            return message
+        return message
     
     header_size = struct.calcsize("lll")
     header = receive_fixed(header_size)
