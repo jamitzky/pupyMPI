@@ -44,9 +44,7 @@ def test_Bcast(size, max_iterations):
         """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            #my_data = data if ci.rank == root else None # probably superfluous
-            my_data = "e" if ci.rank == root else None # probably superfluous
-            #print "my_data:",my_data
+            my_data = data if ci.rank == root else None # probably superfluous
             ci.communicator.bcast(root, my_data)
             
             root += 1
@@ -58,11 +56,7 @@ def test_Bcast(size, max_iterations):
 
     # end of test
     
-    #data = common.gen_testset(size)
-    #data = ci.gen_testset(size)
-    data = ci.data[0:size]
-    #print "data:",data
-    #max_iterations = ci.get_iter_single(iteration_schedule, size)
+    data = ci.data[0:size+1] # NOTE: We have to add one to size since our MPI_bcast doesn't work with zero length data for root
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
