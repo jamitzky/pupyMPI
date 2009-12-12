@@ -43,7 +43,7 @@ def test_Bcast(size, max_iterations):
     def Bcast(data, max_iterations):
         """docstring for Bcast"""
         root = 0
-        for r in max_iterations:
+        for r in xrange(max_iterations):
             my_data = data if ci.rank == root else None # probably superfluous
             ci.communicator.bcast(root, data)
             
@@ -56,8 +56,11 @@ def test_Bcast(size, max_iterations):
 
     # end of test
     
-    data = common.gen_testset(size)
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
+    #data = common.gen_testset(size)
+    #data = ci.gen_testset(size)
+    data = ci.data[0:size]
+    #print "data:",data
+    #max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -93,7 +96,8 @@ def test_Allgather(size, max_iterations):
             #    }
 
     # end of test
-    data = common.gen_testset(size)*ci.num_procs
+    #data = common.gen_testset(size)*ci.num_procs
+    data = ci.gen_testset(size)*ci.num_procs
     max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.synchronize_processes()
 
@@ -124,7 +128,8 @@ def test_Allgatherv(size, max_iterations):
             # FIXME defect detection and error handling
 
     # end of test
-    data = common.gen_testset(size)*ci.num_procs
+    #data = common.gen_testset(size)*ci.num_procs
+    data = ci.gen_testset(size)*ci.num_procs
     max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.rdispl = 1 # FIXME not necessarily best
     ci.synchronize_processes()
@@ -152,7 +157,8 @@ def test_Alltoall(size, max_iterations):
             # FIXME defect detection and error handling
 
     # end of test
-    data = common.gen_testset(size)*ci.num_procs
+    #data = common.gen_testset(size)*ci.num_procs
+    data = ci.gen_testset(size)*ci.num_procs
     max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.rdispl = 1 # FIXME not necessarily best
     ci.synchronize_processes()
@@ -295,7 +301,8 @@ def test_Reduce(size, max_iterations):
     if size > 0 or size < 4:
         return 0 # hack to modify schedule for reduce operations
         
-    data = common.gen_testset(size)*ci.num_procs
+    #data = common.gen_testset(size)*ci.num_procs
+    data = ci.gen_testset(size)*ci.num_procs
     ci.rdispl = 1 # FIXME not necessarily best
     ci.synchronize_processes()
 
