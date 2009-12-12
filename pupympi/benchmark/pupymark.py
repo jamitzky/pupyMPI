@@ -177,7 +177,7 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
-    output = "csv"
+
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module
             module = arg.split("=")[1]

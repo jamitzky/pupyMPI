@@ -44,8 +44,10 @@ def test_Bcast(size, max_iterations):
         """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == root else None # probably superfluous
-            ci.communicator.bcast(root, data)
+            #my_data = data if ci.rank == root else None # probably superfluous
+            my_data = "e" if ci.rank == root else None # probably superfluous
+            #print "my_data:",my_data
+            ci.communicator.bcast(root, my_data)
             
             root += 1
             root = root % ci.num_procs
