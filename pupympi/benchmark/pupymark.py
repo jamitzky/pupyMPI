@@ -8,8 +8,9 @@ Usage: MPI program - run with mpirun
 
 Created by Jan Wiberg on 2009-08-13.
 """
+from time import localtime, strftime
 
-import sys,pprint,getopt
+import sys,pprint,getopt, datetime
 from mpi import MPI
 from mpi import constants
 
@@ -40,8 +41,9 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
         results = []
+
         ci.log("%s - %s" % (module.__name__, test.__name__)) 
-        ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))
+        ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))        
         ci.log("--------------------------------------------------------------------------")
         
         sizekeys = module.meta_schedule.keys()
@@ -54,6 +56,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             per_it = total / module.meta_schedule[size]
             mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
             ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
+                
             results.append((size, module.meta_schedule[size], total, per_it, mbsec))
 
         alltotal = 0.0
@@ -110,7 +113,35 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
 
     mpi.finalize()
     
+    # Output to .csv file
     if root:
+        stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
+        filename = "pupymark.output."+stamp+".csv"
+        f = open(constants.LOGDIR+filename, "w")
+        
+        # Column headers for easier reading
+        row = "datasize,repetitions,total time,time/repetition,Mb/second,name of test,timestamp of testrun"
+        f.write(row+"\n")
+
+        for testname in resultlist:
+            testresults = resultlist[testname]            
+            
+            for res in testresults:
+                # Row is like this:
+                # 1, 1000, 3.0093121528625488, 0.0030093121528625487, 0.00031690774102616313          
+                row = "%i,%i,%f,%f,%f" % (res)
+                # and we add testname and date for easy pivoting
+                row += ",%s,%s" % (testname, stamp)
+                f.write(row+"\n")
+            # Empty row for easier reading
+            f.write("\n")
+            
+        f.flush()
+        f.close()
+        
+        #{'test_PingPong': [(0, 1000, 4.4380040168762207, 0.0044380040168762206, 0.0), (1, 1000, 3.9939868450164795, 0.0039939868450164792, 0.00023877753067619704)],
+        #'test_PingPing': [(0, 1000, 2.8434579372406006, 0.0028434579372406004, 0.0), (1, 1000, 3.0093121528625488, 0.0030093121528625487, 0.00031690774102616313)]}
+
         pass
         # Works but need to save as CSV or something instead.
         # pp = pprint.PrettyPrinter(indent=4)
@@ -153,6 +184,7 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
+    output = "csv"
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module
             module = arg.split("=")[1]
@@ -160,7 +192,6 @@ def main(argv=None):
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-        
     testrunner(module, test, limit)
     
 
