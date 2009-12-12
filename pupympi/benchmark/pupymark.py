@@ -58,7 +58,8 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
                 
             results.append((size, module.meta_schedule[size], total, per_it, mbsec))
-
+        
+        # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
         iterationtime = 0.0
         for r in results:
@@ -127,8 +128,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             testresults = resultlist[testname]            
             
             for res in testresults:
-                # Row is like this:
-                # 1, 1000, 3.0093121528625488, 0.0030093121528625487, 0.00031690774102616313          
+                # Data point
                 row = "%i,%i,%f,%f,%f" % (res)
                 # and we add testname and date for easy pivoting
                 row += ",%s,%s" % (testname, stamp)
@@ -139,13 +139,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         f.flush()
         f.close()
         
-        #{'test_PingPong': [(0, 1000, 4.4380040168762207, 0.0044380040168762206, 0.0), (1, 1000, 3.9939868450164795, 0.0039939868450164792, 0.00023877753067619704)],
-        #'test_PingPing': [(0, 1000, 2.8434579372406006, 0.0028434579372406004, 0.0), (1, 1000, 3.0093121528625488, 0.0030093121528625487, 0.00031690774102616313)]}
-
-        pass
-        # Works but need to save as CSV or something instead.
-        # pp = pprint.PrettyPrinter(indent=4)
-        # pp.pprint(resultlist)
 
 class Usage(Exception):
     def __init__(self, msg):
