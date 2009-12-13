@@ -31,9 +31,11 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     """
     # DEBUG / PROFILE
     if yappi:
+        # Trace Python built-in functions
+        built_ins = False
         # We don't know who is root yet so everybody imports yappi and starts it
         import yappi
-        yappi.start(False) # True means also profile built-in functions
+        yappi.start(built_ins) # True means also profile built-in functions
     
     modules = [single, parallel, collective]
     testlist = []
@@ -123,17 +125,19 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     # DEBUG / PROFILING
     if yappi:
         if root:
-            stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
-            filename = "yappi."+stamp+"."+str(module.__name__)+".trace"
-            # Doesn't work atm. since we can't be sure test is defined
-            #filename = "yappi."+stamp+"."+("%s-%s" % (module.__name__, test.__name__))+".trace"
-            f = open(constants.LOGDIR+filename, "w")
-            
+            sorttype = yappi.SORTTYPE_TSUB            
             # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
             # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
             #   Subtime means the total spent time in the function minus the total
             #   time spent in the other functions called from this function.
-            stats = yappi.get_stats(yappi.SORTTYPE_TSUB,yappi.SORTORDER_DESCENDING, 50 )
+            stats = yappi.get_stats(sorttype,yappi.SORTORDER_DESCENDING, 50 )
+
+            stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
+            filename = "yappi.%s.%s-%s-%s.sorttype-%s.trace" % (stamp,fixed_module,fixed_test,limit, sorttype)
+            # Doesn't work atm. since we can't be sure test is defined
+            #filename = "yappi."+stamp+"."+("%s-%s" % (module.__name__, test.__name__))+".trace"
+            f = open(constants.LOGDIR+filename, "w")
+            
             for stat in stats:
                 print stat
                 f.write(stat+"\n")
