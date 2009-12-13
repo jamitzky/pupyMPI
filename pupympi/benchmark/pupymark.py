@@ -104,6 +104,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
         ci.communicator = new_comm
+        # NOTE: What is the below about? Not sure I follow, why does it result in processes having rank None sometimes?
         ci.num_procs = new_comm.size() if new_comm is not constants.MPI_COMM_NULL else -1
         ci.rank = new_comm.rank() if new_comm is not constants.MPI_COMM_NULL else -1
     
