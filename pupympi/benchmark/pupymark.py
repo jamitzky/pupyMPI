@@ -79,6 +79,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         return results
         
     def _set_up_environment(mpi, module):
+        print "SETUP"
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
@@ -90,6 +91,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
 
         new_comm = mpi.MPI_COMM_WORLD
         if hasattr(module, "meta_has_meta"):
+            print "HAS META"
             if module.meta_separate_communicator:
                 if ci.w_num_procs < module.meta_processes_required:
                     raise Exception("Not enough processes active to invoke module %s" % module.__name__)
@@ -97,19 +99,24 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
                 new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
 
-            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule))) 
+            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
         else:
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
         ci.communicator = new_comm
         ci.num_procs = new_comm.size() if new_comm is not constants.MPI_COMM_NULL else -1
         ci.rank = new_comm.rank() if new_comm is not constants.MPI_COMM_NULL else -1
-            
+    
     for module in modules:
         if fixed_module is not None and module.__name__ != fixed_module:
+            print "FIXED MODULE:", fixed_module
+            print "MODULE NAME:", module.__name__
             continue
+        print "FIXED MODULE:", fixed_module
+        print "MODULE NAME:", module.__name__
 
         _set_up_environment(mpi, module)
+        
         
         if ci.rank == -1: # skip unless THIS process participates - we need the environment ready to determine that.
             continue
@@ -134,8 +141,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
 
             stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
             filename = "yappi.%s.%s-%s-%s.sorttype-%s.trace" % (stamp,fixed_module,fixed_test,limit, sorttype)
-            # Doesn't work atm. since we can't be sure test is defined
-            #filename = "yappi."+stamp+"."+("%s-%s" % (module.__name__, test.__name__))+".trace"
             f = open(constants.LOGDIR+filename, "w")
             
             for stat in stats:
@@ -221,7 +226,7 @@ def main(argv=None):
             limit = int(arg.split("=")[1])
         if arg.startswith("--yappi"): # forces an upper limit on the test data size
             yappi = True
-
+    print "MAIN?"
     testrunner(module, test, limit, yappi)
     
 

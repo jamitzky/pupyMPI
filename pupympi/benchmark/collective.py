@@ -45,10 +45,11 @@ def test_Bcast(size, max_iterations):
         root = 0
         for r in xrange(max_iterations):
             my_data = data if ci.rank == root else None # probably superfluous
+            #my_data = data
             ci.communicator.bcast(root, my_data)
             
-            root += 1
-            root = root % ci.num_procs
+            #root += 1
+            #root = root % ci.num_procs
 
           # FIXME error and defect handling 
           # TODO note the error below in categorizing
@@ -56,7 +57,11 @@ def test_Bcast(size, max_iterations):
 
     # end of test
     
-    data = ci.data[0:size+1] # NOTE: We have to add one to size since our MPI_bcast doesn't work with zero length data for root
+    # NOTE: We have to add one to size since our MPI_bcast doesn't work with zero length data for root
+    if size == 0: # Empty messages are not handled well in collective ops
+        size = 1
+        
+    data = ci.data[0:size]        
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -93,7 +98,7 @@ def test_Allgather(size, max_iterations):
 
     # end of test
     #data = common.gen_testset(size)*ci.num_procs
-    data = ci.gen_testset(size)*ci.num_procs
+    data = ci.gen_string_testset(size)*ci.num_procs
     max_iterations = ci.get_iter_single(iteration_schedule, size)
     ci.synchronize_processes()
 

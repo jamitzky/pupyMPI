@@ -5,7 +5,6 @@ from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time
 from threading import Thread
 
-import yappi
         
 from mpi.communicator import Communicator
 from mpi.logger import Logger
