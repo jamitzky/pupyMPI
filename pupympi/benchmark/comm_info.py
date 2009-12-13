@@ -86,6 +86,7 @@ def gen_testset(size):
     """Generates a test message byte array of asked-for size. Used for single and parallel ops.
     Current implementation is really slow - even without random.
     """
+    print "GEN CALLED for rank:",rank
     log( "Generating testdata of size %s" % size)
     data = array.array('b')
     for x in xrange(0, size):
@@ -94,5 +95,16 @@ def gen_testset(size):
     log( "...done generating data.")
     return data
 
-
-    
+baseset2 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-+"
+def gen_string_testset(size):
+    """Generates a test message string of asked-for size. Used for collective ops where "" is not an allowed message
+    """
+    log( "Generating stringy testdata of size %s" % size)
+    if size < 64:
+        if size == 0:
+            size+=1
+        data = baseset2[0:size]
+    else:
+        data = baseset2*(size / len(baseset2))
+    log( "...done generating data.")
+    return data
