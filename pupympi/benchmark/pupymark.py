@@ -24,11 +24,17 @@ help_message = '''
 The help message goes here.
 '''
 
-def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
+def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=False):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     The fixed_module parameter forces the benchmark to run just that one benchmark module
     """
+    # DEBUG / PROFILE
+    if yappi:
+        # We don't know who is root yet so everybody imports yappi and starts it
+        import yappi
+        yappi.start(True) # True means also profile built-in functions
+    
     modules = [single, parallel, collective]
     testlist = []
     resultlist = {}
@@ -114,6 +120,15 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
 
     mpi.finalize()
     
+    # DEBUG / PROFILING
+    # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
+    # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
+    #   Subtime means the total spent time in the function minus the total time spent in the other functions called from this function. 
+    if root:
+        stats = yappi.get_stats(yappi.SORTTYPE_TSUB,yappi.SORTORDER_DESCENDING, 20 )
+        for stat in stats: print stat
+    yappi.stop()
+    
     # Output to .csv file
     if root:
         stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
@@ -177,7 +192,8 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
-
+    yappi = False
+    
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module
             module = arg.split("=")[1]
@@ -185,7 +201,10 @@ def main(argv=None):
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-    testrunner(module, test, limit)
+        if arg.startswith("--yappi"): # forces an upper limit on the test data size
+            yappi = True
+
+    testrunner(module, test, limit, yappi)
     
 
 if __name__ == "__main__":

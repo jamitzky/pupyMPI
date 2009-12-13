@@ -5,6 +5,8 @@ from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time
 from threading import Thread
 
+import yappi
+        
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network import Network
@@ -14,6 +16,7 @@ from mpi import constants
 from mpi.network.utils import pickle
 
 from mpi.request import Request
+
 
 class MPI(Thread):
     """
@@ -116,7 +119,7 @@ class MPI(Thread):
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
         
-        # Unstarted requests are both send and receive requests held here so the user thread can return quickly
+        # Unstarted requests are both send and receive requests, held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
         self.unstarted_requests_has_work = threading.Event()
@@ -206,6 +209,11 @@ class MPI(Thread):
         return match
 
     def run(self):
+        #DEBUG / PROFILING
+        #yappi.start(True) # True means also profile built-in functions
+
+
+        
         # internal function that will be used below
         # FIXME: Rewrite for clarity
         def _handle_unstarted():
@@ -395,6 +403,15 @@ class MPI(Thread):
         # to close
         self.network.finalize()
         #Logger().debug("--- Network finally finalized --")
+        
+        # DEBUG / PROFILING
+        # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
+        # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
+        #   Subtime means the total spent time in the function minus the total time spent in the other functions called from this function. 
+        #stats = yappi.get_stats(yappi.SORTTYPE_TSUB,yappi.SORTORDER_DESCENDING, 200 )
+        #for stat in stats: print stat
+        #yappi.stop()
+
 
     @classmethod
     def initialized(cls):
