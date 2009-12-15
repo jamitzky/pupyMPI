@@ -43,20 +43,14 @@ meta_schedule = {
 def test_PingPing(size, max_iterations):
     def PingPing(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
-            #print "pingping: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
-            # FIXME error handling for all statements
             request = ci.communicator.isend(dest, data)
             recv_data = ci.communicator.recv(source)
             request.wait()  	    
-            # TODO: check for defects and error handling 
     # end of test
     
     (s_tag, r_tag) = ci.get_tags_single()
     (source, dest) = ci.get_srcdest_paired() # source for purposes of recv, rank-relative
     data = ci.data[0:size]
-    # DEBUG
-    #print "data:",data
-    #return 0.1
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -73,15 +67,12 @@ def test_PingPing(size, max_iterations):
 def test_PingPong(size, max_iterations):
     def PingPong(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
-            #print "pingpong: rank %s iteration %s, source %s, dest %s, datalen %s" % (ci.rank, r, source, dest, len(data))
             if ci.rank == ci.pair0: 
                 ci.communicator.send(dest, data, s_tag)
                 recv = ci.communicator.recv(source, r_tag)
-                # FIXME Verify data if enabled        
             elif ci.rank == ci.pair1:
                 recv = ci.communicator.recv(source, r_tag)
                 ci.communicator.send(dest, data, s_tag)
-                # FIXME Verify data if enabled
             else: 
                 raise Exception("Broken state")
     # end of test

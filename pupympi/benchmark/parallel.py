@@ -38,6 +38,7 @@ meta_schedule = {
     2097152: 20,
     4194304: 10
 }
+# TODO: MIGHT NOT WORK ATM, check it
 def test_Sendrecv(size, max_iterations):
     def get_srcdest_chained():
         dest   = (ci.rank + 1) % ci.num_procs
@@ -48,7 +49,6 @@ def test_Sendrecv(size, max_iterations):
         print "%s -> [%s] -> %s" % (source, ci.rank, dest)
         for r in xrange(max_iterations):
             recvdata = ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
-            # FIXME: check for defects
     # end of test
 
     (s_tag, r_tag) = ci.get_tags_single()
@@ -83,7 +83,6 @@ def test_Exchange(size, max_iterations):
             
     def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
         for r in xrange(max_iterations):
-            # FIXME: check for defects
             ci.communicator.isend(right, data, s_tag)
             ci.communicator.isend(left, data, s_tag)
             leftdata = ci.communicator.recv(left, r_tag)

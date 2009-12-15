@@ -180,7 +180,7 @@ class CollectiveRequest(BaseRequest):
 
     def complete_bcast(self):
         """
-        The data from the two_way_tree_traveral will be a list with possible
+        The data from the two_way_tree_traversal will be a list with possible
         multiple items of the packed message. The items will be identical,
         so we simply pick the first and return the value of the message.
         
@@ -194,7 +194,11 @@ class CollectiveRequest(BaseRequest):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
         final_data = range(self.communicator.size())
         for item in data:
-            final_data[item['rank']] = item['value']
+            try:
+                final_data[item['rank']] = item['value']
+            except TypeError, e:
+                Logger().error("item %s of data %s" % (item, data) )
+                raise TypeError("item %s of data %s" % (item, data) )
         
         self.data = final_data
 

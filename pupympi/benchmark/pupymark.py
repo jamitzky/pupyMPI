@@ -84,7 +84,8 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
         ci.w_rank = mpi.MPI_COMM_WORLD.rank()
-
+        
+        # TODO: We have the support now, so clean-up when we have the time
         ci.select_source = True # required until support for SOURCE_ANY implemented in pupympi
         ci.select_tag = True # required until support for TAG_ANY implemented in pupympi
         
