@@ -526,7 +526,7 @@ class Communicator:
         """
         if self.rank() == root:
             # Start collective request
-            if data is not None:
+            if data is None:
                 raise MPIException("You need to specify data when you're the root of a broadcast")
 
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
