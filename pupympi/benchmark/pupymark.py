@@ -61,11 +61,15 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 continue
                 
             total = test(size, module.meta_schedule[size])
-            per_it = total / module.meta_schedule[size]
-            mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
-            ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
-                
-            results.append((size, module.meta_schedule[size], total, per_it, mbsec))
+            if total < 0: # Tests returning negative signals an error
+                ci.log("%-10s\t%-10s\t(test failed - this datapoint invalid)" % (size, module.meta_schedule[size]))
+                results.append((size, module.meta_schedule[size], 0, 0, 0))
+            else:
+                per_it = total / module.meta_schedule[size]
+                mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
+                ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
+                    
+                results.append((size, module.meta_schedule[size], total, per_it, mbsec))
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
