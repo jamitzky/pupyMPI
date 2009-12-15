@@ -93,7 +93,6 @@ def test_Allgather(size, max_iterations):
     
     # Allgather is not valid for size < num_procs
     if size < ci.num_procs:
-        ci.log("Too little size:%i to test with %i processes - this datapoint is invalid." % (size,ci.num_procs))
         return -42
     
     data = ci.gen_testset(size*ci.num_procs)

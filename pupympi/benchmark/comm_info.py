@@ -88,10 +88,8 @@ def gen_testset(size):
     """
     # Sometimes everyone is rank None at this point - see pupymark._set_up_evironment
     #print "GEN CALLED for rank:",rank
-    log( "Generating testdata of size %s" % size)
     data = array.array('b')
     for x in xrange(0, size):
         data.append(ord(baseset[x % len(baseset)])) # Original and fast
         # data.append(ord(baseset[random.randint(0,len(baseset) - 1)])) # Very nifty but takes 7 ages of man
-    log( "...done generating data.")
     return data
