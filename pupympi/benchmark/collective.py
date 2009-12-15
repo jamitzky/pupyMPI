@@ -47,24 +47,24 @@ def test_Bcast(size, max_iterations):
             my_data = data if ci.rank == root else "" # NOTE: probably superflous, discuss with Rune
             ci.communicator.bcast(root, my_data)
             
-            # NOTE: Is this rooting around part of the test?
+            # Switch root
             root += 1
             root = root % ci.num_procs
         
-        # NOTE: Fred don't understand the FIXME and TODO below, will ask Jan
-        # FIXME: error and defect handling 
-        # TODO: note the error below in categorizing
-            # CHK_DIFF("Allgather",c_info, (char*)bc_buf+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs, ...
+        # TODO: note the error below in categorizing (directly from Pallas code)
+        # CHK_DIFF("Allgather",c_info, (char*)bc_buf+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs, ...
 
     # end of test
     
-    # NOTE: We have to add one to size since our MPI_bcast doesn't work with zero length data for root
+    # NOTE: We have to add one to size=0 since our MPI_bcast doesn't work with zero length data
+    # FIXME: Rune?
     if size == 0: # Empty messages are not handled well in collective ops
         # Size 0 could follow from limit=0 in which case the testset contains nothing to slice        
         customset = ci.gen_testset(1)
         data = customset[0:size+1]
     else:        
         data = ci.data[0:size]
+    #data = ci.data[0:size]
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -80,38 +80,32 @@ def test_Bcast(size, max_iterations):
 def test_Allgather(size, max_iterations):
     def Allgather(data, datalen, max_iterations):
         """docstring for Allgather"""
-        for r in max_iterations:
-            # TODO check if allgather verifies that the jth block size is modulo size 
-            ci.communicator.allgather(data[ci.rank:ci.rank+size], size, size) # FIXME allgather signature may change 
-
-            # for(i=0;i< ITERATIONS->n_sample;i++)
-            #    {
-            #      ierr = MPI_Allgather((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-            #                           s_num,c_info->s_data_type,
-            #                          (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-            #                           r_num,c_info->r_data_type,
-            #                          c_info->communicator);
-            #      MPI_ERRHAND(ierr);
-            # 
-            #      CHK_DIFF("Allgather",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
-            #               0, c_info->num_procs*size, 1, 
-            #               put, 0, ITERATIONS->n_sample, i,
-            #               -2, &defect);
-            #    }
-
+        for r in xrange(max_iterations):
+            # TODO: check if allgather verifies that the jth block size is modulo size
+            
+            # We continually move offset in the array taking turns sending each of
+            # the num_procs chunks, to ensure things aren't cached well.
+            # NOTE: This might seem superflous in Python but we want to compare against
+            # Pallas on LAM fairly            
+            offset = ((ci.rank+r) % ci.num_procs) * size       
+            received = ci.communicator.allgather( data[offset:offset+size-1] )
     # end of test
-    #data = common.gen_testset(size)*ci.num_procs
-    data = ci.gen_string_testset(size)*ci.num_procs
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
+    
+    # Allgather is not valid for size < num_procs
+    if size < ci.num_procs:
+        ci.log("Too little size:%i to test with %i processes - this datapoint is invalid." % (size,ci.num_procs))
+        return -42
+    
+    data = ci.gen_testset(size*ci.num_procs)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
     
     # do magic
-    Allgather(data, size, max_iterations)
+    Allgather(data, (size*ci.num_procs), max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
+    time = t2 - t1
 
     return time
 
