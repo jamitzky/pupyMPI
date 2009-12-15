@@ -48,8 +48,7 @@ def test_Bcast(size, max_iterations):
             ci.communicator.bcast(root, my_data)
             
             # Switch root
-            root += 1
-            root = root % ci.num_procs
+            root = (root +1) % ci.num_procs
         
         # TODO: note the error below in categorizing (directly from Pallas code)
         # CHK_DIFF("Allgather",c_info, (char*)bc_buf+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs, ...
@@ -92,6 +91,7 @@ def test_Allgather(size, max_iterations):
     # end of test
     
     # Allgather is not valid for size < num_procs
+    # FIXME: Find proper interpretation of allgather for small size
     if size < ci.num_procs:
         return -42
     
@@ -145,7 +145,8 @@ def test_Alltoall(size, max_iterations):
 
     # end of test
     # Alltoall is not valid for size < num_procs
-    if size < ci.num_procs:
+    #if size < ci.num_procs:
+    if size == 0:
         return -42
     
     data = ci.gen_testset(size*ci.num_procs)
@@ -187,7 +188,14 @@ def test_Alltoall(size, max_iterations):
 
 def test_Scatter(size, max_iterations):
     def Scatter(data, datalen, max_iterations):
-        pass
+        current_root = 0
+        for r in xrange(max_iterations):
+            my_data = data if ci.rank == current_root else "" # NOTE: probably superflous, discuss with Rune
+            ci.communicator.scatter(my_data, current_root)
+            
+            # Switch root
+            current_root = (current_root +1) % ci.num_procs
+            
         #       for(i=0;i<ITERATIONS->n_sample;i++)
         #       {
         #           ierr = MPI_Scatter((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
@@ -204,7 +212,23 @@ def test_Scatter(size, max_iterations):
         #                    i%c_info->num_procs, &defect);
         #         }
     # end of test
-    pass
+    # Alltoall is not valid for size < num_procs
+    #if size < ci.num_procs:
+    if size == 0:
+        return -42
+    
+    data = ci.gen_testset(size*ci.num_procs)
+    #Prepack data into lists for nicer iteration
+    data = [ data[offset*size:offset*size+size] for offset in range(ci.num_procs) ]
+    ci.synchronize_processes()
+    t1 = ci.clock_function()
+    
+    # do magic
+    Scatter(data, size, max_iterations)
+
+    t2 = ci.clock_function()
+    time = t2 - t1
+    return time 
 
 #def test_Scatterv(size, max_iterations):
 #    def Scatterv(data, datalen, max_iterations):
