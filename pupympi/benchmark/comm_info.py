@@ -11,8 +11,8 @@ Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 import time, array, random
 from mpi import constants
  
-N_BARR = 2
-
+N_BARR = 2                  # Number of calls to barrier deemed neccessary for sync
+                            # NOTE: I think this provides false sync security, more barriers are not better in our implementation
  
 mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
