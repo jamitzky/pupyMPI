@@ -46,7 +46,9 @@ def test_Bcast(size, max_iterations):
         for r in xrange(max_iterations):
             my_data = data if ci.rank == root else "w" # probably superfluous
             #my_data = data
-            print "I'm brian",my_data," rank:",ci.rank
+            if my_data is None:
+                print "I'm brian",my_data," rank:",ci.rank
+                print "OUCH"
             ci.communicator.bcast(root, my_data)
             
             #root += 1
