@@ -87,8 +87,8 @@ def test_Allgather(size, max_iterations):
             # the num_procs chunks, to ensure things aren't cached well.
             # NOTE: This might seem superflous in Python but we want to compare against
             # Pallas on LAM fairly            
-            offset = ((ci.rank+r) % ci.num_procs) * size       
-            received = ci.communicator.allgather( data[offset:offset+size-1] )
+            offset = ((ci.rank+r) % ci.num_procs) * datalen       
+            received = ci.communicator.allgather( data[offset:offset+datalen-1] )
     # end of test
     
     # Allgather is not valid for size < num_procs
@@ -109,43 +109,33 @@ def test_Allgather(size, max_iterations):
     return time
 
     
-def test_Allgatherv(size, max_iterations):
-    def Allgatherv(data, datalen, max_iterations):
-        """docstring for Allgather"""
-        for r in max_iterations:
-            # TODO check if allgather verifies that the jth block size is modulo size 
-            ci.communicator.allgatherv(data[ci.rank:ci.rank+size], size, ci.rdispl) # FIXME allgatherv signature may change 
-            # ierr = MPI_Allgatherv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-            #                       s_num,c_info->s_data_type,
-            #                       (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-            #                       c_info->reccnt,c_info->rdispl,
-            #                       c_info->r_data_type,
-            #                       c_info->communicator);
+#def test_Allgatherv(size, max_iterations):
+#    def Allgatherv(data, datalen, max_iterations):
+#        """docstring for Allgather"""
+#        for r in max_iterations:
+#            # TODO check if allgather verifies that the jth block size is modulo size 
+#            ci.communicator.allgatherv(data[ci.rank:ci.rank+size], size, ci.rdispl) # FIXME allgatherv signature may change 
+#            # ierr = MPI_Allgatherv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+#            #                       s_num,c_info->s_data_type,
+#            #                       (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#            #                       c_info->reccnt,c_info->rdispl,
+#            #                       c_info->r_data_type,
+#            #                       c_info->communicator);
+#
+#            # FIXME defect detection and error handling
+#
+#    # end of test
 
-            # FIXME defect detection and error handling
-
-    # end of test
-    #data = common.gen_testset(size)*ci.num_procs
-    data = ci.gen_testset(size)*ci.num_procs
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
-    ci.rdispl = 1 # FIXME not necessarily best
-    ci.synchronize_processes()
-
-    t1 = ci.clock_function()
-    
-    # do magic
-    Allgatherv(data, size, max_iterations)
-
-    t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
-
-    return time
     
 def test_Alltoall(size, max_iterations):
     def Alltoall(data, datalen, max_iterations):
         """docstring for Alltoall"""
-        for r in max_iterations:
-            ci.communicator.alltoall(data[ci.rank:ci.rank+size], ci.sndcnt, data, ci.reccnt)
+        for r in xrange(max_iterations):
+            # TODO: Maybe some of this list comprehension can be moved out of loop
+            #       for slightly faster benchmarking
+            
+            # alternate order of sending for each iteration to minimize cache hits
+            received = ci.communicator.alltoall( [data[(i+r)%ci.num_procs] for i in range(ci.num_procs)] )
                   #             ierr = MPI_Alltoall((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
                   #                                 s_num,c_info->s_data_type,
                   # (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
@@ -154,45 +144,46 @@ def test_Alltoall(size, max_iterations):
             # FIXME defect detection and error handling
 
     # end of test
-    #data = common.gen_testset(size)*ci.num_procs
-    data = ci.gen_testset(size)*ci.num_procs
-    max_iterations = ci.get_iter_single(iteration_schedule, size)
-    ci.rdispl = 1 # FIXME not necessarily best
+    # Alltoall is not valid for size < num_procs
+    if size < ci.num_procs:
+        return -42
+    
+    data = ci.gen_testset(size*ci.num_procs)
+    #Prepack data into lists for nicer iteration
+    data = [ data[offset*size:offset*size+size] for offset in range(ci.num_procs) ]
     ci.synchronize_processes()
-
     t1 = ci.clock_function()
     
     # do magic
-    Allgatherv(data, size, max_iterations)
+    Alltoall(data, size, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
-
+    time = t2 - t1
     return time 
        
-def test_Alltoallv(size, max_iterations):
-    def Alltoallv(data, datalen, max_iterations):
-        pass
-        # for(i=0;i< ITERATIONS->n_sample;i++)
-        #           {
-        #             ierr = MPI_Alltoallv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-        #                                  c_info->sndcnt,c_info->sdispl,
-        #                                  c_info->s_data_type,
-        #                      (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                                  c_info->reccnt,c_info->rdispl,
-        #                                  c_info->r_data_type,
-        #                      c_info->communicator);
-        #             MPI_ERRHAND(ierr);
-        # 
-        #             CHK_DIFF("Alltoallv",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                      c_info->rank*size,
-        #                      0, c_info->num_procs*size, 1, 
-        #                      put, 0, ITERATIONS->n_sample, i,
-        #                      -2, &defect);
-        #           }
-        #         
-    # end of test
-    pass
+#def test_Alltoallv(size, max_iterations):
+#    def Alltoallv(data, datalen, max_iterations):
+#        pass
+#        # for(i=0;i< ITERATIONS->n_sample;i++)
+#        #           {
+#        #             ierr = MPI_Alltoallv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+#        #                                  c_info->sndcnt,c_info->sdispl,
+#        #                                  c_info->s_data_type,
+#        #                      (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        #                                  c_info->reccnt,c_info->rdispl,
+#        #                                  c_info->r_data_type,
+#        #                      c_info->communicator);
+#        #             MPI_ERRHAND(ierr);
+#        # 
+#        #             CHK_DIFF("Alltoallv",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        #                      c_info->rank*size,
+#        #                      0, c_info->num_procs*size, 1, 
+#        #                      put, 0, ITERATIONS->n_sample, i,
+#        #                      -2, &defect);
+#        #           }
+#        #         
+#    # end of test
+#    pass
 
 def test_Scatter(size, max_iterations):
     def Scatter(data, datalen, max_iterations):
@@ -215,26 +206,26 @@ def test_Scatter(size, max_iterations):
     # end of test
     pass
 
-def test_Scatterv(size, max_iterations):
-    def Scatterv(data, datalen, max_iterations):
-        pass
-        #       for(i=0;i<ITERATIONS->n_sample;i++)
-        #       {
-        #           ierr = MPI_Scatterv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-        #                               c_info->sndcnt,c_info->sdispl, c_info->s_data_type,
-        #                     (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        # // root = round robin
-        #                               r_num, c_info->r_data_type, i%c_info->num_procs,
-        #                               c_info->communicator);
-        #           MPI_ERRHAND(ierr);
-        #           CHK_DIFF("Scatterv",c_info, 
-        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                    c_info->sdispl[c_info->rank], size, size, 1, 
-        #                    put, 0, ITERATIONS->n_sample, i,
-        #                    i%c_info->num_procs, &defect);
-        #         }
-    # end of test
-    pass
+#def test_Scatterv(size, max_iterations):
+#    def Scatterv(data, datalen, max_iterations):
+#        pass
+#        #       for(i=0;i<ITERATIONS->n_sample;i++)
+#        #       {
+#        #           ierr = MPI_Scatterv((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+#        #                               c_info->sndcnt,c_info->sdispl, c_info->s_data_type,
+#        #                     (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        # // root = round robin
+#        #                               r_num, c_info->r_data_type, i%c_info->num_procs,
+#        #                               c_info->communicator);
+#        #           MPI_ERRHAND(ierr);
+#        #           CHK_DIFF("Scatterv",c_info, 
+#        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        #                    c_info->sdispl[c_info->rank], size, size, 1, 
+#        #                    put, 0, ITERATIONS->n_sample, i,
+#        #                    i%c_info->num_procs, &defect);
+#        #         }
+#    # end of test
+#    pass
 
 def test_Gather(size, max_iterations):
     def Gather(data, datalen, max_iterations):
@@ -242,31 +233,31 @@ def test_Gather(size, max_iterations):
     # end of test
     pass
 
-def test_Gatherv(size, max_iterations):
-    def Gatherv(data, datalen, max_iterations):
-        pass
-        #       for(i=0;i<ITERATIONS->n_sample;i++)
-        #       {
-        #           ierr = MPI_Gather ((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-        #                              s_num,c_info->s_data_type,
-        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        # // root = round robin
-        #                              r_num, c_info->r_data_type, i%c_info->num_procs,
-        #                              c_info->communicator);
-        #           MPI_ERRHAND(ierr);
-        # #ifdef CHECK
-        #      if( c_info->rank == i%c_info->num_procs )
-        #      {
-        #           CHK_DIFF("Gather",c_info, 
-        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
-        #                    0, c_info->num_procs*size, 1, 
-        #                    put, 0, ITERATIONS->n_sample, i,
-        #                    -2, &defect);
-        #      }
-        # #endif
-        #         }
-    # end of test
-    pass
+#def test_Gatherv(size, max_iterations):
+#    def Gatherv(data, datalen, max_iterations):
+#        pass
+#        #       for(i=0;i<ITERATIONS->n_sample;i++)
+#        #       {
+#        #           ierr = MPI_Gather ((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+#        #                              s_num,c_info->s_data_type,
+#        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        # // root = round robin
+#        #                              r_num, c_info->r_data_type, i%c_info->num_procs,
+#        #                              c_info->communicator);
+#        #           MPI_ERRHAND(ierr);
+#        # #ifdef CHECK
+#        #      if( c_info->rank == i%c_info->num_procs )
+#        #      {
+#        #           CHK_DIFF("Gather",c_info, 
+#        #                    (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
+#        #                    0, c_info->num_procs*size, 1, 
+#        #                    put, 0, ITERATIONS->n_sample, i,
+#        #                    -2, &defect);
+#        #      }
+#        # #endif
+#        #         }
+#    # end of test
+#    pass
 
 def test_Reduce(size, max_iterations):
     def Reduce(data, datalen, max_iterations):
