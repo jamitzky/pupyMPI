@@ -44,19 +44,17 @@ def test_Bcast(size, max_iterations):
         """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == root else "w" # probably superfluous
-            #my_data = data
-            if my_data is None:
-                print "I'm brian",my_data," rank:",ci.rank
-                print "OUCH"
+            my_data = data if ci.rank == root else "" # NOTE: probably superflous, discuss with Rune
             ci.communicator.bcast(root, my_data)
             
-            #root += 1
-            #root = root % ci.num_procs
-
-          # FIXME error and defect handling 
-          # TODO note the error below in categorizing
-                # CHK_DIFF("Allgather",c_info, (char*)bc_buf+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs, ...
+            # NOTE: Is this rooting around part of the test?
+            root += 1
+            root = root % ci.num_procs
+        
+        # NOTE: Fred don't understand the FIXME and TODO below, will ask Jan
+        # FIXME: error and defect handling 
+        # TODO: note the error below in categorizing
+            # CHK_DIFF("Allgather",c_info, (char*)bc_buf+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs, ...
 
     # end of test
     
@@ -67,18 +65,16 @@ def test_Bcast(size, max_iterations):
         data = customset[0:size+1]
     else:        
         data = ci.data[0:size]
-    #print "CI DATA:",ci.data
-    #print "DATALEN:",len(data)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
 
-    # do magic
+    # Doit
     Bcast(data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
-
+    
+    time = (t2 - t1)
     return time
     
 def test_Allgather(size, max_iterations):
