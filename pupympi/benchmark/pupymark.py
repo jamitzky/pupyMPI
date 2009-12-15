@@ -79,7 +79,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         return results
         
     def _set_up_environment(mpi, module):
-        print "SETUP"
+        
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
@@ -91,7 +91,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
 
         new_comm = mpi.MPI_COMM_WORLD
         if hasattr(module, "meta_has_meta"):
-            print "HAS META"
             if module.meta_separate_communicator:
                 if ci.w_num_procs < module.meta_processes_required:
                     raise Exception("Not enough processes active to invoke module %s" % module.__name__)
@@ -104,17 +103,13 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
         ci.communicator = new_comm
-        # NOTE: What is the below about? Not sure I follow, why does it result in processes having rank None sometimes?
+        # NOTE: What is the below about? Not sure I follow, why do ranks get assigned this late?
         ci.num_procs = new_comm.size() if new_comm is not constants.MPI_COMM_NULL else -1
         ci.rank = new_comm.rank() if new_comm is not constants.MPI_COMM_NULL else -1
     
     for module in modules:
         if fixed_module is not None and module.__name__ != fixed_module:
-            print "FIXED MODULE:", fixed_module
-            print "MODULE NAME:", module.__name__
             continue
-        print "FIXED MODULE:", fixed_module
-        print "MODULE NAME:", module.__name__
 
         _set_up_environment(mpi, module)
         
@@ -227,7 +222,6 @@ def main(argv=None):
             limit = int(arg.split("=")[1])
         if arg.startswith("--yappi"): # forces an upper limit on the test data size
             yappi = True
-    print "MAIN?"
     testrunner(module, test, limit, yappi)
     
 

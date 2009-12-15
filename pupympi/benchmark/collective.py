@@ -44,8 +44,9 @@ def test_Bcast(size, max_iterations):
         """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == root else None # probably superfluous
+            my_data = data if ci.rank == root else "w" # probably superfluous
             #my_data = data
+            print "I'm brian",my_data," rank:",ci.rank
             ci.communicator.bcast(root, my_data)
             
             #root += 1
@@ -59,9 +60,13 @@ def test_Bcast(size, max_iterations):
     
     # NOTE: We have to add one to size since our MPI_bcast doesn't work with zero length data for root
     if size == 0: # Empty messages are not handled well in collective ops
-        size = 1
-        
-    data = ci.data[0:size]        
+        # Size 0 could follow from limit=0 in which case the testset contains nothing to slice        
+        customset = ci.gen_testset(1)
+        data = customset[0:size+1]
+    else:        
+        data = ci.data[0:size]
+    #print "CI DATA:",ci.data
+    #print "DATALEN:",len(data)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
