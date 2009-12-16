@@ -86,8 +86,16 @@ def test_Allgather(size, max_iterations):
             # the num_procs chunks, to ensure things aren't cached well.
             # NOTE: This might seem superflous in Python but we want to compare against
             # Pallas on LAM fairly            
-            offset = ((ci.rank+r) % ci.num_procs) * datalen       
-            received = ci.communicator.allgather( data[offset:offset+datalen-1] )
+            offset = ((ci.rank+r) % ci.num_procs) * datalen
+            print "ITERATION:",r
+            if data[offset:offset+datalen-1] is None:
+                print "NNNNONE!"
+                raise Exception("Damn!")
+                
+            packet = data[offset:offset+datalen-1]
+            packet = [2]
+            packet = data
+            received = ci.communicator.allgather( packet )
     # end of test
     
     # Allgather is not valid for size < num_procs
@@ -255,17 +263,13 @@ def test_Gather(size, max_iterations):
     def Gather(data, max_iterations):
         current_root = 0
         for r in xrange(max_iterations):
-            if not data or data is None:
-                print "BADATA:%s, from:%i,r:%i" % (data,ci.rank,r)
-                raise Exception("Damn")
-            ci.communicator.gather(data, current_root)            
+            received = ci.communicator.gather(data, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
     # end of test
 
     # Gather might not be valid for size zero
     # TODO: Check assumption
-    #if size < ci.num_procs:
     if size == 0:
         return -42
     
@@ -307,123 +311,107 @@ def test_Gather(size, max_iterations):
 #    pass
 
 def test_Reduce(size, max_iterations):
-    def Reduce(data, datalen, max_iterations):
+    def Reduce(data, max_iterations):
         """docstring for Reduce"""
-        for r in max_iterations:
-            pass
-            
-                #           ierr = MPI_Reduce((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-                #                             (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-                #                             s_num,
-                # c_info->red_data_type,c_info->op_type,
-                # i1,c_info->communicator);
-                #           MPI_ERRHAND(ierr);
-                # 
-                #             #ifdef CHECK
-                #              if( c_info->rank == i1 )
-                #              {
-                #                   CHK_DIFF("Reduce",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
-                #                            size, size, asize, 
-                #                            put, 0, ITERATIONS->n_sample, i,
-                #                            -1, &defect);
-                #              }
-                #             #endif
-                #         /*  CHANGE THE ROOT NODE */
-                #         i1=(++i1)%c_info->num_procs;
+        current_root = 0
+        for r in xrange(max_iterations):
+            # For the reduce operator we use Python built-in max
+            received = ci.communicator.reduce(data, max, current_root)            
+            # Switch root
+            current_root = (current_root +1) % ci.num_procs
     # end of test
 
-    # end of test
-    if size > 0 or size < 4:
-        return 0 # hack to modify schedule for reduce operations
-        
-    #data = common.gen_testset(size)*ci.num_procs
-    data = ci.gen_testset(size)*ci.num_procs
-    ci.rdispl = 1 # FIXME not necessarily best
+    # Reduce might not be valid for size zero
+    # TODO: Check assumption
+    if size == 0:
+        return -42
+    
+    data = ci.gen_testset(size)
     ci.synchronize_processes()
-
     t1 = ci.clock_function()
     
     # do magic
-    Reduce(data, size, max_iterations)
+    Reduce(data, max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
+    time = t2 - t1
+    return time
 
-    return time    
-
-
-def test_Reduce_scatter(size, max_iterations):
-    def Reduce_scatter(data, datalen, max_iterations):
-        pass
-        #   for (i=0;i<c_info->num_procs ;i++)
-        #     {
-        #      IMB_get_rank_portion(i, c_info->num_procs, size, s_size, 
-        #                       &pos1, &pos2);
-        #      c_info->reccnt[i] = (pos2-pos1+1)/s_size;
-        # #ifdef CHECK
-        #      if( i==c_info->rank ) {pos=pos1; Locsize= s_size*c_info->reccnt[i];}
-        # #endif
-        #      }
-        # 
-        #   if(c_info->rank!=-1)
-        #     {
-        #       for(i=0; i<N_BARR; i++) MPI_Barrier(c_info->communicator);
-        # 
-        #       t1 = MPI_Wtime();
-        #       for(i=0;i< ITERATIONS->n_sample;i++)
-        #         {
-        #           ierr = MPI_Reduce_scatter
-        #                            ((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-        #                             (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                             c_info->reccnt,
-        #               c_info->red_data_type,c_info->op_type,
-        #               c_info->communicator);
-        #           MPI_ERRHAND(ierr);
-        # 
-        #           CHK_DIFF("Reduce_scatter",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                     pos,
-        #                     Locsize, size, asize,
-        #                     put, 0, ITERATIONS->n_sample, i,
-        #                     -1, &defect);
-        # 
-        #         }
-        #       t2 = MPI_Wtime();
-        #       *time=(t2 - t1)/ITERATIONS->n_sample;
-        #     }
-        #   else
-        #     { 
-        #       *time = 0.; 
-        #     }
-        # 
-    # end of test
-    if size > 0 or size < 4:
-        return 0 # hack to modify schedule for reduce operations
-    pass
+#def test_Reduce_scatter(size, max_iterations):
+#    def Reduce_scatter(data, datalen, max_iterations):
+#        pass
+#        #   for (i=0;i<c_info->num_procs ;i++)
+#        #     {
+#        #      IMB_get_rank_portion(i, c_info->num_procs, size, s_size, 
+#        #                       &pos1, &pos2);
+#        #      c_info->reccnt[i] = (pos2-pos1+1)/s_size;
+#        # #ifdef CHECK
+#        #      if( i==c_info->rank ) {pos=pos1; Locsize= s_size*c_info->reccnt[i];}
+#        # #endif
+#        #      }
+#        # 
+#        #   if(c_info->rank!=-1)
+#        #     {
+#        #       for(i=0; i<N_BARR; i++) MPI_Barrier(c_info->communicator);
+#        # 
+#        #       t1 = MPI_Wtime();
+#        #       for(i=0;i< ITERATIONS->n_sample;i++)
+#        #         {
+#        #           ierr = MPI_Reduce_scatter
+#        #                            ((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+#        #                             (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        #                             c_info->reccnt,
+#        #               c_info->red_data_type,c_info->op_type,
+#        #               c_info->communicator);
+#        #           MPI_ERRHAND(ierr);
+#        # 
+#        #           CHK_DIFF("Reduce_scatter",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+#        #                     pos,
+#        #                     Locsize, size, asize,
+#        #                     put, 0, ITERATIONS->n_sample, i,
+#        #                     -1, &defect);
+#        # 
+#        #         }
+#        #       t2 = MPI_Wtime();
+#        #       *time=(t2 - t1)/ITERATIONS->n_sample;
+#        #     }
+#        #   else
+#        #     { 
+#        #       *time = 0.; 
+#        #     }
+#        # 
+#    # end of test
+#    if size > 0 or size < 4:
+#        return 0 # hack to modify schedule for reduce operations
+#    pass
 
 def test_Allreduce(size, max_iterations):
-    def Allreduce(data, datalen, max_iterations):
-        pass
-        # for(i=0;i< ITERATIONS->n_sample;i++)
-        #   {
-        #     ierr = MPI_Allreduce((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
-        #                          (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
-        #                          s_num,
-        #                      c_info->red_data_type,c_info->op_type,
-        #                      c_info->communicator);
-        #     MPI_ERRHAND(ierr);
-        # 
-        #     CHK_DIFF("Allreduce",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
-        #              size, size, asize, 
-        #              put, 0, ITERATIONS->n_sample, i,
-        #              -1, &defect);
-        # 
-        #   }
-        
-    # end of test
-    if size > 0 or size < 4:
-        return 0 # hack to modify schedule for reduce operations
-    pass
+    def Allreduce(data, max_iterations):
+        for r in xrange(max_iterations):
+            # Since there is no switching of root, we jump around in the data
+            # to 
+            # For the allreduce operator we use Python built-in max
+            received = ci.communicator.allreduce(data, max)            
 
+    # end of test
+
+    # Reduce might not be valid for size zero
+    # TODO: Check assumption
+    if size == 0:
+        return -42
+    
+
+    data = ci.gen_testset(size)
+    ci.synchronize_processes()
+    t1 = ci.clock_function()
+    
+    # do magic
+    Allreduce(data, max_iterations)
+
+    t2 = ci.clock_function()
+    time = t2 - t1
+    return time
+ 
 def test_Barrier(size, max_iterations):
     def Barrier(max_iterations):
         """docstring for Barrier"""
@@ -439,7 +427,7 @@ def test_Barrier(size, max_iterations):
     t1 = ci.clock_function()
 
     # do magic
-    barrier(max_iterations)
+    Barrier(max_iterations)
 
     t2 = ci.clock_function()
     time = (t2 - t1)/max_iterations
