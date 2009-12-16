@@ -37,3 +37,12 @@ def prod(input_list):
     return p
 
 prod.partial_data = True
+
+def MPI_max(input_list):
+    """
+    Returns the largest element in the list. The input can be any kind of list
+    or pseudo list (string, tuple, array etc.).
+    
+    """
+
+    return max(input_list)
