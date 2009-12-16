@@ -128,7 +128,7 @@ def test_Allgather(size, max_iterations):
 
     
 def test_Alltoall(size, max_iterations):
-    def Alltoall(data, datalen, max_iterations):
+    def Alltoall(data, max_iterations):
         """docstring for Alltoall"""
         for r in xrange(max_iterations):
             # TODO: Maybe some of this list comprehension can be moved out of loop
@@ -144,7 +144,7 @@ def test_Alltoall(size, max_iterations):
             # FIXME defect detection and error handling
 
     # end of test
-    # Alltoall is not valid for size < num_procs
+    # Alltoall is not valid for size zero
     #if size < ci.num_procs:
     if size == 0:
         return -42
@@ -156,7 +156,7 @@ def test_Alltoall(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Alltoall(data, size, max_iterations)
+    Alltoall(data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -187,7 +187,7 @@ def test_Alltoall(size, max_iterations):
 #    pass
 
 def test_Scatter(size, max_iterations):
-    def Scatter(data, datalen, max_iterations):
+    def Scatter(data, max_iterations):
         current_root = 0
         for r in xrange(max_iterations):
             my_data = data if ci.rank == current_root else "" # NOTE: probably superflous, discuss with Rune
@@ -212,7 +212,7 @@ def test_Scatter(size, max_iterations):
         #                    i%c_info->num_procs, &defect);
         #         }
     # end of test
-    # Alltoall is not valid for size < num_procs
+    # Scatter is not valid for size zero
     #if size < ci.num_procs:
     if size == 0:
         return -42
@@ -224,7 +224,7 @@ def test_Scatter(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Scatter(data, size, max_iterations)
+    Scatter(data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -252,10 +252,33 @@ def test_Scatter(size, max_iterations):
 #    pass
 
 def test_Gather(size, max_iterations):
-    def Gather(data, datalen, max_iterations):
-        pass
+    def Gather(data, max_iterations):
+        current_root = 0
+        for r in xrange(max_iterations):
+            if not data or data is None:
+                print "BADATA:%s, from:%i,r:%i" % (data,ci.rank,r)
+                raise Exception("Damn")
+            ci.communicator.gather(data, current_root)            
+            # Switch root
+            current_root = (current_root +1) % ci.num_procs
     # end of test
-    pass
+
+    # Gather might not be valid for size zero
+    # TODO: Check assumption
+    #if size < ci.num_procs:
+    if size == 0:
+        return -42
+    
+    data = ci.gen_testset(size)
+    ci.synchronize_processes()
+    t1 = ci.clock_function()
+    
+    # do magic
+    Gather(data, max_iterations)
+
+    t2 = ci.clock_function()
+    time = t2 - t1
+    return time
 
 #def test_Gatherv(size, max_iterations):
 #    def Gatherv(data, datalen, max_iterations):
