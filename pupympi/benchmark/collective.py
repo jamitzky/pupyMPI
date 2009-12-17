@@ -59,17 +59,14 @@ def test_Bcast(size, max_iterations):
     # FIXME: Rune?
     if size == 0: # Empty messages are not handled well in collective ops
         # Size 0 could follow from limit=0 in which case the testset contains nothing to slice        
-        customset = ci.gen_testset(1)
-        data = customset[0:size+1]
-    else:        
-        data = ci.data[0:size]
+        size += 1 
 
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
 
     # Doit
-    Bcast(data, max_iterations)
+    Bcast(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     
@@ -96,7 +93,7 @@ def test_Allgather(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Allgather(ci.data, max_iterations)
+    Allgather(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -135,12 +132,15 @@ def test_Alltoall(size, max_iterations):
                   # c_info->communicator);
         # end of test
 
-    # Alltoall is not valid for size zero
-    if size == 0:
+    # Alltoall is not valid for size < numprocs
+    if size < ci.num_procs:
         return -42
     
     #Prepack data into lists for nicer iteration
-    datalist = [ ci.data[:] for x in range(ci.num_procs) ]
+    # TODO: We send size/numprocs data to each process for now
+    chunksize = size/ci.num_procs
+    # each distinct chunk goes to a distinct process
+    datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
@@ -201,14 +201,16 @@ def test_Scatter(size, max_iterations):
         #                    i%c_info->num_procs, &defect);
         #         }
     # end of test
-    # Scatter is not valid for size zero
-    #if size < ci.num_procs:
-    if size == 0:
+    
+    # Scatter is not valid for size < numprocs
+    if size < ci.num_procs:
         return -42
     
     #Prepack data into lists for nicer iteration
-    # NOTE: the [:] is to slice into a view rather than making a copy
-    datalist = [ ci.data[:] for x in range(ci.num_procs) ]
+    # TODO: We send size/numprocs data to each process for now
+    chunksize = size/ci.num_procs
+    # each distinct chunk goes to a distinct process
+    datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
@@ -250,7 +252,7 @@ def test_Gather(size, max_iterations):
     # end of test
 
     # Gather might not be valid for size zero
-    # TODO: Check assumption
+    # TODO: Check above assumption
     if size == 0:
         return -42
     
@@ -258,7 +260,10 @@ def test_Gather(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Gather(ci.data, max_iterations)
+    # TODO: All procs send size data to the reciever, maybe this is a bit much
+    # for the upper limits of datasize, are we fine with a proc getting eg. 32x4 MB?
+    # this could be scaled down as done for some of the other tests
+    Gather(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -367,8 +372,6 @@ def test_Reduce(size, max_iterations):
 def test_Allreduce(size, max_iterations):
     def Allreduce(data, max_iterations):
         for r in xrange(max_iterations):
-            # Since there is no switching of root, we jump around in the data
-            # to 
             # For the allreduce operator we use Python built-in max
             received = ci.communicator.allreduce(data, max)            
 
@@ -383,7 +386,7 @@ def test_Allreduce(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Allreduce(ci.data, max_iterations)
+    Allreduce(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -397,7 +400,7 @@ def test_Barrier(size, max_iterations):
     # end of test
 
     if size is not 0: 
-        return None# hack to modify schedule for barrier
+        return None # We don't care about barrier for increasing sizes
     
     ci.synchronize_processes()
     t1 = ci.clock_function()
