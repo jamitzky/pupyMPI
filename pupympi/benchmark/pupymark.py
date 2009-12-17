@@ -61,8 +61,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 continue
                 
             total = test(size, module.meta_schedule[size])
+            if total is None:
+                # Tests returning None are not meant to be run
+                # (eg. Barrier for different datasizes does not make sense)
+                continue
             if total < 0: # Tests returning negative signals an error
-                ci.log("%-10s\t%-10s\t(test failed - this datapoint invalid)" % (size, module.meta_schedule[size]))
+                ci.log("%-10s\t%-10s\t(benchmark failed - datapoint invalid)" % (size, module.meta_schedule[size]))
                 results.append((size, module.meta_schedule[size], 0, 0, 0))
             else:
                 per_it = total / module.meta_schedule[size]

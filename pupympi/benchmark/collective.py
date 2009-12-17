@@ -63,7 +63,7 @@ def test_Bcast(size, max_iterations):
         data = customset[0:size+1]
     else:        
         data = ci.data[0:size]
-    #data = ci.data[0:size]
+
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -77,25 +77,12 @@ def test_Bcast(size, max_iterations):
     return time
     
 def test_Allgather(size, max_iterations):
-    def Allgather(data, datalen, max_iterations):
+    def Allgather(data, max_iterations):
         """docstring for Allgather"""
         for r in xrange(max_iterations):
-            # TODO: check if allgather verifies that the jth block size is modulo size
-            
-            # We continually move offset in the array taking turns sending each of
-            # the num_procs chunks, to ensure things aren't cached well.
-            # NOTE: This might seem superflous in Python but we want to compare against
-            # Pallas on LAM fairly            
-            offset = ((ci.rank+r) % ci.num_procs) * datalen
-            print "ITERATION:",r
-            if data[offset:offset+datalen-1] is None:
-                print "NNNNONE!"
-                raise Exception("Damn!")
-                
-            packet = data[offset:offset+datalen-1]
-            packet = [2]
-            packet = data
-            received = ci.communicator.allgather( packet )
+            # NOTE: Should we be concerned about having data cached? Is it a fair
+            #       comparison? Shouldn't LAM MPI have cached similar sizes as us?
+            received = ci.communicator.allgather( data )
     # end of test
     
     # Allgather is not valid for size < num_procs
@@ -103,13 +90,13 @@ def test_Allgather(size, max_iterations):
     if size < ci.num_procs:
         return -42
     
-    data = ci.gen_testset(size*ci.num_procs)
+    #data = ci.gen_testset(size)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
     
     # do magic
-    Allgather(data, (size*ci.num_procs), max_iterations)
+    Allgather(ci.data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -139,32 +126,26 @@ def test_Alltoall(size, max_iterations):
     def Alltoall(data, max_iterations):
         """docstring for Alltoall"""
         for r in xrange(max_iterations):
-            # TODO: Maybe some of this list comprehension can be moved out of loop
-            #       for slightly faster benchmarking
-            
-            # alternate order of sending for each iteration to minimize cache hits
-            received = ci.communicator.alltoall( [data[(i+r)%ci.num_procs] for i in range(ci.num_procs)] )
+
+            received = ci.communicator.alltoall(data)
                   #             ierr = MPI_Alltoall((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
                   #                                 s_num,c_info->s_data_type,
                   # (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
                   #                                 r_num,c_info->r_data_type,
                   # c_info->communicator);
-            # FIXME defect detection and error handling
+        # end of test
 
-    # end of test
     # Alltoall is not valid for size zero
-    #if size < ci.num_procs:
     if size == 0:
         return -42
     
-    data = ci.gen_testset(size*ci.num_procs)
     #Prepack data into lists for nicer iteration
-    data = [ data[offset*size:offset*size+size] for offset in range(ci.num_procs) ]
+    datalist = [ ci.data[:] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Alltoall(data, max_iterations)
+    Alltoall(datalist, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -225,14 +206,14 @@ def test_Scatter(size, max_iterations):
     if size == 0:
         return -42
     
-    data = ci.gen_testset(size*ci.num_procs)
     #Prepack data into lists for nicer iteration
-    data = [ data[offset*size:offset*size+size] for offset in range(ci.num_procs) ]
+    # NOTE: the [:] is to slice into a view rather than making a copy
+    datalist = [ ci.data[:] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Scatter(data, max_iterations)
+    Scatter(datalist, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -273,12 +254,11 @@ def test_Gather(size, max_iterations):
     if size == 0:
         return -42
     
-    data = ci.gen_testset(size)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Gather(data, max_iterations)
+    Gather(ci.data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -326,12 +306,11 @@ def test_Reduce(size, max_iterations):
     if size == 0:
         return -42
     
-    data = ci.gen_testset(size)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Reduce(data, max_iterations)
+    Reduce(ci.data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -400,13 +379,11 @@ def test_Allreduce(size, max_iterations):
     if size == 0:
         return -42
     
-
-    data = ci.gen_testset(size)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Allreduce(data, max_iterations)
+    Allreduce(ci.data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
@@ -415,21 +392,19 @@ def test_Allreduce(size, max_iterations):
 def test_Barrier(size, max_iterations):
     def Barrier(max_iterations):
         """docstring for Barrier"""
-        for r in max_iterations:
+        for r in xrange(max_iterations):
             ci.communicator.barrier()
     # end of test
 
     if size is not 0: 
-        return 0 # hack to modify schedule for barrier
+        return None# hack to modify schedule for barrier
     
     ci.synchronize_processes()
-
     t1 = ci.clock_function()
 
     # do magic
     Barrier(max_iterations)
 
     t2 = ci.clock_function()
-    time = (t2 - t1)/max_iterations
-
+    time = t2 - t1
     return time
