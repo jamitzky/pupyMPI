@@ -106,7 +106,9 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                     
                 new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
                 new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
-
+    
+            # DEBUG            
+            #print "TESTSET SIZE WILL BE: %i " % min(limit, max(module.meta_schedule))
             ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
         else:
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
