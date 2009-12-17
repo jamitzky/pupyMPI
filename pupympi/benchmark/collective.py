@@ -87,7 +87,6 @@ def test_Allgather(size, max_iterations):
     if size < ci.num_procs:
         return -42
     
-    #data = ci.gen_testset(size)
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
