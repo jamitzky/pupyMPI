@@ -72,7 +72,8 @@ def test_Bcast(size, max_iterations):
     
     time = (t2 - t1)
     return time
-    
+
+# Goes to max 16384 on the cluster with 8 procs
 def test_Allgather(size, max_iterations):
     def Allgather(data, max_iterations):
         """docstring for Allgather"""
