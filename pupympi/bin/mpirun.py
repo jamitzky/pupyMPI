@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-import sys, os
+import sys, os, copy
 from optparse import OptionParser, OptionGroup
 import select, time
 
@@ -134,33 +134,36 @@ if __name__ == "__main__":
     # List of process objects (instances of subprocess.Popen class)
     process_list = []
 
+    # Make sure we have a full path
+    if not executeable.startswith("/"):
+        executeable = os.path.join( os.getcwd(), executeable)
+
+    logger.debug("enable_profiling %s" % options.enable_profiling)
+    profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
+
+    # Mimic our cli call structure also for remotely started processes
+    global_run_options = [options.remote_python, "-u", profiler, executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+            "--mpirun-conn-port=%d" % mpi_run_port, 
+            "--size=%d" % options.np, 
+            "--socket-pool-size=%d" % options.socket_pool_size, 
+            "--verbosity=%d" % options.verbosity, 
+            "--process-io=%s" % options.process_io,
+            "--log-file=%s" % options.logfile,
+    ] 
+
+    if options.disable_full_network_startup:
+        global_run_options.append('--disable-full-network-startup')
+
+    for flag in ("quiet", "debug"):
+        value = getattr(options, flag, None)
+        if value:
+            global_run_options.append("--"+flag)
+
     # Start a process for each rank on the host 
     for (host, rank, port) in mappedHosts:
-        # Make sure we have a full path
-        if not executeable.startswith("/"):
-            executeable = os.path.join( os.getcwd(), executeable)
+        run_options = copy.copy(global_run_options)
+        run_options.append("--rank=%d" % rank) 
         
-        logger.debug("enable_profiling %s" % options.enable_profiling)
-        profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
-        # Mimic our cli call structure also for remotely started processes
-        run_options = [options.remote_python, "-u", profiler, executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
-                "--mpirun-conn-port=%d" % mpi_run_port, 
-                "--rank=%d" % rank, 
-                "--size=%d" % options.np, 
-                "--socket-pool-size=%d" % options.socket_pool_size, 
-                "--verbosity=%d" % options.verbosity, 
-                "--process-io=%s" % options.process_io,
-                "--log-file=%s" % options.logfile,
-            ] 
-
-        if options.disable_full_network_startup:
-            run_options.append('--disable-full-network-startup')
-
-        for flag in ("quiet", "debug"):
-            value = getattr(options, flag, None)
-            if value:
-                run_options.append("--"+flag)
-
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
         run_options.extend( user_options )
