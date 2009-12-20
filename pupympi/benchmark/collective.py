@@ -118,7 +118,7 @@ def test_Allgather(size, max_iterations):
 #
 #    # end of test
 
-    
+# Goes to max 16384 on the cluster with 8 procs
 def test_Alltoall(size, max_iterations):
     def Alltoall(data, max_iterations):
         """docstring for Alltoall"""
