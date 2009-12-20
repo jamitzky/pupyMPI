@@ -242,6 +242,7 @@ def test_Scatter(size, max_iterations):
 #    # end of test
 #    pass
 
+# NOTE: Our gather currently only goes up to 1048576
 def test_Gather(size, max_iterations):
     def Gather(data, max_iterations):
         current_root = 0
