@@ -4,7 +4,7 @@
 # meta-minprocesses: 10
 
 from mpi import MPI
-from mpi.operations import prod
+from mpi.operations import prod,MPI_sum
 
 def fact(n):
     if n == 0:
@@ -21,10 +21,14 @@ rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, prod, root=root)
+# dist_sum = mpi.MPI_COMM_WORLD.reduce(rank+1, MPI_sum, root=root)
+# print "Rank %s: dist_sum %s" % (rank, dist_sum)
 
 if root == rank:
     assert fact(size) == dist_fact
+    #assert sum(range(size)) == dist_sum
 else:
     assert dist_fact == None
+    assert dist_sum == None
 
 mpi.finalize()

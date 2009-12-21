@@ -7,6 +7,9 @@ that will control the behaviour.
 See the documentation for more information.
 """
 
+def MPI_sum(input_list):
+    return sum(input_list)
+
 def prod(input_list):
     """
     Multiplies all the elements. The elements must be
@@ -37,6 +40,7 @@ def prod(input_list):
     return p
 
 prod.partial_data = True
+MPI_sum.partial_data = False
 
 def MPI_max(input_list):
     """

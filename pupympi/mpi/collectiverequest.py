@@ -109,7 +109,7 @@ class CollectiveRequest(BaseRequest):
             for rank in nodes_to:
                 self.communicator.send(rank, data_list, self.tag)
 
-            Logger().warning("Return data for traverse (iteration: %d): %s" % (iteration, data_list))
+            #Logger().warning("Return data for traverse (iteration: %d): %s" % (iteration, data_list))
             return data_list
 
         def start_traverse(direction, tree, data=None, iteration=1):

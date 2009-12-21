@@ -1,7 +1,8 @@
 #!/usr/bin/env python2.6
-# meta-description: allreduce, first computes factorial of mpi_size, then uses builtin max to find slowest process.
+# meta-description: allreduce, first computes factorial of mpi_size
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# todo: desc was:, then uses builtin max to find slowest process.
 
 from mpi import MPI
 from mpi.operations import prod
