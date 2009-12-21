@@ -242,7 +242,7 @@ def test_Scatter(size, max_iterations):
 #    # end of test
 #    pass
 
-# NOTE: Our gather currently only goes up to 1048576  and sometimes stall at 131072 (!)
+# NOTE: Our gather currently only goes up to 1048576  and sometimes stall at 131072 or 32768(!)
 def test_Gather(size, max_iterations):
     def Gather(data, max_iterations):
         current_root = 0
@@ -296,6 +296,7 @@ def test_Gather(size, max_iterations):
 #    # end of test
 #    pass
 
+# FIXME: Reduce does not work atm. - we hope Rune is on it
 def test_Reduce(size, max_iterations):
     def Reduce(data, max_iterations):
         """docstring for Reduce"""
