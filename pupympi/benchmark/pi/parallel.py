@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import math, random, sys
+import math, random, sys, time
 from mpi import MPI
 from mpi import constants
 
@@ -25,6 +25,8 @@ max = orig_max / size
 
 #print "Rank %s doing %s iterations." % (rank,max)
 
+t1 = time.time()
+
 # algorithm
 random.seed()
 for i in xrange(max):
@@ -37,7 +39,7 @@ for i in xrange(max):
 # distribute
 
 total = orig_max
-print "Rank %s: total is %s, num_in is %s" % (rank, total, num_in)
+print "Rank %s: total is %s, num_in is %s, time %s" % (rank, total, num_in, time.time()-t1)
 num_in_list = comm.gather(num_in)
 # if rank == 0:
 #     list_of_reqs = []
@@ -62,5 +64,6 @@ if rank == 0:
     print "Python's Internal Pi: " + str(math.pi)
     print "*** Approx. Pi: " + str(my_pi) + " ***"
     print "Discrepancy: " + str(math.pi - my_pi)
+    print "Internal time: " + str(time.time() - t1)
 
 mpi.finalize()
