@@ -814,30 +814,35 @@ class Communicator:
         waiting for the receive completions with a waitall call::
             
             from mpi import MPI
+
             mpi = MPI()
-            TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+
             request_list = []
 
             if mpi.MPI_COMM_WORLD.rank() == 0:
                 for i in range(10):
-                    mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+                    mpi.MPI_COMM_WORLD.send(1, "Hello World!")
 
                 for i in range(10):
-                    handle = mpi.MPI_COMM_WORLD.irecv(1, TAG)
+                    handle = mpi.MPI_COMM_WORLD.irecv(1)
                     request_list.append(handle)
 
                 messages = mpi.MPI_COMM_WORLD.waitall(request_list)
             elif mpi.MPI_COMM_WORLD.rank() == 1:
                 for i in range(10):
-                    handle = mpi.MPI_COMM_WORLD.irecv(1, TAG)
+                    handle = mpi.MPI_COMM_WORLD.irecv(0)
                     request_list.append(handle)
 
                 for i in range(10):
-                    mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+                    mpi.MPI_COMM_WORLD.send(0, "Hello World!")
 
                 messages = mpi.MPI_COMM_WORLD.waitall(request_list)
             else:
                 pass
+
+            mpi.finalize()
         """
         return_list = []
 
