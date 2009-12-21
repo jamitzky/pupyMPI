@@ -13,6 +13,8 @@ comm = mpi.MPI_COMM_WORLD
 rank = comm.rank()
 size = comm.size()
 
+mpi.barrier()
+
 # regular setup
 if ( len(sys.argv) != 2 ):
     print "Usage: " + sys.argv[0] + " sample_number"
