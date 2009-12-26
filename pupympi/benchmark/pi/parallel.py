@@ -13,7 +13,7 @@ comm = mpi.MPI_COMM_WORLD
 rank = comm.rank()
 size = comm.size()
 
-mpi.barrier()
+comm.barrier()
 
 # regular setup
 if ( len(sys.argv) != 2 ):
@@ -21,11 +21,8 @@ if ( len(sys.argv) != 2 ):
     mpi.finalize()
     sys.exit(0)
     
-orig_max = int(sys.argv[1]) 
-
-max = orig_max / size
-
-#print "Rank %s doing %s iterations." % (rank,max)
+max_cmdline = int(sys.argv[1]) 
+max = max_cmdline / size
 
 t1 = time.time()
 
@@ -40,23 +37,14 @@ for i in xrange(max):
 
 # distribute
 
-total = orig_max
+total = max_cmdline
 print "Rank %s: total is %s, num_in is %s, time %s" % (rank, total, num_in, time.time()-t1)
 num_in_list = comm.gather(num_in)
-# if rank == 0:
-#     list_of_reqs = []
-#     for r in range(1, size):
-#         handle = comm.irecv()
-#         list_of_reqs.append(handle)
-#     num_in_list = comm.waitall(list_of_reqs)
-#     num_in_list.append(num_in)
-# else:
-#     comm.send(0, num_in)
 
 # rank 0 gathers and displays
 if rank == 0:
     summed_num_in = sum(num_in_list)
-    print "Rank %s: total is %s, summed_num_in is %s" % (rank, total, summed_num_in)
+    #print "total is %s, summed_num_in is %s" % (rank, total, summed_num_in)
     ratio = float(summed_num_in) / float(total)
     my_pi = 4 * ratio
 
