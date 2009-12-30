@@ -4,7 +4,7 @@
 
 from mpi import MPI
     
-from mpi.operations import prod
+from mpi.operations import MPI_prod
 
 try:
     from numpy import matrix
@@ -19,7 +19,7 @@ else:
     
     local_matrix = matrix( [[r, r, r], [r, r, r], [r, r, r] ])
     
-    reduced_matrix = mpi.MPI_COMM_WORLD.allreduce(local_matrix, prod)
+    reduced_matrix = mpi.MPI_COMM_WORLD.allreduce(local_matrix, MPI_prod)
     
     if r == 1:
         print reduced_matrix

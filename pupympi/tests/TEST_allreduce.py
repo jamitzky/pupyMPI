@@ -5,7 +5,7 @@
 # todo: desc was:, then uses builtin max to find slowest process.
 
 from mpi import MPI
-from mpi.operations import prod
+from mpi.operations import MPI_prod
 from datetime import datetime
 
 def fact(n):
@@ -22,7 +22,7 @@ n = datetime.now()
 rank = world.rank()
 size = world.size()
 
-dist_fact = world.allreduce(rank+1, prod)
+dist_fact = world.allreduce(rank+1, MPI_prod)
 
 try:
     assert fact(size) == dist_fact
