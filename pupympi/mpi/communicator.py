@@ -974,24 +974,45 @@ class Communicator:
         Waits for some requests in the given request list to 
         complete. Returns a list with (request, data) pairs
         for the completed requests. 
-
-        If you want to receive a message from all the even
-        ranks you could do it like this::
+    
+        The following example shows rank 0 receiving 10 messages
+        from every other process. Instead of waiting for each
+        one sequentially or waiting for them all at the same time
+        it's possible to fetch the already completed handles::
 
             from mpi import MPI
+
             mpi = MPI()
             world = mpi.MPI_COMM_WORLD
             request_list = []
 
-            for rank in range(0, world.size(), 2):
-                request = world.irecv(rank)
-                request_list.append(request)
+            if world.rank() == 0:
+                for i in range(10):
+                    for rank in range(0, world.size()):
+                        if rank != 0:
+                            request = world.irecv(rank)
+                            request_list.append(request)
 
-            while request_list:
-                for item in world.waitsome(request_list):
-                    (request, data) = item
-                    print "Got message", data
-                    request_list.remove(request)
+                while request_list:
+                    items =  world.waitsome(request_list)
+                    print "Waited for %d handles" % len(items)
+                    for item in items:
+                        (request, data) = item
+                        request_list.remove(request)
+            else:
+                for i in range(10):
+                    world.send(0, "Message")
+
+            mpi.finalize()
+
+        One possible output from the above code (with 10 processes)
+        is::
+
+            Waited for 1 handles
+            Waited for 45 handles
+            Waited for 31 handles
+            Waited for 1 handles
+            Waited for 12 handles
 
         .. note::
             This function works in many aspects as the unix
