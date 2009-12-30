@@ -1,3 +1,9 @@
+"""
+The constants module contains a number of predefined tags, sources and other 
+structures either useable as arguments in MPI functions or returned from 
+MPI functions.
+"""
+
 import os
 
 # Auxillary tags
