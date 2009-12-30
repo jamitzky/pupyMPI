@@ -800,9 +800,32 @@ class Communicator:
 
     def scatter(self, data=None, root=0):
         """
-        Takes a SIZE list at the root and distibutes
-        this to all the other processes in this communicator. The j'th
-        element in the list will go to the process with rank j. 
+        Takes a list with the size N, where N is also the number of participants
+        in this communicator. It distributes the N elements to all the participants
+        in the communicator like to following example::
+
+            from mpi import MPI
+
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+
+            rank = world.rank()
+            size = world.size()
+
+            SCATTER_ROOT = 3
+
+            if rank == SCATTER_ROOT:
+                scatter_data = range(size)
+            else:
+                scatter_data = None
+                my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+                assert my_data == rank
+
+            mpi.finalize()
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
             raise MPIException("Scatter used with invalid arguments.")
@@ -815,7 +838,8 @@ class Communicator:
         
     def testall(self, request_list):
         """
-        Test if all the requests in the request list are finished. 
+        Test if all the requests in the request list are finished. Returns a boolean
+        indicating this. 
         """
         # We short circuit this so make it faster
         for request in request_list:
