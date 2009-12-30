@@ -807,7 +807,6 @@ class Communicator:
         if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
             raise MPIException("Scatter used with invalid arguments.")
         
-        identity = lambda x : x # NOTE: Far be it for me to argue with the infinite wisdom of Codus Rex, but I fail to see the utility of this
         cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
         cr.complete_bcast()
         data = cr.wait()
