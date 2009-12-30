@@ -31,4 +31,5 @@ subsections.
     Communicators <api_communicator>
     The request objects <api_request>
     Operations <api_operations>
+    Predefined constants <api_constants>
 
