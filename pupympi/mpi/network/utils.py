@@ -40,7 +40,6 @@ def create_random_socket(min=10000, max=30000):
             used.append( port_no ) # Mark socket as used (or no good or whatever)
             continue
         
-    #logger.debug("get_socket: Bound socket on port %d" % port_no)
     return sock, hostname, port_no
 
 def get_raw_message(client_socket):
@@ -115,7 +114,6 @@ def _nice_data(data):
         hexysymbols, sep, rest = sdata.partition("(I")
         # Now tcp control chars garble garble has been removed
         data = (sep+rest).replace("\n","<n>")
-        
         return data
 
 def robust_send(socket, message):
