@@ -11,7 +11,7 @@ from mpi.logger import Logger
 from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
-from mpi import constants
+from mpi import constants 
 from mpi.network.utils import pickle
 
 from mpi.request import Request
@@ -71,7 +71,7 @@ class MPI(Thread):
         logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
-            filename = logdir+'mpi.local.rank%s.log' % options.rank
+            filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
             output = open(filename, "w")
             sys.stdout = output
