@@ -681,7 +681,7 @@ class Communicator:
         factorial number of size::
         
             from mpi import MPI
-            from mpi.operations import prod
+            from mpi.operations import MPI_prod
             
             mpi = MPI()
             
@@ -691,7 +691,7 @@ class Communicator:
             rank = mpi.MPI_COMM_WORLD.rank()
             size = mpi.MPI_COMM_WORLD.size()
             
-            dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, prod, root=root)
+            dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, MPI_prod, root=root)
                 
             mpi.finalize()
 
