@@ -1,4 +1,4 @@
-The :mod:`mpi.communicator` Module
+Communicator object
 ------------------------------------
 
 .. module:: mpi.communicator
