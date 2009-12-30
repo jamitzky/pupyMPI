@@ -525,10 +525,6 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node67.html
         """
-        if self.rank() == root:
-            if data is None:
-                raise MPIException("You need to specify data when you're the root of a broadcast")
-                
         # Start collective request
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         cr.complete_bcast()

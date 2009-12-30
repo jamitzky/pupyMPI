@@ -14,16 +14,19 @@ rank = world.rank()
 size = world.size()
 
 BCAST_ROOT = 3
-BCAST_MESSAGE = "Test message for rank %d" % BCAST_ROOT
+BCAST_FIRST_MESSAGE = "Test message for rank %d" % BCAST_ROOT
 
-if rank == BCAST_ROOT:
-    world.bcast(BCAST_ROOT, BCAST_MESSAGE)
-else:
-    message = world.bcast(BCAST_ROOT)
-    try:
-        assert message == BCAST_MESSAGE
-    except AssertionError, e:
-        #print "Expected data:", BCAST_MESSAGE
-        #print "Received data:", message
-        raise e
+messages = [BCAST_FIRST_MESSAGE, None, "", -1]
+
+for msg in messages:
+    if rank == BCAST_ROOT:
+        world.bcast(BCAST_ROOT, msg)
+    else:
+        message = world.bcast(BCAST_ROOT)
+        print "-"*80
+        print msg
+        print message
+        print "-"*80
+        assert message == msg 
+
 mpi.finalize()

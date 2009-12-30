@@ -76,6 +76,7 @@ class CollectiveRequest(BaseRequest):
                 # First iteration should do something with our data
                 # and pass the result further.
                 d = {'rank' : self.communicator.rank(), 'value' : initial_data }
+
                 if initial_data is not None:
                     data_list.append(d)
                 
@@ -187,7 +188,12 @@ class CollectiveRequest(BaseRequest):
             of the messages got send. 
         """
         Logger().debug("Rank: %i, data: %s" % (self.communicator.rank(), self.data) )
-        self.data = self.data.pop()['value']
+        if self.data:
+            self.data = self.data.pop()
+            try:
+                self.data = self.data['value']
+            except:
+                pass
     
     def start_allgather(self):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
