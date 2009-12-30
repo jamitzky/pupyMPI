@@ -81,11 +81,11 @@ class SocketPool(object):
         known_socket = self._get_socket_for_rank(global_rank)
         
         if known_socket == socket_connection:
-            Logger().warning("SocketPool.add_created_socket: We were very close to pushing a socket out and putting it in again. BAD")
+            Logger().info("SocketPool.add_created_socket: We were very close to pushing a socket out and putting it in again. BAD")
             return
         
         if known_socket:
-            Logger().warning("There is already a socket in the pool for a created connection.. Possible loop stuff.. ")
+            Logger().info("There is already a socket in the pool for a created connection.. Possible loop stuff.. ")
             
         if len(self.sockets) > self.max_size: # Throw one out if there are too many
                 self._remove_element()
