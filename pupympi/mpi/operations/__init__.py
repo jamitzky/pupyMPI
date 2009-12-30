@@ -4,7 +4,7 @@ list and do something and return the result. There are
 a number of settings you can set on the function itself
 that will control the behaviour.
 
-See the documentation for more information.
+It's very easy to write custom operations as described :ref:`here <operations-api-label>`
 """
 
 def MPI_sum(input_list):
@@ -19,7 +19,7 @@ def MPI_prod(input_list):
     where n is the size of the world communicator.::
 
         from mpi import MPI
-        from mpi.operations import prod
+        from mpi.operations import MPI_prod
 
         mpi = MPI()
 

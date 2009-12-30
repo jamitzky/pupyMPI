@@ -83,8 +83,6 @@ class Request(BaseRequest):
         """
         Cancel a request. This can be used to free memory, but the request must be redone
         by all parties involved.
-        
-        http://www.mpi-forum.org/docs/mpi-11-html/node50.html
         """
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
@@ -106,10 +104,6 @@ class Request(BaseRequest):
 
         On successfull completion the ressources occupied by this request object will
         be garbage collected.
-               
-        FIXME: The C version of wait() returns always a status, but we're returning data
-               as it's the best thing in python. Maybe it would make sense to return a
-               tuple containing something like (status, data). 
         """
         #Logger().info("Starting a %s wait" % self.request_type)
         
