@@ -1,3 +1,4 @@
+.. _api-communicator-label:
 Communicator object
 ------------------------------------
 
