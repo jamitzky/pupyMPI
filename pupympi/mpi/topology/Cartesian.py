@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-Cartesian.py
 
-Created by Jan Wiberg on 2009-07-21.
 """
 
 import math
@@ -188,7 +186,14 @@ def MPI_Cart_Create(communicator):
 
     
 def MPI_Dims_Create(size, d, constraints = None):
-    """MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the user select a balanced distribution of processes per coordinate direction, depending on the number of processes in the group to be balanced and optional constraints that can be specified by the user. One use is to partition all the processes (the size of MPI_COMM_WORLD's group) into an n-dimensional topology. """      
+    """
+    MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the
+    user select a balanced distribution of processes per coordinate direction,
+    depending on the number of processes in the group to be balanced and
+    optional constraints that can be specified by the user. One use is to
+    partition all the processes (the size of MPI_COMM_WORLD's group) into an
+    n-dimensional topology. 
+    """      
     
     if d < 1:
         raise MPITopologyException("Dimensions must be higher or equal to 1.")
