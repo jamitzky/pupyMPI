@@ -328,6 +328,40 @@ class Communicator:
             self.mpi.has_work_event.set()
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
+        """
+        Starts a non-blocking send. The function will return as soon as the 
+        data has been copied into a internal buffer making it safe for the
+        user to alter the data. 
+
+        The function will return a handle making it possible :func:`cancel <mpi.request.Request.cancel>` the request,
+        wait until the sending has completed or simply test if the request is
+        complete like the following example shows::
+
+            from mpi import MPI
+            world = mpi.MPI_COMM_WORLD
+
+            if world.rank() == 0:
+                handle1 = world.isend(1, "My message to 1")
+                handle2 = world.isend(2, "My message to 2")
+
+                # Wait until the message to 1 is sent
+                handle1.wait()
+
+                # Check if the second message has completed. Cancel the
+                # request otherwise
+                if handle2.test():
+                    handle2.wait() # This will complete right away
+                                   # due to the test. 
+                else:
+                    handle2.cancel()
+            else:
+                # This might not complete if the request gets
+                # cancelled on the other end
+                message = world.recv(0)
+
+        .. note:: 
+            See also the :func:`send` and :func:`irecv` functions. 
+        """
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
