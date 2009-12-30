@@ -295,7 +295,30 @@ class Communicator:
     # other stuff, related to requests that may get done:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
-    def irecv(self, sender = constants.MPI_SOURCE_ANY, tag = constants.MPI_TAG_ANY):
+    def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        """
+        Starts a non-blocking receive, returning a handle like :func:`isend`. The
+        following example shows how to prepare a receive request but perform some
+        larger calculation while the MPI environment completes the receive::
+
+            from mpi import MPI
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+
+            if world.rank() == 0:
+                world.send(1, "My message")
+            else:
+                handle = world.irecv(0)
+
+                # Do some large calculation here
+                pass
+
+                # Receive the data from process 0
+                data = handle.wait()
+
+            mpi.finalize()
+        """
+
         # Check that destination exists
         if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
@@ -358,6 +381,8 @@ class Communicator:
                 # This might not complete if the request gets
                 # cancelled on the other end
                 message = world.recv(0)
+
+            mpi.finalize()
 
         .. note:: 
             See also the :func:`send` and :func:`irecv` functions. 
