@@ -569,11 +569,16 @@ class Communicator:
 
             mpi.finalize()
 
-        Se also the :func:`reduce` function
-        
         .. note::
             The allreduce function will raise an exception if you pass anything
             else than a function as an operation. 
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
+
+        .. note::
+            See also the :func:`reduce` and :func:`scan` functions.
         """
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
