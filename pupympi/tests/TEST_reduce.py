@@ -30,9 +30,7 @@ dist_sum = mpi.MPI_COMM_WORLD.reduce(rank, sum, root=root)
 dist_min = mpi.MPI_COMM_WORLD.reduce(rank, min, root=root)
 dist_max = mpi.MPI_COMM_WORLD.reduce(rank, max, root=root)
 
-
 if root == rank:
-
     print "-"*80
     print "Custom MPI operations"
     print "\tFactorial: %d" % dist_fact
@@ -51,7 +49,7 @@ if root == rank:
     assert dist_sum == dist_mpi_sum
     assert dist_min == dist_mpi_min
     assert dist_max == dist_mpi_max
-    assert dist_max == size
+    assert dist_max == size-1
     assert dist_min == 0
     assert dist_mpi_avg == sum(range(size))/len(range(size))
 else:
