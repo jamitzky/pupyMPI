@@ -9,8 +9,9 @@ See the documentation for more information.
 
 def MPI_sum(input_list):
     return sum(input_list)
+MPI_sum.partial_data = True
 
-def prod(input_list):
+def MPI_prod(input_list):
     """
     Multiplies all the elements. The elements must be
     integers, float etc. As an example the following code
@@ -39,8 +40,7 @@ def prod(input_list):
         p *= e
     return p
 
-prod.partial_data = True
-MPI_sum.partial_data = False
+MPI_prod.partial_data = True
 
 def MPI_max(input_list):
     """
@@ -48,5 +48,19 @@ def MPI_max(input_list):
     or pseudo list (string, tuple, array etc.).
     
     """
-
     return max(input_list)
+MPI_max.partial_data = True
+
+def MPI_min(input_list):
+    """
+    Returns the minimum element in the list. 
+    """
+    return min(input_list)
+MPI_min.partial_data = True
+
+def MPI_avg(input_list):
+    """
+    Return the average of the elements
+    """
+    return sum(input_list)/len(input_list)
+MPI_avg.partial_data = False
