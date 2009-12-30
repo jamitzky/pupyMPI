@@ -7,10 +7,22 @@ LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below
+"""
+A special tag matching any other tag. Use this if you don't want to filter
+the incomming message on a specific tag. 
+"""
+
 MPI_SOURCE_ANY = -2 # to be recognizable
+"""
+A special rank matching any rank. Use this if you don't want to filter
+the incomming message on sender rank.
+"""
 
 # Other constants. NOTE: These are advisory only
 MPI_COMM_NULL = None
+"""
+The empty communicator
+"""
 
 # internal tags below. 
 TAG_ACK     = -3 
@@ -32,12 +44,30 @@ TAG_SCAN = -16
 # MPI_COMM_SELF (MPI 2.x)
 
 MPI_GROUP_EMPTY = None # gets set later on an empty group to avoid cyclic imports
+"""
+The empty group
+"""
 
 MPI_IDENT       = 0     # Identical 
+"""
+Jan, document me
+"""
 MPI_CONGRUENT   = 0     # (only for MPI_COMM_COMPARE) The groups are identical 
+"""
+Jan, document me
+"""
 MPI_SIMILAR     = 1     # Same members, but in a different order 
+"""
+Jan, document me
+"""
 MPI_UNEQUAL     = -1    # Different
+"""
+Jan, document me
+"""
 MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutorials/MPI/alliance/communicators/MPI_Group_rank.html)
+"""
+Jan, document me
+"""
 
 JOB_INITIALIZING = -1
 
