@@ -33,5 +33,5 @@ subsections.
     Operations <api_operations>
     Topologies <api_topologies>
     Predefined constants <api_constants>
-    
+    Exceptions <api_exceptions> 
 
