@@ -51,7 +51,5 @@ The output of running the above command would be::
 
 You can even pass arguments that are elsewhere reserved by the mpirun.py 
 program like "-c". We recommend you don't handle argument parsin yourself. Look
-into the [getopt]_ or [optparse]_ module in python.
+into the getopt or optparse module in python.
 
-.. [getopt] getopt module documentation available from
-.. [optparse] optparse moduel documentation available from
