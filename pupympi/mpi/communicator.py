@@ -8,13 +8,7 @@ from mpi.group import Group
 from mpi import constants
 
 class Communicator:
-    """
-    This class represents an MPI communicator. The communicator holds information
-    about a 'group' of processes and allows for inter communication between these. 
 
-    It's not possible from within a communicator to talk with processes outside. Remember
-    you have the MPI_COMM_WORLD communicator holding ALL the started proceses. 
-    """
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.mpi = mpi 
         self.name = name
@@ -101,22 +95,15 @@ class Communicator:
         
     def comm_create(self, group):
         """
-        This function creates a new communicator newcomm with communication
-        group defined by group and a new context. No cached information
-        propagates from comm to newcomm. The function returns
-        None to processes that are not in group.
+        This function creates a new communicator with communication group
+        defined by the group parameter and a new context. No cached information
+        propagates from the existing communicator to the new. The function
+        returns None to processes that are not in group.
+
         The call is erroneous if not all group arguments have the same value,
-        or if group is not a subset of the group associated with comm.
-        Note that the call is to be executed by all processes in comm,
-        even if they do not belong to the new group.
-
-        This call applies only to intra-communicators. 
-
-        [ IN comm] communicator (handle - self object)
-        [ IN group] Group, which is a subset of the group of comm
-        [ OUT newcomm] new communicator
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
+        or if group is not a subset of the group associated with comm.  Note
+        that the call is to be executed by all processes in comm, even if they
+        do not belong to the new group.
 
         .. note::
             This call is internally implemented either locally, in which case only 32 new communicators 
@@ -193,9 +180,6 @@ class Communicator:
         .. note::
             *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
-        The delete callback functions for any attributes are called in arbitrary order.
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)                
 
@@ -499,6 +483,13 @@ class Communicator:
                 mpi.MPI_COMM_WORLD.barrier()
             mpi.finalize()
 
+        The performance of the barrier function is the same as an :func:`bcast`
+        call if the data in the call is small. Use this fact to piggybag data
+        to other processes about status or whatever you need. 
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
@@ -546,11 +537,19 @@ class Communicator:
             rank = world.rank()
             size = world.size()
             
-            received = world.allgather(rank+1)
+            received = world.allgather(rank)
             
-            assert received == range(1,size+1)
+            assert received == range(size)
                 
             mpi.finalize()
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
+
+        .. note::
+            See also the :func:`alltoall` function where each process sends 
+            individual data to each other process. 
             
         """
         cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
@@ -577,13 +576,16 @@ class Communicator:
 
             mpi.finalize()
 
-        Se also the :func:`reduce` function
-        
-        Original MPI 1.1 specification at FIXME
-
         .. note::
             The allreduce function will raise an exception if you pass anything
             else than a function as an operation. 
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
+
+        .. note::
+            See also the :func:`reduce` and :func:`scan` functions.
         """
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
@@ -594,15 +596,15 @@ class Communicator:
         
     def alltoall(self, data):
         """
-        This meethod extends the allgather in the situation where you need
-        to send distinct data to each process. 
+        This meethod extends the :func:`allgather` in the situation where you
+        need to send distinct data to each process. 
         
-        The input data should be list with the same number of elements as
-        the size of the communicator. If you supply something else an 
-        Exception is raised. 
+        The input data should be list with the same number of elements as the
+        size of the communicator. If you supply something else an Exception is
+        raised. 
         
-        If for example a process wants to send a string prefixed by the
-        sending AND the recipient rank we could use the following code::
+        If for example a process wants to send a string prefixed by the sending
+        AND the recipient rank we could use the following code::
         
             from mpi import MPI
             
@@ -620,6 +622,10 @@ class Communicator:
             # This will then look like the following (maybe not 
             # in this order). We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
         cr.start_alltoall()
