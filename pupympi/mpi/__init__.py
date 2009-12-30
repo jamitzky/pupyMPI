@@ -28,6 +28,15 @@ class MPI(Thread):
         pattern. 
     """
 
+    MPI_COMM_WORLD = None
+    """
+    The largest and first communicator containing all the started processes as
+    members. 
+
+    Look at the API documentation for :ref:`communicators <api-communicator-label>` 
+    for more information about the available methods. 
+    """
+
     def __init__(self):
         Thread.__init__(self)
 
@@ -96,9 +105,6 @@ class MPI(Thread):
         self.communicators = {}
 
         self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
-        """
-        Testing docstrings for attributes
-        """
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
