@@ -76,7 +76,8 @@ class CollectiveRequest(BaseRequest):
                 # First iteration should do something with our data
                 # and pass the result further.
                 d = {'rank' : self.communicator.rank(), 'value' : initial_data }
-                if initial_data:
+
+                if initial_data is not None:
                     data_list.append(d)
                 
                 # We look at the operations settings to check if we should run the
@@ -109,7 +110,6 @@ class CollectiveRequest(BaseRequest):
             for rank in nodes_to:
                 self.communicator.send(rank, data_list, self.tag)
 
-            #Logger().warning("Return data for traverse (iteration: %d): %s" % (iteration, data_list))
             return data_list
 
         def start_traverse(direction, tree, data=None, iteration=1):
@@ -188,7 +188,12 @@ class CollectiveRequest(BaseRequest):
             of the messages got send. 
         """
         Logger().debug("Rank: %i, data: %s" % (self.communicator.rank(), self.data) )
-        self.data = self.data.pop()['value']
+        if self.data:
+            self.data = self.data.pop()
+            try:
+                self.data = self.data['value']
+            except:
+                pass
     
     def start_allgather(self):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
@@ -221,19 +226,26 @@ class CollectiveRequest(BaseRequest):
         self.data = operation(our_data) 
 
     def start_allreduce(self, operation):
-        """
-        Document me
-        """
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
         
         # FIXME: Currently we're looking at the type of self.data as the collective
         # operations will wrap things in to many lists. We need some way to ensure
         # this does not happen. Also to test the system with lists as the primary 
         # datatype, as our system might crash on this. 
-        if isinstance(self.data, list):
-            self.data = self.data.pop()['value']
+
+        partial_data = getattr(operation, "partial_data", False)
+        if not partial_data:
+            full_meta = getattr(operation, "full_meta", False)
+            
+            if not full_meta:
+                self.data = [x['value'] for x in self.data]
+        
+            self.data = operation(self.data) 
         else:
-            self.data = self.data['value']
+            if isinstance(self.data, list):
+                self.data = self.data.pop()['value']
+            else:
+                self.data = self.data['value']
         
     def start_alltoall(self):
         self.data = self.two_way_tree_traversal(start_direction="up", return_type="last")
@@ -266,7 +278,6 @@ class CollectiveRequest(BaseRequest):
         self._metadata['status'] = 'cancelled'
         Logger().debug("Cancelling a request with tag" % self.tag)
         
-
     def get_status(self):
         return self._metadata['status']
 
