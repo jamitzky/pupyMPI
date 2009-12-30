@@ -211,8 +211,6 @@ class MPI(Thread):
         #DEBUG / PROFILING
         #yappi.start(True) # True means also profile built-in functions
 
-
-        
         # internal function that will be used below
         # FIXME: Rewrite for clarity
         def _handle_unstarted():
@@ -322,7 +320,6 @@ class MPI(Thread):
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
 
-        
     def schedule_request(self, request):
         #Logger().debug("Schedule request for: %s" % (request.request_type))
         # Add the request to the internal queue

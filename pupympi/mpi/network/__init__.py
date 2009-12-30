@@ -99,8 +99,8 @@ class Network(object):
             our_rank = self.mpi.MPI_COMM_WORLD.rank()
             size = self.mpi.MPI_COMM_WORLD.size()
 
-            receiver_ranks = [x for x in range(0, our_rank) if x != our_rank]
-            sender_ranks = range(our_rank+1, size)
+            receiver_ranks = [x for x in range(0, our_rank)]
+            sender_ranks = range(our_rank, size)
 
             Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
 
