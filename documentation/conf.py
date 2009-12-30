@@ -37,7 +37,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pupympi'
+project = u'pupyMPI'
 copyright = u'2009, Jan Wiberg, Frederik Hanto & Rune Bromer'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -84,7 +84,7 @@ exclude_trees = ['_build']
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
+modindex_common_prefix = ["mpi"]
 
 
 # -- Options for HTML output ---------------------------------------------------
@@ -192,4 +192,4 @@ latex_documents = [
 #latex_appendices = []
 
 # If false, no module index is generated.
-#latex_use_modindex = True
+latex_use_modindex = False

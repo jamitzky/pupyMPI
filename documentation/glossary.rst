@@ -16,4 +16,5 @@
 
    tag
       A integer you specify on a message allowing you do filter the kind of
-      messages you wan't to receive. 
+      messages you wan't to receive. These tags are restricted as described
+      under :ref:`the tag rules <tagrules>`

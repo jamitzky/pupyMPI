@@ -2,17 +2,13 @@
 Welcome to pupympi's documentation!
 **************************************
 
-Table of contents
------------------------------------
-
 .. toctree::
-    :maxdepth: 1
-
+    :hidden:
+    
+    introduction <tut_introduction>
     getting started <tut_getting_started>
     reference manual <api>
     running your program <mpirun>
-    full table of contents <toc>
-
 
 Getting started
 -------------------------

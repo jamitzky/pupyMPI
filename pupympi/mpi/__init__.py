@@ -4,7 +4,6 @@ import sys
 from optparse import OptionParser, OptionGroup
 import threading, sys, getopt, time
 from threading import Thread
-
         
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -16,7 +15,6 @@ from mpi.network.utils import pickle
 
 from mpi.request import Request
 
-
 class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
@@ -24,9 +22,19 @@ class MPI(Thread):
     MPI instance a program can interact with other processes through different
     communicators. 
 
-    NOTE: The MPI instance state is a static class variable, so creating multiple
-    instances will always yield 'the same' instance, much like a singleton design
-    pattern. 
+    .. note::
+        The MPI instance state is a static class variable, so creating multiple
+        instances will always yield 'the same' instance, much like a singleton design
+        pattern. 
+    """
+
+    MPI_COMM_WORLD = None
+    """
+    The largest and first communicator containing all the started processes as
+    members. 
+
+    Look at the API documentation for :ref:`communicators <api-communicator-label>` 
+    for more information about the available methods. 
     """
 
     def __init__(self):
@@ -45,6 +53,8 @@ class MPI(Thread):
             size = mpi.MPI_COMM_WORLD.size()
         
             print "Proc %d of %d started" % (rank, size)
+
+            mpi.finalize()
             
         """
         
@@ -93,10 +103,8 @@ class MPI(Thread):
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
         self.communicators = {}
+
         self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
-        """
-        Testing docstrings for attributes
-        """
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
         # listen on the correcsponding network channels
@@ -313,7 +321,6 @@ class MPI(Thread):
 
         Logger().debug("Queues flushed and user thread has been signalled.")
         
-        # DEBUG
         # FIXME: Check if this has any effect
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
@@ -323,6 +330,10 @@ class MPI(Thread):
         Makes a best attempt to cancel all the tasks in the world
         communicator and makes every process shut down. Don't expect
         anything to behave nicely after this call. 
+
+        You should use this method if something bad and irreversible
+        happens. The system will have a better chance - but it's not
+        guaranteed - of finalizing nicely. 
         """
         world = self.MPI_COMM_WORLD
         rank = world.rank()
@@ -364,6 +375,11 @@ class MPI(Thread):
 
         Remember to always end your MPI program with this call. Otherwise proper 
         shutdown is not guaranteed. 
+
+        .. note::
+            Part of the finalizing call is to flush all outgoing requests. You
+            don't need to wait() on all your started isends before you call 
+            finalize. 
         """
         #Logger().debug("--- Setting shutdown event ---")
         
@@ -403,8 +419,11 @@ class MPI(Thread):
 
             status = MPI.initialized()  # status will now be True
 
-        Please, if you're thinking of using this method, you might
-        be down the wrong track. 
+        .. note::
+            This method is usefull if you're using threads in your
+            calculation. You can use the method to ensure the MPI
+            enviroment is fully initializing before a tread starts
+            actual communication. 
         """
         return getattr(cls, '_initialized', False)
                     
@@ -420,7 +439,9 @@ class MPI(Thread):
         pass
         
     def get_version(self):
-        # FIXME (doc)
+        """
+        Return the version number of the pupyMPI installation. 
+        """
         return __version__
     
     def _version_check(self):
