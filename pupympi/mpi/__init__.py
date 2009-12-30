@@ -212,14 +212,11 @@ class MPI(Thread):
         #yappi.start(True) # True means also profile built-in functions
 
         # internal function that will be used below
-        # FIXME: Rewrite for clarity
         def _handle_unstarted():
-            # Schedule unstarted requests (may be in- or outbound)
-            #                if self.unstarted_requests_has_work.is_set():
             with self.unstarted_requests_lock:
                 #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
                 for request in self.unstarted_requests:
-                    self.schedule_request(request)
+                    self.network.t_out.add_out_request(request)
                 self.unstarted_requests = []
                 self.unstarted_requests_has_work.clear()
     
@@ -252,7 +249,8 @@ class MPI(Thread):
                 with self.unstarted_requests_lock:
                     #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
                     for request in self.unstarted_requests:
-                        self.schedule_request(request)
+                        self.network.t_out.add_out_request(request)
+
                     self.unstarted_requests = []
                     self.unstarted_requests_has_work.clear()
                 
@@ -300,7 +298,7 @@ class MPI(Thread):
         with self.unstarted_requests_lock:
             #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
             for request in self.unstarted_requests:
-                self.schedule_request(request)
+                self.network.t_out.add_out_request(request)
             self.unstarted_requests = []
             self.unstarted_requests_has_work.clear()
             
@@ -319,23 +317,6 @@ class MPI(Thread):
         # FIXME: Check if this has any effect
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
-
-    def schedule_request(self, request):
-        #Logger().debug("Schedule request for: %s" % (request.request_type))
-        # Add the request to the internal queue
-        if request.request_type == "recv":
-            with self.pending_requests_lock:
-                self.pending_requests.append(request)
-                self.pending_requests_has_work.set()
-                # This signal should be superflous since we are already checking queues and will hit pending_requests next
-                #self.has_work_event.set() 
-                Logger().debug("Notified self about has_work_cond during schedule_request")
-        else:
-            # If the request was outgoing we add to the out queue instead (on the out thread)
-            self.network.t_out.add_out_request(request)
-                
-                #For synchronized sends we also need to add a recieve receipt request
-                # FIXME: Implement here or in add_out_request
 
     def abort(self):
         """
