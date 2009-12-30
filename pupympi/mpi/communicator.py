@@ -8,13 +8,7 @@ from mpi.group import Group
 from mpi import constants
 
 class Communicator:
-    """
-    This class represents an MPI communicator. The communicator holds information
-    about a 'group' of processes and allows for inter communication between these. 
 
-    It's not possible from within a communicator to talk with processes outside. Remember
-    you have the MPI_COMM_WORLD communicator holding ALL the started proceses. 
-    """
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.mpi = mpi 
         self.name = name
@@ -101,22 +95,15 @@ class Communicator:
         
     def comm_create(self, group):
         """
-        This function creates a new communicator newcomm with communication
-        group defined by group and a new context. No cached information
-        propagates from comm to newcomm. The function returns
-        None to processes that are not in group.
+        This function creates a new communicator with communication group
+        defined by the group parameter and a new context. No cached information
+        propagates from the existing communicator to the new. The function
+        returns None to processes that are not in group.
+
         The call is erroneous if not all group arguments have the same value,
-        or if group is not a subset of the group associated with comm.
-        Note that the call is to be executed by all processes in comm,
-        even if they do not belong to the new group.
-
-        This call applies only to intra-communicators. 
-
-        [ IN comm] communicator (handle - self object)
-        [ IN group] Group, which is a subset of the group of comm
-        [ OUT newcomm] new communicator
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
+        or if group is not a subset of the group associated with comm.  Note
+        that the call is to be executed by all processes in comm, even if they
+        do not belong to the new group.
 
         .. note::
             This call is internally implemented either locally, in which case only 32 new communicators 
@@ -193,9 +180,6 @@ class Communicator:
         .. note::
             *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
-        The delete callback functions for any attributes are called in arbitrary order.
-
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node103.html#Node103
         """
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)                
 
@@ -546,11 +530,19 @@ class Communicator:
             rank = world.rank()
             size = world.size()
             
-            received = world.allgather(rank+1)
+            received = world.allgather(rank)
             
-            assert received == range(1,size+1)
+            assert received == range(size)
                 
             mpi.finalize()
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
+
+        .. note::
+            See also the :func:`alltoall` function where each process sends 
+            individual data to each other process. 
             
         """
         cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
@@ -579,8 +571,6 @@ class Communicator:
 
         Se also the :func:`reduce` function
         
-        Original MPI 1.1 specification at FIXME
-
         .. note::
             The allreduce function will raise an exception if you pass anything
             else than a function as an operation. 
