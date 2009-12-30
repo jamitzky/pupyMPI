@@ -839,7 +839,43 @@ class Communicator:
     def testall(self, request_list):
         """
         Test if all the requests in the request list are finished. Returns a boolean
-        indicating this. 
+        indicating this. The following test shows the expected behaviour::
+
+            from mpi import MPI
+            import time
+
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+
+            rank = world.rank()
+            size = world.size()
+
+            handles = []
+
+            if rank == 0:
+                # Sleep so the sending will be delayed
+                time.sleep(3)
+
+            for i in range(10):
+                if rank == 0:
+                    world.send(1, i)
+                else:
+                    handle = world.irecv(0)
+                    handles.append(handle)
+
+            if rank == 1:
+                # It will probably not be ready the first time
+                ready = world.testall(handles)
+                assert not ready 
+
+                # Give time time for the sending to complete
+                time.sleep(4)
+
+                # It should be ready now
+                ready = world.testall(handles)
+                assert ready 
+
+            mpi.finalize()
         """
         # We short circuit this so make it faster
         for request in request_list:
