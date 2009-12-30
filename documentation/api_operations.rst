@@ -1,4 +1,3 @@
-
 The :mod:`mpi.operations` Module
 ----------------------------------------------------------------------
 .. automodule:: mpi.operations

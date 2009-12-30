@@ -1,6 +1,6 @@
 .. _api: 
 
-API documentation
+Reference manual
 ===================================
 
 This chapter contains documentation of the pupyMPI API. It's further divided by a number of
