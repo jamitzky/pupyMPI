@@ -431,7 +431,7 @@ class Communicator:
         POSSIBLE ERRORS: If you specify a destination rank out of scope for
         this communicator. 
 
-        **See also**: :func:`irecv` and :func:`send`
+        .. note:: See also the :func:`irecv` and :func:`send` functions
 
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
@@ -514,7 +514,9 @@ class Communicator:
 
             mpi.finalize()
 
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node67.html
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         # Start collective request
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
@@ -659,8 +661,12 @@ class Communicator:
                 
             mpi.finalize()
             
-        ..note:: 
-            If you need all the processes to receive the result you should look at allgather.  
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
+
+        .. note:: 
+            See also the :func:`allgather` and :func:`alltoall` functions. 
         """
         cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
         cr.start_allgather()
@@ -688,6 +694,10 @@ class Communicator:
             dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, prod, root=root)
                 
             mpi.finalize()
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
@@ -720,6 +730,10 @@ class Communicator:
             assert partial_sum == sum(range(rank+1))
             
             mpi.finalize()
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
         cr.start_scan(operation)
