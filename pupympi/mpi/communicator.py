@@ -941,6 +941,9 @@ class Communicator:
                 pass
 
             mpi.finalize()
+
+        .. note:: 
+            See also the :func:`waitany` and :func:`waitsome` functions. 
         """
         return_list = []
 
@@ -951,11 +954,41 @@ class Communicator:
         
     def waitany(self, request_list):
         """
-        Wait for one request in the request list and return a tuple
+        Wait for **one** request in the request list and return a tuple
         with the request and the data from the wait(). 
 
         This method will raise an MPIException if the supplied return_list
         is empty. 
+
+        The following example shows rank 0 receiving 10 messages
+        from every other process. Rank 0 wait for one request at 
+        the time, but does not specify which one. This allows for
+        smoother progres::
+        
+            from mpi import MPI
+
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+            request_list = []
+
+            if world.rank() == 0:
+                for i in range(10):
+                    for rank in range(0, world.size()):
+                        if rank != 0:
+                            request = world.irecv(rank)
+                            request_list.append(request)
+
+                while request_list:
+                    (request, data) =  world.waitany(request_list)
+                    request_list.remove(request)
+            else:
+                for i in range(10):
+                    world.send(0, "Message")
+
+            mpi.finalize()
+
+        .. note:: 
+            See also the :func:`waitall` and :func:`waitsome` functions. 
         """
         if len(request_list) == 0:
             raise MPIException("The request_list argument to waitany can't be empty.. ")
@@ -1013,6 +1046,9 @@ class Communicator:
             Waited for 31 handles
             Waited for 1 handles
             Waited for 12 handles
+
+        .. note:: 
+            See also the :func:`waitany` and :func:`waitall` functions. 
 
         .. note::
             This function works in many aspects as the unix
