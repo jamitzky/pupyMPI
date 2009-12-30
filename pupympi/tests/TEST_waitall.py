@@ -16,13 +16,13 @@ handles = []
 
 for i in range(10):
     if rank == 0:
-        world.send(1, i+1)
+        world.send(1, i)
     else:
         handle = world.irecv(0)
         handles.append(handle)
 
 if rank == 1:
     data = world.waitall(handles)
-    assert data == range(1,11)
+    assert data == range(10)
 
 mpi.finalize()
