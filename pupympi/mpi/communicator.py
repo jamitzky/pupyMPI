@@ -483,6 +483,13 @@ class Communicator:
                 mpi.MPI_COMM_WORLD.barrier()
             mpi.finalize()
 
+        The performance of the barrier function is the same as an :func:`bcast`
+        call if the data in the call is small. Use this fact to piggybag data
+        to other processes about status or whatever you need. 
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
@@ -589,15 +596,15 @@ class Communicator:
         
     def alltoall(self, data):
         """
-        This meethod extends the allgather in the situation where you need
-        to send distinct data to each process. 
+        This meethod extends the :func:`allgather` in the situation where you
+        need to send distinct data to each process. 
         
-        The input data should be list with the same number of elements as
-        the size of the communicator. If you supply something else an 
-        Exception is raised. 
+        The input data should be list with the same number of elements as the
+        size of the communicator. If you supply something else an Exception is
+        raised. 
         
-        If for example a process wants to send a string prefixed by the
-        sending AND the recipient rank we could use the following code::
+        If for example a process wants to send a string prefixed by the sending
+        AND the recipient rank we could use the following code::
         
             from mpi import MPI
             
@@ -615,6 +622,10 @@ class Communicator:
             # This will then look like the following (maybe not 
             # in this order). We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
+
+        .. note::
+            All processes in the communicator **must** participate in this operation.
+            The operation will block until every process has entered the call. 
         """
         cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
         cr.start_alltoall()
