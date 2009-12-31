@@ -1,7 +1,7 @@
 .. _mpirun:
 
-mpirun.py - Starting your processes
-===================================
+Starting your processes with mpirun.py
+============================================
 
 This section contains information about the mpirun.py script you should use to
 start pupympi programs. You should include the bin directory of pupympi in your
