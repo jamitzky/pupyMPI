@@ -4,7 +4,8 @@
 # Define exception class
 class MPIException(Exception): 
     """
-    Custom exception for pupyMPI
+    General exception for pupyMPI. Look into the API at the
+    specific function for the actual cause of this exception. 
     """
     pass
     
@@ -16,7 +17,7 @@ class MPITopologyException(MPIException):
 
 class MPINoSuchRankException(MPIException):
     """
-    Document me
+    Raised in calls where an invalid rank i supplied. 
     """
     pass
 
@@ -34,7 +35,8 @@ class MPIInvalidRangeException(MPIException):
 
 class MPIInvalidTagException(MPIException):
     """
-    Document me
+    Raised in calls where an invalid tag i supplied. Remember all
+    tags should be integers. See also the section about :ref:`TagRules`. 
     """
     pass
 
