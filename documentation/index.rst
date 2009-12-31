@@ -9,3 +9,4 @@ Welcome to pupympi's documentation!
     running your program <mpirun>
     Writing custom operations for collective reducing calls <tut_operations>
     Reference manual <api>
+    Changes in pupyMPI <changelog>
