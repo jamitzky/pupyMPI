@@ -16,10 +16,10 @@ size = world.size()
 
 ROOT = 3
 
-received = world.gather(rank+1, root=ROOT)
+received = world.gather(rank, root=ROOT)
 
 if ROOT == rank:
-    assert received == range(1, size+1)
+    assert received == range(0, size)
 else:
     assert received == None
     
