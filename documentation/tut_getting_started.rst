@@ -58,7 +58,8 @@ Create a file called pupympi_test1.py and add the following code to it::
      else:
          message = mpi.MPI_COMM_WORLD.recv(0)
          print message
-
+     mpi.finalize()
+     
 From the command line, run ``mpirun -c 2 pupympi_test1.py``.You should receive the message: "Hello World!"
 If you did not you might have run into one of these problems:
 
@@ -66,3 +67,59 @@ If you did not you might have run into one of these problems:
  * **Command not found** Make sure pupyMPI is in your ``PYTHONPATH``. It should be installed as an egg or module. It is also possible to start pupyMPI by cd'ing to the root directory and try this instead ``PYTHONPATH=. bin/mpirun -c 2 /path/to/pupympi_test1.py``
  * **SSH password prompt** Ensure password-less access
  * **No message appears and your script hangs** ctrl-c, kill all Python processes and use the ``-d`` parameter in addition to the others. You will get a metric ton of output. 
+ 
+The above test example introduce the ``MPI_COMM_WORLD`` communicator holding all the
+started processes.
+
+Filtering messages with tags
+-------------------------------------------------------------------------------
+Unlike the previous example it's possible to filter which type of message you
+want to receive based on a tag. A very simple example::
+    
+     from mpi import MPI
+     from mpi.constants import MPI_SOURCE_ANY
+     mpi = MPI()
+     world = mpi.MPI_COMM_WORLD
+     rank = world.rank()
+     
+     
+     RECEIVER = 2
+     if rank == 0:
+         TAG = 1
+         world.send(RECEIVER, "Hello World from 0!", tag=TAG)
+     elif rank == 1:
+         TAG = 2
+         world.send(RECEIVER, "Hello World from 1!", tag=TAG)
+     elif rank == 2:
+         FIRST_TAG = 1
+         SECOND_TAG = 2
+         msg1 = world.recv(MPI_SOURCE_ANY, tag=FIRST_TAG)
+         msg2 = world.recv(MPI_SOURCE_ANY, tag=SECOND_TAG)
+         
+         print msg1
+         print msg2
+     else:
+        # disregard other processes
+        pass
+        
+     mpi.finalize()
+     
+The above example will always print the message from rank 0 before the one
+from rank 1. The first :func:`recv <mpi.communicator.Communicator.recv>` 
+call will accept messages from any rank, but only with the correct tag. This
+is a very usefull way to group data and let different subsystems handle it. 
+
+.. _tagrules:
+
+Rules for tags
+-------------------------------------------------------------------------------
+
+When you specify tags they should all be possitive integers. The internal
+MPI system use negative integers as tags so they are in principle allowed,
+but the behaviour of the system if you mix negative tags with anythin else than
+the normal :func:`recv <mpi.communicator.Communicator.recv>` and :func:`send <mpi.communicator.Communicator.send>`
+is undefined. 
+
+There exist a special tag called :func:`MPI_TAG_ANY <mpi.constants.MPI_TAG_ANY>` that will
+match any other tag. 
+
