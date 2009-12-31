@@ -229,7 +229,6 @@ class MPI(Thread):
             # Schedule unstarted requests (may be in- or outbound)
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
-                    #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
                     for request in self.unstarted_requests:
                         self.network.t_out.add_out_request(request)
 
@@ -239,9 +238,7 @@ class MPI(Thread):
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
                 with self.raw_data_lock:
-                    #Logger().debug("Checking - got raw_data_lock")
                     with self.received_data_lock:
-                        #Logger().debug("Checking received:%s " % self.received_data)
                         for raw_data in self.raw_data_queue:
                             data = pickle.loads(raw_data)
                             self.received_data.append(data)
@@ -253,7 +250,6 @@ class MPI(Thread):
             # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
                 with self.pending_requests_lock:
-                    #Logger().debug("Checking pending:%s " % self.pending_requests)
                     removal = [] # Remember succesfully matched requests so we can remove them
                     for request in self.pending_requests:
                         if self.match_pending(request):
