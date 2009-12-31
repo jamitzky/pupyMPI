@@ -219,23 +219,12 @@ class MPI(Thread):
         #DEBUG / PROFILING
         #yappi.start(True) # True means also profile built-in functions
 
-        # internal function that will be used below
-        def _handle_unstarted():
-            with self.unstarted_requests_lock:
-                #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
-                for request in self.unstarted_requests:
-                    self.network.t_out.add_out_request(request)
-                self.unstarted_requests = []
-                self.unstarted_requests_has_work.clear()
-    
         while not self.shutdown_event.is_set():
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
-            
-            #_handle_unstarted()
             
             # Schedule unstarted requests (may be in- or outbound)
             if self.unstarted_requests_has_work.is_set():
