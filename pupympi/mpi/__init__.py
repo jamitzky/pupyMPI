@@ -229,27 +229,12 @@ class MPI(Thread):
                 self.unstarted_requests_has_work.clear()
     
         while not self.shutdown_event.is_set():
-            Logger().debug("has_work_event not notified yet. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
-                    self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
-            Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
-            Logger().debug("\traw data: %s" % self.raw_data_queue)
-            Logger().debug("\trecieved data: %s" % self.received_data)
-            Logger().debug("\tpending_requests: %s" % self.pending_requests)
-            Logger().debug("Still going, try getting has work cond")
-            
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
             
-            Logger().debug("Somebody notified has_work_event. unstarted_requests_has_work(%s), raw_data_has_work(%s) & pending_requests_has_work (%s)" % (
-                    self.unstarted_requests_has_work.is_set(), self.raw_data_has_work.is_set(), self.pending_requests_has_work.is_set() ))
-            Logger().debug("\tunstarted requests: %s" % self.unstarted_requests)
-            Logger().debug("\traw data: %s" % self.raw_data_queue)
-            Logger().debug("\trecieved data: %s" % self.received_data)
-            Logger().debug("\tpending_requests: %s" % self.pending_requests)
-
             #_handle_unstarted()
             
             # Schedule unstarted requests (may be in- or outbound)
@@ -302,9 +287,8 @@ class MPI(Thread):
         
         Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
-        #_handle_unstarted()
+
         with self.unstarted_requests_lock:
-            #Logger().debug(debugarg+"Checking unstarted:%s " % self.unstarted_requests)
             for request in self.unstarted_requests:
                 self.network.t_out.add_out_request(request)
             self.unstarted_requests = []
