@@ -42,6 +42,10 @@ class Communicator:
         if not getattr(self, "bc_trees", None):
             self.bc_trees = {}
 
+        # See if the root is actually present in this commnicator
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Invalid root. Not present in this communicator.")
+
         # Look for the root as key in the structure. If so we use this
         # tree as it has been generated earlier. This makes the system
         # act like a caching system, so we don't end up generating trees
@@ -576,6 +580,10 @@ class Communicator:
         .. note::
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
+
+        .. note::
+            An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
+            is raised if the provided root is not a member of this communicator. 
         """
         # Start collective request
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
@@ -724,6 +732,10 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
 
+        .. note::
+            An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
+            is raised if the provided root is not a member of this communicator. 
+
         .. note:: 
             See also the :func:`allgather` and :func:`alltoall` functions. 
         """
@@ -757,6 +769,10 @@ class Communicator:
         .. note::
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
+
+        .. note::
+            An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
+            is raised if the provided root is not a member of this communicator. 
         """
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
@@ -826,6 +842,10 @@ class Communicator:
         .. note::
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
+
+        .. note::
+            An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
+            is raised if the provided root is not a member of this communicator. 
         """
         if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
             raise MPIException("Scatter used with invalid arguments.")
