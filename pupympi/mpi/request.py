@@ -58,7 +58,6 @@ class Request(BaseRequest):
         Logger().debug("Request object created for communicator %s, tag %s, data %s, ack %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
     
     def __repr__(self):        
-        
         orig_repr = super(Request, self).__repr__()
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
     
@@ -71,7 +70,7 @@ class Request(BaseRequest):
         
         # We only update if there is data (ie. a recv operation)
         #NOTE: Even if a send includes the data parameter it is only a superflous overwrite
-        if data:
+        if data is not None:
             self.data = data
             
         # If the status is ready we're enabling the wait operation
