@@ -31,11 +31,11 @@ if rank == 1:
     assert not ready 
 
     # Give time time for the sending to complete
-    time.sleep(2)
+    time.sleep(4)
 
     # It should be ready now
     ready = world.testall(handles)
-    assert not ready 
+    assert ready 
 
 
 mpi.finalize()
