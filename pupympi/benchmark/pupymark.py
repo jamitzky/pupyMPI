@@ -76,7 +76,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 round(per_it * 1000000, 2), \
                 round(mbsec, 5)))
                     
-                results.append((size, module.meta_schedule[size], total, per_it, mbsec))
+                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbsec))
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
