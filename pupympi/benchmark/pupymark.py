@@ -15,9 +15,7 @@ from mpi import MPI
 from mpi import constants
 
 import comm_info as ci
-import single
-import collective
-import parallel
+import single, collective, parallel
 
 
 help_message = '''
@@ -104,16 +102,18 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 raise Exception("Not enough processes active to invoke module %s" % module.__name__)
             
             if module.meta_processes_required == -1:
-                meta_processes_required = ci.w_num_procs # set to all nodes participating.
+                processes_required = ci.w_num_procs #e nlist everybody active.
+            else:
+                processes_required = module.meta_processes_required
+                
             # TODO pairs can be implemented here.    
-            new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required))
-            ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
-    
-            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
+            new_group = mpi.MPI_COMM_WORLD.group().incl(range(processes_required))
+            ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
         else:
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
         if ci.communicator is not None:
+            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
             ci.num_procs = ci.communicator.size() 
             ci.rank = ci.communicator.rank() 
         else:
@@ -127,11 +127,13 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
 
         _set_up_environment(mpi, module)        
         
-        if ci.rank == -1: # hold in barrier unless THIS process participates        
+        if ci.rank == -1: # hold in barrier unless THIS process participates
             mpi.MPI_COMM_WORLD.barrier()
         else: # participates.
             for function in dir(module):
-                if (fixed_test is None and function.startswith("test_")) or (fixed_test is not None and function.endswith(fixed_test)):
+                if function.startswith("test_"):
+                    if fixed_test is not None and function.endswith(fixed_test):
+                        continue
                     f = getattr(module, function)
                     result = run_benchmark(module, f)
                     resultlist[function] = result

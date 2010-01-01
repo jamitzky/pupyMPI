@@ -9,10 +9,10 @@ Created by Jan Wiberg on 2009-08-13.
 import comm_info as ci
 from mpi import constants
 
+
 meta_has_meta = True
 meta_processes_required = -1
 meta_min_processes = 2
-meta_separate_communicator = True
 meta_schedule = {
     0: 1000,
     1: 1000,
@@ -39,7 +39,7 @@ meta_schedule = {
     2097152: 20,
     4194304: 10
 }
-# TODO: MIGHT NOT WORK ATM, check it
+
 def test_Sendrecv(size, max_iterations):
     def get_srcdest_chained():
         dest   = (ci.rank + 1) % ci.num_procs
