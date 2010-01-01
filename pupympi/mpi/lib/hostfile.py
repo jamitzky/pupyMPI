@@ -71,12 +71,12 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
         pass
     elif maxCPUs >= np: # Overmapping is needed
         if overmapping: # Overmapping allowed?
-            logger.info("Insufficient hosts - overmapping processes.")
+            logger.warning("Insufficient hosts - overmapping processes.")
         else: # Overmapping needed but not allowed
-            logger.info("Number of processes exceeds the total CPUs and overmapping is not allowed")
+            logger.error("Number of processes exceeds the total CPUs and overmapping is not allowed")
             return []
     else: # Can't be done even with overmapping
-        logger.info("Number of processes exceeds the maximum allowed CPUs")
+        logger.error("Number of processes exceeds the maximum allowed CPUs")
         return []
         
     i = 0 # host indexer

@@ -29,12 +29,9 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     Initializes MPI, the shared context object and runs the tests in sequential order.
     The fixed_module parameter forces the benchmark to run just that one benchmark module
     """
-    # DEBUG / PROFILE
-    if yappi:
-        # Trace Python built-in functions
-        built_ins = False
-        # We don't know who is root yet so everybody imports yappi and starts it
-        import yappi
+    if yappi: # DEBUG / PROFILE
+        built_ins = False # Trace Python built-in functions        
+        import yappi # We don't know who is root yet so everybody imports yappi and starts it
         yappi.start(built_ins) # True means also profile built-in functions
     
     modules = [single, parallel, collective]
@@ -50,6 +47,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         """Runs one specific benchmark in one specific module, and saves the timing results."""
         results = []
 
+        ci.log("%s processes participating - %s waiting in barrier" %( ci.num_procs, ci.w_num_procs - ci.num_procs ))
         ci.log("%s - %s" % (module.__name__, test.__name__)) 
         ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))        
         ci.log("--------------------------------------------------------------------------")
@@ -58,7 +56,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         sizekeys.sort()
         for size in sizekeys:
             if size > limit:
-                continue
+                break
                 
             total = test(size, module.meta_schedule[size])
             if total is None:
@@ -71,7 +69,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             else:
                 per_it = total / module.meta_schedule[size]
                 mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
-                ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % (size, module.meta_schedule[size], round(total, 2), round(per_it * 1000000, 2), round(mbsec, 5)))
+                ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" %  (\
+                size, \
+                module.meta_schedule[size], \
+                round(total, 2), \
+                round(per_it * 1000000, 2), \
+                round(mbsec, 5)))
                     
                 results.append((size, module.meta_schedule[size], total, per_it, mbsec))
         
@@ -87,52 +90,50 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         return results
         
     def _set_up_environment(mpi, module):
-        
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
         ci.w_rank = mpi.MPI_COMM_WORLD.rank()
         
-        # TODO: We have the support now, so clean-up when we have the time
-        ci.select_source = True # required until support for SOURCE_ANY implemented in pupympi
-        ci.select_tag = True # required until support for TAG_ANY implemented in pupympi
-        
+        # TODO: Causes single/parallel tests to use specific tag. Not tested in pupymark.
+        ci.select_source = True 
+        ci.select_tag = True         
 
-        new_comm = mpi.MPI_COMM_WORLD
         if hasattr(module, "meta_has_meta"):
-            if module.meta_separate_communicator:
-                if ci.w_num_procs < module.meta_processes_required:
-                    raise Exception("Not enough processes active to invoke module %s" % module.__name__)
-                    
-                new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required)) # TODO pairs can be implemented here.
-                new_comm = mpi.MPI_COMM_WORLD.comm_create(new_group)
+            if ci.w_num_procs < module.meta_processes_required:
+                raise Exception("Not enough processes active to invoke module %s" % module.__name__)
+            
+            # TODO pairs can be implemented here.    
+            new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required))
+            ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
     
-            # DEBUG            
-            #print "TESTSET SIZE WILL BE: %i " % min(limit, max(module.meta_schedule))
             ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
         else:
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
 
-        ci.communicator = new_comm
-        # NOTE: What is the below about? Not sure I follow, why do ranks get assigned this late?
-        ci.num_procs = new_comm.size() if new_comm is not constants.MPI_COMM_NULL else -1
-        ci.rank = new_comm.rank() if new_comm is not constants.MPI_COMM_NULL else -1
+        if ci.communicator is not None:
+            ci.num_procs = ci.communicator.size() 
+            ci.rank = ci.communicator.rank() 
+        else:
+            ci.num_procs = 0
+            ci.rank = -1
+        # end of set up environment subfunction
     
     for module in modules:
         if fixed_module is not None and module.__name__ != fixed_module:
             continue
 
-        _set_up_environment(mpi, module)
+        _set_up_environment(mpi, module)        
         
-        
-        if ci.rank == -1: # skip unless THIS process participates - we need the environment ready to determine that.
-            continue
-
-        for function in dir(module):
-            if (fixed_test is None and function.startswith("test_")) or (fixed_test is not None and function.endswith(fixed_test)):
-                f = getattr(module, function)
-                result = run_benchmark(module, f)
-                resultlist[function] = result
+        if ci.rank == -1: # hold in barrier unless THIS process participates        
+            mpi.MPI_COMM_WORLD.barrier()
+        else: # participates.
+            for function in dir(module):
+                if (fixed_test is None and function.startswith("test_")) or (fixed_test is not None and function.endswith(fixed_test)):
+                    f = getattr(module, function)
+                    result = run_benchmark(module, f)
+                    resultlist[function] = result
+                    mpi.MPI_COMM_WORLD.barrier() # join the barrier from above.
 
     mpi.finalize()
     
