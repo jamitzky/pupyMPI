@@ -1,5 +1,5 @@
-The :class:`mpi` class 
------------------------------
+The main :class:`mpi` class 
+-------------------------------------------------------------------------------
 .. currentmodule:: mpi
 .. module:: mpi
 .. autoclass:: MPI

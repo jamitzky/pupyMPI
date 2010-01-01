@@ -1,5 +1,5 @@
-Request object
------------------------------
+Request object 
+-------------------------------------------------------------------------------
 
 .. module:: mpi.request
 .. autoclass:: Request
