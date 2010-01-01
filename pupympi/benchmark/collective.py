@@ -353,7 +353,7 @@ def test_Reduce(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Reduce(ci.data, max_iterations)
+    Reduce(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
