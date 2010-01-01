@@ -296,7 +296,6 @@ def test_Gather(size, max_iterations):
 #    # end of test
 #    pass
 
-# FIXME: Reduce does not work atm. - we hope Rune is on it
 def test_Reduce(size, max_iterations):
     def Reduce(data, max_iterations):
         """docstring for Reduce"""
@@ -343,6 +342,7 @@ def test_Reduce(size, max_iterations):
     #       t2 = MPI_Wtime();
     #       *time=(t2 - t1)/ITERATIONS->n_sample;
     #     }
+    
     # Reduce might not be valid for size zero
     # TODO: Check assumption
     if size == 0:
