@@ -48,7 +48,12 @@ def MPI_max(input_list):
     or pseudo list (string, tuple, array etc.).
     
     """
+    #if isinstance(input_list[0], list):
+    #    return max(max(input_list))
+    #else:
+    #    return max(input_list)
     return max(input_list)
+
 MPI_max.partial_data = True
 
 def MPI_min(input_list):
