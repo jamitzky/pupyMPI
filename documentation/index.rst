@@ -7,6 +7,7 @@ Welcome to pupympi's documentation!
     
     getting started <tut_getting_started>
     running your program <mpirun>
-    Writing custom operations for collective reducing calls <tut_operations>
+    Using custom operations in collective operations <tut_operations>
+    Working with NumPy <tut_numpy>
     Reference manual <api>
     Changes in pupyMPI <changelog>

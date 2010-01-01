@@ -1,6 +1,6 @@
 .. _api-communicator-label:
-Communicator object
-------------------------------------
+Communicator object 
+-------------------------------------------------------------------------------
 
 This class represents an MPI communicator. The communicator holds information
 about a 'group' of processes and allows for inter communication between these. 
