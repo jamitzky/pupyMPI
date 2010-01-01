@@ -12,6 +12,7 @@ meta_has_meta = True
 meta_separate_communicator = False
 meta_requires_data_ranks_adjunct = False
 meta_min_processes = 4
+meta_processes_required = -1
 
 meta_schedule = {
     0: 10,
