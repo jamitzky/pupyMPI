@@ -125,6 +125,7 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
+    logger.debug("Hosts are now configured: " + str(mappedHosts))
     s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
     s.listen(5)
 
