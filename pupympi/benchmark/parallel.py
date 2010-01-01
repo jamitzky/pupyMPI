@@ -41,13 +41,14 @@ meta_schedule = {
 }
 
 def test_Sendrecv(size, max_iterations):
-    def get_srcdest_chained():
+    def get_srcdest_chained(): # this fails for c=2, obviously. Since we want to run for 8 or 32, no reason to fix
+        assert ci.num_procs > 2 # 
         dest   = (ci.rank + 1) % ci.num_procs
         source = (ci.rank + ci.num_procs-1) % ci.num_procs
         return (source, dest)
 
     def Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):        
-        print "%s -> [%s] -> %s" % (source, ci.rank, dest)
+        #print "%s -> [%s] -> %s" % (source, ci.rank, dest)
         for r in xrange(max_iterations):
             recvdata = ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
     # end of test
@@ -57,7 +58,6 @@ def test_Sendrecv(size, max_iterations):
     ci.synchronize_processes()
 
     (source, dest) = get_srcdest_chained()        
-
     t1 = ci.clock_function()
     
     # do magic
