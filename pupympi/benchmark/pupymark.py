@@ -39,7 +39,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
     
-    # print ("Limitation parameters, fixed_module = %s and fixed_test = %s" % (fixed_module, fixed_test))
+    #print ("Limitation parameters, fixed_module = %s and fixed_test = %s" % (fixed_module, fixed_test))
 
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
@@ -123,6 +123,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     
     for module in modules:
         if fixed_module is not None and module.__name__ != fixed_module:
+            ci.log("Skipping module %s" % module.__name__)
             continue
 
         _set_up_environment(mpi, module)        
@@ -132,8 +133,10 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         else: # participates.
             for function in dir(module):
                 if function.startswith("test_"):
-                    if fixed_test is not None and function.endswith(fixed_test):
+                    if fixed_test is not None and not function.endswith(fixed_test):
+                        ci.log( "Skipping test %s" % function)
                         continue
+                        
                     f = getattr(module, function)
                     result = run_benchmark(module, f)
                     resultlist[function] = result
