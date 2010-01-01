@@ -100,9 +100,11 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         ci.select_tag = True         
 
         if hasattr(module, "meta_has_meta"):
-            if ci.w_num_procs < module.meta_processes_required:
+            if ci.w_num_procs < module.meta_min_processes:
                 raise Exception("Not enough processes active to invoke module %s" % module.__name__)
             
+            if module.meta_processes_required == -1:
+                meta_processes_required = ci.w_num_procs # set to all nodes participating.
             # TODO pairs can be implemented here.    
             new_group = mpi.MPI_COMM_WORLD.group().incl(range(module.meta_processes_required))
             ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
