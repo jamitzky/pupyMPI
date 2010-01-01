@@ -63,4 +63,4 @@ def MPI_avg(input_list):
     Return the average of the elements
     """
     return sum(input_list)/len(input_list)
-MPI_avg.partial_data = False
+
