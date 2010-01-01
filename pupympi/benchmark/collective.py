@@ -308,6 +308,41 @@ def test_Reduce(size, max_iterations):
             current_root = (current_root +1) % ci.num_procs
     # end of test
 
+    #   /*  GET SIZE OF DATA TYPE */  
+    #   MPI_Type_size(c_info->red_data_type,&s_size);
+    #   if (s_size!=0) s_num=size/s_size;
+    # 
+    #   if(c_info->rank!=-1)
+    #     {
+    #       i1=0;
+    # 
+    #       for(i=0; i<N_BARR; i++) MPI_Barrier(c_info->communicator);
+    # 
+    #       t1 = MPI_Wtime();
+    #       for(i=0;i< ITERATIONS->n_sample;i++)
+    #         {
+    #           ierr = MPI_Reduce((char*)c_info->s_buffer+i%ITERATIONS->s_cache_iter*ITERATIONS->s_offs,
+    #                             (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs,
+    #                             s_num,
+    #               c_info->red_data_type,c_info->op_type,
+    #               i1,c_info->communicator);
+    #           MPI_ERRHAND(ierr);
+    # 
+    # #ifdef CHECK
+    #      if( c_info->rank == i1 )
+    #      {
+    #           CHK_DIFF("Reduce",c_info, (char*)c_info->r_buffer+i%ITERATIONS->r_cache_iter*ITERATIONS->r_offs, 0,
+    #                    size, size, asize, 
+    #                    put, 0, ITERATIONS->n_sample, i,
+    #                    -1, &defect);
+    #      }
+    # #endif
+    #     /*  CHANGE THE ROOT NODE */
+    #     i1=(++i1)%c_info->num_procs;
+    #         }
+    #       t2 = MPI_Wtime();
+    #       *time=(t2 - t1)/ITERATIONS->n_sample;
+    #     }
     # Reduce might not be valid for size zero
     # TODO: Check assumption
     if size == 0:

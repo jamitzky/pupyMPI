@@ -11,7 +11,6 @@ from mpi import constants
 
 meta_has_meta = True
 meta_processes_required = 2
-meta_separate_communicator = True
 meta_result_configuration = "single"
 meta_schedule = {
     0: 1000,
