@@ -9,6 +9,7 @@ this test is superflous
 
 from mpi import MPI
 from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max
+import array
 
 def MPI_max_list(input_list):
     """
@@ -28,10 +29,13 @@ world = mpi.MPI_COMM_WORLD
 
 rank = world.rank()
 
-local_data = [2,5,1,(6+rank)]
+#local_data = [2,5,1,(6+rank)]
 #local_data = 100 - rank
+local_data = array.array('b')
+for i in range((rank*10)):
+    local_data.append(i)
 
-result = world.reduce(max(local_data), MPI_max, root=0)
+result = world.reduce(local_data, MPI_max, root=0)
 #result = world.reduce(local_data, MPI_max_list, root=0)
 
 
