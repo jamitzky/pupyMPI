@@ -16,7 +16,7 @@ rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 
-assert size % 2 == 1 # Require odd number of participants
+#assert size % 2 == 1 # Require odd number of participants
 
 content = "conch"
 DUMMY_TAG = 1
