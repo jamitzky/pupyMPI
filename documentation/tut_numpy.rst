@@ -21,7 +21,8 @@ rank 1. Rank 1 will simply print the received data::
     if rank == 0:
         world.send(1, np.float32(1.0))
         world.send(1, np.int_([1,2,4]))
-        world.send(1, np.array([[ 7.,  9.,  7.,  7.,  6.,  3.], [ 5.,  3.,  2.,  8.,  8.,  2.]]))
+        world.send(1, np.array([[ 7.,  9.,  7.,  7.,  6.,  3.], 
+                [ 5.,  3.,  2.,  8.,  8.,  2.]]))
     elif rank == 1:
         for i in range(3):
             r = world.recv(0)
@@ -38,8 +39,60 @@ Running the above script with at least 2 processes will yield the following outp
 
 Using NumPy in collective operations
 -------------------------------------------------------------------------------
-skriv mig
+As the following example shows it's also possible to use NumPy data types
+in collective operations like bcast::
+    
+    from mpi import MPI
+    import numpy as np
+    
+    mpi = MPI()
+    world = mpi.MPI_COMM_WORLD
+    
+    rank = world.rank()
+    
+    if rank == 0:
+        world.bcast(0, data=np.array([[ 7.,  9.,  7.,  7.,  6.,  3.], 
+            [ 5.,  3.,  2.,  8.,  8.,  2.]]))
+    else:
+        data = world.bcast(0)
+        print rank, data
+    
+    mpi.finalize()
+
+The output of 4 processes running this script is::
+    
+    3 [[ 7.  9.  7.  7.  6.  3.]
+      [ 5.  3.  2.  8.  8.  2.]]
+    2 [[ 7.  9.  7.  7.  6.  3.]
+      [ 5.  3.  2.  8.  8.  2.]]
+    1 [[ 7.  9.  7.  7.  6.  3.]
+      [ 5.  3.  2.  8.  8.  2.]]
+
 
 Using NumPy types in operations for ``reduce``, ``allreduce`` or ``scan``
 -------------------------------------------------------------------------------
-skriv mig
+As long as the chosen operation can work on a list of items the type doesn't 
+really matter. The following example shows how to sum a number of vectors where
+each process provide a vector::
+    
+    from mpi import MPI
+    import numpy as np
+    
+    mpi = MPI()
+    world = mpi.MPI_COMM_WORLD
+    
+    data = np.int_([1,2,3])
+    
+    reduced_data = world.allreduce(data, sum)
+    
+    print reduced_data
+    
+    mpi.finalize()
+
+    
+The output of 4 processes running this script is::
+    
+    [ 4  8 12]
+    [ 4  8 12]
+    [ 4  8 12]
+    [ 4  8 12]
