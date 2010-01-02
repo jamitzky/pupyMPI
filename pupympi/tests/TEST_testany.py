@@ -4,6 +4,7 @@
 # meta-minprocesses: 4
 
 from mpi import MPI
+from mpi import constants
 import time
 
 mpi = MPI()
@@ -14,26 +15,30 @@ size = world.size()
 
 handles = []
 
-for i in range(100):
-    if rank == 0:
-        # This rank receives every 
-
-        world.send(1, i)
-    else:
-        handle = world.irecv(0)
-        handles.append(handle)
-
-if rank == 1:
-    # It will probably not be ready the first time
-    ready = world.testall(handles)
-    assert not ready 
-
-    # Give time time for the sending to complete
+if rank != 0:
     time.sleep(4)
 
-    # It should be ready now
-    ready = world.testall(handles)
-    assert ready 
+for i in range(100):
+    if rank == 0:
+        # This rank receives every message received by the other 
+        # processes. 
+        for j in range(size-1):
+            handle = world.irecv(constants.MPI_SOURCE_ANY) 
+            handles.append(handle)
 
+        while handles:
+            (found, request) = world.testany(handles)
+            if found:
+                # Finish the request
+                start_time = time.time()
+                request.wait()
+                end_time = time.time()
+
+                diff_time = end_time - start_time
+                assert diff_time < 0.05
+                handles.remove(request)
+
+    else:
+        world.send(0, "My data", constants.MPI_TAG_ANY)
 
 mpi.finalize()
