@@ -179,12 +179,11 @@ class CollectiveRequest(BaseRequest):
 
     def start_bcast(self):
         """
-        The data from the two_way_tree_traversal will be a list with possible
-        multiple items of the packed message. The items will be identical,
-        so we simply pick the first and return the value of the message.
-        
-        FIXME: A more optimal solution would be to ensure that only one
-            of the messages got send. 
+        Creates a custom down function that will ensure only one item
+        is sent through the tree. 
+
+        The up message is irrelevant. It's only there to ensure the 
+        blocking requirement.
         """
         def down_identity_func(input_list):
             if input_list: 
