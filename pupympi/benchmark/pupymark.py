@@ -15,7 +15,7 @@ from mpi import MPI
 from mpi import constants
 
 import comm_info as ci
-import single, collective, parallel
+import single, collective, parallel, special
 
 
 help_message = '''
@@ -32,7 +32,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         import yappi # We don't know who is root yet so everybody imports yappi and starts it
         yappi.start(built_ins) # True means also profile built-in functions
     
-    modules = [single, parallel, collective]
+    modules = [single, parallel, collective, special]
     testlist = []
     resultlist = {}
 
