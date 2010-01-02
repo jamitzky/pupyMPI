@@ -3,9 +3,16 @@
 # meta-minprocesses: 2
 
 from mpi import MPI
-import numpy as np
-
 mpi = MPI()
+
+try:
+    import numpy as np
+except ImportError:
+    print "NumPy not installed. Will bail from this test. "
+    import sys
+    mpi.finalize()
+    sys.exit()
+
 world = mpi.MPI_COMM_WORLD
 
 rank = world.rank()
