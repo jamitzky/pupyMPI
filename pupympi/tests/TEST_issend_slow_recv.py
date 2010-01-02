@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test ssend with delayed matching receive
+# meta-description: Test issend with delayed matching receive
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 # meta-max_runtime: 15
@@ -15,7 +15,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 assert size == 2
 
-f = open(constants.LOGDIR+"mpi.ssend_slow_recv.rank%s.log" % rank, "w")
+f = open(constants.LOGDIR+"mpi.issend_slow_recv.rank%s.log" % rank, "w")
 
 message = "Just a basic message from %d" % (rank)
 
@@ -23,23 +23,31 @@ DUMMY_TAG = 1
 
 if rank == 0: # Send
     neighbour = 1
-    f.write("Rank: %d ssending to %d \n" % (rank,neighbour))
+    f.write("Rank: %d issending to %d \n" % (rank,neighbour))
     f.flush()
-    t1 = time.time()
     
-    mpi.MPI_COMM_WORLD.ssend(neighbour, message, DUMMY_TAG)
+    handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
     
-    t2 = time.time()
-    f.write("Rank: %d sendt synchronized message to %d \n" % (rank,neighbour))
+    f.write("Rank: %d sendt immediate synchronized message to %d \n" % (rank,neighbour))
+    f.flush()
     
-    # More than 4 seconds should have elapsed since reciever waits 5 seconds before posting matching recieve
-    assert ((t2 - t1) > 4)
+    # Since reciever waits 4 seconds before posting matching recieve the first test should fail
+    assert not handle.test()
+    
+    f.write("First test done, rank: %d sleeping before testing again \n" % (rank) )
+    time.sleep(5) # By the time we wake up the receiver should have posted matching receive
+    
+    assert handle.test()
+    f.write("Second test done")
+    
+    # Wait for it - just for the principle of it
+    handle.wait()
     
 elif rank == 1: # Recieve
     neighbour = 0
     f.write("Rank: %d sleeping before recieving from %d \n" % (rank,neighbour) )
     f.flush()
-    time.sleep(5)
+    time.sleep(4)
     f.write("Rank: %d recieving from %d \n" % (rank,neighbour) )
     f.flush()
     recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
