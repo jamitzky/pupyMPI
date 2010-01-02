@@ -75,7 +75,9 @@ class SocketPool(object):
     
     def add_created_socket(self, socket_connection, global_rank):
         if self.readonly:
-            raise Exception("Can't add created socket. We're in readonly mode")
+            # DEBUG
+            Logger().info("Bad conn to rank %i with metainfo:%s and sockets:%s" % (global_rank, self.metainfo, self.sockets))
+            raise Exception("Can't add created socket. We're in readonly mode")        
 
         Logger().debug("SocketPool.add_created_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
         known_socket = self._get_socket_for_rank(global_rank)
@@ -86,7 +88,8 @@ class SocketPool(object):
         
         if known_socket:
             Logger().info("There is already a socket in the pool for a created connection.. Possible loop stuff.. ")
-            
+        
+        
         if len(self.sockets) > self.max_size: # Throw one out if there are too many
                 self._remove_element()
                 

@@ -28,11 +28,14 @@ if rank == 0: # Send
     f.write("Rank: %d ssending to %d \n" % (rank,neighbour))
     f.flush()
     t1 = time.time()
+    
     #mpi.MPI_COMM_WORLD.ssend(neighbour, message, DUMMY_TAG)
+    
     handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
     print "HANDLE:",handle
     dummy = handle.wait()
     print "DUMMY",dummy
+    
     t2 = time.time()
     f.write("Rank: %d sendt synchronized message to %d \n" % (rank,neighbour))
     print (t2-t1)
@@ -45,9 +48,9 @@ elif rank == 1: # Recieve
     #time.sleep(10)
     f.write("Rank: %d recieving from %d \n" % (rank,neighbour) )
     f.flush()
-    recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
-    f.write("Rank: %d recieved '%s' \n" % (rank,recieved) )
-    f.flush()
+    #recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
+    #f.write("Rank: %d recieved '%s' \n" % (rank,recieved) )
+    #f.flush()
 
 f.write("Done for rank %d\n" % rank)
 f.flush()

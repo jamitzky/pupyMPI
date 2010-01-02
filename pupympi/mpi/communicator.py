@@ -346,13 +346,24 @@ class Communicator:
 
     def _add_unstarted_request(self, requests):
         with self.mpi.unstarted_requests_lock:
-            # NOTE: Why do we have to check isinstace here?
+            # NOTE: Why do we have to check isinstance here? Who puts multiple requests in queue at the same time?
             if isinstance(requests, list):
                 self.mpi.unstarted_requests.extend( requests )
             else:
                 self.mpi.unstarted_requests.append( requests )
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
+    
+    # Add a request that for communication with self
+    def _send_to_self(self, request):
+        # The sending request is complete, so we update it right away
+        # so the user will be able to wait() for it.
+        request.update("ready")
+            
+        queue_item = (self.id, self.rank(), request.tag, False, request.data)
+        with self.mpi.received_data_lock:
+            self.mpi.received_data.append(queue_item)            
+            self.mpi.pending_requests_has_work.set()
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
         """
@@ -403,6 +414,11 @@ class Communicator:
         # Create a send request object
         handle = Request("send", self, destination_rank, tag, False, data=content)
         
+        # If sending to self, take a short-cut
+        if destination_rank == self.rank():
+            self._send_to_self(handle)
+            return handle
+                
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
