@@ -427,7 +427,27 @@ class Communicator:
         return handle
 
     def issend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
-        """Synchronous send"""
+        """
+        Synchronized non-blocking send function. The function will return as soon as the 
+        data has been copied into a internal buffer for subsequent sending. 
+
+        The function will return a handle to the request on which is is possible to
+        :func:`cancel <mpi.request.Request.cancel>`, wait until the sending has
+        completed or simply test if the request is complete.
+        
+        Until the receiving party in the communication has posted a receive of some
+        kind matching the issend the request is not complete. Meaning that when
+        a wait or a test on the request handle is succesful it is guaranteed that
+        a matching receive is posted on the other side.::
+
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
+        this communicator.
+
+        **See also**: :func:`ssend`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
+        """
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
@@ -483,7 +503,7 @@ class Communicator:
                 print "Now rank 1 must have asked for the message"
             elif mpi.MPI_COMM_WORLD.rank() == 1:
                 message = mpi.MPI_COMM_WORLD.recv(0, TAG)
-            else: # 
+            else:
                 pass
             
             mpi.finalize()
@@ -491,7 +511,7 @@ class Communicator:
         POSSIBLE ERRORS: If you specify a destination rank out of scope for
         this communicator. 
 
-        **See also**: :func:`recv` and :func:`isend`
+        **See also**: :func:`issend`
 
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
