@@ -75,20 +75,26 @@ class MPI(Thread):
 
         options, args = parser.parse_args()
 
-        # Initialise the logger
-        logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
-        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
+            # Initialise the logger - hackish
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
             output = open(filename, "w")
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
+            # Initialise the logger - hackish
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             logger.debug("Closing stdout")
             sys.stdout = None
+        else:
+            # Initialise the logger
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+
+        logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
+            
 
         # First check for required Python version
         self._version_check()
@@ -219,7 +225,7 @@ class MPI(Thread):
         #DEBUG / PROFILING
         #yappi.start(True) # True means also profile built-in functions
 
-        while not self.shutdown_event.is_set():
+        while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
@@ -289,10 +295,9 @@ class MPI(Thread):
         self.queues_flushed.set()
 
         Logger().debug("Queues flushed and user thread has been signalled.")
-        
-        # FIXME: Check if this has any effect
         if sys.stdout is not None:
             sys.stdout.flush() # Dirty hack to get the rest of the output out
+        
 
     def abort(self):
         """
