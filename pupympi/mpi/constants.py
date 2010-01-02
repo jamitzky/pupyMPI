@@ -66,6 +66,16 @@ MPI_UNDEFINED   = -3    # Like SGI's MPI (http://scv.bu.edu/documentation/tutori
 Used for method parameters that is undefined, such as for :func:`Communicator.comm_split` or when the result of a method call is undefined in some context, such as for :func:`Group.translate_ranks`.
 """
 
+MPI_CARTESIAN = 1
+"""
+Signals a Cartesian topology
+"""
+MPI_GRAPH = 2
+"""
+Signals a Graph topology (Not implemented)
+"""
+
+
 #### INTERNAL VALUES BELOW ####
 
 TAG_ACK     = -3 
