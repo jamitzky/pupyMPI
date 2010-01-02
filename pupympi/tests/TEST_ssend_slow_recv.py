@@ -21,8 +21,6 @@ message = "Just a basic message from %d" % (rank)
 
 DUMMY_TAG = 1
 
-#mpi.MPI_COMM_WORLD.barrier()
-
 if rank == 0: # Send
     neighbour = 1
     f.write("Rank: %d ssending to %d \n" % (rank,neighbour))
@@ -36,6 +34,8 @@ if rank == 0: # Send
     
     t2 = time.time()
     f.write("Rank: %d sendt synchronized message to %d \n" % (rank,neighbour))
+    
+    # More than 4 seconds should have elapsed since reciever waits 5 seconds before posting matching recieve
     assert ((t2 - t1) > 4)
     
 elif rank == 1: # Recieve
