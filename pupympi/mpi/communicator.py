@@ -403,13 +403,12 @@ class Communicator:
             mpi.finalize()
 
         .. note::
-            It's possible for rank N to send data to N. The data will **not**
+            It's possible for rank N to send data to N (itself). The data will **not**
             be transferred on the network but take a faster path. 
 
         .. note:: 
             See also the :func:`send` and :func:`irecv` functions. 
         """
-        logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
@@ -490,7 +489,6 @@ class Communicator:
 
         **See also**: :func:`ssend` and :func:`test`
         """
-        logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))

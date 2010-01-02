@@ -8,32 +8,18 @@ import math
 import unittest
 from operator import mul
 from BaseTopology import BaseTopology
-from BaseTopology import MPI_CARTESIAN
+from mpi import constants
 from mpi.exceptions import MPITopologyException
+from mpi.logger import Logger
 
-class Logger(object):
-    """docstring for logger"""
-    def __init__(self):
-        pass
-
-    def debug(self, arg):
-        pass
-    
-    def info(self, arg):
-        pass
             
 class dummycomm():
-    """Haxx communicator for unittests only"""
-            
+    """Mock communicator for unittests only"""            
     def __init__(self, size):
         self.size = size
         import sys
         sys.path.append("../..")
-        self.logger = Logger()
-        
-#        from mpi.logger import setup_log
-#        self.logger = setup_log( "dummycomm", "proc-%d" % 0, False, 1, False)
-        
+                
     def associate(self, arg):
         pass
         
@@ -48,8 +34,12 @@ class Cartesian(BaseTopology):
     """
     Cartesian topology class for pupyMPI.
     Supports n'th dimensional topologies with flexible size and with periodicity. Rank reordering not supported.
+    
+    .. note:: 
+        if the `periodic` parameter is not supplied or contains less information than `dims` it is automatically extended as False for the remainder of the dimensions.
+        It is considered an error to supply a `dims` list of 0 elements or where any element is not a positive integer.
+    
     """
-    # TODO Need some sort of check for that communicator size cannot exceed topology (look up order of operations when have inet access: probably at topology creation)
     def __init__(self, communicator, dims, periodic = None, rank_reordering = False ):
         if not periodic:
             periodic = []
@@ -62,9 +52,9 @@ class Cartesian(BaseTopology):
         if not communicator:
             raise MPITopologyException("No existing communicator given")
         if 0 in dims:
-            raise MPITopologyException("All extants must be at least 1 wide")
+            raise MPITopologyException("All dimensions must be at least 1 wide")
         if rank_reordering:
-            raise MPITopologyException("Rank reordering not supported in this release.")
+            raise MPITopologyException("Rank reordering not supported.")
 
         if len(periodic) < len(dims):
             periodic.extend([False] * (len(dims) - len(periodic)))
@@ -72,9 +62,8 @@ class Cartesian(BaseTopology):
         self.dims = dims
         self.periodic = periodic
         self.communicator = communicator
-        self.logger = communicator.logger
-        communicator.associate(self)
-        self.logger.info("Creating new topology %s and associated with communicator %s." % (self, communicator))
+        #communicator.associate(self)
+        #Logger("Creating new topology %s and associated with communicator %s." % (self, communicator))
         
     def __repr__(self):
         return "<Cartesian topology, %sD with dims %s>" % (len(self.dims), 'x'.join(map(_writeDimStr, self.dims, self.periodic)))
@@ -93,14 +82,24 @@ class Cartesian(BaseTopology):
         """Return type of topology"""
         return MPI_CARTESIAN
                 
-    def get(self, rank):
+    def get(self):
         """
         Get my grid coordinates based on my rank
-        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
         """
-        if self.communicator.size <= rank:
-            raise MPITopologyException("Rank given exceeds size of communicator")
+        rank = self.communicator.rank()
         
+        return self.coords(rank)
+        
+    def coords(self, rank):
+        """
+        The inverse mapping, rank-to-coordinates translation is provided by MPI_CART_COORDS
+
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        """
+        if self.communicator.size() <= rank:
+            raise MPITopologyException("Rank given exceeds size of communicator")
+
         d = len(self.dims)
         coords = [0] * d
         for k in range(d-1, 0, -1):
@@ -110,22 +109,12 @@ class Cartesian(BaseTopology):
             rank = max(0, rank - sum)
         coords[0] = rank % self.dims[0]
         
-        return coords
-        
-    def coords(self, rank):
-        """
-        The inverse mapping, rank-to-coordinates translation is provided by MPI_CART_COORDS
-
-        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
-        """
-        # FIXME: Decide whether to implement as it is as get, except get is supposedly aware of rank?
-        raise MPITopologyException("Use Cartesian.get")
-        
+        return coords        
         
     def rank(self, coords):
         """
         Get my 1D rank from grid coordinates
-        http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
         """
         if len(coords) is not len(self.dims):
             raise MPITopologyException("Dimensions given must match those of this topology.")
@@ -141,7 +130,7 @@ class Cartesian(BaseTopology):
         
     def shift(self, direction, displacement, rank_source):
         """Shifts by rank in one coordinate direction. Displacement specifies step width. 
-            http://www.mpi-forum.org/docs/mpi-11-html/node137.html#Node137"""
+            Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node137.html#Node137"""
         if direction >= len(self.dims):
             raise MPITopologyException("Dimensionality exceeded")
             
@@ -160,7 +149,7 @@ class Cartesian(BaseTopology):
         
         This implementation does just that, as mapping to physical hardware is not supported.
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node139.html
+        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node139.html
         """
         return self.communicator.rank()
         
@@ -193,50 +182,14 @@ def MPI_Dims_Create(size, d, constraints = None):
     optional constraints that can be specified by the user. One use is to
     partition all the processes (the size of MPI_COMM_WORLD's group) into an
     n-dimensional topology. 
+    
+    This method is not implemented in the public version of pupyMPI because it was not sufficiently stable.
     """      
     
-    if d < 1:
-        raise MPITopologyException("Dimensions must be higher or equal to 1.")
-    if constraints and not len(constraints) is d:
-        raise MPITopologyException("If constraints are specified, they must match requested dimensionality.")
-    if constraints and not 0 in constraints:
-        raise MPITopologyException("If constraints are specified, they must not bind all dimensions.")
-        
-    if not constraints:
-        constraints = [0] * d
-            
-    if _isprime(size):
-        tmpdims = [1] * d
-        dims = [t if c == 0 else c for c,t in zip(constraints,tmpdims)]
-        dims[0] = size
-    else:
-        base = math.pow (size, 1.0/d)
-        tmpdims = [int(base)] * d
-        dims = [t if c == 0 else c for c,t in zip(constraints,tmpdims)]
-
-        last_empty = 0
-        block = d
-        while reduce(mul, dims) < size:
-            if constraints[last_empty] is 0:
-                dims[last_empty] += 1;
-            last_empty += 1
-            if reduce(mul, dims) > size:
-                if block is 0:
-                    raise MPITopologyException("!Size (%s) must be a multiple of the resulting grid size (%s)." % (size, dims))
-                else:
-                    block -= 1
-                    dims[last_empty-1] -= 1
-                    last_empty = 0
-                    continue
-            if last_empty >= block:
-                last_empty = 0
-                
-    if reduce(mul, dims) > size:
-        raise MPITopologyException("Size (%s) must be a multiple of the resulting grid size (%s)." % (size, dims))
-        
-    return dims      
+    raise  MPITopologyException("This method is presently not included")
 
 class CartesianTests(unittest.TestCase):
+    """Contains stand-alone unit tests for the CartesianTopology class."""
     def setUp(self):
         pass
         
