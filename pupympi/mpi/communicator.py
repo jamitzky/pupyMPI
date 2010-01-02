@@ -321,6 +321,9 @@ class Communicator:
                 data = handle.wait()
 
             mpi.finalize()
+
+        .. note::
+            It's possible for rank N to receive data from N.  
         """
 
         # Check that destination exists
@@ -398,6 +401,10 @@ class Communicator:
                 message = world.recv(0)
 
             mpi.finalize()
+
+        .. note::
+            It's possible for rank N to send data to N. The data will **not**
+            be transferred on the network but take a faster path. 
 
         .. note:: 
             See also the :func:`send` and :func:`irecv` functions. 
@@ -548,6 +555,10 @@ class Communicator:
             :doc:`mpirun`). If invoked with more processes there will be size-2 
             processes waiting for a message that will never come. 
 
+        .. note::
+            It's possible for rank N to send data to N. The data will **not**
+            be transferred on the network but take a faster path. 
+
         POSSIBLE ERRORS: If you specify a destination rank out of scope for
         this communicator. 
 
@@ -575,6 +586,9 @@ class Communicator:
         this communicator. 
 
         .. note:: See also the :func:`irecv` and :func:`send` functions
+
+        .. note::
+            It's possible for rank N to receive data from N.  
 
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
