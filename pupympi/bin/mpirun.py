@@ -139,7 +139,7 @@ if __name__ == "__main__":
     if not executeable.startswith("/"):
         executeable = os.path.join( os.getcwd(), executeable)
 
-    logger.debug("enable_profiling %s" % options.enable_profiling)
+    #logger.debug("enable_profiling %s" % options.enable_profiling)
     profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
 
     # Mimic our cli call structure also for remotely started processes

@@ -78,7 +78,7 @@ class MPI(Thread):
         # Initialise the logger
         logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
-        logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
+        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
@@ -163,7 +163,7 @@ class MPI(Thread):
 
         # Makes every node connect to each other if the settings allow us to do that.
         self.network.start_full_network()
-        logger.info("MPI environment is up and running.")
+        #logger.info("MPI environment is up and running.")
 
     def match_pending(self, request):
         """
