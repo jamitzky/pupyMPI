@@ -913,16 +913,35 @@ class Communicator:
         any of the requests is completed and the request object::
 
             from mpi import MPI
+            from mpi import constants
+
             mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
 
-            ...
+            rank = world.rank()
+            size = world.size()
 
-            (completed, request) = mpi.MPI_COMM_WORLD.testany(request_list)
+            handles = []
 
-            if completed:
-                data = request.wait() # will return right away.. 
-            else:
-                pass # the request will be None
+            for i in range(100):
+                if rank == 0:
+                    # This rank receives every message received by the other 
+                    # processes. 
+                    for j in range(size-1):
+                        handle = world.irecv(constants.MPI_SOURCE_ANY) 
+                        handles.append(handle)
+
+                    while handles:
+                        (found, request) = world.testany(handles)
+                        if found:
+                            # Finish the request
+                            request.wait()
+                            handles.remove(request)
+
+                else:
+                    world.send(0, "My data", constants.MPI_TAG_ANY)
+
+            mpi.finalize()
         """
         for request in request_list:
             if request.test():
@@ -939,13 +958,36 @@ class Communicator:
         something like this::
 
             from mpi import MPI
-            mpi = MPI()
+            from mpi import constants
 
-            ...
-            request_list = ...
-            finished_requests = mpi.MPI_COMM_WORLD.testsome(request_list)
-            data_list = mpi_MPI_COMM_WORLD.waitall(finished_requests)
-            print "\\n".join(data_list)
+            mpi = MPI()
+            world = mpi.MPI_COMM_WORLD
+
+            rank = world.rank()
+            size = world.size()
+
+            handles = []
+
+            for i in range(100):
+                if rank == 0:
+                    # This rank receives every message received by the other 
+                    # processes. 
+                    for j in range(size-1):
+                        handle = world.irecv(constants.MPI_SOURCE_ANY) 
+                        handles.append(handle)
+
+                    while handles:
+                        request_list = world.testsome(handles)
+                        if request_list:
+                            # Finish the request
+                            data_list = world.waitall(request_list)
+                            print "\\n".join(data_list)
+                            handles = [ r for r in handles if r not in request_list]
+
+                else:
+                    world.send(0, "My data", constants.MPI_TAG_ANY)
+
+            mpi.finalize()
         """
         return_list = []
         for request in request_list:
