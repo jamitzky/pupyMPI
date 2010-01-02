@@ -405,7 +405,7 @@ class Communicator:
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
@@ -431,7 +431,7 @@ class Communicator:
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
@@ -448,10 +448,19 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        self._add_unstarted_request([dummyhandle, handle])
+        with self.mpi.pending_requests_lock:
+            self.mpi.pending_requests.append(handle)
+            self.mpi.pending_requests_has_work.set()
+            self.mpi.has_work_event.set()
+
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        self._add_unstarted_request(dummyhandle)
 
         return handle
-        
+    
+    
     def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
         """Synchronous send"""
         return self.issend(destination, content, tag).wait()
