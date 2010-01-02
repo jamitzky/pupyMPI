@@ -603,8 +603,8 @@ class Communicator:
             is raised if the provided root is not a member of this communicator. 
         """
         # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
-        cr.complete_bcast()
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
+        cr.start_bcast()
         return cr.wait()
 
     def allgather(self, data):
