@@ -965,6 +965,9 @@ class Communicator:
         """
         if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
             raise MPIException("Scatter used with invalid arguments.")
+
+        if self.rank() != root and data is not None:
+            raise MPIException("Only the root of scatter should send data")
         
         cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
         cr.complete_bcast()
