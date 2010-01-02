@@ -81,7 +81,10 @@ def popen(host, arguments, process_io, rank):
         raise MPIException("This processloader can only start processes on localhost, '%s' specified." % host)
 
 def terminate_children():
-    sys.exit()
+    for p in process_list:
+        logger = Logger()
+        logger.debug("Killing %s" % p)
+        p.terminate()
 
 def wait_for_shutdown(process_list):
     """
