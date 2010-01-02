@@ -981,7 +981,7 @@ class Communicator:
 
     def scatter(self, data=None, root=0):
         """
-        Takes a list with the size N, where N is also the number of participants
+        Takes a list with the size M*N, where N is also the number of participants
         in this communicator. It distributes the N elements to all the participants
         in the communicator like to following example::
 
@@ -1012,16 +1012,20 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
-        if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
+        if self.rank() == root and (not data or not isinstance(data, list) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         if self.rank() != root and data is not None:
             raise MPIException("Only the root of scatter should send data")
-        
-        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        cr.complete_bcast()
-        data = cr.wait()
 
+        # Create a list with size N
+        if data:
+            if len(data) != self.size():
+                elements_per_rank = len(data) / self.size()
+                data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
+
+        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        data = cr.wait().pop()['value']
         return data[self.rank()]
         
     def testall(self, request_list):
