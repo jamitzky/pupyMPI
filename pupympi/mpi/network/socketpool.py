@@ -121,7 +121,7 @@ class SocketPool(object):
         Attempts to find an already created socket with a connection to a
         specific rank. If this does not exist we return None
         """
-        Logger().debug("SocketPool._get_socket_for_rank: Trying to fetch socket for rank %d" % rank)
+        #Logger().debug("SocketPool._get_socket_for_rank: Trying to fetch socket for rank %d" % rank)
         for client_socket in self.sockets:
             (srank, _, fp) = self.metainfo[client_socket]
             if srank == rank:

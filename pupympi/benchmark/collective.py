@@ -5,6 +5,7 @@ collective.py - collection of collective tests inspired by Intel MPI Benchmark (
 
 Created by Jan Wiberg on 2009-08-13.
 """
+from mpi.operations import MPI_max
 
 import comm_info as ci
 
@@ -179,7 +180,7 @@ def test_Scatter(size, max_iterations):
     def Scatter(data, max_iterations):
         current_root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == current_root else "" # NOTE: probably superflous, discuss with Rune
+            my_data = data if ci.rank == current_root else None # NOTE: probably superflous, discuss with Rune
             ci.communicator.scatter(my_data, current_root)
             
             # Switch root
@@ -211,6 +212,7 @@ def test_Scatter(size, max_iterations):
     chunksize = size/ci.num_procs
     # each distinct chunk goes to a distinct process
     datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
+    #datalist = range(ci.num_procs)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
@@ -301,8 +303,8 @@ def test_Reduce(size, max_iterations):
         """docstring for Reduce"""
         current_root = 0
         for r in xrange(max_iterations):
-            # For the reduce operator we use Python built-in max
-            received = ci.communicator.reduce(data, max, current_root)            
+            # For the reduce operator we use pupyMPI's built-in max
+            received = ci.communicator.reduce(data, MPI_max, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
     # end of test
@@ -352,7 +354,7 @@ def test_Reduce(size, max_iterations):
     t1 = ci.clock_function()
     
     # do magic
-    Reduce(ci.data, max_iterations)
+    Reduce(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
