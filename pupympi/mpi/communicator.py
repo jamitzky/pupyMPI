@@ -462,7 +462,40 @@ class Communicator:
     
     
     def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
-        """Synchronous send"""
+        """
+        Synchronized send function. Send to the destination rank a message
+        with the specified tag. 
+
+        Ssend blocks until a matching receieve is posted. That is when ssend
+        returns you know the receiver has asked for something matching your
+        message and most likely has also gotten the message.
+
+        **Example**
+        Rank 0 sends "Hello world!" to rank 1. Rank 1 posts a matching receive
+        and rank 0 can be sure the message has gotten through.::
+            
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                mpi.MPI_COMM_WORLD.ssend(1, "Hello World!", TAG)
+                print "Now rank 1 must have asked for the message"
+            elif mpi.MPI_COMM_WORLD.rank() == 1:
+                message = mpi.MPI_COMM_WORLD.recv(0, TAG)
+            else: # 
+                pass
+            
+            mpi.finalize()
+
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
+        this communicator. 
+
+        **See also**: :func:`recv` and :func:`isend`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
+        """
         return self.issend(destination, content, tag).wait()
         
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
@@ -487,6 +520,8 @@ class Communicator:
             else:
                 message = mpi.MPI_COMM_WORLD.recv(0, TAG)
                 print message
+                
+            mpi.finalize()
 
         .. note::
             The above program will only work if run with -c 2 parameter (see
