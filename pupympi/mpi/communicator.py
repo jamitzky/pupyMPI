@@ -445,15 +445,48 @@ class Communicator:
         Until the receiving party in the communication has posted a receive of some
         kind matching the issend the request is not complete. Meaning that when
         a wait or a test on the request handle is succesful it is guaranteed that
-        a matching receive is posted on the other side.::
+        a matching receive is posted on the other side.
+        
+        **Example**
+        Rank 0 posts an isend but rank 1 delays before posting a recieve that matches.
+        Meanwhile rank 0 can test to see if the message got through::    
 
-        POSSIBLE ERRORS: If you specify a destination rank out of scope for
-        this communicator.
+            import time
+            from mpi import MPI
+            
+            mpi = MPI()
+            
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+            
+            message = "Just a basic message from %d" % (rank)
+            DUMMY_TAG = 1
+            
+            if rank == 0: # Send
+                neighbour = 1
+                handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
+                
+                # Since reciever waits 4 seconds before posting matching recieve the first test should fail
+                if not handle.test():
+                    print "Yawn, still not getting through..."
+                
+                time.sleep(5) # By the time we wake up the receiver should have posted matching receive
+                
+                if handle.test():
+                    print "Finally got through."
+                    
+                handle.wait() # This is not strictly needed but good form
+                
+            elif rank == 1: # Recieve
+                neighbour = 0    
+                time.sleep(4) # Wait a while to build tension
+            
+                recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
+            
+            # Close the sockets down nicely
+            mpi.finalize()
 
-        **See also**: :func:`ssend`
-
-        .. note::
-            See the :ref:`TagRules` page for rules about your custom tags
+        **See also**: :func:`ssend` and :func:`test`
         """
         logger = Logger()
         # Check that destination exists
