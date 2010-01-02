@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-import sys, os, copy
+import sys, os, copy, signal
 from optparse import OptionParser, OptionGroup
 import select, time
 
@@ -61,6 +61,19 @@ def parse_options():
     except Exception, e:
         print "It's was not possible to parse the arguments. Error received: %s" % e
         sys.exit(1)
+        
+global sender_conns
+
+def signal_handler(signal, frame):
+    print 'Interrupt signal trapped - attempting to nuke children. You may want to verify manually that nothing is hanging.'
+    COMM_ID = -1
+    COMM_RANK = -1
+    data = (COMM_ID, COMM_RANK, constants.TAG_SHUTDOWN, all_procs)
+    message = prepare_message(data, constants.CMD_ABORT)
+    for conn in sender_conns:
+        utils.robust_send(conn, message)
+    processloaders.terminate_children()
+    sys.exit(3)
 
 def io_forwarder(process_list):
     """
@@ -175,6 +188,7 @@ if __name__ == "__main__":
             
         logger.debug("Process with rank %d started" % rank)
 
+
     """
     NOTE: Now we have a proccess list and can start the io forwarder if needed
     At this point processes are of course already running meaning we could
@@ -185,7 +199,6 @@ if __name__ == "__main__":
     """
     # Start a thread to handle io forwarding from processes
     if options.process_io == "asyncdirect":
-
         # Declare an event for proper shutdown. When the system is ready to
         # shutdown we signal the event. People looking at the signal will catch
         # it and shutdown.
@@ -227,19 +240,23 @@ if __name__ == "__main__":
     message = prepare_message(data, -1)
     for conn in sender_conns:
         utils.robust_send(conn, message)
-        conn.close()
 
     s.close()
     
+    # Trap CTRL-C before we let processes loose on the world
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    
     # Wait for all started processes to die
     exit_codes = processloaders.wait_for_shutdown(process_list)    
+    for conn in sender_conns: # if still up (shouldn't be)
+        conn.close()        
 
     # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
    
-    logger.debug("Checking IO forward")    
     if options.process_io == "asyncdirect":
         logger.debug("IO forward thread will be stopped")
         # Signal shutdown to io_forwarder thread

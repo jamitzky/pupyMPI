@@ -132,5 +132,5 @@ def robust_send(socket, message):
         
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]
-            Logger().info("WHOA NELLY once around the block")
+            Logger().debug("Message sliced because it was too large for one send.")
         
