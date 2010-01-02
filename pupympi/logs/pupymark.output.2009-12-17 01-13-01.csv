@@ -1,0 +1,3 @@
+datasize,repetitions,total time,time/repetition,Mb/second,name of test,timestamp of testrun
+0,1000,4.428192,0.004428,0.000000,test_Barrier,2009-12-17 01-13-01
+
