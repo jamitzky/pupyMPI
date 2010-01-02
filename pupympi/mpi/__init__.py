@@ -75,9 +75,6 @@ class MPI(Thread):
 
         options, args = parser.parse_args()
 
-        # Initialise the logger
-        logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-        logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         if options.process_io == "remotefile": 
             # Initialise the logger - hackish
@@ -172,7 +169,7 @@ class MPI(Thread):
 
         # Makes every node connect to each other if the settings allow us to do that.
         self.network.start_full_network()
-        logger.info("MPI environment is up and running.")
+        #logger.info("MPI environment is up and running.")
 
     def match_pending(self, request):
         """
@@ -203,7 +200,7 @@ class MPI(Thread):
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
                         
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
-                        if request.tag in (tag, constants.MPI_TAG_ANY, constants.TAG_ACK):
+                        if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
                             remove.append(data)                            
                             request.update(status="ready", data=message)
                             match = True

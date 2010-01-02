@@ -100,7 +100,7 @@ class Network(object):
             size = self.mpi.MPI_COMM_WORLD.size()
 
             receiver_ranks = [x for x in range(0, our_rank)]
-            sender_ranks = range(our_rank, size)
+            sender_ranks = range(our_rank+1, size)
 
             Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
 
@@ -122,6 +122,9 @@ class Network(object):
             for handle in recv_handles:
                 handle.wait()
             
+            #DEBUG
+            #print "Socket pool sockets",self.socket_pool.sockets
+            #print "Socket pool meta",self.socket_pool.metainfo
             # Full network start up means a static socket pool
             self.socket_pool.readonly = True
         
@@ -287,7 +290,7 @@ class CommunicationHandler(threading.Thread):
                 except Exception, e:
                     Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                     
-                Logger().debug("Received data from rank %d" % rank)
+                #Logger().debug("Received data from rank %d" % rank)
                 
                 if add_to_pool:
                     self.network.socket_pool.add_created_socket(conn, rank)

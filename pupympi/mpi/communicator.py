@@ -346,13 +346,24 @@ class Communicator:
 
     def _add_unstarted_request(self, requests):
         with self.mpi.unstarted_requests_lock:
-            # NOTE: Why do we have to check isinstace here?
+            # NOTE: Why do we have to check isinstance here? Who puts multiple requests in queue at the same time?
             if isinstance(requests, list):
                 self.mpi.unstarted_requests.extend( requests )
             else:
                 self.mpi.unstarted_requests.append( requests )
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
+    
+    # Add a request that for communication with self
+    def _send_to_self(self, request):
+        # The sending request is complete, so we update it right away
+        # so the user will be able to wait() for it.
+        request.update("ready")
+            
+        queue_item = (self.id, self.rank(), request.tag, False, request.data)
+        with self.mpi.received_data_lock:
+            self.mpi.received_data.append(queue_item)            
+            self.mpi.pending_requests_has_work.set()
 
     def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
         """
@@ -394,7 +405,7 @@ class Communicator:
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
@@ -403,6 +414,11 @@ class Communicator:
         # Create a send request object
         handle = Request("send", self, destination_rank, tag, False, data=content)
         
+        # If sending to self, take a short-cut
+        if destination_rank == self.rank():
+            self._send_to_self(handle)
+            return handle
+                
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
@@ -411,11 +427,31 @@ class Communicator:
         return handle
 
     def issend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
-        """Synchronous send"""
+        """
+        Synchronized non-blocking send function. The function will return as soon as the 
+        data has been copied into a internal buffer for subsequent sending. 
+
+        The function will return a handle to the request on which is is possible to
+        :func:`cancel <mpi.request.Request.cancel>`, wait until the sending has
+        completed or simply test if the request is complete.
+        
+        Until the receiving party in the communication has posted a receive of some
+        kind matching the issend the request is not complete. Meaning that when
+        a wait or a test on the request handle is succesful it is guaranteed that
+        a matching receive is posted on the other side.::
+
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
+        this communicator.
+
+        **See also**: :func:`ssend`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
+        """
         logger = Logger()
         # Check that destination exists
         if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("Not process with rank %d in communicator %s. " % (destination_rank, self.name))
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
@@ -432,12 +468,54 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
-        self._add_unstarted_request([dummyhandle, handle])
+        with self.mpi.pending_requests_lock:
+            self.mpi.pending_requests.append(handle)
+            self.mpi.pending_requests_has_work.set()
+            self.mpi.has_work_event.set()
+
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start. 
+        self._add_unstarted_request(dummyhandle)
 
         return handle
-        
+    
+    
     def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
-        """Synchronous send"""
+        """
+        Synchronized send function. Send to the destination rank a message
+        with the specified tag. 
+
+        Ssend blocks until a matching receieve is posted. That is when ssend
+        returns you know the receiver has asked for something matching your
+        message and most likely has also gotten the message.
+
+        **Example**
+        Rank 0 sends "Hello world!" to rank 1. Rank 1 posts a matching receive
+        and rank 0 can be sure the message has gotten through.::
+            
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                mpi.MPI_COMM_WORLD.ssend(1, "Hello World!", TAG)
+                print "Now rank 1 must have asked for the message"
+            elif mpi.MPI_COMM_WORLD.rank() == 1:
+                message = mpi.MPI_COMM_WORLD.recv(0, TAG)
+            else:
+                pass
+            
+            mpi.finalize()
+
+        POSSIBLE ERRORS: If you specify a destination rank out of scope for
+        this communicator. 
+
+        **See also**: :func:`issend`
+
+        .. note::
+            See the :ref:`TagRules` page for rules about your custom tags
+        """
         return self.issend(destination, content, tag).wait()
         
     def send(self, destination, content, tag = constants.MPI_TAG_ANY):
@@ -462,6 +540,8 @@ class Communicator:
             else:
                 message = mpi.MPI_COMM_WORLD.recv(0, TAG)
                 print message
+                
+            mpi.finalize()
 
         .. note::
             The above program will only work if run with -c 2 parameter (see
@@ -503,13 +583,48 @@ class Communicator:
 
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
-        The send-receive operations combine in one call the sending of a message to one destination and the receiving of another message, from another process.
-        The two (source and destination) are possibly the same. 
         
-        A send-receive operation is very useful for executing a shift operation across a chain of processes.
-        A message sent by a send-receive operation can be received by a regular receive operation or probed by a probe operation; a send-receive operation can receive a message sent by a regular send operation. 
+        The send-receive operation combine in one call the sending of a message
+        to one destination and the receiving of another message, from another destination.
+        The two destinations can be the same. 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
+        A send-receive operation is very useful for executing a shift operation
+        across a chain of processes.
+        A message sent by a send-receive operation can be received by a regular
+        receive operation or probed by a probe operation; a send-receive operation
+        can receive a message sent by a regular send operation. 
+        
+        **Example usage**:
+        The following code will send a token string between all messages. All
+        ranks receive the token from their lower neighbour and pass it to the
+        upper neighbour::
+
+            from mpi import MPI
+            
+            mpi = MPI()
+            
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+            
+            
+            content = "conch"
+            DUMMY_TAG = 1
+            
+            # Send up in chain, recv from lower
+            # modulo with size is to wrap around for lowest and highest rank
+            dest   = (rank + 1) % size
+            source = (rank - 1) % size
+            
+            recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank), dest, DUMMY_TAG, source, DUMMY_TAG)
+            print "Rank %i got %s" % (rank,recvdata)
+            
+            # Close the sockets down nicely
+            mpi.finalize()
+
+        .. note::
+        There is no sequential ordering here, as the print output will show. All
+        that is guaranteed is that every process has sent and received, not in any
+        particular order.        
         """
         if dest == source:
             return senddata
@@ -557,8 +672,7 @@ class Communicator:
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
     
-    # FIXME: The syntax for other cals are data,root - switch this one?    
-    def bcast(self, root, data=None):
+    def bcast(self, data=None, root=0):
         """
         Broadcast a message (data) from the process with rank <root>
         to all other participants in the communicator. 
@@ -569,10 +683,12 @@ class Communicator:
             from mpi import MPI
 
             mpi = MPI()
-            if mpi.MPI_COMM_WORLD.rank() == 3:
-                mpi.MPI_COMM_WORLD.bcast(3, "Test message")
+            world = mpi.MPI_COMM_WORLD 
+
+            if world.rank() == 3:
+                world.bcast("Test message", 3)
             else:
-                message = mpi.MPI_COMM_WORLD.bcast(3)
+                message = world.bcast(root=3)
                 print message
 
             mpi.finalize()
@@ -586,8 +702,8 @@ class Communicator:
             is raised if the provided root is not a member of this communicator. 
         """
         # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
-        cr.complete_bcast()
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
+        cr.start_bcast()
         return cr.wait()
 
     def allgather(self, data):

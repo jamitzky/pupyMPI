@@ -149,7 +149,6 @@ class CollectiveRequest(BaseRequest):
             
         # Step 1: Setup safe methods for propergating data through the tree if
         #         the callee didn't give us any.
-        #up_func = up_func or CollectiveRequest.Datafunctions.safehead
         down_func = down_func or identity
         up_func = up_func or identity
 
@@ -178,23 +177,23 @@ class CollectiveRequest(BaseRequest):
         else:
             return rt_second
 
-    def complete_bcast(self):
+    def start_bcast(self):
         """
-        The data from the two_way_tree_traversal will be a list with possible
-        multiple items of the packed message. The items will be identical,
-        so we simply pick the first and return the value of the message.
-        
-        FIXME: A more optimal solution would be to ensure that only one
-            of the messages got send. 
+        Creates a custom down function that will ensure only one item
+        is sent through the tree. 
+
+        The up message is irrelevant. It's only there to ensure the 
+        blocking requirement.
         """
-        Logger().debug("Rank: %i, data: %s" % (self.communicator.rank(), self.data) )
-        if self.data:
-            self.data = self.data.pop()
-            try:
-                self.data = self.data['value']
-            except:
-                pass
-    
+        def down_identity_func(input_list):
+            if input_list: 
+                return input_list.pop()
+        down_identity_func.partial_data = True
+
+        data = self.two_way_tree_traversal(start_direction="down", return_type="first", down_func=down_identity_func)
+
+        self.data = data['value']
+
     def start_allgather(self):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
         final_data = range(self.communicator.size())

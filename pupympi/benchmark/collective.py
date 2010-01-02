@@ -46,7 +46,7 @@ def test_Bcast(size, max_iterations):
         root = 0
         for r in xrange(max_iterations):
             my_data = data if ci.rank == root else "" # NOTE: probably superflous, discuss with Rune
-            ci.communicator.bcast(root, my_data)
+            ci.communicator.bcast(my_data, root)
             
             # Switch root
             root = (root +1) % ci.num_procs
