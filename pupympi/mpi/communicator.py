@@ -982,8 +982,9 @@ class Communicator:
     def scatter(self, data=None, root=0):
         """
         Takes a list with the size M*N, where N is also the number of participants
-        in this communicator. It distributes the N elements to all the participants
-        in the communicator like to following example::
+        in this communicator. It distributes the elements so each participant gets
+        M elements. Notice the difference in scattering where M is 1 or above in the
+        following example::
 
             from mpi import MPI
 
