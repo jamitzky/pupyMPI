@@ -466,11 +466,14 @@ class Communicator:
                 neighbour = 1
                 handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
                 
-                # Since reciever waits 4 seconds before posting matching recieve the first test should fail
+                # Since reciever waits 4 seconds before posting matching recieve
+                # the first test should fail
                 if not handle.test():
                     print "Yawn, still not getting through..."
-                
-                time.sleep(5) # By the time we wake up the receiver should have posted matching receive
+                    
+                # By the time we wake up the receiver should have posted a
+                # matching receive
+                time.sleep(5)
                 
                 if handle.test():
                     print "Finally got through."
@@ -483,7 +486,6 @@ class Communicator:
             
                 recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
             
-            # Close the sockets down nicely
             mpi.finalize()
 
         **See also**: :func:`ssend` and :func:`test`
@@ -653,7 +655,6 @@ class Communicator:
             rank = mpi.MPI_COMM_WORLD.rank()
             size = mpi.MPI_COMM_WORLD.size()
             
-            
             content = "conch"
             DUMMY_TAG = 1
             
@@ -662,10 +663,13 @@ class Communicator:
             dest   = (rank + 1) % size
             source = (rank - 1) % size
             
-            recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank), dest, DUMMY_TAG, source, DUMMY_TAG)
+            recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank),
+                                                   dest,
+                                                   DUMMY_TAG,
+                                                   source,
+                                                   DUMMY_TAG)
             print "Rank %i got %s" % (rank,recvdata)
             
-            # Close the sockets down nicely
             mpi.finalize()
 
         .. note::
