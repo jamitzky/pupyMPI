@@ -157,12 +157,12 @@ class Network(object):
         self.t_in.join()
         self.t_out.join()
         
-        Logger().debug("network.finalize: Closing sockets")
+        #Logger().debug("network.finalize: Closing sockets")
         
         # Close socketpool
         self.socket_pool.close_all_sockets()
         
-        Logger().debug("network.finalize: DONE Finalize")
+        #Logger().debug("network.finalize: DONE Finalize")
         
         
 class CommunicationHandler(threading.Thread):
@@ -282,7 +282,7 @@ class CommunicationHandler(threading.Thread):
                     else:
                         # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                         # so we just try listening to next socket
-                        Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
+                        #Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
                         continue
                 except Exception, e:
                     Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
@@ -346,7 +346,7 @@ class CommunicationHandler(threading.Thread):
             _handle_readlist(in_list)
             _handle_writelist(out_list)
         
-        Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
+        #Logger().debug("STOPPING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
    
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then close the sockets.
@@ -363,7 +363,7 @@ class CommunicationHandler(threading.Thread):
                 del self.socket_to_request[r]
 
         
-        Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
+        #Logger().debug("CLOSING %s-thread - sockets_to_request: %s \n sockets_in: %s \t sockets_out: %s" % (self.type, self.socket_to_request, self.sockets_in, self.sockets_out) )
         #Logger().info("Shutting down thread type '%s'." % self.type)
         
 
