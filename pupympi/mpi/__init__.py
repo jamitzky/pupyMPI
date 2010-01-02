@@ -194,7 +194,7 @@ class MPI(Thread):
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
                         
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
-                        if request.tag in (tag, constants.MPI_TAG_ANY, constants.TAG_ACK):
+                        if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
                             remove.append(data)                            
                             request.update(status="ready", data=message)
                             match = True
