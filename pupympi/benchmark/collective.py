@@ -180,7 +180,7 @@ def test_Scatter(size, max_iterations):
     def Scatter(data, max_iterations):
         current_root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == current_root else "" # NOTE: probably superflous, discuss with Rune
+            my_data = data if ci.rank == current_root else None # NOTE: probably superflous, discuss with Rune
             ci.communicator.scatter(my_data, current_root)
             
             # Switch root
@@ -212,6 +212,7 @@ def test_Scatter(size, max_iterations):
     chunksize = size/ci.num_procs
     # each distinct chunk goes to a distinct process
     datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
+    #datalist = range(ci.num_procs)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
