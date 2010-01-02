@@ -188,6 +188,7 @@ class CollectiveRequest(BaseRequest):
             of the messages got send. 
         """
         Logger().debug("Rank: %i, data: %s" % (self.communicator.rank(), self.data) )
+        print self.data
         if self.data:
             self.data = self.data.pop()
             try:

@@ -573,8 +573,7 @@ class Communicator:
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
     
-    # FIXME: The syntax for other cals are data,root - switch this one?    
-    def bcast(self, root, data=None):
+    def bcast(self, data=None, root=0):
         """
         Broadcast a message (data) from the process with rank <root>
         to all other participants in the communicator. 
@@ -585,10 +584,12 @@ class Communicator:
             from mpi import MPI
 
             mpi = MPI()
-            if mpi.MPI_COMM_WORLD.rank() == 3:
-                mpi.MPI_COMM_WORLD.bcast(3, "Test message")
+            world = mpi.MPI_COMM_WORLD 
+
+            if world.rank() == 3:
+                world.bcast("Test message", 3)
             else:
-                message = mpi.MPI_COMM_WORLD.bcast(3)
+                message = world.bcast(root=3)
                 print message
 
             mpi.finalize()
