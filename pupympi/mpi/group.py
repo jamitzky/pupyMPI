@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-group.py
-
-Created by Jan Wiberg on 2009-09-01.
-Copyright (c) 2009 __MyCompanyName__. All rights reserved.
+group.py - contains class definition for Group functionality.
 """
 
 import sys
