@@ -931,7 +931,7 @@ class Communicator:
     
     def testsome(self, request_list):
         """
-        Tests that some of the operations has completed. Return a list
+        Tests if some of the operations has completed. Return a list
         of requst objects from that list that's completed. If none of
         the operations has completed the empty list is returned. 
 
