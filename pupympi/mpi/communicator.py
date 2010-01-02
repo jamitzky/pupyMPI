@@ -583,13 +583,48 @@ class Communicator:
 
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
-        The send-receive operations combine in one call the sending of a message to one destination and the receiving of another message, from another process.
-        The two (source and destination) are possibly the same. 
         
-        A send-receive operation is very useful for executing a shift operation across a chain of processes.
-        A message sent by a send-receive operation can be received by a regular receive operation or probed by a probe operation; a send-receive operation can receive a message sent by a regular send operation. 
+        The send-receive operation combine in one call the sending of a message
+        to one destination and the receiving of another message, from another destination.
+        The two destinations can be the same. 
         
-        http://www.mpi-forum.org/docs/mpi-11-html/node52.html
+        A send-receive operation is very useful for executing a shift operation
+        across a chain of processes.
+        A message sent by a send-receive operation can be received by a regular
+        receive operation or probed by a probe operation; a send-receive operation
+        can receive a message sent by a regular send operation. 
+        
+        **Example usage**:
+        The following code will send a token string between all messages. All
+        ranks receive the token from their lower neighbour and pass it to the
+        upper neighbour::
+
+            from mpi import MPI
+            
+            mpi = MPI()
+            
+            rank = mpi.MPI_COMM_WORLD.rank()
+            size = mpi.MPI_COMM_WORLD.size()
+            
+            
+            content = "conch"
+            DUMMY_TAG = 1
+            
+            # Send up in chain, recv from lower
+            # modulo with size is to wrap around for lowest and highest rank
+            dest   = (rank + 1) % size
+            source = (rank - 1) % size
+            
+            recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank), dest, DUMMY_TAG, source, DUMMY_TAG)
+            print "Rank %i got %s" % (rank,recvdata)
+            
+            # Close the sockets down nicely
+            mpi.finalize()
+
+        .. note::
+        There is no sequential ordering here, as the print output will show. All
+        that is guaranteed is that every process has sent and received, not in any
+        particular order.        
         """
         if dest == source:
             return senddata
