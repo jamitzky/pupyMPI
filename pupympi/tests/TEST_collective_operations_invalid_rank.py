@@ -25,7 +25,7 @@ except Exception, e:
     assert type(e) == MPINoSuchRankException
    
 try:
-    world.bcast(size, rank)
+    world.bcast(data=rank, root=size)
 except Exception, e:
     assert type(e) == MPINoSuchRankException
 

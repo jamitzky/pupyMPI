@@ -14,20 +14,24 @@ LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below
 """
-A special tag matching any other tag. Use this if you don't want to filter
-the incomming message on a specific tag. 
+MPI_TAG_ANY is a special tag matching any other tag - a wildcard if you will.
+This is also the default tag used if you do not specify a particular tag.
+You can use this if you don't want to filter the incoming message on a specific tag. 
 """
 
 MPI_SOURCE_ANY = -2 # to be recognizable
 """
-A special rank matching any rank. Use this if you don't want to filter
-the incomming message on sender rank.
+MPI_SOURCE_ANY is a special rank matching any rank - a wildcard like the any-tag.
+This is also the default rank used if you do not specify a particular rank.
+You can use this if you don't want to filter the incoming message on sender rank.
 """
 
 # Other constants. NOTE: These are advisory only
 MPI_COMM_NULL = None
 """
-The empty communicator
+MPI_COMM_NULL represents the empty communicator. You shouldn't normally see this
+unless you tried to create a communicator with conditions resulting in it being
+empty.
 """
 
 # internal tags below. 
@@ -52,7 +56,9 @@ TAG_SHUTDOWN = -17
 
 MPI_GROUP_EMPTY = None # gets set later on an empty group to avoid cyclic imports
 """
-The empty group
+MPI_GROUP_EMPTY represents the empty group. You shouldn't normally see this
+unless you tried to create a group with conditions resulting in it being
+empty.
 """
 
 MPI_IDENT       = 0     # Identical 

@@ -20,13 +20,16 @@ messages = [BCAST_FIRST_MESSAGE, None, "", -1]
 
 for msg in messages:
     if rank == BCAST_ROOT:
-        world.bcast(BCAST_ROOT, msg)
+        world.bcast(msg, BCAST_ROOT)
     else:
-        message = world.bcast(BCAST_ROOT)
-        print "-"*80
-        print msg
-        print message
-        print "-"*80
-        assert message == msg 
+        message = world.bcast(root=BCAST_ROOT)
+        try:
+            assert message == msg 
+        except AssertionError, e:
+            print "="*80
+            print "Expected", msg
+            print "Received", message
+            print "="*80
+            raise e
 
 mpi.finalize()
