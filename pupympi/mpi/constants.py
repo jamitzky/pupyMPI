@@ -26,7 +26,7 @@ This is also the default rank used if you do not specify a particular rank.
 You can use this if you don't want to filter the incoming message on sender rank.
 """
 
-# Other constants. NOTE: These are advisory only
+# Other constants
 MPI_COMM_NULL = None
 """
 MPI_COMM_NULL represents the empty communicator. You shouldn't normally see this

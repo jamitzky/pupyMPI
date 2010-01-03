@@ -1,4 +1,4 @@
-# meta-description: Scatter test
+# meta-description: Scatter testing invalid data
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 
