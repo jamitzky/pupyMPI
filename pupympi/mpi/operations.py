@@ -68,10 +68,36 @@ def MPI_avg(input_list):
     Return the average of the elements
     """
     return sum(input_list)/len(input_list)
-    
+
+# An example of a "vector" reducing operation    
 def MPI_list_max(input_lists):
     """
-    Return an element-wise max on the elements in the lists
+    Return an element-wise max on the elements in the lists. The elements must
+    be comparable with Python's built-in max function and all ranks must provide
+    equal length lists.
+    
+    As an example the following code uses reduce and MPI_lists_max to calculate
+    the globally highest results for six rolls of a d20 dice. Roll 1 from all ranks is compared, then roll 2 etc. ::
+
+        from mpi import MPI
+        from mpi.operations import MPI_list_max
+
+        mpi = MPI()
+
+        rank = mpi.MPI_COMM_WORLD.rank()
+        
+        # Not a very good seed for random, don't use in practice
+        random.seed(rank) 
+
+        rolls = [random.randint(1,20) for i in range(6)] # Roll d20 six times
+        
+        # Submit rolls for global comparison
+        result = world.reduce(rolls, MPI_list_max, 0) 
+
+        if rank == 0: # Root announces the results
+            print "Highest rolls were: ",result
+            
+        mpi.finalize()    
     """
     maxed = [max( [x[i] for x in input_lists]) for i in range(len(input_lists[0]))]
     return maxed
