@@ -1043,7 +1043,7 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
-        if self.rank() == root and (not data or not isinstance(data, list) or (len(data) % self.size() != 0)):
+        if self.rank() == root and (not data or not getattr(data,"__iter__") or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         if self.rank() != root and data is not None:
