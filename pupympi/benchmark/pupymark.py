@@ -1,16 +1,13 @@
-
 #!/usr/bin/env python2.6
 # encoding: utf-8
 """
 pupymark.py - Benchmark runner.
 
 Usage: MPI program - run with mpirun
-
-Created by Jan Wiberg on 2009-08-13.
 """
 from time import localtime, strftime
-
 import sys,pprint,getopt, datetime
+
 from mpi import MPI
 from mpi import constants
 
@@ -39,8 +36,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
     
-    #print ("Limitation parameters, fixed_module = %s and fixed_test = %s" % (fixed_module, fixed_test))
-
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
         results = []
@@ -93,7 +88,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
         ci.w_rank = mpi.MPI_COMM_WORLD.rank()
         
-        # TODO: Causes single/parallel tests to use specific tag. Not tested in pupymark.
         ci.select_source = True 
         ci.select_tag = True         
 
@@ -106,7 +100,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             else:
                 processes_required = module.meta_processes_required
                 
-            # TODO pairs can be implemented here.    
             new_group = mpi.MPI_COMM_WORLD.group().incl(range(processes_required))
             ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
         else:
@@ -198,34 +191,7 @@ class Usage(Exception):
         self.msg = msg
 
 
-def main(argv=None):    
-    # Parameter parsing disabled until parameter passing through mpirun works
-    # if argv is None:
-    #     argv = sys.argv
-    # try:
-    #     try:
-    #         opts, args = getopt.getopt(argv[1:], "ho:vm:", ["help", "output=", "module="])
-    #     except getopt.error, msg:
-    #         raise Usage(msg)
-    # 
-    #     # option processing
-    #     for option, value in opts:
-    #         if option == "-v":
-    #             verbose = True
-    #         if option in ("-h", "--help"):
-    #             raise Usage(help_message)
-    #         if option in ("-o", "--output"):
-    #             output = value
-    #         if option in ("-m", "--module"):
-    #             module = value
-    # 
-    # except Usage, err:
-    #     print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
-    #     print >> sys.stderr, "\t for help use --help"
-    #     print >> sys.stderr, "\t Args: " + str(sys.argv)
-    #     return 2
-    
-    # FIXME: haxx it for now (I need the option to run individual modules because everything is too broken to get anywhere)
+def main(argv=None):
     
     module = None
     test = None

@@ -77,7 +77,7 @@ class MPI(Thread):
 
 
         if options.process_io == "remotefile": 
-            # Initialise the logger - hackish
+            # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
@@ -85,7 +85,7 @@ class MPI(Thread):
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
-            # Initialise the logger - hackish
+            # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             logger.debug("Closing stdout")
             sys.stdout = None
@@ -113,11 +113,11 @@ class MPI(Thread):
         self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
 
         # Tell the network about the global MPI_COMM_WORLD, and let it start to 
-        # listen on the correcsponding network channels
+        # listen on the corresponding network channels
         self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
         
         # Change the contents of sys.argv runtime, so the user processes 
-        # can't see all the mpi specific junk parameters we start with.
+        # can't see all the mpi specific parameters we start with.
         user_options =[sys.argv[0], ] 
         user_options.extend(sys.argv[sys.argv.index("--")+1:])
         sys.argv = user_options
@@ -204,11 +204,10 @@ class MPI(Thread):
                             if acknowledge:
                                 Logger().debug("SSEND RECIEVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
-                                # TODO: Consider using an empty message string, to save resources
+                                # NOTE: Consider using an empty message string, to save (a little) resources
                                 self.communicators[communicator_id].isend(sender, "ACKNOWLEDGEMENT", constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
-                                # FIXME: We should also change state on outgoing request here?
                                 Logger().debug("ACK RECIEVED request: %s" % request)
                             
                             break # We can only find matching data for one request and we have
@@ -218,8 +217,6 @@ class MPI(Thread):
         return match
 
     def run(self):
-        #DEBUG / PROFILING
-        #yappi.start(True) # True means also profile built-in functions
 
         while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
@@ -255,9 +252,6 @@ class MPI(Thread):
                     removal = [] # Remember succesfully matched requests so we can remove them
                     for request in self.pending_requests:
                         if self.match_pending(request):
-                            # FIXME: Either here or in the match_pending we need to
-                            # issue a send with a reciept
-                            
                             # The matcher function does the actual request update
                             # and will remove matched data from received_data queue
                             # we only need to update our own queue
@@ -268,13 +262,12 @@ class MPI(Thread):
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
-        # The main loop is now done. We flush all the messages so there are not any outbound messages
-        # stuck in the pipline.
-        # NOTE: I don't think this flushing can work for acks if the network thread doesn't get a slice
         
         Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
         Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
 
+        # The main loop is now done. We flush all the messages so there are not any outbound messages
+        # stuck in the pipline.
         with self.unstarted_requests_lock:
             for request in self.unstarted_requests:
                 self.network.t_out.add_out_request(request)
@@ -347,13 +340,9 @@ class MPI(Thread):
             Part of the finalizing call is to flush all outgoing requests. You
             don't need to wait() on all your started isends before you call 
             finalize. 
-        """
-        #Logger().debug("--- Setting shutdown event ---")
-        
+        """        
         self.shutdown_event.set() # signal shutdown to mpi thread
         self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work        
-        
-        #Logger().debug("--- Waiting for mpi thread to flush --")
         
         self.queues_flushed.wait()
         
@@ -362,16 +351,7 @@ class MPI(Thread):
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
-        #Logger().debug("--- Network finally finalized --")
-        
-        # DEBUG / PROFILING
-        # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
-        # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
-        #   Subtime means the total spent time in the function minus the total time spent in the other functions called from this function. 
-        #stats = yappi.get_stats(yappi.SORTTYPE_TSUB,yappi.SORTORDER_DESCENDING, 200 )
-        #for stat in stats: print stat
-        #yappi.stop()
-
+        #Logger().debug("--- Network finally finalized --")        
 
     @classmethod
     def initialized(cls):
