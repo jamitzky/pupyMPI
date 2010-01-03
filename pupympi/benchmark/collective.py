@@ -5,7 +5,7 @@ collective.py - collection of collective tests inspired by Intel MPI Benchmark (
 
 Created by Jan Wiberg on 2009-08-13.
 """
-from mpi.operations import MPI_max
+from mpi.operations import MPI_max, MPI_list_max
 
 import comm_info as ci
 
@@ -198,7 +198,7 @@ def test_Reduce(size, max_iterations):
         current_root = 0
         for r in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            received = ci.communicator.reduce(data, MPI_max, current_root)            
+            received = ci.communicator.reduce(data, MPI_list_max, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
     # end of test
