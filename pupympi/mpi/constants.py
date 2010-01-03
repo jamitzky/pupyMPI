@@ -9,8 +9,6 @@ import os
 
 #### PUBLIC VALUES BELOW ####
 
-# TODO: This is a nasty way of going to dirs up and down into logs. There must be a prettier way
-#       Maybe we shouldn't be afraid of changing current working directory
 LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
 
 # Predefined tags
