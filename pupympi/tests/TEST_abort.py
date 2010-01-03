@@ -20,8 +20,3 @@ else:
     # If we get to this line the abort stuff has not worked
     # so we actually return nicely, which is not expected.
     sys.exit(0)
-
-# TODO: 1. Will this leave processes hanging because we don't 
-#          finalize the system as we should?
-#       2. Is there any way to test HOW MANY processes actually
-#          failed?
