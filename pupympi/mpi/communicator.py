@@ -115,8 +115,6 @@ class Communicator:
             the amount of created communicators but is significantly slower. 
         
         """
-        # FIXME There is presently no way to determine which implementation is in effect.
-        
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
@@ -166,8 +164,6 @@ class Communicator:
         # wait for answer on id
         cr = CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
         
-        # FIXME validate that received group was identical to my worldview
-
         # Non-members have rank -1
         if not group._owner_is_member():
             return None
