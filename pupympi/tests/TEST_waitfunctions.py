@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: tests wait_any,all,some FIXMEFIXMEFIXME
+# meta-description: Tests use of waitall. 
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 
