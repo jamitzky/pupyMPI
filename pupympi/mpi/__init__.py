@@ -182,10 +182,6 @@ class MPI(Thread):
         The request is updated with the data if found and this
         status update returned from the function so it's possible
         to remove the item from the list.
-        
-        FIXME: This function is called for all requests in the pending_requests list
-        so ideally we should find the data more effectively than linear search
-        OTOH: We like the fact that ordering is preserved via current methods
         """
         match = False
         remove = [] 
