@@ -8,7 +8,8 @@ this test is superflous
 """
 
 from mpi import MPI
-from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max
+from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max, MPI_list_max
+
 import array
 
 def MPI_max_list(input_list):
@@ -27,19 +28,24 @@ def MPI_max_list(input_list):
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 
+size = world.size()
 rank = world.rank()
 
 #local_data = [2,5,1,(6+rank)]
 #local_data = 100 - rank
-local_data = array.array('b')
-for i in range((rank*10)):
-    local_data.append(i)
+#local_data = array.array('b')
+#for i in range((rank*10)):
+#    local_data.append(i)
 
-result = world.reduce(local_data, MPI_max, root=0)
+local_data = range(size)
+if rank % 2 == 0:
+    local_data.reverse()
+
+result = world.reduce(local_data, MPI_list_max, root=0)
 #result = world.reduce(local_data, MPI_max_list, root=0)
 
 
-print "Result:",result
+print "Rank: %i - result:%s" % (rank,result)
     
 mpi.finalize()
 

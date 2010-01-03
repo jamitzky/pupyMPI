@@ -68,4 +68,12 @@ def MPI_avg(input_list):
     Return the average of the elements
     """
     return sum(input_list)/len(input_list)
+    
+def MPI_list_max(input_lists):
+    """
+    Return an element-wise max on the elements in the lists
+    """
+    maxed = [max( [x[i] for x in input_lists]) for i in range(len(input_lists[0]))]
+    return maxed
 
+MPI_list_max.partial_data = True
