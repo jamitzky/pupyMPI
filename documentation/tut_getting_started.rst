@@ -1,8 +1,7 @@
 .. _getting-started: 
 
-***********************************
 Getting started with pupyMPI
-***********************************
+=====================================================================================
 
 pupyMPI is a pure python MPI implementation for educational use. This document
 does not in any way try to explain general MPI concepts, but it merely a reference

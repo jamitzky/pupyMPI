@@ -145,11 +145,16 @@ class Cartesian(BaseTopology):
     
     def map(self):
         """
-        MPI_CART_MAP computes an ``optimal'' placement for the calling process on the physical machine. A possible implementation of this function is to always return the rank of the calling process, that is, not to perform any reordering. 
+        MPI_CART_MAP computes an ''optimal'' placement for the calling process
+        on the physical machine. A possible implementation of this function is
+        to always return the rank of the calling process, that is, not to
+        perform any reordering. 
         
-        This implementation does just that, as mapping to physical hardware is not supported.
+        This implementation does just that, as mapping to physical hardware is
+        not supported.
         
-        Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node139.html
+        Original MPI 1.1 specification at
+        http://www.mpi-forum.org/docs/mpi-11-html/node139.html
         """
         return self.communicator.rank()
         
