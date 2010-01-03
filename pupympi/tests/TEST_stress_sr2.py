@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Multi-process version of stress_sr, with 200 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock)
+# meta-description: Multi-process version of stress_sr, with 200 iterations. Processes communicate p2p with neighbours in lockstep: Evens send and odds recieve then vice versa. If odd number of processes are specified the last ranking one is  excluded to avoid deadlock
 # meta-expectedresult: 0
 # meta-minprocesses: 5
 # meta-max_runtime: 100
