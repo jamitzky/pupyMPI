@@ -182,10 +182,6 @@ class MPI(Thread):
         The request is updated with the data if found and this
         status update returned from the function so it's possible
         to remove the item from the list.
-        
-        FIXME: This function is called for all requests in the pending_requests list
-        so ideally we should find the data more effectively than linear search
-        OTOH: We like the fact that ordering is preserved via current methods
         """
         match = False
         remove = [] 
@@ -337,9 +333,6 @@ class MPI(Thread):
     def handle_system_message(self, rank, command, raw_data):
         if command == constants.CMD_ABORT:
             Logger().info("Got abort command!")
-
-            # FIXME: This might not actually delay all the threads. We
-            # need something more conclusive in the test cases. 
             sys.exit(1)
 
     def finalize(self):
@@ -401,17 +394,6 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
                     
-    def get_count(self, arg):
-        # FIXME
-        pass
-        
-    def get_elements(self, arg):
-        # FIXME
-        pass
-    def get_processor_name(self, arg):
-        # FIXME
-        pass
-        
     def get_version(self):
         """
         Return the version number of the pupyMPI installation. 
@@ -436,6 +418,3 @@ class MPI(Thread):
         with self.current_request_id_lock:            
             self.current_request_id += 1
             return self.current_request_id
-        
-        
-

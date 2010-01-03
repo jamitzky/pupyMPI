@@ -3,8 +3,6 @@ from mpi.exceptions import MPIException
 from mpi.logger import Logger
 from mpi import constants
 
-# TODO Output redirect. Log files?
-
 def _islocal(host):
     return host == "localhost" or host == "127.0.0.1"
     
@@ -23,8 +21,7 @@ io_target_list = []
 def ssh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
-    # FIXME check if file exists on remote, which seems to be the last hang problem
-    # if [[ -e ~/html ]]; then echo "boom"; else echo "bust";fi 
+
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
@@ -34,7 +31,7 @@ def ssh(host, arguments, process_io, rank):
     elif process_io == 'asyncdirect': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
@@ -57,7 +54,7 @@ def rsh(host, arguments, process_io, rank):
     elif process_io == 'pipe': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'filepipe': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)

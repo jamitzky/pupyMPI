@@ -227,11 +227,6 @@ class CollectiveRequest(BaseRequest):
     def start_allreduce(self, operation):
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
         
-        # FIXME: Currently we're looking at the type of self.data as the collective
-        # operations will wrap things in to many lists. We need some way to ensure
-        # this does not happen. Also to test the system with lists as the primary 
-        # datatype, as our system might crash on this. 
-
         partial_data = getattr(operation, "partial_data", False)
         if not partial_data:
             full_meta = getattr(operation, "full_meta", False)
