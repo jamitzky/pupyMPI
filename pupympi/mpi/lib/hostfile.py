@@ -1,16 +1,14 @@
 from mpi.logger import Logger
 
-def parse_hostfile(hostfile): # {{{1
+def parse_hostfile(hostfile):
     """
     Parses hostfile, and returns list of tuples of the form (hostname, hostparameters_in_dict)
-    NOTE: Standard port below and maybe other defaults should not be hardcoded here
-    (defaults should probably be a parameter for this function)
+
+    NOTE: Defaults are hard-coded here. Nicer solution would be... nice
     """
     logger = Logger()
 
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
-    # TODO: Something must be intended with the malformed flag but I can't find usage,
-    #       what do we do about malformed hostfiles?
     malformed = False # Flag bad hostfile
     hosts = []
     
@@ -35,7 +33,6 @@ def parse_hostfile(hostfile): # {{{1
                         malformed = True
                     else:                        
                         specified[key] = int(val)
-                        #NOTE: Should check for value type here (probably non-int = malformed for now)
                 
                 hosts += [(hostname, specified)]
 
@@ -44,14 +41,19 @@ def parse_hostfile(hostfile): # {{{1
         logger.info("No hostfile specified or hostfile invalid - all processes will run on default machines (typically localhost)")
         hosts = [("localhost",defaults)]
     
-    return hosts
+    # Fall back to defaults if user messed up the hostfile    
+    if malformed:
+        hosts = [("localhost",defaults)]
+    else:
+        return hosts
             
 
-def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
+def map_hostfile(hosts, np=1, type="rr", overmapping=True):
     """
     Assign ranks and host to all processes
+
     NOTE: We only do primitive overcommitting so far.
-    Eventually we should decide how to best map more processes than "cpu" specifies, onto hosts
+    In the future we should decide how to best map more processes than "cpu" specifies, onto hosts
     eg. does higher cpu/max_cpu ratio mean a more realistic estimate of a good max cpu?
     """
     logger = Logger()
@@ -90,8 +92,6 @@ def map_hostfile(hosts, np=1, type="rr", overmapping=True): # {{{1
             params["max_cpu"] -= 1 # max cpu includes actual ones so decrease here too
             mappedHosts += [(hostname, rank, params["port"])] # map it
             rank += 1 # assign next rank
-            #DEBUG
-            #print "mapped %i to %s" % (rank,hostname)
             
             if type == "rr": # round-robin?
                 i += 1 # for round-robin always go to next host

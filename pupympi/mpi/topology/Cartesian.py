@@ -62,7 +62,6 @@ class Cartesian(BaseTopology):
         self.dims = dims
         self.periodic = periodic
         self.communicator = communicator
-        #communicator.associate(self)
         #Logger("Creating new topology %s and associated with communicator %s." % (self, communicator))
         
     def __repr__(self):
@@ -71,7 +70,6 @@ class Cartesian(BaseTopology):
     def _normalize(self, coords):
         """Normalizes potentially periodic grid coordinates to fit within the grid, if possible, otherwise raise error."""
         normcoords = [c % g if p and c is not g else c for c, g, p in zip(coords, self.dims, self.periodic)]
-        # TODO just do the whole without list comprehensions?
         for checkcoords, dims in zip(normcoords, self.dims):
             if checkcoords > dims:
                 raise MPITopologyException("Grid dimensions overflow")
@@ -174,9 +172,9 @@ def _isprime(n):
 
 
 def MPI_Cart_Create(communicator):
-    """Build a new topology from an existing 1D communicator"""
-    # Might ditch this one
-    pass 
+    """Build a new topology from an existing 1D communicator"""    
+    raise NotImplementedException("Cartesian creation targeted for version 1.1")
+    return None
 
     
 def MPI_Dims_Create(size, d, constraints = None):
@@ -249,7 +247,6 @@ class CartesianTests(unittest.TestCase):
         result = t._normalize([12, 10, 12, 9])
         self.assertEqual(result, [2, 10, 2, 9])
 
-        # TODO more tests
 
     def testCreateDims(self):
         self.assertRaises(MPITopologyException,  MPI_Dims_Create, 6,2,[2,3]) # test fully bound constraint
@@ -261,12 +258,6 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(ca, [2,3,1])
         self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0]) # test unable to reach multiple scenario
 
-        # FIXME none of these should raise errors
-        # for d in range(1, 10):
-        #     for s in range(2, 96):
-        #         ca = MPI_Dims_Create(s,d)
-        #         self.assertEqual(reduce(mul, ca), s)
-                
         # based on openmpi 3.x        
         ca = MPI_Dims_Create(32,4)
         self.assertEqual(ca, [4,2,2,2])
@@ -274,7 +265,7 @@ class CartesianTests(unittest.TestCase):
     # test rank -> [grid coords]
     def testCartGet(self):
         c = dummycomm(10)    
-        c.size = 1 # fuck around with the size so we can test.
+        c.size = 1 # change the size so we can test.
         t = Cartesian(c, [3], [False], None)
         self.assertRaises(MPITopologyException, t.get, 1)
         result = t.get(0)
