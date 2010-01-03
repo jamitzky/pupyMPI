@@ -1390,7 +1390,6 @@ class Communicator:
     ################################################################################################################
     
     #### Inter-communicator operations
-    # TODO Need to officially decide if inter-communicators are implemented and if not, why (imo: not to be implemented.) 
     def test_inter(self):
         """
         This local routine allows the calling process to determine if a communicator is an inter-communicator or an intra-communicator. It returns true if it is an inter-communicator, otherwise false. 
