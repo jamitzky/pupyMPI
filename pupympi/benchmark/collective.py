@@ -211,11 +211,6 @@ def test_Allreduce(size, max_iterations):
             received = ci.communicator.allreduce(data, max)            
 
     # end of test
-
-    # Reduce might not be valid for size zero
-    # TODO: Check assumption
-    if size == 0:
-        return -42
     
     ci.synchronize_processes()
     t1 = ci.clock_function()
