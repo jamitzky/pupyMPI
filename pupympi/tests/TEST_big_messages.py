@@ -4,7 +4,7 @@
 # meta-minprocesses: 2
 # meta-max_runtime: 60
 
-# NOTE: You do not want to call this test with debugging that print the message content active.
+# NOTE: You do not want to call this test with debugging (that prints the message content) active!
 # Outputting the big messages take a _long_ time
 
 from mpi import MPI
@@ -32,7 +32,6 @@ FIRST_TAG = 111
 SECOND_TAG = 222
 THIRD_TAG = 333
 
-# NOTE: Consider doing this with other data structures for realism
 string = "abcdefghijklmnopqrst" # 20 chars
 
 largeMsg = 256*string
