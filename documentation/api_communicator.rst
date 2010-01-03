@@ -1,4 +1,5 @@
 .. _api-communicator-label:
+
 Communicator object 
 -------------------------------------------------------------------------------
 
@@ -13,4 +14,4 @@ Communicators should not be created directly, but created through the :func:`com
 
 .. module:: mpi.communicator
 .. autoclass:: Communicator
-   :members: allgather,allreduce,alltoall,barrier,bcast,comm_compare,comm_create,comm_dup,comm_free,comm_split,gather,get_name,group,irecv,isend,issend,rank,recv,reduce,scan,scatter,send,sendrecv,set_name,,,size,ssend,testall,testany,testsome,waitall,waitany,waitsome,Wtick,Wtime
+   :members: allgather,allreduce,alltoall,barrier,bcast,comm_compare,comm_create,comm_dup,comm_free,comm_split,gather,get_name,group,irecv,isend,issend,rank,recv,reduce,scan,scatter,send,sendrecv,set_name,size,ssend,testall,testany,testsome,waitall,waitany,waitsome,Wtick,Wtime
