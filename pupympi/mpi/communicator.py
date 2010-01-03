@@ -91,7 +91,7 @@ class Communicator:
     ################################################################################################################
     def _comm_call_attrs(self, **kwargs):
         """Iterates through each value in the cached attribute collection and calls the value if its callable"""
-        for a in self.attr: # FIXME not tested
+        for a in self.attr: 
             if hasattr(self.attr[a], '__call__'):
                 Logger().debug("Calling callback function on '%s'" % a)                
                 self.attr[a](self, **kwargs)
@@ -134,8 +134,6 @@ class Communicator:
         """
         local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth. 
         """
-        
-        # FIXME should probably lock...
         if self.ceiling <= 2:
             raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
         # set up some easily understandable vars (can be optimized later)
