@@ -981,9 +981,10 @@ class Communicator:
 
     def scatter(self, data=None, root=0):
         """
-        Takes a list with the size N, where N is also the number of participants
-        in this communicator. It distributes the N elements to all the participants
-        in the communicator like to following example::
+        Takes a list with the size M*N, where N is also the number of participants
+        in this communicator. It distributes the elements so each participant gets
+        M elements. Notice the difference in scattering where M is 1 or above in the
+        following example::
 
             from mpi import MPI
 
@@ -993,16 +994,46 @@ class Communicator:
             rank = world.rank()
             size = world.size()
 
-            SCATTER_ROOT = 3
+            # Scatter a list with the same number of elements in the 
+            # list as there are processes in th world communicator
 
+            SCATTER_ROOT = 3
             if rank == SCATTER_ROOT:
                 scatter_data = range(size)
             else:
                 scatter_data = None
-                my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
-                assert my_data == rank
+
+            my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+            print "Rank %d:" % rank,  my_data
+
+            # Scatter a list with 10 times the number of elements
+            # in the list as there are processes in the world
+            # communicator. This will give each process a list
+            # with 10 items in it. 
+
+            if rank == SCATTER_ROOT:
+                scatter_data = range(size*10)
+            else:
+                scatter_data = None
+
+            my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+            print "Rank %d:" % rank,  my_data
 
             mpi.finalize()
+
+        Running the above example with 5 processes will yield something
+        like::
+
+            Rank 4: 4
+            Rank 2: 2
+            Rank 1: 1
+            Rank 3: 3
+            Rank 0: 0
+            Rank 2: [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+            Rank 0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            Rank 1: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+            Rank 4: [40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
+            Rank 3: [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
 
         .. note::
             All processes in the communicator **must** participate in this operation.
@@ -1012,16 +1043,20 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
-        if self.rank() == root and (data is None or not isinstance(data, list) or len(data) != self.size()):
+        if self.rank() == root and (not data or not isinstance(data, list) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         if self.rank() != root and data is not None:
             raise MPIException("Only the root of scatter should send data")
-        
-        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        cr.complete_bcast()
-        data = cr.wait()
 
+        # Create a list with size N
+        if data:
+            if len(data) != self.size():
+                elements_per_rank = len(data) / self.size()
+                data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
+
+        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        data = cr.wait().pop()['value']
         return data[self.rank()]
         
     def testall(self, request_list):
