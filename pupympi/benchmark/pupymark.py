@@ -58,7 +58,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 continue
             if total < 0: # Tests returning negative signals an error
                 ci.log("%-10s\t%-10s\t(benchmark failed - datapoint invalid)" % (size, module.meta_schedule[size]))
-                results.append((size, module.meta_schedule[size], 0, 0, 0))
+                results.append((size, module.meta_schedule[size], 0, 0, 0, ci.num_procs))
             else:
                 per_it = total / module.meta_schedule[size]
                 mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
@@ -175,7 +175,10 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             
             for res in testresults:
                 # Data point
-                row = "%i,%i,%f,%f,%f,%i" % (res)
+                try:
+                    row = "%i,%i,%f,%f,%f,%i" % (res)
+                except:
+                    print "Res is",res
                 # and we add testname and date for easy pivoting
                 row += ",%s,%s" % (testname, stamp)
                 f.write(row+"\n")
