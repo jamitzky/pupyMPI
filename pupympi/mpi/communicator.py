@@ -1198,11 +1198,6 @@ class Communicator:
                 return_list.append( request )
         return return_list
         
-    def topo_test(self):
-        """docstring for topo_test"""
-        # FIXME: Is this method still on our roadmap? 
-        pass
-        
     def waitall(self, request_list):
         """
         Waits for all the requets in the given list and returns a list
