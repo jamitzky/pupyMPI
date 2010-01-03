@@ -122,8 +122,6 @@ def robust_send(socket, message):
     handling any unsent bytes. Even though we have not really seen it yet we use
     this wrapper to ensure that it all really gets sent.
     """
-    # FIXME: Decide whether to catch errors here and reraise or as now let caller handle
-    
     target = len(message) # how many bytes to send
     transmitted_bytes = 0
     while target > transmitted_bytes:        
