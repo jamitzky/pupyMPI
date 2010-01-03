@@ -69,7 +69,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
                 round(per_it * 1000000, 2), \
                 round(mbsec, 5)))
                     
-                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbsec))
+                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbsec, ci.num_procs))
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
@@ -162,12 +162,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
     
     # Output to .csv file
     if root:
-        stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
+        stamp = strftime("%Y-%m-%d_%H-%M-%S", localtime())
         filename = "pupymark.output."+stamp+".csv"
         f = open(constants.LOGDIR+filename, "w")
         
         # Column headers for easier reading
-        row = "datasize,repetitions,total time,time/repetition,Mb/second,name of test,timestamp of testrun"
+        row = "datasize,repetitions,total time,time/repetition,Mb/second,nodes,name of test,timestamp of testrun,nodes"
         f.write(row+"\n")
 
         for testname in resultlist:
@@ -175,7 +175,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=Fals
             
             for res in testresults:
                 # Data point
-                row = "%i,%i,%f,%f,%f" % (res)
+                row = "%i,%i,%f,%f,%f,%i" % (res)
                 # and we add testname and date for easy pivoting
                 row += ",%s,%s" % (testname, stamp)
                 f.write(row+"\n")
