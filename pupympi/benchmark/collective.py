@@ -211,13 +211,14 @@ def test_Scatter(size, max_iterations):
     # TODO: We send size/numprocs data to each process for now
     chunksize = size/ci.num_procs
     # each distinct chunk goes to a distinct process
-    datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
+    #datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
     #datalist = range(ci.num_procs)
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Scatter(datalist, max_iterations)
+    #Scatter(datalist, max_iterations)
+    Scatter(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
