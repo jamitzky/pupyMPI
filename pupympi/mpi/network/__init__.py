@@ -149,14 +149,12 @@ class Network(object):
         #Logger().debug("Network got finalize call")
         Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
         Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
-        #time.sleep(10) # FIXME: We want to try without this one!
         self.t_in.finalize()
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
         
         # Wait for network threads to die
-        # FIXME: Test if this works on single thread network also
         self.t_in.join()
         self.t_out.join()
         
@@ -316,8 +314,6 @@ class CommunicationHandler(threading.Thread):
                         Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                         # Send the data on the socket
                         try:
-                            # TODO: We should loop here 
-                            #write_socket.send(request.data)
                             utils.robust_send(write_socket,request.data)
                         except socket.error, e:
                             Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
