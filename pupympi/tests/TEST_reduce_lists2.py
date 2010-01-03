@@ -10,7 +10,7 @@ this test is superflous
 from mpi import MPI
 from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max, MPI_list_max
 
-import array
+import array, random
 
 def MPI_max_list(input_list):
     """
@@ -44,8 +44,11 @@ if rank % 2 == 0:
 result = world.reduce(local_data, MPI_list_max, root=0)
 #result = world.reduce(local_data, MPI_max_list, root=0)
 
-
-print "Rank: %i - result:%s" % (rank,result)
+random.seed(rank) # Not a very good seed for random, don't use in practice
+rolls = [random.randint(1,20) for i in range(6)]
+result = world.reduce(rolls, MPI_list_max, 0)
+if rank == 0: # Root announces the results
+    print "Highest rolls were: ",result
     
 mpi.finalize()
 
