@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pupyMPI'
-copyright = u'2009, Jan Wiberg, Frederik Hanto & Rune Bromer'
+copyright = u'2009, Jan Wiberg, Frederik Hantho & Rune Bromer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
