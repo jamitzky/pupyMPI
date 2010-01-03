@@ -1,6 +1,3 @@
-**************************************
-Welcome to pupympi's documentation!
-**************************************
 
 .. toctree::
     :hidden:

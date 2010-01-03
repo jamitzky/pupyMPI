@@ -665,9 +665,10 @@ class Communicator:
             mpi.finalize()
 
         .. note::
-        There is no sequential ordering here, as the print output will show. All
-        that is guaranteed is that every process has sent and received, not in any
-        particular order.        
+            There is no sequential ordering here, as the print output will show. All
+            that is guaranteed is that every process has sent and received, not in any
+            particular order.        
+
         """
         if dest == source:
             return senddata
