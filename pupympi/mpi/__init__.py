@@ -394,17 +394,6 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
                     
-    def get_count(self, arg):
-        # FIXME
-        pass
-        
-    def get_elements(self, arg):
-        # FIXME
-        pass
-    def get_processor_name(self, arg):
-        # FIXME
-        pass
-        
     def get_version(self):
         """
         Return the version number of the pupyMPI installation. 
@@ -429,6 +418,3 @@ class MPI(Thread):
         with self.current_request_id_lock:            
             self.current_request_id += 1
             return self.current_request_id
-        
-        
-
