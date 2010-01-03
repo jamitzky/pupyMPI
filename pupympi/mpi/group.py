@@ -270,7 +270,7 @@ class Group:
         the new group produced includes the list of ranks resulting from the
         evaluation of all triples
         
-        Note: start and end are inclusive, that is
+        NOTE: start and end are inclusive, that is
         range_incl([(42,42,1)])
         produces the group with rank 42
         
@@ -308,7 +308,7 @@ class Group:
         the new group produced excludes the list of ranks resulting from the
         evaluation of all triples
         
-        Note: start and end are inclusive, that is
+        NOTE: start and end are inclusive, that is
         range_excl([(42,42,1)])
         produces the same group with rank 42 excluded        
         """

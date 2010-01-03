@@ -100,8 +100,8 @@ class SocketPool(object):
         Finds the first element that already had it's second chance and
         remove it from the list.
         
-        NOTE: Shouldn't we close the socket we are removing here?
-        NOTE-ANSWER: Yes.. maybe.. but that will not improve correctness
+        NOTE: We don't explicitly close the socket once removed. This has nothing
+        to do with correctness but we should clean up after ourselves. See issue#
         """
         with self.sockets_lock:
             for x in range(2): # Run through twice
