@@ -9,7 +9,6 @@ import time, array, random
 from mpi import constants
  
 N_BARR = 2                  # Number of calls to barrier deemed neccessary for sync
-                            # NOTE: I think this provides false sync security, more barriers are not better in our implementation
  
 mpi = None                  # MPI object instance
 w_num_procs = None          # number of procs in COMM_WORLD             
@@ -37,7 +36,7 @@ select_source = False       # 0/1 for sender selection off/on
 clock_function = time.time # NEW: set this to communicator.Wtime() for MPI time, or time.time() for an alternative timer.
 data = None                 # NEW: Stores fixed data set
 
-sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops FIXME snd-, and reccnt not presently used.
+sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops NOTE: snd-, and reccnt not presently used.
 
 
 def log(str):
