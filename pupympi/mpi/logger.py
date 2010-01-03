@@ -17,8 +17,6 @@ class Logger:
     verbosity: Set level of incident generating log entries
     """    
     def setup_log(self, filename, logname, debug, verbosity, quiet):
-        # FIXME: There is something wrong with the logger. Without options
-        # errors is not in the file or stderr. It should. 
         if debug or (verbosity > 3):
             verbosity = 3
         
