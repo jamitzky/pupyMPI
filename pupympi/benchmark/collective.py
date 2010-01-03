@@ -45,8 +45,7 @@ def test_Bcast(size, max_iterations):
         """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            my_data = data
-            ci.communicator.bcast(my_data, root)
+            ci.communicator.bcast(data, root)
             
             # Switch root
             root = (root +1) % ci.num_procs
