@@ -320,7 +320,6 @@ class CommunicationHandler(threading.Thread):
                             # Send went wrong, do not update, but hope for better luck next time
                             continue
                         
-                        # NOTE: Do we want to remove even if it is an unacked?    
                         removal.append((write_socket, request))
                         
                         if request.acknowledge:

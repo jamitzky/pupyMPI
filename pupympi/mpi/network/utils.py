@@ -60,13 +60,12 @@ def get_raw_message(client_socket):
                 Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("recieve_fixed threw socket error: %s" % e)
                 # NOTE: We can maybe recover more gracefully here but that requires
-                # throwing status besides message and rank upwards. For now I just want
-                # to be aware of this error when it happens.
+                # throwing status besides message and rank upwards.
             except Exception, e:
                 Logger().error("get_raw_message: Raised error: %s" %e)
                 raise MPIException("recieve_fixed threw other error: %s" % e)
             
-            # Other side closed NOTE: Make sure this does not mask any "normal" errors
+            # Other side closed
             if len(data) == 0:
                 raise MPIException("Connection broke or something recieved empty")
 
