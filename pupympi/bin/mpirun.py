@@ -15,7 +15,7 @@ from mpi.network.utils import pickle
 
 def parse_options():
     usage = 'usage: %prog [options] arg'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.2 (dev)")
+    parser = OptionParser(usage=usage, version="Pupympi version 0.6 (beta)")
     parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
     parser.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
