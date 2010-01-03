@@ -2,8 +2,6 @@
 # encoding: utf-8
 """
 parallel.py - collection of parallel tests inspired by Intel MPI Benchmark (IMB)
-
-Created by Jan Wiberg on 2009-08-13.
 """
 
 import comm_info as ci
@@ -48,7 +46,6 @@ def test_Sendrecv(size, max_iterations):
         return (source, dest)
 
     def Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):        
-        #print "%s -> [%s] -> %s" % (source, ci.rank, dest)
         for r in xrange(max_iterations):
             recvdata = ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
     # end of test
@@ -105,10 +102,3 @@ def test_Exchange(size, max_iterations):
     time = (t2 - t1)
 
     return time
- 
- # multi versions    
-     # Multi-PingPong 
-     # Multi-PingPing
-     # Multi-Sendrecv 
-     # Multi-Exchange
-

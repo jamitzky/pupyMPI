@@ -191,34 +191,7 @@ class Usage(Exception):
         self.msg = msg
 
 
-def main(argv=None):    
-    # Parameter parsing disabled until parameter passing through mpirun works
-    # if argv is None:
-    #     argv = sys.argv
-    # try:
-    #     try:
-    #         opts, args = getopt.getopt(argv[1:], "ho:vm:", ["help", "output=", "module="])
-    #     except getopt.error, msg:
-    #         raise Usage(msg)
-    # 
-    #     # option processing
-    #     for option, value in opts:
-    #         if option == "-v":
-    #             verbose = True
-    #         if option in ("-h", "--help"):
-    #             raise Usage(help_message)
-    #         if option in ("-o", "--output"):
-    #             output = value
-    #         if option in ("-m", "--module"):
-    #             module = value
-    # 
-    # except Usage, err:
-    #     print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
-    #     print >> sys.stderr, "\t for help use --help"
-    #     print >> sys.stderr, "\t Args: " + str(sys.argv)
-    #     return 2
-    
-    # FIXME: haxx it for now (I need the option to run individual modules because everything is too broken to get anywhere)
+def main(argv=None):
     
     module = None
     test = None
