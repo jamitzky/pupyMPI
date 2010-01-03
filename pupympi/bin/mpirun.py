@@ -214,10 +214,6 @@ if __name__ == "__main__":
     logger.debug("Waiting for %d processes" % options.np)
     
     # Recieve listings from newly started proccesses phoning in
-    # TODO: This initial communication should be more robust
-    # - if procs die before contacting mother, we hang
-    # - if procs don't send complete info in first attempt we go haywire
-    # - if mother is contacted on port from anyone but the proper processes we could hang or miss a process
     for i in range(options.np):       
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
@@ -231,9 +227,6 @@ if __name__ == "__main__":
     logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
-    # TODO: This initial communication should also be more robust
-    # - if a proc does not recieve proper info all bets are off
-    # - if a proc is not there to recieve we hang (at what timeout?)
     COMM_ID = -1
     COMM_RANK = -1
     data = (COMM_ID, COMM_RANK, constants.TAG_INITIALIZING, all_procs)
