@@ -343,11 +343,7 @@ class Communicator:
 
     def _add_unstarted_request(self, requests):
         with self.mpi.unstarted_requests_lock:
-            # NOTE: Why do we have to check isinstance here? Who puts multiple requests in queue at the same time?
-            if isinstance(requests, list):
-                self.mpi.unstarted_requests.extend( requests )
-            else:
-                self.mpi.unstarted_requests.append( requests )
+            self.mpi.unstarted_requests.append( requests )
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
     

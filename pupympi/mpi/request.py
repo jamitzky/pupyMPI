@@ -69,7 +69,7 @@ class Request(BaseRequest):
             raise Exception("Updating a request from %s to %s" % self.status, status)
         
         # We only update if there is data (ie. a recv operation)
-        #NOTE: Even if a send includes the data parameter it is only a superflous overwrite
+        # NOTE: Even if a send includes the data parameter it is only a superflous overwrite
         if data is not None:
             self.data = data
             
