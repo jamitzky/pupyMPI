@@ -133,7 +133,7 @@ class RunTest(Thread):
         self.returncode = self.process.returncode
 
 def get_testnames():
-    """returns a list of files that match our 'official' requirement to qualify as a pupympi™© test"""
+    """returns a list of files that match our 'official' requirement to qualify as a pupymp test"""
     return sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
     
 def _status_str(ret, expres):

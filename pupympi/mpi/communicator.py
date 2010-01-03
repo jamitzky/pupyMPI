@@ -19,7 +19,7 @@ class Communicator:
         self.MPI_COMM_WORLD = comm_root or self
         self.cmd = constants.CMD_USER
         
-        self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
+        self.mpi.communicators[self.id] = self 
         
         self.attr = {}
         if name == "MPI_COMM_WORLD":
@@ -91,7 +91,7 @@ class Communicator:
     ################################################################################################################
     def _comm_call_attrs(self, **kwargs):
         """Iterates through each value in the cached attribute collection and calls the value if its callable"""
-        for a in self.attr: # FIXME not tested
+        for a in self.attr: 
             if hasattr(self.attr[a], '__call__'):
                 Logger().debug("Calling callback function on '%s'" % a)                
                 self.attr[a](self, **kwargs)
@@ -115,8 +115,6 @@ class Communicator:
             the amount of created communicators but is significantly slower. 
         
         """
-        # FIXME There is presently no way to determine which implementation is in effect.
-        
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
@@ -134,8 +132,6 @@ class Communicator:
         """
         local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth. 
         """
-        
-        # FIXME should probably lock...
         if self.ceiling <= 2:
             raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
         # set up some easily understandable vars (can be optimized later)
@@ -168,8 +164,6 @@ class Communicator:
         # wait for answer on id
         cr = CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
         
-        # FIXME validate that received group was identical to my worldview
-
         # Non-members have rank -1
         if not group._owner_is_member():
             return None
@@ -235,7 +229,7 @@ class Communicator:
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
         new_comm = self.comm_create(self.group())
-        for a in self.attr: # FIXME not tested
+        for a in self.attr: 
             if a.startswith("MPI_"):
                 continue
             new_comm.attr[a] = copy.deepcopy(self.attr[a])
@@ -1198,11 +1192,6 @@ class Communicator:
                 return_list.append( request )
         return return_list
         
-    def topo_test(self):
-        """docstring for topo_test"""
-        # FIXME: Is this method still on our roadmap? 
-        pass
-        
     def waitall(self, request_list):
         """
         Waits for all the requets in the given list and returns a list
@@ -1385,7 +1374,6 @@ class Communicator:
         """
         
         return time.time() 
-        # TODO Improve clock function
         
     def Wtick(self):
 
@@ -1396,14 +1384,12 @@ class Communicator:
         every millisecond, the value returned by wtick() should be 10 to the power of -3.
         """
         return 1.0 
-        # TODO improve resolution detection
         
     ################################################################################################################
     # LOCAL OPERATIONS
     ################################################################################################################
     
     #### Inter-communicator operations
-    # TODO Need to officially decide if inter-communicators are implemented and if not, why (imo: not to be implemented.) 
     def test_inter(self):
         """
         This local routine allows the calling process to determine if a communicator is an inter-communicator or an intra-communicator. It returns true if it is an inter-communicator, otherwise false. 
