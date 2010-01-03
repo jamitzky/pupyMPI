@@ -31,7 +31,7 @@ def ssh(host, arguments, process_io, rank):
     elif process_io == 'asyncdirect': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
@@ -54,7 +54,7 @@ def rsh(host, arguments, process_io, rank):
     elif process_io == 'pipe': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'filepipe': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") # FIXME temporary naming/handling/solution
+        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
         io_target_list.append(target)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
