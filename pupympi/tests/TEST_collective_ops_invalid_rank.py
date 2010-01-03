@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.6
 # meta-description: Test all the collective operations receiving a root parameter what happens with an invalid root
 # meta-expectedresult: 0
-# meta-minprocesses: 10
+# meta-minprocesses: 4
 
 from mpi import MPI
 from mpi.exceptions import MPINoSuchRankException
@@ -16,11 +16,12 @@ size = world.size()
 # Make every processes send their rank to the root. 
 try:
     world.gather(rank, root=size)
-except Exception, e:
+except Exception, e:    
     assert type(e) == MPINoSuchRankException
+    
 
 try:
-    world.reduce(rank, sum, size)
+    world.reduce(rank, sum, root=size)
 except Exception, e:
     assert type(e) == MPINoSuchRankException
    

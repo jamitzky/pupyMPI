@@ -1046,8 +1046,8 @@ class Communicator:
         if self.rank() == root and (not data or not getattr(data,"__iter__") or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
-        if self.rank() != root and data is not None:
-            raise MPIException("Only the root of scatter should send data")
+        if self.rank() != root:
+            data = None
 
         # Create a list with size N
         if data:
