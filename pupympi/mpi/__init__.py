@@ -333,9 +333,6 @@ class MPI(Thread):
     def handle_system_message(self, rank, command, raw_data):
         if command == constants.CMD_ABORT:
             Logger().info("Got abort command!")
-
-            # FIXME: This might not actually delay all the threads. We
-            # need something more conclusive in the test cases. 
             sys.exit(1)
 
     def finalize(self):
