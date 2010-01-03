@@ -28,29 +28,7 @@ meta_schedule = {
     4096: 10000,
     8192: 10000
 }
-    
-# def test_ThreadSaturationPing(size, max_iterations):
-#     def PingPing(s_tag, r_tag, source, dest, data, max_iterations):
-#         for r in xrange(max_iterations):
-#             request = ci.communicator.isend(dest, data)
-#             recv_data = ci.communicator.recv(source)
-#             request.wait()        
-#     # end of test
-#     
-#     (s_tag, r_tag) = ci.get_tags_single()
-#     (source, dest) = ci.get_srcdest_paired() # source for purposes of recv, rank-relative
-#     data = ci.data[0:size]
-#     ci.synchronize_processes()
-# 
-#     t1 = ci.clock_function()
-# 
-#     # do magic
-#     PingPing(s_tag, r_tag, source, dest, data, max_iterations)
-# 
-#     t2 = ci.clock_function()
-#     time = (t2 - t1)
-# 
-#     return time
+
 
 def test_ThreadSaturationExchange(size, max_iterations):
     def get_leftright_chained():
@@ -92,10 +70,9 @@ def test_ThreadSaturationExchange(size, max_iterations):
     
 def test_ThreadSaturationBcast(size, max_iterations):
     def Bcast(data, max_iterations):
-        """docstring for Bcast"""
         root = 0
         for r in xrange(max_iterations):
-            my_data = data if ci.rank == root else "" # NOTE: probably superflous, discuss with Rune
+            my_data = data
             ci.communicator.bcast(my_data, root)
             # Switch root
             root = (root +1) % ci.num_procs
