@@ -4,10 +4,11 @@ allgather & 10 & success & allgather, gathers information from all the processes
 allreduce & 10 & success & allreduce, first computes factorial of mpi\_size \\ 
 alltoall & 10 & success & alltoall. Sends individual data from all to all. \\ 
 barrier & 11 & success & Test if barriers work. \\ 
-bcast & 11 & failed & Test if mpi\_bcast work. \\ 
+bcast & 11 & success & Test if mpi\_bcast work. \\ 
 big\_messages & 2 & success & tests how we deal with transmitting very large messages \\ 
 breaking & 2 & success & tests if crashes in MPI program are propagated back to initiator, ie is expected to actually crash. \\ 
-collective\_operations\_invalid\_rank & 10 & success & Test all the collective operations receiving a root parameter what happens with an invalid root \\ 
+cartesian\_topology & 8 & success & Baseline test of cartesian topologies (use CartesianTest class to be thorough) \\ 
+collective\_ops\_invalid\_rank & 4 & success & Test all the collective operations receiving a root parameter what happens with an invalid root \\ 
 communicator-ops & 2 & success & Test if communicator operations function. \\ 
 finalize\_quickly & 8 & success & The minimal correct pupyMPI program is allowed \\ 
 gather & 10 & success & gather, Receives information from all processes to one. \\ 
@@ -16,6 +17,7 @@ groups2 & 10 & success & tests advanced groups functionality. \\
 initialized & 2 & success & MPI environment can be established \\ 
 isend\_to\_irecv & 2 & success & test out of order immediate sending/receiving between 2 processses \\ 
 isend\_to\_recv & 2 & success &  \\ 
+issend\_slow\_recv & 2 & success & Test issend with delayed matching receive \\ 
 lock\_trouble & 2 & success & basic send and recive over many iterations where communicating parties should be in sync \\ 
 numpy\_bcast & 2 & success & Testing the broadcast function with different numpy data types. \\ 
 numpy\_reduce & 10 & success & A simple test and receive showing that numpy object can be transferred without problems \\ 
@@ -27,11 +29,13 @@ reduce\_lists2 & 4 & success & Reduce with list as type, prototype for reduce op
 request\_cancelled & 2 & success & allreduce, first computes factorial of mpi\_size, then uses builtin max to find slowest process. \\ 
 scan & 10 & success & scan, makes a partial reduce \\ 
 scatter & 10 & success & Scatter test \\ 
-scatter\_list & 2 & success & Test of list scattering \\ 
+scatter\_invalid\_data & 4 & success & Scatter testing invalid data exceptions \\ 
+scatter\_list & 4 & success & Test of list scattering \\ 
 self\_communication & 2 & success &  \\ 
 send\_0\_fix\_none & 2 & success &  \\ 
 send\_to\_irecv & 2 & success & test send to irecv with out of order recieving \\ 
 send\_to\_recv & 2 & success &  \\ 
+send\_to\_self & 2 & success &  \\ 
 sendreceive & 5 & success & Testing the sendrecv call. Runs with odd no. of processes who pass a token around \\ 
 simple\_blocking\_sr & 2 & success & test basic blocking communication. first rank 0 sends then 1 recieves, then vice versa. \\ 
 simple\_immediate\_sr & 2 & success & test basic immediate communication. First rank 0 isends timestamp to rank 1 who is a very slow reciever so rank 0 should quit early \\ 
@@ -39,10 +43,12 @@ simple\_synchronized\_sr & 2 & success & test basic synchronized communication. 
 small\_collective & 10 & success & Test if it's possible to create a really small collective operation. \\ 
 ssend\_slow\_recv & 2 & success & Test ssend with delayed matching receive \\ 
 stress\_sr & 2 & success & Cyclic blocking send/receive between two processes. Runs 500 iterations, and verifies that the data received are correct. (at current timeout-bound design, 500 iterations can take about 600 seconds) \\ 
-stress\_sr2 & 5 & success & Multi-process version of stress\_sr, with 200 iterations. Processes communicate point to point with neighbours in lockstep: Evens send and odds recieve then vice versa. If uneven number of processes are specified the last ranking one is automatically excluded so the lockstep scheme does not break down (deadlock) \\ 
+stress\_sr2 & 5 & success & Multi-process version of stress\_sr, with 200 iterations. Processes communicate p2p with neighbours in lockstep: Evens send and odds recieve then vice versa. If odd number of processes are specified the last ranking one is  excluded to avoid deadlock \\ 
 tags\_source & 2 & success & test if tags/sources are handled correctly. Rank 0 sends 5 messages to rank 1 which should receive the first 3 but not the last 2. \\ 
-testall & 2 & failed & scan, makes a partial reduce \\ 
+testall & 2 & success & scan, makes a partial reduce \\ 
+testany & 4 & success & Test case for testany operation. \\ 
+testsome & 4 & success & Test case for testany operation. \\ 
 waitall & 2 & success & scan, makes a partial reduce \\ 
 waitany & 2 & success &  \\ 
-waitfunctions & 10 & success & tests wait\_any,all,some FIXMEFIXMEFIXME \\ 
+waitfunctions & 10 & success & Tests use of waitall. \\ 
 waitsome & 2 & success &  \\ 
