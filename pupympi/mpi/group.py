@@ -30,9 +30,7 @@ class Group:
     def _is_empty(self):
         """
         Convenience function to test if a group is empty
-        """
-        
-        # TODO Still arguing over whether we should return MPI_GROUP_EMPTY as a singleton empty group instead
+        """        
         return self.size() == 0
 
     def _global_ranks(self):
@@ -337,13 +335,5 @@ class Group:
         """
         Marks a group for deallocation
         """
-        # TODO:  We decided not to implement this, so remove or give a message saying not implemented.
-        pass
-
-class groupTests(unittest.TestCase):
-    def setUp(self):
-        pass
-
-
-if __name__ == '__main__':
-    unittest.main()
+        raise NotImplementedException("free targeted for version 1.1")
+        return None
