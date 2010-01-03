@@ -19,7 +19,7 @@ class Communicator:
         self.MPI_COMM_WORLD = comm_root or self
         self.cmd = constants.CMD_USER
         
-        self.mpi.communicators[self.id] = self # TODO bit of a side-effect here, by automatically registering on new
+        self.mpi.communicators[self.id] = self 
         
         self.attr = {}
         if name == "MPI_COMM_WORLD":
@@ -229,7 +229,7 @@ class Communicator:
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
         new_comm = self.comm_create(self.group())
-        for a in self.attr: # FIXME not tested
+        for a in self.attr: 
             if a.startswith("MPI_"):
                 continue
             new_comm.attr[a] = copy.deepcopy(self.attr[a])
@@ -1374,7 +1374,6 @@ class Communicator:
         """
         
         return time.time() 
-        # TODO Improve clock function
         
     def Wtick(self):
 
@@ -1385,7 +1384,6 @@ class Communicator:
         every millisecond, the value returned by wtick() should be 10 to the power of -3.
         """
         return 1.0 
-        # TODO improve resolution detection
         
     ################################################################################################################
     # LOCAL OPERATIONS
