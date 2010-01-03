@@ -432,7 +432,7 @@ class Stats:
         print >> self.stream, '   ncalls  tottime  percall  cumtime  percall',
         print >> self.stream, 'filename:lineno(function)'
 
-    def print_line(self, func):  # hack : should print percentages
+    def print_line(self, func):
         cc, nc, tt, ct, callers = self.stats[func]
         c = str(nc)
         if nc != cc:

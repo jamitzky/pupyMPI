@@ -285,7 +285,7 @@ class MPI(Thread):
 
         Logger().debug("Queues flushed and user thread has been signalled.")
         if sys.stdout is not None:
-            sys.stdout.flush() # Dirty hack to get the rest of the output out
+            sys.stdout.flush() # Slight hack to get the rest of the output out
         
 
     def abort(self):

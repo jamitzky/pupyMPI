@@ -10,9 +10,6 @@ identity = lambda x : x
 class CollectiveRequest(BaseRequest):
 
     def __init__(self, tag, communicator, data=None, root=0, start=True):
-        # Note about the super types. How about we define them depending on how many 
-        # participants get the data? Or just remove them alltoghter. Added a reduce
-        # for now just to handle the allreduce implementation.
         super(CollectiveRequest, self).__init__()
 
         self.communicator = communicator

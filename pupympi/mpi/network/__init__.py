@@ -128,8 +128,6 @@ class Network(object):
             # Full network start up means a static socket pool
             self.socket_pool.readonly = True
         
-        # DEBUG NOTE
-        # Procs that hang never get to here, they hang while finishing the recieves
         Logger().debug("Network (fully) started")
 
     def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
