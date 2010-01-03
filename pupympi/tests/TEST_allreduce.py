@@ -2,7 +2,6 @@
 # meta-description: allreduce, first computes factorial of mpi_size
 # meta-expectedresult: 0
 # meta-minprocesses: 10
-# todo: desc was:, then uses builtin max to find slowest process.
 
 from mpi import MPI
 from mpi.operations import MPI_prod
@@ -24,12 +23,6 @@ size = world.size()
 
 dist_fact = world.allreduce(rank+1, MPI_prod)
 
-try:
-    assert fact(size) == dist_fact
-except AssertionError, e:
-    #print "Got AssertionError"
-    #print "\tExpected data: %s" % fact(size)
-    #print "\tReceived: %s" % dist_fact
-    raise e
+assert fact(size) == dist_fact
 
 mpi.finalize()
