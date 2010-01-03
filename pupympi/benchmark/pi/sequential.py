@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+"""
+sequential.py
 
+basic sequential Python version of Monte Carlo Pi approximator
+"""
 import math, random, sys
 
 num_in = 0

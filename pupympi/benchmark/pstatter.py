@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.6
-
+"""
+pstatter.py - helper function to parse output from Python profiling
+"""
 import sys
 import pstats
 

@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+parallel.py
+
+pupyMPI parallelized version of Monte Carlo Pi approximator
+"""
 
 import math, random, sys, time
 from mpi import MPI
@@ -44,7 +49,6 @@ num_in_list = comm.gather(num_in)
 # rank 0 gathers and displays
 if rank == 0:
     summed_num_in = sum(num_in_list)
-    #print "total is %s, summed_num_in is %s" % (rank, total, summed_num_in)
     ratio = float(summed_num_in) / float(total)
     my_pi = 4 * ratio
 
