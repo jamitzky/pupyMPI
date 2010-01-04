@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if barriers work. 
+# meta-description: Test if barriers work and do so tightly
 # meta-expectedresult: 0
 # meta-minprocesses: 11
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: tests simple groups functionality. 
+# meta-description: Test simple groups functionality
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

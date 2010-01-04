@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if mpi_bcast work. 
+# meta-description: Test if broadcast works
 # meta-expectedresult: 0
 # meta-minprocesses: 11
 

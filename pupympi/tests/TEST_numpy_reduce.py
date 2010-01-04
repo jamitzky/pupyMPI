@@ -1,4 +1,4 @@
-# meta-description: A simple test and receive showing that numpy object can be transferred without problems
+# meta-description: A allreduce showing that numpy objects can be transferred with collective operations
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 

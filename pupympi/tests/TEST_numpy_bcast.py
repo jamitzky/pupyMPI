@@ -1,4 +1,4 @@
-# meta-description: Testing the broadcast function with different numpy data types.
+# meta-description: Testing the broadcast function with different numpy data types
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

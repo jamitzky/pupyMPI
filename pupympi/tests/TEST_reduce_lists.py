@@ -1,4 +1,4 @@
-# meta-description: Allreduce with list as main type
+# meta-description: Test allreduce with list as main type and a custom reduce op
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 """

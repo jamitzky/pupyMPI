@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: MPI environment can be established
+# meta-description: Test establishment of MPI environment
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

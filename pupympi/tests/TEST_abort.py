@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: abort, Process with rank 0 will abort right away. Other processes will sleep and we'll see if we exit "wrongly".
+# meta-description: Test abort, rank 0 will abort right away, other processes will sleep and should not exit with code 0
 # meta-expectedresult: 1
 # meta-minprocesses: 4
 
