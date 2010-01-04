@@ -1,7 +1,13 @@
+#!/usr/bin/env python2.6
+# meta-description: Test waitsome on list of request handles
+# meta-expectedresult: 0
+# meta-minprocesses: 3
+
 from mpi import MPI
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
+
 request_list = []
 
 if world.rank() == 0:

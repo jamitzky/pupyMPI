@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: scan, makes a partial reduce
+# meta-description: Test that waitall returns list of results
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test case for testany operation. 
+# meta-description: Test of testsome
 # meta-expectedresult: 0
 # meta-minprocesses: 4
 

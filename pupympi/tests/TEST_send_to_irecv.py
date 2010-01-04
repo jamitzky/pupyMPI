@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: test send to irecv with out of order recieving
+# meta-description: Test send to irecv with out of order recieving
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 # meta-max_runtime: 15
@@ -9,9 +9,7 @@
 # message1 (based on tag) and then message2
 # That is message1 should be recieved first then message2
 
-import time
 from mpi import MPI
-from mpi import constants
 
 mpi = MPI()
 

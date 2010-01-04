@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Testing the sendrecv call. Runs with odd no. of processes who pass a token around
+# meta-description: Testing the sendrecv call. All processes pass a token around
 # meta-expectedresult: 0
 # meta-minprocesses: 5
 # meta-max_runtime: 90
