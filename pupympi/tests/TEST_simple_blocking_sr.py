@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: test basic blocking communication. first rank 0 sends then 1 recieves, then vice versa.
+# meta-description: Test basic blocking communication. First rank 0 sends then 1 recieves, then vice versa.
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python2.6
+# meta-description: Test communication with self
+# meta-expectedresult: 0
 
-# Simple pupympi program to test basic if it's possible
-# to send to self.
+# Simple pupympi program to test basically if it's possible to send to self.
 
-# rank 0 sends message to rank 1 
+
 from mpi import MPI
 
 mpi = MPI()

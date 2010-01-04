@@ -1,9 +1,8 @@
 #!/usr/bin/env python2.6
+# meta-description: Test that "", [] () and 0 all result in None when sent
+# meta-expectedresult: 0
+# meta-minprocesses: 10
 
-# Simple pupympi program to test basic blocking send to blocking recieve
-# This test is meant to be run with only two processes
-
-# rank 0 sends message to rank 1 
 from mpi import MPI
 
 mpi = MPI()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if it's possible to create a really small collective operation. 
+# meta-description: Test basic collective operation (gather)
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 

@@ -1,3 +1,8 @@
+#!/usr/bin/env python2.6
+# meta-description: Test waitany on request list
+# meta-expectedresult: 0
+# meta-minprocesses: 2
+
 from mpi import MPI
 
 mpi = MPI()
