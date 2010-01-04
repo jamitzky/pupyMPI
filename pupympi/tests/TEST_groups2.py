@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: tests advanced groups functionality. 
+# meta-description: Test advanced groups functionality
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 # meta-max_runtime: 25

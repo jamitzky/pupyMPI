@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: allreduce, first computes factorial of mpi_size
+# meta-description: Allreduce, actually computes factorial of mpi_size
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 
@@ -15,7 +15,6 @@ def fact(n):
     
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
-n = datetime.now()
 
 # We start n processes, and try to calculate n!
 rank = world.rank()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: test out of order immediate sending/receiving between 2 processses
+# meta-description: Test out of order immediate sending/receiving between 2 processses
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 # meta-max_runtime: 15

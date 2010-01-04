@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: allreduce, first computes factorial of mpi_size, then uses builtin max to find slowest process.
+# meta-description: Test that irecv and isend request can be cancelled
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

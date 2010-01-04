@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Tests that we can accept user arguments. 
+# meta-description: Tests that we can accept user arguments
 # meta-expectedresult: 0
 # meta-minprocesses: 1
 # meta-userargs: arg0 arg1 -o -p -xys --long-argument

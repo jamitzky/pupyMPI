@@ -1,8 +1,8 @@
 #!/usr/bin/env python2.6
+# meta-description: Simple pupympi hello world'ish program used for examples
+# meta-expectedresult: 0
 
-# Simple pupympi program to test assigning/reporting of ranks and reporting of size
 
-from sys import stderr
 from mpi import MPI
 
 mpi = MPI()

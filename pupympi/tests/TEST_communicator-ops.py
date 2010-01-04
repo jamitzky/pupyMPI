@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if communicator operations function. 
+# meta-description: Test if communicator operations function properly
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 

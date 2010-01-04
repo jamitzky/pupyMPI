@@ -1,7 +1,8 @@
 #!/usr/bin/env python2.6
+# meta-description: Simple pupympi program to test basic immediate send to blocking recieve
+# meta-expectedresult: 0
+# meta-minprocesses: 2
 
-# Simple pupympi program to test basic immediate send to blocking recieve
-# This test is meant to be run with only two processes
 
 # rank 0 isends message to rank 1 who is a very slow reciever so rank 0 should quit early
 
