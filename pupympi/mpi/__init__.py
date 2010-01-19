@@ -1,4 +1,4 @@
-__version__ = 0.2 # It bumps the version or else it gets the hose again!
+__version__ = 0.6 # It bumps the version or else it gets the hose again!
 
 import sys
 from optparse import OptionParser, OptionGroup
