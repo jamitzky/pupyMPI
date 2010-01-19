@@ -1,5 +1,0 @@
-datasize,repetitions,total time,time/repetition,Mb/second,name of test,timestamp of testrun
-0,1000,0.000000,0.000000,0.000000,test_Allgather,2009-12-17 01-00-51
-1,1000,0.000000,0.000000,0.000000,test_Allgather,2009-12-17 01-00-51
-2,1000,5.926083,0.005926,0.000322,test_Allgather,2009-12-17 01-00-51
-

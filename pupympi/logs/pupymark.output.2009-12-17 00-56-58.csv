@@ -1,5 +1,0 @@
-datasize,repetitions,total time,time/repetition,Mb/second,name of test,timestamp of testrun
-0,1000,0.000000,0.000000,0.000000,test_Scatter,2009-12-17 00-56-58
-1,1000,1.000000,0.000000,0.000954,test_Scatter,2009-12-17 00-56-58
-2,1000,1.000000,0.000000,0.001907,test_Scatter,2009-12-17 00-56-58
-
