@@ -23,7 +23,7 @@ if rank == 0:
     f.write("Rank: %d sending to %d\n" % (rank,neighbour) )
     f.flush()
     
-    request = mpi.MPI_COMM_WORLD.isend(neighbour,content,DUMMY_TAG)
+    request = mpi.MPI_COMM_WORLD.isend(content, neighbour, DUMMY_TAG)
     request.wait()
     
     f.write("Rank: %d sent % s \n" % (rank, content) )

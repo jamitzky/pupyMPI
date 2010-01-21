@@ -30,12 +30,12 @@ if rank <= 1:
 
     for it in xrange(max_iterations):
         if rank == 0: 
-            world.send(other, gen_msg(rank, it), TAG)
+            world.send( gen_msg(rank, it), other, TAG)
 
         recv = world.recv(other, TAG)
 
         if rank == 1: 
-            world.send(other, gen_msg(rank, it), TAG)
+            world.send(gen_msg(rank, it), other, TAG)
 
         assert recv == gen_msg(other, it)
 

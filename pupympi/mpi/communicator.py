@@ -172,7 +172,7 @@ class Communicator:
 
         if self.rank() == 0:
             # send request to rank 0 of mpi_comm_world (if already rank 0 of mcw, just send the message anyway)
-            self.MPI_COMM_WORLD.send(self.MPI_COMM_WORLD.group().members[0], None, constants.TAG_COMM_CREATE)
+            self.MPI_COMM_WORLD.send(None, self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
             new_id = self.MPI_COMM_WORLD.recv(self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
 
         if new_id < 0:
@@ -321,7 +321,7 @@ class Communicator:
             world = mpi.MPI_COMM_WORLD
 
             if world.rank() == 0:
-                world.send(1, "My message")
+                world.send( "My message", 1)
             else:
                 handle = world.irecv(0)
 
@@ -375,7 +375,7 @@ class Communicator:
             self.mpi.received_data.append(queue_item)            
             self.mpi.pending_requests_has_work.set()
 
-    def isend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
+    def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Starts a non-blocking send. The function will return as soon as the 
         data has been copied into a internal buffer making it safe for the
@@ -389,8 +389,8 @@ class Communicator:
             world = mpi.MPI_COMM_WORLD
 
             if world.rank() == 0:
-                handle1 = world.isend(1, "My message to 1")
-                handle2 = world.isend(2, "My message to 2")
+                handle1 = world.isend("My message to 1", 1)
+                handle2 = world.isend("My message to 2", 2)
 
                 # Wait until the message to 1 is sent
                 handle1.wait()
@@ -417,18 +417,18 @@ class Communicator:
             See also the :func:`send` and :func:`irecv` functions. 
         """
         # Check that destination exists
-        if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
+        if not self.have_rank(destination):
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
 
         # Create a send request object
-        handle = Request("send", self, destination_rank, tag, False, data=content)
+        handle = Request("send", self, destination, tag, False, data=content)
         
         # If sending to self, take a short-cut
-        if destination_rank == self.rank():
+        if destination == self.rank():
             self._send_to_self(handle)
             return handle
                 
@@ -439,7 +439,7 @@ class Communicator:
 
         return handle
 
-    def issend(self, destination_rank, content, tag = constants.MPI_TAG_ANY):
+    def issend(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Synchronized non-blocking send function. The function will return as soon as the 
         data has been copied into a internal buffer for subsequent sending. 
@@ -470,7 +470,7 @@ class Communicator:
             
             if rank == 0: # Send
                 neighbour = 1
-                handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
+                handle = mpi.MPI_COMM_WORLD.issend(message, neighbour, DUMMY_TAG)
                 
                 # Since reciever waits 4 seconds before posting matching recieve
                 # the first test should fail
@@ -497,20 +497,19 @@ class Communicator:
         **See also**: :func:`ssend` and :func:`test`
         """
         # Check that destination exists
-        if not self.have_rank(destination_rank):
-            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination_rank, self.name))
+        if not self.have_rank(destination):
+            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination, self.name))
 
         # Check that tag is valid
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
 
         # Create a send request object
-        dummyhandle = Request("send", self, destination_rank, tag, True, data=content)
+        dummyhandle = Request("send", self, destination, tag, True, data=content)
         
         # Create a recv request object to catch the acknowledgement message coming in
         # when this request is matched it also triggers the unacked->ready transition on the request handle
-        handle = Request("recv", self, destination_rank, constants.TAG_ACK)
-        #self.irecv(destination_rank, constants.TAG_ACK)
+        handle = Request("recv", self, destination, constants.TAG_ACK)
         
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
@@ -528,7 +527,7 @@ class Communicator:
         return handle
     
     
-    def ssend(self, destination, content, tag = constants.MPI_TAG_ANY):
+    def ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Synchronized send function. Send to the destination rank a message
         with the specified tag. 
@@ -546,7 +545,7 @@ class Communicator:
             TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
 
             if mpi.MPI_COMM_WORLD.rank() == 0:
-                mpi.MPI_COMM_WORLD.ssend(1, "Hello World!", TAG)
+                mpi.MPI_COMM_WORLD.ssend("Hello World!", 1, TAG)
                 print "Now rank 1 must have asked for the message"
             elif mpi.MPI_COMM_WORLD.rank() == 1:
                 message = mpi.MPI_COMM_WORLD.recv(0, TAG)
@@ -563,9 +562,9 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.issend(destination, content, tag).wait()
+        return self.issend(content, destination, tag).wait()
         
-    def send(self, destination, content, tag = constants.MPI_TAG_ANY):
+    def send(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
         with the specified tag. 
@@ -583,7 +582,7 @@ class Communicator:
             TAG = 1 # optional. If omitted, MPI_TAG_ANY is assumed.
 
             if mpi.MPI_COMM_WORLD.rank() == 0:
-                mpi.MPI_COMM_WORLD.send(1, "Hello World!", TAG)
+                mpi.MPI_COMM_WORLD.send("Hello World!", 1, TAG)
             else:
                 message = mpi.MPI_COMM_WORLD.recv(0, TAG)
                 print message
@@ -607,7 +606,7 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.isend(destination, content, tag).wait()
+        return self.isend(content, destination, tag).wait()
 
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
@@ -690,7 +689,7 @@ class Communicator:
             recvhandle = self.irecv(source, recvtag)
         
         if dest is not None:
-            self.send(dest, senddata, sendtag)
+            self.send(senddata, dest, sendtag)
             
         if source is not None:
             return recvhandle.wait()
@@ -1089,7 +1088,7 @@ class Communicator:
 
             for i in range(10):
                 if rank == 0:
-                    world.send(1, i)
+                    world.send( i, 1)
                 else:
                     handle = world.irecv(0)
                     handles.append(handle)
@@ -1150,7 +1149,7 @@ class Communicator:
                             handles.remove(request)
 
                 else:
-                    world.send(0, "My data", constants.MPI_TAG_ANY)
+                    world.send( "My data", 0, constants.MPI_TAG_ANY)
 
             mpi.finalize()
         """
@@ -1196,7 +1195,7 @@ class Communicator:
                             handles = [ r for r in handles if r not in request_list]
 
                 else:
-                    world.send(0, "My data", constants.MPI_TAG_ANY)
+                    world.send("My data", 0, constants.MPI_TAG_ANY)
 
             mpi.finalize()
         """
@@ -1238,7 +1237,7 @@ class Communicator:
                     request_list.append(handle)
 
                 for i in range(10):
-                    mpi.MPI_COMM_WORLD.send(0, "Hello World!")
+                    mpi.MPI_COMM_WORLD.send( "Hello World!", 0)
 
                 messages = mpi.MPI_COMM_WORLD.waitall(request_list)
             else:
@@ -1287,7 +1286,7 @@ class Communicator:
                     request_list.remove(request)
             else:
                 for i in range(10):
-                    world.send(0, "Message")
+                    world.send( "Message", 0)
 
             mpi.finalize()
 
@@ -1338,7 +1337,7 @@ class Communicator:
                         request_list.remove(request)
             else:
                 for i in range(10):
-                    world.send(0, "Message")
+                    world.send( "Message", 0)
 
             mpi.finalize()
 
@@ -1358,7 +1357,7 @@ class Communicator:
             This function works in many aspects as the unix
             select functionality. You can use it as a simple
             way to just work on the messages that are actually
-            ready without coding all the boilor plate yourself.
+            ready without coding all the boiler-plate yourself.
 
             Note however that it's not given that this function
             will include **all** the requests that are ready. It
@@ -1390,7 +1389,6 @@ class Communicator:
         return time.time() 
         
     def Wtick(self):
-
         """
         returns the resolution of wtime() in seconds. That is, it returns, 
         as a double precision value, the number of seconds between successive clock ticks. For

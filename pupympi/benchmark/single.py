@@ -41,7 +41,7 @@ meta_schedule = {
 def test_PingPing(size, max_iterations):
     def PingPing(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
-            request = ci.communicator.isend(dest, data)
+            request = ci.communicator.isend(data, dest)
             recv_data = ci.communicator.recv(source)
             request.wait()  	    
     # end of test
@@ -66,11 +66,11 @@ def test_PingPong(size, max_iterations):
     def PingPong(s_tag, r_tag, source, dest, data, max_iterations):
         for r in xrange(max_iterations):
             if ci.rank == ci.pair0: 
-                ci.communicator.send(dest, data, s_tag)
+                ci.communicator.send(data, dest, s_tag)
                 recv = ci.communicator.recv(source, r_tag)
             elif ci.rank == ci.pair1:
                 recv = ci.communicator.recv(source, r_tag)
-                ci.communicator.send(dest, data, s_tag)
+                ci.communicator.send(data, dest, s_tag)
             else: 
                 raise Exception("Broken state")
     # end of test

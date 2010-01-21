@@ -27,7 +27,7 @@ if rank == 0: # Send
     f.flush()
     t1 = time.time()
     
-    mpi.MPI_COMM_WORLD.ssend(neighbour, message, DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.ssend(message, neighbour, DUMMY_TAG)
     
     t2 = time.time()
     f.write("Rank: %d sendt synchronized message to %d \n" % (rank,neighbour))

@@ -16,7 +16,7 @@ match = True
 
 if rank == 0:
     for c in possible_none_content:
-        world.send(1, c)
+        world.send( c, 1)
 elif rank == 1: 
     for c in possible_none_content:
         c_received = world.recv(0)

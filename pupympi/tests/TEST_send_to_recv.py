@@ -22,7 +22,7 @@ DUMMY_TAG = 1
 if rank == 0:
     # Send
     neighbour = 1
-    mpi.MPI_COMM_WORLD.send(neighbour,content,DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, DUMMY_TAG)
     
 elif rank == 1: 
     neighbour = 0

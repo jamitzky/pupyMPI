@@ -13,7 +13,7 @@ request_list = []
 
 if mpi.MPI_COMM_WORLD.rank() == 0:
     for i in range(10):
-        mpi.MPI_COMM_WORLD.send(1, "Hello World!")
+        mpi.MPI_COMM_WORLD.send("Hello World!", 1)
 
     for i in range(10):
         handle = mpi.MPI_COMM_WORLD.irecv(1)
@@ -26,7 +26,7 @@ elif mpi.MPI_COMM_WORLD.rank() == 1:
         request_list.append(handle)
 
     for i in range(10):
-        mpi.MPI_COMM_WORLD.send(0, "Hello World!")
+        mpi.MPI_COMM_WORLD.send( "Hello World!", 0)
 
     messages = mpi.MPI_COMM_WORLD.waitall(request_list)
 else:

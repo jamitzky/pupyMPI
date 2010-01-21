@@ -23,7 +23,7 @@ if rank == 0:
     # Send
     neighbour = 1
     #print "Rank: %d sending to %d" % (rank,neighbour)
-    mpi.MPI_COMM_WORLD.send(neighbour, get_content(rank), DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.send(get_content(rank), neighbour, DUMMY_TAG)
 
     # Recieve
     #print "Rank: %d recieving from %d" % (rank,neighbour)
@@ -43,7 +43,7 @@ elif rank == 1:
     
     # Send
     #print "Rank: %d sending to %d" % (rank,neighbour)
-    mpi.MPI_COMM_WORLD.send(neighbour, get_content(rank), DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.send(get_content(rank), neighbour, DUMMY_TAG)
     
 else: # rank == 1
     #print "Im doing nothing"

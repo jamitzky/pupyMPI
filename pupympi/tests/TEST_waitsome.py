@@ -25,6 +25,6 @@ if world.rank() == 0:
             request_list.remove(request)
 else:
     for i in range(10):
-        world.send(0, "Message")
+        world.send( "Message", 0)
 
 mpi.finalize()

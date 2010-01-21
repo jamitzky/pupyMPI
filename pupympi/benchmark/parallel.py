@@ -81,8 +81,8 @@ def test_Exchange(size, max_iterations):
             
     def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
         for r in xrange(max_iterations):
-            ci.communicator.isend(right, data, s_tag)
-            ci.communicator.isend(left, data, s_tag)
+            ci.communicator.isend( data, right, s_tag)
+            ci.communicator.isend( data, left, s_tag)
             leftdata = ci.communicator.recv(left, r_tag)
             rightdata = ci.communicator.recv(right, r_tag)
 

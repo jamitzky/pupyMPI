@@ -25,8 +25,8 @@ ANOTHER_TAG = 2
 if rank == 0:
     neighbour = 1
     # Send
-    mpi.MPI_COMM_WORLD.send(neighbour,content2,DUMMY_TAG)
-    mpi.MPI_COMM_WORLD.send(neighbour,content1,ANOTHER_TAG)    
+    mpi.MPI_COMM_WORLD.send(content2, neighbour, DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.send(content1, neighbour, ANOTHER_TAG)    
 
 elif rank == 1:
     neighbour = 0

@@ -26,7 +26,7 @@ if rank == 0: # Send
     f.write("Rank: %d issending to %d \n" % (rank,neighbour))
     f.flush()
     
-    handle = mpi.MPI_COMM_WORLD.issend(neighbour, message, DUMMY_TAG)
+    handle = mpi.MPI_COMM_WORLD.issend(message, neighbour, DUMMY_TAG)
     
     f.write("Rank: %d sendt immediate synchronized message to %d \n" % (rank,neighbour))
     f.flush()

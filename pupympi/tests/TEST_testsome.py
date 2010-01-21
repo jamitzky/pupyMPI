@@ -41,6 +41,6 @@ for i in range(100):
                 handles = [ r for r in handles if r not in request_list]
 
     else:
-        world.send(0, "My data", constants.MPI_TAG_ANY)
+        world.send("My data", 0, constants.MPI_TAG_ANY)
 
 mpi.finalize()

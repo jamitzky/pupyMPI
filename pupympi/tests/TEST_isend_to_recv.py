@@ -24,7 +24,7 @@ if rank == 0:
     # Send
     neighbour = 1
     #print "Rank: %d sending to %d" % (rank,neighbour)
-    request = mpi.MPI_COMM_WORLD.isend(neighbour,content,DUMMY_TAG)
+    request = mpi.MPI_COMM_WORLD.isend(content, neighbour, DUMMY_TAG)
     #print "Rank: %d DONE sending to %d" % (rank,neighbour)
     request.wait()
     

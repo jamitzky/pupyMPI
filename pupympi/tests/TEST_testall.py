@@ -20,7 +20,7 @@ if rank == 0:
 
 for i in range(10):
     if rank == 0:
-        world.send(1, i)
+        world.send(i, 1)
     else:
         handle = world.irecv(0)
         handles.append(handle)

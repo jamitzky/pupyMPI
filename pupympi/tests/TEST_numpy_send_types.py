@@ -28,7 +28,7 @@ expected_data = [
 match = True
 if rank == 0:
     for ep in expected_data:
-        world.send(1, ep)
+        world.send(ep, 1)
 elif rank == 1:
     for ep in expected_data:
         received = world.recv(0)

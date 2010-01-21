@@ -14,5 +14,5 @@ mpi = MPI()
 
 raise Exception("Forced error from rank %s" % mpi.MPI_COMM_WORLD.rank())
 
-# Close the sockets down nicely
+# This shouldnt run.
 mpi.finalize()
