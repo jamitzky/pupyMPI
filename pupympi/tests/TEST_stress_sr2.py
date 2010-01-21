@@ -36,7 +36,7 @@ elif rank % 2 == 0: # evens
     for iterations in xrange(maxIterations):
         f.write("%s: Sending upper to %s " % (rank, upper))
         f.flush()
-        mpi.MPI_COMM_WORLD.send(upper, data, 1)
+        mpi.MPI_COMM_WORLD.send( data, upper, 1)
 
         f.write("%s: Receiving lower to %s " % (rank, lower))
         f.flush()
@@ -44,7 +44,7 @@ elif rank % 2 == 0: # evens
 
         f.write("%s: Sending lower to %s " % (rank, lower))
         f.flush()
-        mpi.MPI_COMM_WORLD.send(lower, data, 1)
+        mpi.MPI_COMM_WORLD.send( data, lower, 1)
 
         f.write("%s: Receiving upper to %s " % (rank, upper))
         f.flush()
@@ -63,7 +63,7 @@ else: # odds
 
         f.write("%s: Sending upper to %s " % (rank, upper))
         f.flush()
-        mpi.MPI_COMM_WORLD.send(upper, data, 1)
+        mpi.MPI_COMM_WORLD.send( data, upper,1)
 
         f.write("%s: Receiving upper to %s " % (rank, upper))
         f.flush()
@@ -71,7 +71,7 @@ else: # odds
 
         f.write("%s: Sending lower to %s " % (rank, lower))
         f.flush()
-        mpi.MPI_COMM_WORLD.send(lower, data, 1)
+        mpi.MPI_COMM_WORLD.send( data, lower, 1)
 
         f.write( "Iteration %s completed for rank %s\n" % (iterations, mpi.MPI_COMM_WORLD.rank()))
         f.flush()

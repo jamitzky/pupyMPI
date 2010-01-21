@@ -39,6 +39,6 @@ for i in range(100):
                 handles.remove(request)
 
     else:
-        world.send(0, "My data", constants.MPI_TAG_ANY)
+        world.send( "My data", 0, constants.MPI_TAG_ANY)
 
 mpi.finalize()

@@ -21,7 +21,7 @@ max_iterations = 500
 
 for iterations in xrange(max_iterations):
     if rank == 0: 
-        world.send(1, "rank%s,iterations%s" %(rank, iterations), DUMMY_TAG)
+        world.send("rank%s,iterations%s" %(rank, iterations), 1, DUMMY_TAG)
         # print "%s: %s done sending" % (iterations, c_info.rank)
         msg =  "Iteration:%s for rank:%s \n" % (iterations, rank)
     elif rank == 1: 
@@ -37,7 +37,7 @@ for iterations in xrange(max_iterations):
     
 # Test that procs agree on last message (max_iterations)
 if rank == 0: 
-    world.send(1, "rank%s,iterations%s" %(rank, max_iterations), DUMMY_TAG)
+    world.send("rank%s,iterations%s" %(rank, max_iterations), 1, DUMMY_TAG)
     # print "%s: %s done sending" % (iterations, c_info.rank)
     msg =  "Last iteration: %s for rank:%s \n" % (max_iterations, rank)
     f.write(msg)

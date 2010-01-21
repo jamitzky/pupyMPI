@@ -22,13 +22,13 @@ if rank == 0:
     # Send
     neighbour = 1
     
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
     
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
-    mpi.MPI_COMM_WORLD.send(neighbour,content, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
+    mpi.MPI_COMM_WORLD.send(content, neighbour, a_real_tag)
     
 
 elif rank == 1: 

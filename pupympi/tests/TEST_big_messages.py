@@ -46,9 +46,9 @@ heftyMsg = 1024*1024*string
 
 # One way comm: 0 sends, 1 recives, the rest do nothing
 if rank == 0:
-    mpi.MPI_COMM_WORLD.send(1,largeMsg,FIRST_TAG)
-    mpi.MPI_COMM_WORLD.send(1,largerMsg,SECOND_TAG)
-    mpi.MPI_COMM_WORLD.send(1,heftyMsg,THIRD_TAG)    
+    mpi.MPI_COMM_WORLD.send(largeMsg, 1, FIRST_TAG)
+    mpi.MPI_COMM_WORLD.send(largerMsg, 1, SECOND_TAG)
+    mpi.MPI_COMM_WORLD.send(heftyMsg, 1, THIRD_TAG)    
     f.write( "Done sending big messages - rank %d\n" % rank)
     f.flush()
 elif rank == 1:
@@ -69,7 +69,7 @@ else:
 
 # Two way comm blocking
 if rank == 0:
-    mpi.MPI_COMM_WORLD.send(1,largerMsg,SECOND_TAG)
+    mpi.MPI_COMM_WORLD.send(largerMsg, 1, SECOND_TAG)
 
     msg = mpi.MPI_COMM_WORLD.recv(1,THIRD_TAG)
     assert msg == heftyMsg
@@ -77,7 +77,7 @@ if rank == 0:
     msg = mpi.MPI_COMM_WORLD.recv(1,SECOND_TAG)
     assert msg == largerMsg
 
-    mpi.MPI_COMM_WORLD.send(1,heftyMsg,THIRD_TAG)
+    mpi.MPI_COMM_WORLD.send(heftyMsg, 1, THIRD_TAG)
     
     f.write( "Blocking two-way passing of big messages done - rank %d\n" % rank)
     f.flush()
@@ -86,8 +86,8 @@ elif rank == 1:
     msg = mpi.MPI_COMM_WORLD.recv(0,SECOND_TAG)
     assert msg == largerMsg
 
-    mpi.MPI_COMM_WORLD.send(0,heftyMsg,THIRD_TAG)    
-    mpi.MPI_COMM_WORLD.send(0,largerMsg,SECOND_TAG)
+    mpi.MPI_COMM_WORLD.send(heftyMsg, 1, THIRD_TAG)    
+    mpi.MPI_COMM_WORLD.send(largerMsg, 1, SECOND_TAG)
 
     msg = mpi.MPI_COMM_WORLD.recv(0,THIRD_TAG)
     assert msg == heftyMsg
@@ -100,8 +100,8 @@ else:
 
 # Two way comm immediate
 if rank == 0:
-    s1 = mpi.MPI_COMM_WORLD.isend(1,largerMsg,SECOND_TAG)
-    s2 = mpi.MPI_COMM_WORLD.isend(1,heftyMsg,THIRD_TAG)
+    s1 = mpi.MPI_COMM_WORLD.isend(largerMsg, 1, SECOND_TAG)
+    s2 = mpi.MPI_COMM_WORLD.isend(heftyMsg, 1, THIRD_TAG)
     
     f.write( "Immediate send done - rank %d\n" % rank)
     f.flush()
@@ -124,8 +124,8 @@ if rank == 0:
     f.write( "Send wait done - rank %d\n" % rank)
     f.flush()   
 elif rank == 1:
-    s1 = mpi.MPI_COMM_WORLD.isend(0,largerMsg,SECOND_TAG)
-    s2 = mpi.MPI_COMM_WORLD.isend(0,heftyMsg,THIRD_TAG)
+    s1 = mpi.MPI_COMM_WORLD.isend(largerMsg, 0, SECOND_TAG)
+    s2 = mpi.MPI_COMM_WORLD.isend(heftyMsg, 0, THIRD_TAG)
     
     f.write( "Immediate send done - rank %d\n" % rank)
     f.flush()

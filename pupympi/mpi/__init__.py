@@ -222,7 +222,7 @@ class MPI(Thread):
                                 Logger().debug("SSEND RECIEVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
                                 # NOTE: Consider using an empty message string, to save (a little) resources
-                                self.communicators[communicator_id].isend(sender, "ACKNOWLEDGEMENT", constants.TAG_ACK)
+                                self.communicators[communicator_id].isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
                                 Logger().debug("ACK RECIEVED request: %s" % request)

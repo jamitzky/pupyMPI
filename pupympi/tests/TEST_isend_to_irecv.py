@@ -29,9 +29,9 @@ f = open(constants.LOGDIR+"mpi.isend_to_irecv.rank%s.log" % rank, "w")
 if rank == 0:
     neighbour = 1
 
-    sendRequest1 = mpi.MPI_COMM_WORLD.isend(neighbour,content1,FIRST_TAG)    
-    sendRequest2 = mpi.MPI_COMM_WORLD.isend(neighbour,content2,SECOND_TAG)    
-    sendRequest3 = mpi.MPI_COMM_WORLD.isend(neighbour,content3,THIRD_TAG)    
+    sendRequest1 = mpi.MPI_COMM_WORLD.isend(content1, neighbour, FIRST_TAG)    
+    sendRequest2 = mpi.MPI_COMM_WORLD.isend(content2, neighbour, SECOND_TAG)    
+    sendRequest3 = mpi.MPI_COMM_WORLD.isend(content3, neighbour, THIRD_TAG)    
 
     recvRequest1 = mpi.MPI_COMM_WORLD.irecv(neighbour,FIRST_TAG)
     recvRequest2 = mpi.MPI_COMM_WORLD.irecv(neighbour,SECOND_TAG)
@@ -61,19 +61,19 @@ elif rank == 1:
 
     recvRequest2 = mpi.MPI_COMM_WORLD.irecv(neighbour,SECOND_TAG)        
 
-    sendRequest2 = mpi.MPI_COMM_WORLD.isend(neighbour,content2,SECOND_TAG)
+    sendRequest2 = mpi.MPI_COMM_WORLD.isend(content2, neighbour, SECOND_TAG)
     sendRequest2.wait()
 
     recvRequest3 = mpi.MPI_COMM_WORLD.irecv(neighbour,THIRD_TAG)
     
-    sendRequest3 = mpi.MPI_COMM_WORLD.isend(neighbour,content3,THIRD_TAG)    
+    sendRequest3 = mpi.MPI_COMM_WORLD.isend(content3, neighbour, THIRD_TAG)    
 
     recvRequest1 = mpi.MPI_COMM_WORLD.irecv(neighbour,FIRST_TAG)
     recvRes1 = recvRequest1.wait()
 
     recvRes3 = recvRequest3.wait()
 
-    sendRequest1 = mpi.MPI_COMM_WORLD.isend(neighbour,content1,FIRST_TAG)    
+    sendRequest1 = mpi.MPI_COMM_WORLD.isend(content1, neighbour, FIRST_TAG)    
     
     recvRes2 = recvRequest2.wait()
     

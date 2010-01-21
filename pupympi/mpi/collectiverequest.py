@@ -122,7 +122,7 @@ class CollectiveRequest(BaseRequest):
             # on. 
              
             for rank in nodes_to:
-                self.communicator.send(rank, data_list, self.tag)
+                self.communicator.send(data_list, rank, self.tag)
 
             return data_list
 

@@ -15,7 +15,7 @@ size = world.size()
 DUMMY_TAG = 1
 MESSAGE = "Test message with tag %d" % DUMMY_TAG
 
-world.send(rank, MESSAGE, DUMMY_TAG)
+world.send( MESSAGE, rank, DUMMY_TAG)
 msg = world.recv(rank, DUMMY_TAG)
 
 assert msg == MESSAGE

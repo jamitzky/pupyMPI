@@ -24,7 +24,7 @@ if rank == 0: # Send
     neighbour = 1
     f.write("Rank: %d sending to %d \n" % (rank,neighbour))
     f.flush()
-    mpi.MPI_COMM_WORLD.ssend(neighbour, message, DUMMY_TAG)
+    mpi.MPI_COMM_WORLD.ssend(message, neighbour, DUMMY_TAG)
     f.write("Rank: %d succesfully sent to %d \n" % (rank,neighbour) )
     f.flush()
     

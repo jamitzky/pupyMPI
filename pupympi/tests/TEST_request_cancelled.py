@@ -11,7 +11,7 @@ world = mpi.MPI_COMM_WORLD
 TAG = 1
 
 if world.rank() == 1:
-    req1 = world.isend(0, "My message 1", TAG)
+    req1 = world.isend( "My message 1", 0, TAG)
 
     assert not req1.test_cancelled()
     

@@ -131,7 +131,7 @@ class Network(object):
 
             # Send all
             for s_rank in sender_ranks:
-                self.mpi.MPI_COMM_WORLD.send(s_rank, our_rank, constants.TAG_FULL_NETWORK)
+                self.mpi.MPI_COMM_WORLD.send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
 
             #Logger().debug("Start_full_network: All sends done")
 
