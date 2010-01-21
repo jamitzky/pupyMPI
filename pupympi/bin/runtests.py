@@ -47,7 +47,7 @@ WARNING = '\033[93m'
 FAIL = '\033[91m'
 ENDC = '\033[0m'
 
-latex_output = None
+# latex_output = None
 
 def output_console(text, color = None, newline = True, block = "", output=True):
     """Adds one block/line of output to console"""
@@ -76,16 +76,16 @@ def output_console_nocolor(text, color = None, newline = True, block = "", outpu
     return out
 
     
-def output_latex(test):
-    """Adds one block/line of output as latex output"""
-    global latex_output
-
-    
-    description = test.meta["description"].replace("_", "\\_") if "description" in test.meta else ""
-    testname = test.test.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
-    result = "success" if test.returncode == test.expectedresult and not test.killed else "failed"
-    
-    latex_output.write("%s & %s & %s & %s \\\\ \n" % (testname, test.processes, result, description))
+# def output_latex(test):
+#     """Adds one block/line of output as latex output"""
+#     global latex_output
+# 
+#     
+#     description = test.meta["description"].replace("_", "\\_") if "description" in test.meta else ""
+#     testname = test.test.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
+#     result = "success" if test.returncode == test.expectedresult and not test.killed else "failed"
+#     
+#     latex_output.write("%s & %s & %s & %s \\\\ \n" % (testname, test.processes, result, description))
             
 output = output_console
 
@@ -174,7 +174,7 @@ def format_output(threads):
                                                     color=OKOFFWHITE if odd else OKBLACK,
                                                     block="Results table console")                                                    
         odd = True if odd == False else False
-        output_latex(thread)                                                    
+        # output_latex(thread)                                                    
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
@@ -214,22 +214,22 @@ def run_tests(test_files, options):
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
     
-    with open("testrun.tex", "w") as latex:
-        global latex_output
-        latex_output = latex
+    # with open("testrun.tex", "w") as latex:
+    #     global latex_output
+    #     latex_output = latex
     
         # We run tests sequentially since many of them are rather hefty and may
         # interfere with others. Also breakage can lead to side effects and so
         # non-breaking tests may appear to break when in fact the cause is another
         # test running at the same time
-        for test in test_files:
-            t = RunTest(test, logfile_prefix, options, get_test_data(test))
-            threadlist.append(t)
-            t.start()
-            t.join()
-    
-        format_output(threadlist)
-        combine_logs(logfile_prefix)
+    for test in test_files:
+        t = RunTest(test, logfile_prefix, options, get_test_data(test))
+        threadlist.append(t)
+        t.start()
+        t.join()
+
+    format_output(threadlist)
+    combine_logs(logfile_prefix)
     
 class Usage(Exception):
     def __init__(self, msg):
