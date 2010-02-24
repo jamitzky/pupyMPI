@@ -47,11 +47,15 @@ class Logger:
         filepath = _LOG_BASE % os.path.basename(filename)
         basename = os.path.splitext(os.path.basename(filename))[0]
         
-        filelog = logging.FileHandler(filepath)
         formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S')
-        filelog.setFormatter(formatter)
-        filelog.setLevel(level)
-        logging.getLogger(logname).addHandler(filelog)
+        try:            
+            filelog = logging.FileHandler(filepath)            
+            filelog.setFormatter(formatter)
+            filelog.setLevel(level)
+            logging.getLogger(logname).addHandler(filelog)
+        except Exception, e:
+            # TODO: Do something smarter here when we detect that logging can't be done to specified path    
+            pass
         
         # Add a handler to do std out logging if verbosity demands it and quiet is not on
         if not quiet and verbosity > 0:
