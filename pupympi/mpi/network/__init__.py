@@ -22,9 +22,7 @@ try:
 except ImportError:
     import pickle
 
-
 import time
-
 
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
