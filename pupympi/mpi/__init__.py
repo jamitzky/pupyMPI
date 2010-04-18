@@ -112,7 +112,6 @@ class MPI(Thread):
 
         logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
             
-
         # First check for required Python version
         self._version_check()
 
