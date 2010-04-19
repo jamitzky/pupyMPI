@@ -402,7 +402,8 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
         in_list = []
         out_list = []
         error_list = []
-        events = self.kqueue.control(self.kqueue_evn, 0, None)
+        Logger().debug("Got kqueue : %s" % self.kqueue_evn)
+        events = self.kqueue.control(self.kqueue_evn, 0, 1)
         Logger().debug("Got kqueue events: %s" % events)
         for event in events:
             print "Found event with identifier", event.filter
