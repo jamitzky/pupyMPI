@@ -371,6 +371,33 @@ class BaseCommunicationHandler(threading.Thread):
             
             for r in removal:
                 del self.socket_to_request[r]
+                
+class CommunicationHandlerEpoll(BaseCommunicationHandler):
+    def __init__(self, *args, **kwargs):
+        super(CommunicationHandlerEpoll, self).__init__(*args, **kwargs)
+        
+        # Add a special kqueue environment we can later use to poll
+        # the system. 
+        self.epoll = select.epoll()
+
+    def add_in_socket(self, client_socket):
+        super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
+        self.epoll.register(client_socket, select.EPOLLIN)
+
+    def add_out_socket(self, client_socket):
+        super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
+        self.epoll.register(client_socket, select.EPOLLOUT)
+
+    def select(self):
+        in_list = []
+        out_list = []
+        error_list = []
+        
+        events = self.epoll.poll()
+        for event in events:
+            print dir(event)
+
+        return (in_list, out_list, error_list)
 
 class CommunicationHandlerKqueue(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
@@ -385,14 +412,14 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
         super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
         
         # Create a kqueue event and add it to the kqueue environment.
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_READ)
+        event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
         self.kqueue_evn.append(event)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
 
         # Create a kqueue event and add it to the kqueue environment.
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE)
+        event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
         self.kqueue_evn.append(event)
         
     def _log_status(self):
