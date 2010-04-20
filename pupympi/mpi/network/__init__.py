@@ -273,7 +273,7 @@ class BaseCommunicationHandler(threading.Thread):
             add_to_pool = False
             try:
                 (conn, sender_address) = read_socket.accept()
-
+                
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True
@@ -296,7 +296,7 @@ class BaseCommunicationHandler(threading.Thread):
                 else:
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
-                    #Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
+                    Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
                     continue
             except Exception, e:
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
@@ -376,16 +376,16 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerEpoll, self).__init__(*args, **kwargs)
         
-        # Add a special kqueue environment we can later use to poll
+        # Add a special epoll environment we can later use to poll
         # the system. 
         self.epoll = select.epoll()
 
     def add_in_socket(self, client_socket):
-        super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
+        super(CommunicationHandlerEpoll, self).add_in_socket(client_socket)
         self.epoll.register(client_socket, select.EPOLLIN)
 
     def add_out_socket(self, client_socket):
-        super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
+        super(CommunicationHandlerEpoll, self).add_out_socket(client_socket)
         self.epoll.register(client_socket, select.EPOLLOUT)
 
     def select(self):
@@ -405,39 +405,58 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
         
         # Add a special kqueue environment we can later use to poll
         # the system. 
-        self.kqueue_evn = []
+        self.kqueue_changelist_lock = threading.Lock()
+        self.kqueue_changelist = []            # I think this needs to go away.
         self.kqueue = select.kqueue()
-        
+        self.in_ident_to_socket = {}
+        self.out_ident_to_socket = {}
+
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
         
         # Create a kqueue event and add it to the kqueue environment.
         event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        self.kqueue_evn.append(event)
+        
+        with self.kqueue_changelist_lock:
+            self.kqueue_changelist.append(event)
+        print "Changelist", self.kqueue_changelist
+        self.in_ident_to_socket[event.ident] = client_socket
+        Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
+        Logger().debug("Called, add in socket %s", self.kqueue_changelist)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
 
         # Create a kqueue event and add it to the kqueue environment.
         event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        self.kqueue_evn.append(event)
-        
-    def _log_status(self):
-        Logger().debug("Kqueue have %d events in it's internal structure: %s", len(self.kqueue_evn), str(self.kqueue_evn))
-        
+        with self.kqueue_changelist_lock:
+            self.kqueue_changelist.append(event)
+        print "Changelist", self.kqueue_changelist
+        Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
+        self.out_ident_to_socket[event.ident] = client_socket
+
     def select(self):
         in_list = []
         out_list = []
         error_list = []
-        Logger().debug("Got kqueue : %s" % self.kqueue_evn)
-        events = self.kqueue.control(self.kqueue_evn, 0, 1)
-        Logger().debug("Got kqueue events: %s" % events)
-        for event in events:
-            print "Found event with identifier", event.filter
-            if event.filter == select.KQ_FILTER_READ:
-                in_list.append(event.ident)
-            elif event.filter == select.KQ_FILTER_WRITE:
-                out_list.append(event.ident)
+        #print self.kqueue_changelist
+        with self.kqueue_changelist_lock:
+            events = self.kqueue.control(self.kqueue_changelist, 10, 0)
+            if events:
+                print "events", events
+            for event in events:
+                Logger().debug("Found event with ident: %s" % event.ident)
+                if event.filter == select.KQ_FILTER_READ:
+                    socket = self.in_ident_to_socket.get(event.ident, None)
+                    if socket:
+                        in_list.append(socket)
+                elif event.filter == select.KQ_FILTER_WRITE:
+                    socket = self.out_ident_to_socket.get(event.ident, None)
+                    if socket:
+                        out_list.append(socket)
+            
+            # Reset the change list
+            self.kqueue_changelist = []
                 
         return (in_list, out_list, error_list)
         
