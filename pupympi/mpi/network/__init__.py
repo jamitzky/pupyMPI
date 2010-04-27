@@ -43,7 +43,7 @@ def get_communicator_class(force_select=False):
     if not c_class:
         c_class = CommunicationHandlerSelect
     
-    Logger().debug("Found communicator class of type %s, called with force_select parameter %s" % (type(c_class), force_select))
+    Logger().debug("Found communicator class of type %s, called with force_select parameter %s" % (c_class, force_select))
     return c_class
 
 class Network(object):
@@ -378,14 +378,21 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         
         # Add a special epoll environment we can later use to poll
         # the system. 
+        self.epoll_lock = threading.Lock()
+
         self.epoll = select.epoll()
+
+        self.in_fd_to_socket = {}
+        self.out_fd_to_socket = {}
 
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerEpoll, self).add_in_socket(client_socket)
+        self.in_fd_to_socket[client_socket.fileno()] = client_socket
         self.epoll.register(client_socket, select.EPOLLIN)
 
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerEpoll, self).add_out_socket(client_socket)
+        self.out_fd_to_socket[client_socket.fileno()] = client_socket
         self.epoll.register(client_socket, select.EPOLLOUT)
 
     def select(self):
@@ -393,9 +400,12 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         out_list = []
         error_list = []
         
-        events = self.epoll.poll()
-        for event in events:
-            print dir(event)
+        events = self.epoll.poll(1)
+        for fileno, event in events:    
+            if event & select.EPOLLIN:
+                in_list.append(self.in_fd_to_socket.get(fileno))
+            if event & select.EPOLLOUT:
+                out_list.append(self.out_fd_to_socket.get(fileno))
 
         return (in_list, out_list, error_list)
 
