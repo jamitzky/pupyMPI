@@ -39,9 +39,14 @@ def get_communicator_class(force_select=False):
         kqueue = getattr(select, "kqueue", None)
         if kqueue and not c_class:
             c_class = CommunicationHandlerKqueue
+
+        poll = getattr(select, "poll", None)
+        if poll and not c_class:
+            c_class = CommunicationHandlerPoll
         
     if not c_class:
-        c_class = CommunicationHandlerSelect
+        c_class = CommunicationHandlerPoll
+        #c_class = CommunicationHandlerSelect
     
     Logger().debug("Found communicator class of type %s, called with force_select parameter %s" % (c_class, force_select))
     return c_class
@@ -405,6 +410,41 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
             if event & select.EPOLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
             if event & select.EPOLLOUT:
+                out_list.append(self.out_fd_to_socket.get(fileno))
+
+        return (in_list, out_list, error_list)
+
+class CommunicationHandlerPoll(BaseCommunicationHandler):
+    def __init__(self, *args, **kwargs):
+        super(CommunicationHandlerPoll, self).__init__(*args, **kwargs)
+        
+        # Add a special epoll environment we can later use to poll
+        # the system. 
+        self.poll = select.poll()
+
+        self.in_fd_to_socket = {}
+        self.out_fd_to_socket = {}
+
+    def add_in_socket(self, client_socket):
+        super(CommunicationHandlerPoll, self).add_in_socket(client_socket)
+        self.in_fd_to_socket[client_socket.fileno()] = client_socket
+        self.poll.register(client_socket, select.POLLIN)
+
+    def add_out_socket(self, client_socket):
+        super(CommunicationHandlerPoll, self).add_out_socket(client_socket)
+        self.out_fd_to_socket[client_socket.fileno()] = client_socket
+        self.poll.register(client_socket, select.POLLOUT)
+
+    def select(self):
+        in_list = []
+        out_list = []
+        error_list = []
+        
+        events = self.poll.poll(1)
+        for fileno, event in events:    
+            if event & select.POLLIN:
+                in_list.append(self.in_fd_to_socket.get(fileno))
+            if event & select.POLLOUT:
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
         return (in_list, out_list, error_list)
