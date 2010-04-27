@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.6
-# meta-description: Simple pupympi program to test basic immediate send to blocking recieve
+# meta-description: Simple pupympi program to test basic immediate send to blocking receive
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 
 
-# rank 0 isends message to rank 1 who is a very slow reciever so rank 0 should quit early
+# rank 0 isends message to rank 1 who is a very slow receiver so rank 0 should quit early
 
 import time
 from mpi import MPI
@@ -31,18 +31,20 @@ if rank == 0:
     #print "Rank: %d ALL DONE" % (rank)
 elif rank == 1: 
     # Waaaaait for it...
+    time.sleep(1)
     neighbour = 0
     
-    # Recieve
-    print "YAWN, rank: %d recieving from %d" % (rank,neighbour)
-    recieved = mpi.MPI_COMM_WORLD.recv(neighbour,DUMMY_TAG)    
-    print "Rank: %d RECIEVED %s" % (rank,recieved)
+    # Receive
+    print "YAWN, rank: %d receiving from %d" % (rank,neighbour)
+    received = mpi.MPI_COMM_WORLD.recv(neighbour,DUMMY_TAG)    
+    print "Rank: %d RECEIVED %s" % (rank,received)
+    time.sleep(1)
 
 else:
     #print "I'm rank %d and I'm not doing anything in this test" % rank
     pass
 
-print "Sending/recieving done rank %d of %d" % (rank, size)
+print "Sending/receiving done rank %d of %d" % (rank, size)
 
 # Close the sockets down nicely
 mpi.finalize()
