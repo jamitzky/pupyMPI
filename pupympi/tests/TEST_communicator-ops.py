@@ -35,7 +35,7 @@ assert cloned_comm_of_mcw.group() is newgroup
 
 
 if newcomm_full.rank() == 0:
-    newcomm_full.send(1, "MSG", 1)
+    newcomm_full.send("MSG", 1, 1)
 elif newcomm_full.rank() == 1:
     data = newcomm_full.recv(0, 1)
     assert data == "MSG"
