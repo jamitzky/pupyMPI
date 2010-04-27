@@ -20,6 +20,11 @@ import sys, os, copy, signal
 from optparse import OptionParser, OptionGroup
 import select, time
 
+# This is untested but should allow the user to import mpi without specifying
+# PYTHONPATH in the environment
+sys.path.append(os.getcwd())
+
+
 import processloaders 
 from mpi.logger import Logger
 from mpi.network import utils
@@ -41,6 +46,7 @@ def parse_options():
             "Use these settings to control the level of output to the program. The --debug and --quiet options can't be used at the same time. Trying to will result in an error.")
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
+    parser_debug_group.add_option('-u', '--unbuffered', dest='buffer', action='store_true', help='Try not to buffer')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
     parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
     parser.add_option_group( parser_debug_group )
@@ -144,6 +150,8 @@ def io_forwarder(process_list):
     logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
+    # Try to get around export pythonpath issue
+    
     options, args, user_options, executeable = parse_options() # Get options from cli
 
     # Set log dir
