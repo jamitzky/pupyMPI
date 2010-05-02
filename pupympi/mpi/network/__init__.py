@@ -29,9 +29,31 @@ from mpi.network.utils import create_random_socket, get_raw_message, prepare_mes
 from mpi import constants
 from mpi.logger import Logger
 
-def get_communicator_class(force_select=False):
+def get_communicator_class(socket_poll_method=False):
     c_class = None
-    if not force_select:
+
+    if socket_poll_method:
+        poll_method_exists = getattr(select, socket_poll_method, None)
+        if not poll_method_exists:
+            Logger().warn("Socket poll method '%s' is not supported on this system - falling back to automatic selection." % socket_poll_method)
+            socket_poll_method = False
+
+    if socket_poll_method == "epoll":
+        c_class = CommunicationHandlerEpoll
+    
+    elif socket_poll_method == "kqueue":
+        c_class = CommunicationHandlerKqueue
+
+    elif socket_poll_method == "poll":
+        c_class = CommunicationHandlerPoll
+
+    elif socket_poll_method == "select":
+        c_class = CommunicationHandlerSelect
+
+    else:
+        if socket_poll_method:
+            Logger().warn("Unknown socket poll method '%s' - falling back to automatic selection." % socket_poll_method)
+
         epoll = getattr(select, "epoll", None)
         if epoll:
             c_class = CommunicationHandlerEpoll
@@ -44,11 +66,10 @@ def get_communicator_class(force_select=False):
         if poll and not c_class:
             c_class = CommunicationHandlerPoll
         
-    if not c_class:
-        c_class = CommunicationHandlerPoll
-        #c_class = CommunicationHandlerSelect
+        if not c_class:
+            c_class = CommunicationHandlerSelect
     
-    Logger().debug("Found communicator class of type %s, called with force_select parameter %s" % (c_class, force_select))
+    Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
     return c_class
 
 class Network(object):
@@ -61,7 +82,7 @@ class Network(object):
 
         self.socket_pool = SocketPool(socket_pool_size)
 
-        communicator_class = get_communicator_class(options.force_select)
+        communicator_class = get_communicator_class(options.socket_poll_method)
 
         self.mpi = mpi
         self.options = options
