@@ -89,7 +89,7 @@ class MPI(Thread):
         parser.add_option('--process-io', dest='process_io')
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
-        parser.add_option('--force-select', dest='force_select', action='store_true')
+        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
 
         options, args = parser.parse_args()
 
