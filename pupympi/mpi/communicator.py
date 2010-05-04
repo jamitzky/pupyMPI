@@ -418,7 +418,10 @@ class Communicator:
         """
         # Check that destination exists
         if not self.have_rank(destination):
-            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination, self.name))
+            if isinstance(destination, int):
+                raise MPINoSuchRankException("No process with rank %d in communicator %s." % (destination, self.name))
+            else:
+                raise MPIInvalidRankException("Rank %s is not a valid rank (a rank should be an integer)." % (destination))
 
         # Check that tag is valid
         if not isinstance(tag, int):
@@ -498,7 +501,10 @@ class Communicator:
         """
         # Check that destination exists
         if not self.have_rank(destination):
-            raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (destination, self.name))
+            if isinstance(destination, int):
+                raise MPINoSuchRankException("No process with rank %d in communicator %s." % (destination, self.name))
+            else:
+                raise MPIInvalidRankException("Rank %s is not a valid rank (a rank should be an integer)." % (destination))
 
         # Check that tag is valid
         if not isinstance(tag, int):
