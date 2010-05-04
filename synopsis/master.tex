@@ -1,837 +1,92 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" 
-	"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-<head>
-	<title>
-	bromer / python-mpi / source &mdash; bitbucket.org
-</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="description" content="Mercurial hosting - we're here to serve." />
-	<meta name="keywords" content="mercurial,hg,hosting,bitbucket,bromer,Graduate,project,for,DIKU.,MPI,library,written,fully,in,python,(not,just,wrappers).,The,project,will,not,use,the,precise,MPI,API,as,most,of,the,type,handling,can,be,inferred,and,handled,internally,in,python.,source,sourcecode,synopsis/master.tex@d18663b3cea2" />
-	<link rel="stylesheet" type="text/css" href="http://bitbucket-assets.s3.amazonaws.com/css/layout.css" />
-<meta name="google-site-verification" content="GLJMpoIUjgWhrjaR6XRvBOZqe-JbiFVzUhs5iOJ1iI8" />
-    <link rel="stylesheet" type="text/css" href="http://bitbucket-assets.s3.amazonaws.com/css/screen.css" />
-	<link rel="stylesheet" type="text/css" href="http://bitbucket-assets.s3.amazonaws.com/css/print.css" media="print" />
-	<link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="Bitbucket" />
-	<link rel="icon" href="http://bitbucket-assets.s3.amazonaws.com/img/logo_new.png" type="image/png"/>
-	<script type="text/javascript" src="http://bitbucket-assets.s3.amazonaws.com/js/lib/bundle.160310Mar.js"></script>
-	
-	<script type="text/javascript">
-		$(document).ready(function() {
-			Dropdown.init();
-			$(".tooltip").tipsy({gravity:'s'});
-		});
-	</script>
-	<noscript>
-		<style type="text/css">
-			.dropdown-container-text .dropdown {
-				position: static !important;
-			}
-		</style>
-	</noscript>
+\documentclass{article}
 
-	<!--[if lt IE 7]>
-	<style type="text/css">
-	body {
-		behavior: url(http://bitbucket-assets.s3.amazonaws.com/css/csshover.htc);
-	}
-	
-	#issues-issue pre {
-		white-space: normal !important;
-	}
-	
-	.changeset-description {
-		white-space: normal !important;
-	}
-	</style>
-	<script type="text/javascript"> 
-		$(document).ready(function(){ 
-			$('#header-wrapper').pngFix();
-			$('#sourcelist').pngFix();
-			$('.promo-signup-screenshot').pngFix();
-		}); 
-	</script>
-	<![endif]-->
-	
-	<link rel="stylesheet" href="http://bitbucket-assets.s3.amazonaws.com/css/highlight/trac.css" type="text/css" />
+\usepackage{fancyhdr}
 
-	
-	<script type="text/javascript">
-	  var _gaq = _gaq || [];
-	  _gaq.push(['_setAccount', 'UA-2456069-3'], ['_trackPageview']);
-	
-	  /* User specified tracking. */
-	  var _gaq = _gaq || [];
-	  _gaq.push(['repo._setAccount', 'UA-12344067-1'], ['repo._trackPageview']);
-	
-	  var _gaq = _gaq || [];
-	  _gaq.push(['atl._setAccount', 'UA-6032469-33'], ['atl._trackPageview']);
-	  (function() {
-	    var ga = document.createElement('script');
-	    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 
-	        'http://www') + '.google-analytics.com/ga.js';
-	    ga.setAttribute('async', 'true');
-	    document.documentElement.firstChild.appendChild(ga);
-	  })();
-	</script>
-</head>
-<body class="">
-	<div id="main-wrapper">
-		<div id="header-wrapper">
-			<div id="header-loggedin">
-				<a href="/"><img src="http://bitbucket-assets.s3.amazonaws.com/img/logo_myriad.png" alt="Bitbucket" id="header-wrapper-logo" /></a>
-				
-					
-					
-						<a href="/hantho">
-							
-								<img src="http://www.gravatar.com/avatar/ffc4a0c37ab5ddf46b11f01077d97f9a?d=identicon&amp;s=35" id="userimage" alt="" />
-							
-						</a>
-					
+\begin{document}
+\pagestyle{fancy}
 
-					<div id="header-nav">
-						<ul>
-							<li><a href="/">Home</a></li>
-							<li class="has-dropdown">
-								<a href="/repo/all">Repositories</a> 
-								<ul>
-									<li><a href="/repo/create">Create new</a> </li>
-									<li class="header-nav-repo-button-new">
-											<a href="/repo/all">All public repositories</a>
-									</li>
-									<li class="header-nav-repo-segmenter-theirs">
-											&ndash; your repositories &ndash;
-										</li>
-									
-										<li class="header-nav-repo">
-											<img class="repo-dropdown-indicator" src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock_disable_unlock.png" />
-											<a href="/hantho/ap2009-diku" title="This is a public repository only because I used my private one already. These files are not meant to be shared with students following ap-2009 and you are the cheater - not I - if you copy this code. :) (public repository)">ap2009-diku</a>
-										</li>
-									
-										<li class="">
-											<img class="repo-dropdown-indicator" src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock.png" />
-											<a href="/hantho/pupympireloaded" title="Fork of pupyMPI 0.6, targeting increased performance (private repository)">pupyMPIreloaded</a>
-										</li>
-									
-									
-										<li class="header-nav-repo-segmenter-theirs">
-											&ndash; others' repositories &ndash;
-										</li>
-										
-											<li class="header-nav-repo">
-												<a href="/bromer/pupympi" title="A generic 100% python MPI implementation. 
+\fancyhead[R]{Frederik Hantho\\Jan Wiberg\\Rune Bromer}
+\fancyhead[L]{Synopsis\\pupyMPI\\27. August 2009}
+\setlength\headheight{2cm}
 
-First initial release aims to cover most of the MPI 1.3 API specifications but pays less attention to performance. 
+\noindent
+\textbf{Project title:} pupyMPI - Pure Python MPI\\
 
-pupyMPI is licensed under the GPL version 2, please see the COPYRIGHT and LICENSE files.
+\noindent
+\textbf{Authors:} Frederik Hantho, Jan Wiberg \& Rune Bromer\\
 
-Documentation temp. placed here: http://diku.dk/hjemmesider/studerende/bromer/pupympi/index.html (public repository)">
-													<img src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock_disable_unlock.png" /> bromer / pupyMPI
-												</a>
-											</li>									
-										
-											<li class="header-nav-repo">
-												<a href="/bromer/pupympi-epoll" title="Fork to play with epoll replacement. We&#39;ll keep the select() method as a fallback method.  (public repository)">
-													<img src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock_disable_unlock.png" /> bromer / pupyMPI-epoll
-												</a>
-											</li>									
-										
-											<li class="header-nav-repo">
-												<a href="/bromer/pupympi-report" title=" (private repository)">
-													<img src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock.png" /> bromer / pupympi-report
-												</a>
-											</li>									
-										
-											<li class="">
-												<a href="/bromer/python-mpi" title="Graduate project for DIKU. MPI library written fully in python (not just wrappers). 
+\noindent
+\textbf{Project consultant:} Brian Vinter\\
 
-The project will not use the precise MPI API as most of the type handling can be inferred and handled internally in python.  (public repository)">
-													<img src="http://bitbucket-assets.s3.amazonaws.com/img/icons/fugue/lock_disable_unlock.png" /> bromer / python-mpi
-												</a>
-											</li>									
-										
-									
-								</ul>
-							</li>
-							<li><a href="/account">Account</a></li>
-							<li>
-								<a href="/notifications" class="inbox-no-messages">Inbox</a>
-							</li>
-							<li>
-								<a href="/plans">
-									Plans
-								</a>
-							</li>
-							<li><a href="/help">Help</a></li>
-							<li><a href="/account/signout/">Log out <small>(hantho)</small></a></li>
-							<li id="topsearch">
-								<form action="/repo/all/">
-									<input type="text" name="name" />
-								</form>
-							</li>
-						</ul>
-					</div>
-				
-			</div>
-		</div>
-		<div id="content-wrapper">
-			
-			
-			
-
-			
-			
-			
-	
-	
+\noindent
+\textbf{ECTS:} 15\\
 
 
+\section*{Background}
+The demand for easy, highly scalable, parallel computing is growing daily as
+many-core systems become prevalent. The Message Passing Interface (MPI) is a
+widely used and globally accepted model for expressing parallelism. The success
+of MPI stems from its portability, completeness and performance i.r.t. massively
+parallel programs, amongst others. However, MPI is generally not considered
+simple, nor easy to program, particularly as it is most commonly implemented in
+C or FORTRAN. This is a problem since many potential users are not skilled
+programmers, but rather researchers who are capable of expressing their
+algorithms in a deterministic logical framework.
+\\
+
+The difficulty involved in ensuring the correctness and maintainability of C has
+lead to the rise of higher level languages, such as Python. Python is a
+language that originated in academia, and has large and growing popularity in
+this group where it is often used for prototyping solutions to scientific
+problems. Amongst Pythons many advantages are a strong typing system, a highly
+readable syntax, existence on many platforms, and it is quite mature.
+\\
+
+Python has no built-in support for MPI, but several other projects have grafted
+MPI functionality onto Python, with varying degrees of completeness. At present,
+there seems to be no native Python MPI implementations openly available.
+
+%1 mpi is a globally accepted standard
+%2 python is mature and widely used in scientific computing circles.
+%3 python is cross platform
+%4 many existing implementations in C and fortran, other languages often wrappers.
+%5 both mpi and python widely used in academia and education.
+
+\section*{Motivation}
+Coupling Python with MPI would seem to have several distinct advantages. 
+\begin{enumerate}
+	\item The advanced type system alleviates the complexities of MPI types as
+Python types can be easily inferred at runtime. 
+	\item Python is standardized across platforms and is either already
+installed, or very easy to install, on almost any major platform of interest to
+HPC users. Python is also highly modular and easy to extend.
+	\item Implementing MPI in native Python means that there is no need to
+maintain a separate native MPI installation, and by extension no need to keep
+specific versions of Python, the MPI wrapper and the MPI library around to
+maintain binary compatibility.
+	\item The low bar to entry to Python means that it is highly useful as a
+prototyping language, and educators can focus on teaching central concepts of
+concurrency, without the clutter of boilerplate code so typical to e.g. C.
+\end{enumerate}
+
+%1 ease of installation
+%1.5 crossplatform.
+%2 problems with current wrappers
+%3 python highly accessible to non computer scientist researchers.
+%4 education.
+%5 MPI types easily handled in python.
 
 
+\section*{Learning goals}
+At the end of the project, we will be able to: 
 
-	<script type="text/javascript" src="http://bitbucket-assets.s3.amazonaws.com/js/lib/jquery.cookie.js"></script> <!--REMOVE WHEN NEWER BUNDLE THAN 030309Mar -->
-	<script type="text/javascript">
-		var date = new Date();
-		date.setTime(date.getTime() + (365 * 24 * 60 * 60 * 1000));
-		var cookieoptions = { path: '/', expires: date };
-		
-		window._shard = 'fe02 (ID 2)';
-		
-		$(document).ready(function(){
-			$('#toggle-repo-content').click(function(){
-				$('#repo-desc-cloneinfo').toggle('fast');
-				$('#repo-menu').toggle();
-				$('#repo-menu-links-mini').toggle(100);
-				$('.repo-desc-description').toggle('fast');
-				var avatar_new_width = ($('.repo-avatar').width() == 35) ? 16 : 35;
-				$('.repo-avatar').animate({ width: avatar_new_width }, 250);
-				
-				if ($.cookie('toggle_status') == 'hide') {
-					$.cookie('toggle_status', 'show', cookieoptions);
-					$(this).css('background-image','url(http://bitbucket-assets.s3.amazonaws.com/img/repo-toggle-up.png)');
-				} else {
-					$.cookie('toggle_status', 'hide', cookieoptions);
-					$(this).css('background-image','url(http://bitbucket-assets.s3.amazonaws.com/img/repo-toggle-down.png)');
-				}
-			});
-			
-			if ($.cookie('toggle_status') == 'hide') {
-				$('#toggle-repo-content').css('background-image','url(http://bitbucket-assets.s3.amazonaws.com/img/repo-toggle-down.png)');
-				$('#repo-desc-cloneinfo').hide();
-				$('#repo-menu').hide();
-				$('#repo-menu-links-mini').show();
-				$('.repo-desc-description').hide();
-				$('.repo-avatar').css({ width: '16px' });
-			} else {
-				$('#toggle-repo-content').css('background-image','url(http://bitbucket-assets.s3.amazonaws.com/img/repo-toggle-up.png)');
-				$('#repo-desc-cloneinfo').show();
-				$('#repo-menu').show();
-				$('#repo-menu-links-mini').hide();
-				$('.repo-desc-description').show();
-				$('.repo-avatar').css({ width: '35px' });
-			}
-		});
-	</script>
+\begin{itemize}
+	\item{ Analyze the shortcomings of the MPI libraries written in a strict programming language. }
+	\item{ Reason about the advantages and disadvantages of a native Python MPI compared with other Python MPI solutions. }
+	\item{ Reason about different internal communication strategies for achieving high performance. }
+	\item{ Choose a design for a high performance MPI-like library, and argue for the choice. }
+	\item{ Reflect on the performance and reliability of a prototype implementation of our design. }
+%	\item{ Analyze and compare different MPI libraries in terms of performance and liability }
+\end{itemize}
 
-
-<div id="tabs">
-	<ul class="ui-tabs-nav">
-		<li>
-			<a href="/bromer/python-mpi/overview"><span>Overview</span></a>
-		</li>
-
-		<li>
-			<a href="/bromer/python-mpi/downloads"><span>Downloads (2)</span></a>
-		</li>
-		
-		
-
-		<li class="ui-tabs-selected">
-			
-				<a href="/bromer/python-mpi/src/d18663b3cea2"><span>Source</span></a>
-			
-		</li>
-		
-		<li>
-			<a href="/bromer/python-mpi/changesets"><span>Changesets</span></a>
-		</li>
-
-		
-			
-				<li class="ui-tabs-nav-issues">
-					<a href="/bromer/python-mpi/wiki"><span>Wiki</span></a>
-				</li>
-			
-		
-
-		
-			
-				<li class="ui-tabs-nav-issues">
-					<a href="/bromer/python-mpi/issues?status=new&amp;status=open"><span>Issues (17) &raquo;</span></a>
-					<ul>
-						<li><a href="/bromer/python-mpi/issues?status=new">New issues</a></li>
-						<li><a href="/bromer/python-mpi/issues?status=new&amp;status=open">Open issues</a></li>
-						<li><a href="/bromer/python-mpi/issues?status=resolved&amp;status=invalid&amp;status=duplicate">Closed issues</a></li>
-					
-							<li><a href="/bromer/python-mpi/issues/mine">hantho's issues</a></li>
-					
-						<li><a href="/bromer/python-mpi/issues">All issues</a></li>
-						<li><a href="/bromer/python-mpi/issues/query">Advanced query</a></li>
-						<li><a href="/bromer/python-mpi/issues/new">Create new issue</a></li>
-					</ul>
-				</li>
-			
-		
-				
-		
-			
-		
-			
-		
-			
-				<li>
-					<a href="/bromer/python-mpi/admin"><span>Admin</span></a>
-				</li>
-			
-		
-		
-		<li class="tabs-right tabs-far-right">
-			<a href="/bromer/python-mpi/descendants"><span>Forks/Queues (2)</span></a>
-		</li>
-		
-		<li class="tabs-right">
-			<a href="/bromer/python-mpi/zealots"><span>Followers (1)</span></a>
-		</li>
-	</ul>
-</div>
-
-<div id="repo-menu">
-		<div id="repo-menu-links">
-			<ul>
-				<li>
-					<a href="/bromer/python-mpi/rss?token=7095be2558391d7f105d6b367c387f52" class="noborder repo-menu-rss" title="RSS Feed for python-mpi">RSS</a>
-				</li>
-				<li>
-					<a href="/bromer/python-mpi/atom?token=7095be2558391d7f105d6b367c387f52" class="noborder repo-menu-atom" title="Atom Feed for python-mpi">Atom</a>
-				</li>
-				
-				<li>
-					<a href="/bromer/python-mpi/pull" class="link-request-pull">
-						pull request
-					</a>
-				</li>
-				
-				<li><a href="/bromer/python-mpi/fork" class="link-fork">fork</a></li>
-				
-					<li><a href="/bromer/python-mpi/hack" class="link-hack">patch queue</a></li>
-				
-				<li>
-					
-						<a rel="nofollow" href="/bromer/python-mpi/follow" class="link-follow follow-xhr">follow</a>
-					
-				</li>
-				<li><a class="link-download">get source &raquo;</a>
-
-					<ul>
-						
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.zip" class="zip">zip</a></li>
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.gz" class="compressed">gz</a></li>
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.bz2" class="compressed">bz2</a></li>						
-						
-					</ul>
-				</li>
-			</ul>
-		</div>
-		
-		
-		<div id="repo-menu-branches-tags">
- 			<ul>
-				<li class="icon-branches">
-					branches &raquo;
-					
-					<ul>
-					
-						<li><a href="/bromer/python-mpi/src/d18663b3cea2">default</a></li>
-					
-					</ul>
-					
-				</li>
-				<li class="icon-tags">
-					tags &raquo;
-					
-					<ul>
-					
-						<li><a href="/bromer/python-mpi/src/d18663b3cea2">tip</a></li>
-					
-					</ul>
-				</li>
-			</ul>
-		</div>
-		
-		
-		<div class="cb"></div>
-	</div>
-	<div id="repo-desc" class="layout-box">
-		
-		
-		<div id="repo-menu-links-mini" class="right">
-			<ul>
-				<li>
-					<a href="/bromer/python-mpi/rss?token=7095be2558391d7f105d6b367c387f52" class="noborder repo-menu-rss" title="RSS Feed for python-mpi"></a>
-				</li>
-				<li>
-					<a href="/bromer/python-mpi/atom?token=7095be2558391d7f105d6b367c387f52" class="noborder repo-menu-atom" title="Atom Feed for python-mpi"></a>
-				</li>
-				
-				<li>
-					<a href="/bromer/python-mpi/pull" class="tooltip noborder link-request-pull" title="Pull request"></a>
-				</li>
-				
-				<li><a href="/bromer/python-mpi/fork" class="tooltip noborder link-fork" title="Fork"></a></li>
-				
-					<li><a href="/bromer/python-mpi/hack" class="tooltip noborder link-hack" title="Patch queue"></a></li>
-				
-				<li><a class="tooltip noborder link-download" title="Get source"></a>
-
-					<ul>
-						
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.zip" class="zip">zip</a></li>
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.gz" class="compressed">gz</a></li>
-							<li><a rel="nofollow" href="/bromer/python-mpi/get/d18663b3cea2.bz2" class="compressed">bz2</a></li>						
-						
-					</ul>
-				</li>
-			</ul>
-		</div>
-		
-		<h3>
-			<a href="/bromer">bromer</a> / 
-			<a href="/bromer/python-mpi">python-mpi</a>
-			
-			
-		</h3>
-		
-		
-		
-		
-		
-		<p class="repo-desc-description">Graduate project for DIKU. MPI library written fully in python (not just wrappers). 
-
-The project will not use the precise MPI API as most of the type handling can be inferred and handled internally in python. </p>
-		
-		<div id="repo-desc-cloneinfo">Clone this repository (size: 24.8 MB): <a href="https://hantho@bitbucket.org/bromer/python-mpi" onclick="$('#clone-url-ssh').hide();$('#clone-url-https').toggle();return(false);"><small>HTTPS</small></a> / <a href="ssh://hg@bitbucket.org/bromer/python-mpi" onclick="$('#clone-url-https').hide();$('#clone-url-ssh').toggle();return(false);"><small>SSH</small></a><br/>
-		<pre id="clone-url-https">$ hg clone <a href="https://hantho@bitbucket.org/bromer/python-mpi">https://hantho@bitbucket.org/bromer/python-mpi</a></pre>
-		
-		<pre id="clone-url-ssh" style="display:none;">$ hg clone <a href="ssh://hg@bitbucket.org/bromer/python-mpi">ssh://hg@bitbucket.org/bromer/python-mpi</a></pre></div>
-		
-		<div class="cb"></div>
-		<a href="#" id="toggle-repo-content"></a>
-
-		
-
-	</div>
-
-
-			
-			
-
-
-
-
-
-<div id="source-summary" class="layout-box">
-	<div class="right">
-		<table>
-			<tr>
-				<td>commit 1562:</td>
-				<td>d18663b3cea2</td>
-			</tr>
-			
-				<tr>
-					<td>parent 1561:</td>
-					<td>
-						<a href="/bromer/python-mpi/changeset/1df9b8e57638" title="<b>Author:</b> hantho <br/><b>Age:</b> 4 months ago<br/>Equalized listings" class="tooltip tooltip-ul">1df9b8e57638</a>
-					</td>
-				</tr>
-			
-			
-			<tr>
-				<td>branch: </td>
-				<td>default</td>
-			</tr>
-			
-				<tr>
-					<td>tags:</td>
-					<td>tip</td>
-				</tr>
-			
-		</table>
-	</div>
-
-<div class="changeset-description">moved references before appendix</div>
-	
-	<div>
-		
-			
-				
-					<img src="http://www.gravatar.com/avatar/de7ddf530477ed9b323b6fefecf7dfe6?d=identicon&amp;s=32" class="avatar left" alt="" />
-				
-			
-		
-			<span>
-				
-					hantho 
-				
-				<br/>
-				<small>4 months ago</small>
-			</span>
-		
-	</div>
-				
-	<div class="cb"></div>
-</div>
-
-
-
-<div id="source-path" class="layout-box">
-	<a href="/bromer/python-mpi/src">python-mpi</a> /
-	
-		
-			
-				<a href='/bromer/python-mpi/src/d18663b3cea2/synopsis/'>
-					synopsis
-				</a>
-			
-		
-		/
-	
-		
-			
-				master.tex
-			
-		
-		
-	
-</div>
-
-
-<div id="source-view" class="scroll-x">
-	<table class="info-table">
-		<tr>
-			<th>r1562:d18663b3cea2</th>
-			<th>92 loc</th>
-			<th>3.9 KB</th>
-			<th class="source-view-links">
-				<a id="embed-link" href="#" onclick="makeEmbed('#embed-link', 'http://bitbucket.org/bromer/python-mpi/src/d18663b3cea2/synopsis/master.tex?embed=t');">embed</a> /
-				<a href='/bromer/python-mpi/history/synopsis/master.tex'>history</a> / 
-				<a href='/bromer/python-mpi/annotate/d18663b3cea2/synopsis/master.tex'>annotate</a> / 
-				<a href='/bromer/python-mpi/raw/d18663b3cea2/synopsis/master.tex'>raw</a> / 
-				<form action="/bromer/python-mpi/diff/synopsis/master.tex" method="get" class="source-view-form">
-					
-					<input type="hidden" name="diff2" value="d18663b3cea2"/>
-						<select name="diff1" class="smaller">
-							
-								
-									<option value="6fa16ed726f9">
-										r348:6fa16ed726f9
-									</option>
-								
-							
-								
-									<option value="650a57673251">
-										r69:650a57673251
-									</option>
-								
-							
-								
-									<option value="e86f6056ddaf">
-										r15:e86f6056ddaf
-									</option>
-								
-							
-								
-									<option value="23eb2b465f3f">
-										r14:23eb2b465f3f
-									</option>
-								
-							
-								
-									<option value="058f165cf658">
-										r13:058f165cf658
-									</option>
-								
-							
-								
-									<option value="6bd4f883040b">
-										r12:6bd4f883040b
-									</option>
-								
-							
-								
-									<option value="58c231e72df3">
-										r11:58c231e72df3
-									</option>
-								
-							
-								
-									<option value="aadac6d063fc">
-										r10:aadac6d063fc
-									</option>
-								
-							
-								
-									<option value="84e8149c1da8">
-										r9:84e8149c1da8
-									</option>
-								
-							
-								
-									<option value="3a10cc7ca237">
-										r8:3a10cc7ca237
-									</option>
-								
-							
-								
-									<option value="6bd99a4db6af">
-										r6:6bd99a4db6af
-									</option>
-								
-							
-								
-									<option value="73867752506c">
-										r5:73867752506c
-									</option>
-								
-							
-								
-									<option value="5c54d880d1fd">
-										r2:5c54d880d1fd
-									</option>
-								
-							
-								
-									<option value="ab4fbecb787d">
-										r0:ab4fbecb787d
-									</option>
-								
-							
-						</select>
-						<input type="submit" value="diff" class="smaller"/>
-					
-				</form>
-			</th>
-		</tr>
-	</table>
-	
-		
-			<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><a href="#cl-1"> 1</a>
-<a href="#cl-2"> 2</a>
-<a href="#cl-3"> 3</a>
-<a href="#cl-4"> 4</a>
-<a href="#cl-5"> 5</a>
-<a href="#cl-6"> 6</a>
-<a href="#cl-7"> 7</a>
-<a href="#cl-8"> 8</a>
-<a href="#cl-9"> 9</a>
-<a href="#cl-10">10</a>
-<a href="#cl-11">11</a>
-<a href="#cl-12">12</a>
-<a href="#cl-13">13</a>
-<a href="#cl-14">14</a>
-<a href="#cl-15">15</a>
-<a href="#cl-16">16</a>
-<a href="#cl-17">17</a>
-<a href="#cl-18">18</a>
-<a href="#cl-19">19</a>
-<a href="#cl-20">20</a>
-<a href="#cl-21">21</a>
-<a href="#cl-22">22</a>
-<a href="#cl-23">23</a>
-<a href="#cl-24">24</a>
-<a href="#cl-25">25</a>
-<a href="#cl-26">26</a>
-<a href="#cl-27">27</a>
-<a href="#cl-28">28</a>
-<a href="#cl-29">29</a>
-<a href="#cl-30">30</a>
-<a href="#cl-31">31</a>
-<a href="#cl-32">32</a>
-<a href="#cl-33">33</a>
-<a href="#cl-34">34</a>
-<a href="#cl-35">35</a>
-<a href="#cl-36">36</a>
-<a href="#cl-37">37</a>
-<a href="#cl-38">38</a>
-<a href="#cl-39">39</a>
-<a href="#cl-40">40</a>
-<a href="#cl-41">41</a>
-<a href="#cl-42">42</a>
-<a href="#cl-43">43</a>
-<a href="#cl-44">44</a>
-<a href="#cl-45">45</a>
-<a href="#cl-46">46</a>
-<a href="#cl-47">47</a>
-<a href="#cl-48">48</a>
-<a href="#cl-49">49</a>
-<a href="#cl-50">50</a>
-<a href="#cl-51">51</a>
-<a href="#cl-52">52</a>
-<a href="#cl-53">53</a>
-<a href="#cl-54">54</a>
-<a href="#cl-55">55</a>
-<a href="#cl-56">56</a>
-<a href="#cl-57">57</a>
-<a href="#cl-58">58</a>
-<a href="#cl-59">59</a>
-<a href="#cl-60">60</a>
-<a href="#cl-61">61</a>
-<a href="#cl-62">62</a>
-<a href="#cl-63">63</a>
-<a href="#cl-64">64</a>
-<a href="#cl-65">65</a>
-<a href="#cl-66">66</a>
-<a href="#cl-67">67</a>
-<a href="#cl-68">68</a>
-<a href="#cl-69">69</a>
-<a href="#cl-70">70</a>
-<a href="#cl-71">71</a>
-<a href="#cl-72">72</a>
-<a href="#cl-73">73</a>
-<a href="#cl-74">74</a>
-<a href="#cl-75">75</a>
-<a href="#cl-76">76</a>
-<a href="#cl-77">77</a>
-<a href="#cl-78">78</a>
-<a href="#cl-79">79</a>
-<a href="#cl-80">80</a>
-<a href="#cl-81">81</a>
-<a href="#cl-82">82</a>
-<a href="#cl-83">83</a>
-<a href="#cl-84">84</a>
-<a href="#cl-85">85</a>
-<a href="#cl-86">86</a>
-<a href="#cl-87">87</a>
-<a href="#cl-88">88</a>
-<a href="#cl-89">89</a>
-<a href="#cl-90">90</a>
-<a href="#cl-91">91</a>
-<a href="#cl-92">92</a>
-</pre></div></td><td class="code"><div class="highlight"><pre><a name="cl-1"></a><span class="k">\documentclass</span><span class="nb">{</span>article<span class="nb">}</span>
-<a name="cl-2"></a>
-<a name="cl-3"></a><span class="k">\usepackage</span><span class="nb">{</span>fancyhdr<span class="nb">}</span>
-<a name="cl-4"></a>
-<a name="cl-5"></a><span class="k">\begin</span><span class="nb">{</span>document<span class="nb">}</span>
-<a name="cl-6"></a><span class="k">\pagestyle</span><span class="nb">{</span>fancy<span class="nb">}</span>
-<a name="cl-7"></a>
-<a name="cl-8"></a><span class="k">\fancyhead</span><span class="na">[R]</span><span class="nb">{</span>Frederik Hantho<span class="k">\\</span>Jan Wiberg<span class="k">\\</span>Rune Bromer<span class="nb">}</span>
-<a name="cl-9"></a><span class="k">\fancyhead</span><span class="na">[L]</span><span class="nb">{</span>Synopsis<span class="k">\\</span>pupyMPI<span class="k">\\</span>27. August 2009<span class="nb">}</span>
-<a name="cl-10"></a><span class="k">\setlength\headheight</span><span class="nb">{</span>2cm<span class="nb">}</span>
-<a name="cl-11"></a>
-<a name="cl-12"></a><span class="k">\noindent</span>
-<a name="cl-13"></a><span class="k">\textbf</span><span class="nb">{</span>Project title:<span class="nb">}</span> pupyMPI - Pure Python MPI<span class="k">\\</span>
-<a name="cl-14"></a>
-<a name="cl-15"></a><span class="k">\noindent</span>
-<a name="cl-16"></a><span class="k">\textbf</span><span class="nb">{</span>Authors:<span class="nb">}</span> Frederik Hantho, Jan Wiberg <span class="k">\&amp;</span> Rune Bromer<span class="k">\\</span>
-<a name="cl-17"></a>
-<a name="cl-18"></a><span class="k">\noindent</span>
-<a name="cl-19"></a><span class="k">\textbf</span><span class="nb">{</span>Project consultant:<span class="nb">}</span> Brian Vinter<span class="k">\\</span>
-<a name="cl-20"></a>
-<a name="cl-21"></a><span class="k">\noindent</span>
-<a name="cl-22"></a><span class="k">\textbf</span><span class="nb">{</span>ECTS:<span class="nb">}</span> 15<span class="k">\\</span>
-<a name="cl-23"></a>
-<a name="cl-24"></a>
-<a name="cl-25"></a><span class="k">\section*</span><span class="nb">{</span>Background<span class="nb">}</span>
-<a name="cl-26"></a>The demand for easy, highly scalable, parallel computing is growing daily as
-<a name="cl-27"></a>many-core systems become prevalent. The Message Passing Interface (MPI) is a
-<a name="cl-28"></a>widely used and globally accepted model for expressing parallelism. The success
-<a name="cl-29"></a>of MPI stems from its portability, completeness and performance i.r.t. massively
-<a name="cl-30"></a>parallel programs, amongst others. However, MPI is generally not considered
-<a name="cl-31"></a>simple, nor easy to program, particularly as it is most commonly implemented in
-<a name="cl-32"></a>C or FORTRAN. This is a problem since many potential users are not skilled
-<a name="cl-33"></a>programmers, but rather researchers who are capable of expressing their
-<a name="cl-34"></a>algorithms in a deterministic logical framework.
-<a name="cl-35"></a><span class="k">\\</span>
-<a name="cl-36"></a>
-<a name="cl-37"></a>The difficulty involved in ensuring the correctness and maintainability of C has
-<a name="cl-38"></a>lead to the rise of higher level languages, such as Python. Python is a
-<a name="cl-39"></a>language that originated in academia, and has large and growing popularity in
-<a name="cl-40"></a>this group where it is often used for prototyping solutions to scientific
-<a name="cl-41"></a>problems. Amongst Pythons many advantages are a strong typing system, a highly
-<a name="cl-42"></a>readable syntax, existence on many platforms, and it is quite mature.
-<a name="cl-43"></a><span class="k">\\</span>
-<a name="cl-44"></a>
-<a name="cl-45"></a>Python has no built-in support for MPI, but several other projects have grafted
-<a name="cl-46"></a>MPI functionality onto Python, with varying degrees of completeness. At present,
-<a name="cl-47"></a>there seems to be no native Python MPI implementations openly available.
-<a name="cl-48"></a>
-<a name="cl-49"></a><span class="c">%1 mpi is a globally accepted standard</span>
-<a name="cl-50"></a><span class="c">%2 python is mature and widely used in scientific computing circles.</span>
-<a name="cl-51"></a><span class="c">%3 python is cross platform</span>
-<a name="cl-52"></a><span class="c">%4 many existing implementations in C and fortran, other languages often wrappers.</span>
-<a name="cl-53"></a><span class="c">%5 both mpi and python widely used in academia and education.</span>
-<a name="cl-54"></a>
-<a name="cl-55"></a><span class="k">\section*</span><span class="nb">{</span>Motivation<span class="nb">}</span>
-<a name="cl-56"></a>Coupling Python with MPI would seem to have several distinct advantages. 
-<a name="cl-57"></a><span class="k">\begin</span><span class="nb">{</span>enumerate<span class="nb">}</span>
-<a name="cl-58"></a>	<span class="k">\item</span> The advanced type system alleviates the complexities of MPI types as
-<a name="cl-59"></a>Python types can be easily inferred at runtime. 
-<a name="cl-60"></a>	<span class="k">\item</span> Python is standardized across platforms and is either already
-<a name="cl-61"></a>installed, or very easy to install, on almost any major platform of interest to
-<a name="cl-62"></a>HPC users. Python is also highly modular and easy to extend.
-<a name="cl-63"></a>	<span class="k">\item</span> Implementing MPI in native Python means that there is no need to
-<a name="cl-64"></a>maintain a separate native MPI installation, and by extension no need to keep
-<a name="cl-65"></a>specific versions of Python, the MPI wrapper and the MPI library around to
-<a name="cl-66"></a>maintain binary compatibility.
-<a name="cl-67"></a>	<span class="k">\item</span> The low bar to entry to Python means that it is highly useful as a
-<a name="cl-68"></a>prototyping language, and educators can focus on teaching central concepts of
-<a name="cl-69"></a>concurrency, without the clutter of boilerplate code so typical to e.g. C.
-<a name="cl-70"></a><span class="k">\end</span><span class="nb">{</span>enumerate<span class="nb">}</span>
-<a name="cl-71"></a>
-<a name="cl-72"></a><span class="c">%1 ease of installation</span>
-<a name="cl-73"></a><span class="c">%1.5 crossplatform.</span>
-<a name="cl-74"></a><span class="c">%2 problems with current wrappers</span>
-<a name="cl-75"></a><span class="c">%3 python highly accessible to non computer scientist researchers.</span>
-<a name="cl-76"></a><span class="c">%4 education.</span>
-<a name="cl-77"></a><span class="c">%5 MPI types easily handled in python.</span>
-<a name="cl-78"></a>
-<a name="cl-79"></a>
-<a name="cl-80"></a><span class="k">\section*</span><span class="nb">{</span>Learning goals<span class="nb">}</span>
-<a name="cl-81"></a>At the end of the project, we will be able to: 
-<a name="cl-82"></a>
-<a name="cl-83"></a><span class="k">\begin</span><span class="nb">{</span>itemize<span class="nb">}</span>
-<a name="cl-84"></a>	<span class="k">\item</span><span class="nb">{</span> Analyze the shortcomings of the MPI libraries written in a strict programming language. <span class="nb">}</span>
-<a name="cl-85"></a>	<span class="k">\item</span><span class="nb">{</span> Reason about the advantages and disadvantages of a native Python MPI compared with other Python MPI solutions. <span class="nb">}</span>
-<a name="cl-86"></a>	<span class="k">\item</span><span class="nb">{</span> Reason about different internal communication strategies for achieving high performance. <span class="nb">}</span>
-<a name="cl-87"></a>	<span class="k">\item</span><span class="nb">{</span> Choose a design for a high performance MPI-like library, and argue for the choice. <span class="nb">}</span>
-<a name="cl-88"></a>	<span class="k">\item</span><span class="nb">{</span> Reflect on the performance and reliability of a prototype implementation of our design. <span class="nb">}</span>
-<a name="cl-89"></a><span class="c">%	\item{ Analyze and compare different MPI libraries in terms of performance and liability }</span>
-<a name="cl-90"></a><span class="k">\end</span><span class="nb">{</span>itemize<span class="nb">}</span>
-<a name="cl-91"></a>
-<a name="cl-92"></a><span class="k">\end</span><span class="nb">{</span>document<span class="nb">}</span>
-</pre></div>
-</td></tr></table>
-		
-	
-</div>
-
-
-
-			<div class="cb"></div>
-		</div>
-		<div class="cb footer-placeholder"></div>
-	</div>
-	<div id="footer-wrapper">
-		<div id="footer">
-			<a href="/site/terms/">TOS</a> | <a href="/site/privacy/">Privacy Policy</a> | <a href="http://blog.bitbucket.org/">Blog</a> | <a href="http://bitbucket.org/jespern/bitbucket/issues/new/">Report Bug</a> | <a href="http://groups.google.com/group/bitbucket-users">Discuss</a> | <a href="http://avantlumiere.com/">&copy; 2008-2010</a>
-			| We run <small><b>
-				<a href="http://www.djangoproject.com/">Django 1.1.0</a> / 
-				<a href="http://bitbucket.org/jespern/django-piston/">Piston 0.2.3rc1</a> / 
-				<a href="http://www.selenic.com/mercurial/">Hg 1.3.1</a> / 
-				<a href="http://www.python.org">Python 2.5.2</a> /
-				r2895| fe02
-			</b></small>
-		</div>
-	</div>
-</body>
-</html>
+\end{document}
