@@ -31,7 +31,6 @@ p,fname = os.path.split(scriptpath) # separate out the filename
 mpipath,rest = os.path.split(p) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
-
 import processloaders 
 from mpi.logger import Logger
 from mpi.network import utils
