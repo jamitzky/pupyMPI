@@ -11,6 +11,9 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
+# This test only works with 8 procs
+assert size == 8
+
 cart = Cartesian(mpi.MPI_COMM_WORLD, [2,2,2], [True, True, True])
 assert cart is not None
 if rank == 4:
