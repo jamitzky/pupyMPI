@@ -5,21 +5,21 @@
 \begin{document}
 \pagestyle{fancy}
 
-\fancyhead[R]{Frederik Hantho\\Jan Wiberg\\Rune Bromer}
-\fancyhead[L]{Synopsis\\pupyMPI\\27. August 2009}
+\fancyhead[R]{Frederik Hantho\\Asser Schrøder Femø\\Rune Bromer}
+\fancyhead[L]{Synopsis\\pupyMPI Reloaded\\4. May 2010}
 \setlength\headheight{2cm}
 
 \noindent
-\textbf{Project title:} pupyMPI - Pure Python MPI\\
+\textbf{Project title:} pupyMPI Reloaded - Bigger. Faster. Uncut.\\
 
 \noindent
-\textbf{Authors:} Frederik Hantho, Jan Wiberg \& Rune Bromer\\
+\textbf{Authors:} Frederik Hantho, Asser Schrøder Femø\& Rune Bromer\\
 
 \noindent
 \textbf{Project consultant:} Brian Vinter\\
 
 \noindent
-\textbf{ECTS:} 15\\
+\textbf{ECTS:} 7.5\\
 
 
 \section*{Background}
@@ -34,59 +34,49 @@ programmers, but rather researchers who are capable of expressing their
 algorithms in a deterministic logical framework.
 \\
 
-The difficulty involved in ensuring the correctness and maintainability of C has
-lead to the rise of higher level languages, such as Python. Python is a
-language that originated in academia, and has large and growing popularity in
-this group where it is often used for prototyping solutions to scientific
-problems. Amongst Pythons many advantages are a strong typing system, a highly
-readable syntax, existence on many platforms, and it is quite mature.
-\\
-
-Python has no built-in support for MPI, but several other projects have grafted
-MPI functionality onto Python, with varying degrees of completeness. At present,
-there seems to be no native Python MPI implementations openly available.
-
-%1 mpi is a globally accepted standard
-%2 python is mature and widely used in scientific computing circles.
-%3 python is cross platform
-%4 many existing implementations in C and fortran, other languages often wrappers.
-%5 both mpi and python widely used in academia and education.
+% 1. Casting af broadcasttræ ifbm. kollektivoperationer
+% 2. Sammenligning af socket polling metoder
+% 3. Profiling med fine grafer
+% 4. Optimering af buffers
+% 5. Undgå broadcast af redundant data i kollektivoperationer (reduce/scatter)
+% 6. Praktiske kørsler i større miljøer (dikus klynge)
+% 7. TCP tuning, socket options (fhantho har en tutorial/paper-ting)
 
 \section*{Motivation}
-Coupling Python with MPI would seem to have several distinct advantages. 
+
+Improving pupyMPI with an emphasis on performance would seem to have several distinct advantages:
+
 \begin{enumerate}
-	\item The advanced type system alleviates the complexities of MPI types as
-Python types can be easily inferred at runtime. 
-	\item Python is standardized across platforms and is either already
-installed, or very easy to install, on almost any major platform of interest to
-HPC users. Python is also highly modular and easy to extend.
-	\item Implementing MPI in native Python means that there is no need to
-maintain a separate native MPI installation, and by extension no need to keep
-specific versions of Python, the MPI wrapper and the MPI library around to
-maintain binary compatibility.
-	\item The low bar to entry to Python means that it is highly useful as a
-prototyping language, and educators can focus on teaching central concepts of
-concurrency, without the clutter of boilerplate code so typical to e.g. C.
+	\item It's less slow.
+	\item Performance analysis tools can help the pupyMPI user to assess
+	performance in her program as well as the overhead incurred by pupyMPI and
+	communication.
+	\item Scaling of MPI collective operations will be helped!
+	\item Incorporating user feedback is vital for insuring continued use of pupyMPI
+	% XXX: OLD, remove. At some point.
+%	\item The advanced type system alleviates the complexities of MPI types as
+%Python types can be easily inferred at runtime. 
+%	\item Python is standardized across platforms and is either already
+%installed, or very easy to install, on almost any major platform of interest to
+%HPC users. Python is also highly modular and easy to extend.
+%	\item Implementing MPI in native Python means that there is no need to
+%maintain a separate native MPI installation, and by extension no need to keep
+%specific versions of Python, the MPI wrapper and the MPI library around to
+%maintain binary compatibility.
+%	\item The low bar to entry to Python means that it is highly useful as a
+%prototyping language, and educators can focus on teaching central concepts of
+%concurrency, without the clutter of boilerplate code so typical to e.g. C.
 \end{enumerate}
-
-%1 ease of installation
-%1.5 crossplatform.
-%2 problems with current wrappers
-%3 python highly accessible to non computer scientist researchers.
-%4 education.
-%5 MPI types easily handled in python.
-
 
 \section*{Learning goals}
 At the end of the project, we will be able to: 
 
 \begin{itemize}
-	\item{ Analyze the shortcomings of the MPI libraries written in a strict programming language. }
-	\item{ Reason about the advantages and disadvantages of a native Python MPI compared with other Python MPI solutions. }
-	\item{ Reason about different internal communication strategies for achieving high performance. }
-	\item{ Choose a design for a high performance MPI-like library, and argue for the choice. }
-	\item{ Reflect on the performance and reliability of a prototype implementation of our design. }
-%	\item{ Analyze and compare different MPI libraries in terms of performance and liability }
+	\item{ Identify bottlenecks in the existing framework }
+	\item{ Design and implement tools to assist in performance analysis and measurement }
+	\item{ Reason about lower-level network tuning }
+	\item{ Improve performance of Python based high-performance networking applications }
+	\item{ Analyze and improve the design of MPI collective operations }
 \end{itemize}
 
 \end{document}
