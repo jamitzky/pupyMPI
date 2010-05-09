@@ -89,9 +89,9 @@ class MPI(Thread):
         parser.add_option('--process-io', dest='process_io')
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
+        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
 
         options, args = parser.parse_args()
-
 
         if options.process_io == "remotefile": 
             # Initialise the logger
@@ -112,7 +112,6 @@ class MPI(Thread):
 
         logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
             
-
         # First check for required Python version
         self._version_check()
 
