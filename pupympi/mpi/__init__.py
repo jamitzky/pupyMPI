@@ -110,7 +110,7 @@ class MPI(Thread):
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
-        logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
+        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
             
 
         # First check for required Python version
@@ -189,6 +189,7 @@ class MPI(Thread):
         #logger.info("MPI environment is up and running.")
 
     def match_pending(self, request):
+        Logger().debug("-- Match pending called on request:%s" % request)
         """
         Tries to match a pending request with something in
         the received data.
@@ -203,6 +204,8 @@ class MPI(Thread):
         match = False
         remove = [] 
         with self.received_data_lock:
+            Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
+
             for data in self.received_data:
                 (communicator_id, sender, tag, acknowledge, message) = data
                 
@@ -214,7 +217,7 @@ class MPI(Thread):
                         
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
                         if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
-                            remove.append(data)                            
+                            remove.append(data)
                             request.update(status="ready", data=message)
                             match = True
                             # Outgoing synchronized communication requires acknowledgement
@@ -231,6 +234,7 @@ class MPI(Thread):
                         
             for data in remove:
                 self.received_data.remove(data)
+        Logger().debug("-- Match pending released lock! Match:%s" % match)
         return match
 
     def run(self):
@@ -357,7 +361,8 @@ class MPI(Thread):
             Part of the finalizing call is to flush all outgoing requests. You
             don't need to wait() on all your started isends before you call 
             finalize. 
-        """        
+        """
+        Logger().debug("--- Finalize has been called ---")
         self.shutdown_event.set() # signal shutdown to mpi thread
         self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work        
         

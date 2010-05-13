@@ -67,12 +67,14 @@ class Network(object):
         
         self.t_in.add_in_socket(self.main_receive_socket)
         
-        Logger().debug("main socket is: %s" % server_socket)
+        #Logger().debug("main socket is: %s" % server_socket)
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         
         self.full_network_startup = not options.disable_full_network_startup
+        #global done
+        #done = False
 
     def _handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -119,7 +121,7 @@ class Network(object):
             receiver_ranks = [x for x in range(0, our_rank)]
             sender_ranks = range(our_rank+1, size)
 
-            Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
+            #Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
 
             recv_handles = []
             # Start all the receive 
@@ -227,6 +229,7 @@ class CommunicationHandler(threading.Thread):
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
         #print "We found cmd: %d" % request.cmd
         request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
+        Logger().debug("Prepare len: %i, message: %s" % (len(request.data),request.data) )
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
@@ -318,21 +321,32 @@ class CommunicationHandler(threading.Thread):
                     self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
         def _handle_writelist(writelist):
+            #DEBUG
+            #Logger().debug("_handle_writelist called, writelist:%s" % (writelist))
             for write_socket in writelist:
                 removal = []
                 with self.socket_to_request_lock:
                     request_list = self.socket_to_request[write_socket]
                 for request in request_list:
+                    Logger().debug("_handle_writelist (len:%i) called, CHECK REQ - request.status:%s (%s)" % (len(writelist),request.status,(request.status is "new")))
                     if request.status == "cancelled":
-                        removal.append((socket, request))
+                        Logger().debug("Wow cancelled!? data-send on %s. request: %s" % (write_socket, request))
+                        removal.append((write_socket, request))
                     elif request.status == "new":                        
                         Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                        #time.sleep(10)
+                        #print "HEJHEJ"
                         # Send the data on the socket
                         try:
-                            utils.robust_send(write_socket,request.data)
+                            #utils.robust_send(write_socket, request.data)
+                            write_socket.send(request.data)                            
+                            #Logger().debug(" - - Sendone res:%s" % (res))
                         except socket.error, e:
                             Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                             # Send went wrong, do not update, but hope for better luck next time
+                            continue
+                        except Exception, e:
+                            Logger().error("send() threw:%s strange exception! for data:%s" % (e,request.data ) )
                             continue
                         
                         removal.append((write_socket, request))
@@ -343,9 +357,8 @@ class CommunicationHandler(threading.Thread):
                         else:                            
                             request.update("ready") # update status and signal anyone waiting on this request                            
                     else:
+                        Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" % (request.status, request.request_type, request.tag, request.participant))
                         pass
-                        #Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" % 
-                        #        (request.status, request.request_type, request.tag, request.participant))
                         
                 # Remove the requests (messages) that was successfully sent from the list for that socket
                 if removal:  

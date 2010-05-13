@@ -311,6 +311,7 @@ class Communicator:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
         Starts a non-blocking receive, returning a handle like :func:`isend`. The
         following example shows how to prepare a receive request but perform some
@@ -376,6 +377,7 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
 
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
+        #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
         """
         Starts a non-blocking send. The function will return as soon as the 
         data has been copied into a internal buffer making it safe for the
@@ -426,10 +428,8 @@ class Communicator:
         # Check that tag is valid
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
-
         # Create a send request object
         handle = Request("send", self, destination, tag, False, data=content)
-        
         # If sending to self, take a short-cut
         if destination == self.rank():
             self._send_to_self(handle)
@@ -516,7 +516,6 @@ class Communicator:
         # Create a recv request object to catch the acknowledgement message coming in
         # when this request is matched it also triggers the unacked->ready transition on the request handle
         handle = Request("recv", self, destination, constants.TAG_ACK)
-        
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
@@ -611,7 +610,7 @@ class Communicator:
 
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
-        """
+        """        
         return self.isend(content, destination, tag).wait()
 
     def recv(self, source, tag = constants.MPI_TAG_ANY):
