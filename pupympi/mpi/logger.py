@@ -16,7 +16,7 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os
-import logging, logging.handlers
+import logging
 
 class Logger:
 
@@ -45,7 +45,6 @@ class Logger:
         _BASE = os.path.dirname(os.path.abspath(__file__))
         _LOG_BASE = os.path.join(_BASE, '..', '%s.log')
         filepath = _LOG_BASE % os.path.basename(filename)
-        basename = os.path.splitext(os.path.basename(filename))[0]
         
         formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S')
         try:            
@@ -53,7 +52,7 @@ class Logger:
             filelog.setFormatter(formatter)
             filelog.setLevel(level)
             logging.getLogger(logname).addHandler(filelog)
-        except Exception, e:
+        except Exception:
             # TODO: Do something smarter here when we detect that logging can't be done to specified path    
             pass
         

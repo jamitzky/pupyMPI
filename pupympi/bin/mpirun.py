@@ -170,7 +170,12 @@ if __name__ == "__main__":
         executeable = os.path.join( os.getcwd(), executeable)
 
     #logger.debug("enable_profiling %s" % options.enable_profiling)
-    profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
+    
+    # FIXME: The line below is something I removed. The <<rank>> variable is not defined, and how could it?
+    # We don't have a rank for mpirun.py and we send out ranks later in the script. I replaced the <<rank>>
+    # with -1.
+    #profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
+    profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,-1)) if options.enable_profiling else ""
 
     # Mimic our cli call structure also for remotely started processes
     global_run_options = [options.remote_python, "-u", profiler, executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,

@@ -18,14 +18,11 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import math
 import unittest
 from operator import mul
 from BaseTopology import BaseTopology
+from mpi.exceptions import MPITopologyException, NotImplementedException
 from mpi import constants
-from mpi.exceptions import MPITopologyException
-from mpi.logger import Logger
-
             
 class dummycomm():
     """Mock communicator for unittests only"""            
@@ -92,7 +89,7 @@ class Cartesian(BaseTopology):
     # MPI Cartesian functions
     def MPI_Topo_test(self):
         """Return type of topology"""
-        return MPI_CARTESIAN
+        return constants.MPI_CARTESIAN
                 
     def get(self):
         """

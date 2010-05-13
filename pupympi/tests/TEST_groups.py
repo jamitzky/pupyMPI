@@ -5,11 +5,8 @@
 
 from mpi import MPI
 from mpi import constants
-import time
-
 
 mpi = MPI()
-
 
 # we expect the group of MPI_COMM_WORLD to match with the communicator itself
 rank = mpi.MPI_COMM_WORLD.rank()

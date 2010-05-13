@@ -5,7 +5,6 @@ special.py - collection of special tests
 """
 
 import comm_info as ci
-from mpi import constants
 
 meta_has_meta = True
 meta_processes_required = 8
@@ -45,11 +44,11 @@ def test_ThreadSaturationExchange(size, max_iterations):
         return (left, right)
             
     def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             ci.communicator.isend(right, data, s_tag)
             ci.communicator.isend(left, data, s_tag)
-            leftdata = ci.communicator.recv(left, r_tag)
-            rightdata = ci.communicator.recv(right, r_tag)
+            ci.communicator.recv(left, r_tag)
+            ci.communicator.recv(right, r_tag)
 
     # end of test
     (s_tag, r_tag) = ci.get_tags_single()
@@ -71,7 +70,7 @@ def test_ThreadSaturationExchange(size, max_iterations):
 def test_ThreadSaturationBcast(size, max_iterations):
     def Bcast(data, max_iterations):
         root = 0
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             my_data = data
             ci.communicator.bcast(my_data, root)
             # Switch root

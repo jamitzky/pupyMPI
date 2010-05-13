@@ -6,7 +6,6 @@
 
 from mpi import MPI
 from mpi import constants
-import os
 
 mpi = MPI()
 

@@ -5,7 +5,6 @@
 
 from mpi import MPI
 from mpi.topology.Cartesian import Cartesian
-from mpi import constants
 
 mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()

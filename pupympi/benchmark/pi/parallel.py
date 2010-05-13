@@ -7,7 +7,6 @@ pupyMPI parallelized version of Monte Carlo Pi approximator
 
 import math, random, sys, time
 from mpi import MPI
-from mpi import constants
 
 num_in = 0
 total = 0
@@ -34,11 +33,11 @@ t1 = time.time()
 # algorithm
 random.seed()
 for i in xrange(max):
- x = random.uniform(0,1)
- y = random.uniform(0,1)
- if x*x + y*y <= 1:
-  num_in += 1
- total += 1
+    x = random.uniform(0,1)
+    y = random.uniform(0,1)
+    if x*x + y*y <= 1:
+        num_in += 1
+    total += 1
 
 # distribute
 

@@ -15,13 +15,12 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable, MPIException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException
 from mpi.logger import Logger
-import threading,sys,copy,time
+import sys, copy, time
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
-from mpi.group import Group
 from mpi import constants
 
 class Communicator:
@@ -166,8 +165,6 @@ class Communicator:
         """
         Collective implementation of the comm_create call
         """
-        logger = Logger()
-        
         new_id = -1
 
         if self.rank() == 0:
@@ -179,7 +176,7 @@ class Communicator:
             raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
         
         # wait for answer on id
-        cr = CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
+        CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
         
         # Non-members have rank -1
         if not group._owner_is_member():

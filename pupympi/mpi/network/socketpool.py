@@ -18,6 +18,7 @@
 import socket
 import threading
 from mpi.logger import Logger
+from mpi.exceptions import MPIException
 
 class SocketPool(object):
     """
@@ -121,7 +122,7 @@ class SocketPool(object):
         to do with correctness but we should clean up after ourselves. See issue#
         """
         with self.sockets_lock:
-            for x in range(2): # Run through twice
+            for _ in range(2): # Run through twice
                 for client_socket in self.sockets:
                     (srank, sreference, force_persistent) = self.metainfo[client_socket]
                     if force_persistent: # We do not remove persistent connections

@@ -19,7 +19,7 @@ __version__ = 0.6 # It bumps the version or else it gets the hose again!
 
 import sys
 from optparse import OptionParser, OptionGroup
-import threading, sys, getopt, time
+import threading, getopt, time
 from threading import Thread
         
 from mpi.communicator import Communicator
@@ -90,7 +90,8 @@ class MPI(Thread):
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
 
-        options, args = parser.parse_args()
+        # _ is args
+        options, _ = parser.parse_args()
 
 
         if options.process_io == "remotefile": 
@@ -408,10 +409,3 @@ class MPI(Thread):
         elif major >= 2 and minor is not 6:
             Logger().warn("pupyMPI is only certified to run on Python 2.6")
     
-    def _increment_request_id():
-        """
-        Threadsafe incrementing and return of request ids
-        """    
-        with self.current_request_id_lock:            
-            self.current_request_id += 1
-            return self.current_request_id

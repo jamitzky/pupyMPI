@@ -52,7 +52,7 @@ def create_random_socket(min=10000, max=30000):
             #logger.debug("get_socket: Trying to bind on port %d" % port_no)
             sock.bind( (hostname, port_no) )
             break
-        except socket.error, e:
+        except socket.error:
             logger.debug("get_socket: Permission error on port %d, trying a new one" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
             continue
@@ -123,11 +123,12 @@ def _nice_data(data):
     try:
         unpickled = pickle.loads(data)
         return unpickled
-    except Exception, e:
+    except Exception:
         # This is an equally hackish way of removing nasty printing chars
         # a nicer way would be to use str.translate with appropriate mappings
         sdata = str(data)
-        hexysymbols, sep, rest = sdata.partition("(I")
+        # _ is hexysymbols
+        _, sep, rest = sdata.partition("(I")
         # Now tcp control chars garble garble has been removed
         data = (sep+rest).replace("\n","<n>")
         return data

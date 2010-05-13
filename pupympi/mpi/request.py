@@ -20,7 +20,7 @@ from mpi.logger import Logger
 from mpi.network.utils import _nice_data 
 from mpi import constants
 
-import threading, time
+import threading
 
 class BaseRequest(object):
     def __init__(self):

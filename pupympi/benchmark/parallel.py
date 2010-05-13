@@ -5,8 +5,6 @@ parallel.py - collection of parallel tests inspired by Intel MPI Benchmark (IMB)
 """
 
 import comm_info as ci
-from mpi import constants
-
 
 meta_has_meta = True
 meta_processes_required = -1
@@ -46,8 +44,8 @@ def test_Sendrecv(size, max_iterations):
         return (source, dest)
 
     def Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):        
-        for r in xrange(max_iterations):
-            recvdata = ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
+        for _ in xrange(max_iterations):
+            ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
     # end of test
 
     (s_tag, r_tag) = ci.get_tags_single()
@@ -80,11 +78,11 @@ def test_Exchange(size, max_iterations):
         return (left, right)
             
     def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
-        for r in xrange(max_iterations):
-            ci.communicator.isend( data, right, s_tag)
-            ci.communicator.isend( data, left, s_tag)
-            leftdata = ci.communicator.recv(left, r_tag)
-            rightdata = ci.communicator.recv(right, r_tag)
+        for _ in xrange(max_iterations):
+            ci.communicator.isend(data, right, s_tag)
+            ci.communicator.isend(data, left, s_tag)
+            ci.communicator.recv(left, r_tag)
+            ci.communicator.recv(right, r_tag)
 
     # end of test
     (s_tag, r_tag) = ci.get_tags_single()

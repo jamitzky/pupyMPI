@@ -15,7 +15,6 @@
 from mpi import MPI
 
 import time
-from datetime import datetime
 
 mpi = MPI()
 

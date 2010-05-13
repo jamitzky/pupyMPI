@@ -96,7 +96,8 @@ class Network(object):
         utils.robust_send(s_conn, prepare_message(data, internal_rank))        
         
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, _, raw_data = get_raw_message(s_conn)
+        # first _ is rank
+        _, _, raw_data = get_raw_message(s_conn)
         data = pickle.loads(raw_data)
         (_, _, _, all_procs) = data
 
@@ -147,14 +148,6 @@ class Network(object):
         
         Logger().debug("Network (fully) started")
 
-    def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
-        Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))
-        
-        job = {'type' : jobtype, 'data' : data, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': True}
-        tree = BroadCastTree(range(communicator.size()), communicator.rank())
-        tree.up()
-        tree.down()
-        
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
@@ -177,9 +170,6 @@ class Network(object):
         
         # Close socketpool
         self.socket_pool.close_all_sockets()
-        
-        #Logger().debug("network.finalize: DONE Finalize")
-        
         
 class CommunicationHandler(threading.Thread):
     """
@@ -274,7 +264,8 @@ class CommunicationHandler(threading.Thread):
             for read_socket in readlist:
                 add_to_pool = False
                 try:
-                    (conn, sender_address) = read_socket.accept()
+                    # _ is sender_address
+                    (conn, _) = read_socket.accept()
 
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)

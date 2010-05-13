@@ -6,7 +6,6 @@
 
 from mpi import MPI
 from mpi import constants
-import sys
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD

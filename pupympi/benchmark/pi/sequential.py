@@ -10,17 +10,18 @@ num_in = 0
 total = 0
 
 if ( len(sys.argv) != 2 ):
- print "Usage: " + sys.argv[0] + " sample_number"
- sys.exit(1)
+    print "Usage: " + sys.argv[0] + " sample_number"
+    sys.exit(1)
+    
 max = int(sys.argv[1])
 
 random.seed()
 for i in xrange(max):
- x = random.uniform(0,1)
- y = random.uniform(0,1)
- if x*x + y*y <= 1:
-  num_in += 1
- total += 1
+    x = random.uniform(0,1)
+    y = random.uniform(0,1)
+    if x*x + y*y <= 1:
+        num_in += 1
+    total += 1
 
 ratio = float(num_in) / float(total)
 my_pi = 4 * ratio

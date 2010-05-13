@@ -22,7 +22,7 @@ runtests.py - test runner for pupympi
 """
 
 import sys
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser
 import subprocess
 import os
 from threading import Thread
@@ -243,7 +243,8 @@ def main():
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--remote-python', '-r', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
 
-    options, args = parser.parse_args()
+    # _ is args
+    options, _ = parser.parse_args()
 
     run_tests( get_testnames(), options )
 

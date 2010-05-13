@@ -5,7 +5,6 @@
 
 from mpi import MPI
 from mpi.operations import MPI_prod
-from datetime import datetime
 
 def fact(n):
     if n == 0:
