@@ -88,7 +88,7 @@ class SocketPool(object):
             # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
             newly_created = True
-        Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
+        #Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
         return client_socket, newly_created
     
     def add_created_socket(self, socket_connection, global_rank):

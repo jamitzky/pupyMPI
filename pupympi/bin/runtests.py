@@ -31,6 +31,16 @@ import time
 help_message = '''
 Read the source, lazy bum.
 '''
+# This should allow the user to import mpi without specifying
+# PYTHONPATH in the environment
+cwd = os.getcwd() # called from where
+mpirunpath = sys.argv[0] # Path to mpirun.py
+if mpirunpath.startswith('.'): # if called in /bin then path will have "./" which should be removed
+    mpirunpath = mpirunpath[2:]    
+scriptpath = os.path.join(cwd,mpirunpath) # absolute path to mpirun.py
+p,fname = os.path.split(scriptpath) # separate out the filename
+mpipath,rest = os.path.split(p) # separate out the bin dir (dir above is the target)
+sys.path.append(mpipath) # Set PYTHONPATH
 
 # settings
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
@@ -146,9 +156,17 @@ class RunTest(Thread):
         #print self.process.communicate()
         self.returncode = self.process.returncode
 
-def get_testnames():
-    """returns a list of files that match our 'official' requirement to qualify as a pupymp test"""
-    return sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
+def get_testnames(skipto = 0):
+    """returns a list of files that match our 'official' requirement to qualify as a pupympi test"""
+    tests = sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
+    
+    if skipto > 0: # skip some tests from the beginning
+        tests = tests[skipto:]
+    elif skipto < 0: # skip some tests from the end
+        tests = tests[:skipto]
+
+    return tests
+
     
 def _status_str(ret, expres):
     """helper function to write human friendly status string"""
@@ -237,11 +255,13 @@ class Usage(Exception):
 
 def main():
     usage = 'usage: %prog [options]'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.01 (dev)")
+    parser = OptionParser(usage=usage, version="Pupympi version 0.6")
     parser.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
-    parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
-    parser.add_option('--remote-python', '-r', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
+    parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
+    parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
+
+    parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from.')
 
     # _ is args
     options, _ = parser.parse_args()

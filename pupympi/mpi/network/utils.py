@@ -98,9 +98,26 @@ def get_raw_message(client_socket):
     return rank, cmd, receive_fixed(message_size)
     
 def prepare_message(data, rank, cmd=0):
-    Logger().debug("Preparing message with command: %d" % cmd)
+    # DEBUG
+    if data[2] == 9:
+        #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
+        #data = (data[0],data[1],11,data[3],data[4]) # WIN
+        data = (data[0],data[1],111,data[3],data[4]) # WIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
+        #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
+
+    
+    Logger().debug("Preparing message with command: %d and DATA:%s" % (cmd,data) )
     pickled_data = pickle.dumps(data)
-    header = struct.pack("lll", len(pickled_data), rank, cmd)
+    lpd = len(pickled_data)
+    #if data[2] == 9:
+    #    lpd +=  1
+    #if lpd % 2 != 0:
+    #    lpd +=  1
+    
+    header = struct.pack("lll",lpd , rank, cmd)
     return header+pickled_data
 
 def _nice_data(data):
@@ -141,9 +158,10 @@ def robust_send(socket, message):
     """
     target = len(message) # how many bytes to send
     transmitted_bytes = 0
+    #Logger().debug("robust_send message:%s" %(message))
     while target > transmitted_bytes:        
-        transmitted_bytes = socket.send(message)
-        transmitted_bytes += transmitted_bytes
+        delta = socket.send(message)
+        transmitted_bytes += delta
         
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]

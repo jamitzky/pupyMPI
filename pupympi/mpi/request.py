@@ -72,14 +72,14 @@ class Request(BaseRequest):
         #                reciever has acknowledged receiving.
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
-        Logger().debug("Request object created for communicator %s, tag %s, data %s, ack %s and request_type %s and participant %s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
+        Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
     
     def __repr__(self):        
         orig_repr = super(Request, self).__repr__()
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
     
     def update(self, status, data=None):
-        Logger().debug("changing status from %s to %s, for data: %s" %(self.status, status, data))
+        Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
         if self.status not in ("finished", "cancelled"): # No updating on dead requests
             self.status = status
         else:
@@ -121,7 +121,7 @@ class Request(BaseRequest):
         On successfull completion the ressources occupied by this request object will
         be garbage collected.
         """
-        #Logger().info("Starting a %s wait" % self.request_type)
+        Logger().info("Starting a %s wait, tag: %s" % (self.request_type,self.tag) )
         
         if self.status == "cancelled":
             Logger().debug("WAIT on cancel illegality")
@@ -129,6 +129,7 @@ class Request(BaseRequest):
         
         self._waitevent.wait()
         #Logger().debug("Waiting done for request with data:%s" % _nice_data(self.data) )
+        Logger().info("Waiting done for request %s wait, tag: %s" % (self.request_type,self.tag) )
         
         # We're done at this point. Set the request to be completed so it can be removed
         # later.

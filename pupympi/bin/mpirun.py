@@ -20,6 +20,17 @@ import sys, os, copy, signal
 from optparse import OptionParser, OptionGroup
 import select, time
 
+# This should allow the user to import mpi without specifying
+# PYTHONPATH in the environment
+cwd = os.getcwd() # called from where
+mpirunpath = sys.argv[0] # Path to mpirun.py
+if mpirunpath.startswith('.'): # if called in /bin then path will have "./" which should be removed
+    mpirunpath = mpirunpath[2:]    
+scriptpath = os.path.join(cwd,mpirunpath) # absolute path to mpirun.py
+p,fname = os.path.split(scriptpath) # separate out the filename
+mpipath,rest = os.path.split(p) # separate out the bin dir (dir above is the target)
+sys.path.append(mpipath) # Set PYTHONPATH
+
 import processloaders 
 from mpi.logger import Logger
 from mpi.network import utils
@@ -41,6 +52,7 @@ def parse_options():
             "Use these settings to control the level of output to the program. The --debug and --quiet options can't be used at the same time. Trying to will result in an error.")
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
+    parser_debug_group.add_option('-u', '--unbuffered', dest='buffer', action='store_true', help='Try not to buffer')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
     parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
     parser.add_option_group( parser_debug_group )
@@ -55,6 +67,7 @@ def parse_options():
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
+    parser_adv_group.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
     #parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser.add_option_group( parser_adv_group )
 
@@ -144,6 +157,8 @@ def io_forwarder(process_list):
     logger.debug("IO forwarder finished")
 
 if __name__ == "__main__":
+    # Try to get around export pythonpath issue
+    
     options, args, user_options, executeable = parse_options() # Get options from cli
 
     # Set log dir
@@ -151,7 +166,7 @@ if __name__ == "__main__":
     
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
-
+    
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
@@ -186,7 +201,10 @@ if __name__ == "__main__":
             "--process-io=%s" % options.process_io,
             "--log-file=%s" % options.logfile,
     ] 
-
+    
+    if options.socket_poll_method:
+        global_run_options.append('--socket-poll-method=%s' % options.socket_poll_method)
+    
     if options.disable_full_network_startup:
         global_run_options.append('--disable-full-network-startup')
 
