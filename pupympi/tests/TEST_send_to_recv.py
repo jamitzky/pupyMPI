@@ -17,7 +17,7 @@ rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 content = "This message was sent"
-DUMMY_TAG = 1
+DUMMY_TAG = 9
 
 if rank == 0:
     # Send

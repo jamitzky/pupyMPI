@@ -21,7 +21,7 @@ SECOND_TAG = 222
 THIRD_TAG = 333
 
 # Log stuff so progress is easier followed
-f = open(constants.LOGDIR+"mpi.isend_to_irecv.rank%s.log" % rank, "w")
+#f = open(constants.LOGDIR+"mpi.isend_to_irecv.rank%s.log" % rank, "w")
 
 # Rank 0 posts isends and irecvs in order and waits in reverse order
 if rank == 0:
@@ -35,19 +35,19 @@ if rank == 0:
     recvRequest2 = mpi.MPI_COMM_WORLD.irecv(neighbour,SECOND_TAG)
     recvRequest3 = mpi.MPI_COMM_WORLD.irecv(neighbour,THIRD_TAG)
     
-    f.write("Rank %i, done requesting" % rank)
+    #f.write("Rank %i, done requesting" % rank)
     
     recvRes3 = recvRequest3.wait()
     recvRes2 = recvRequest2.wait()
     recvRes1 = recvRequest1.wait()
     
-    f.write("Recieved %s, %s, %s - rank %i" % (recvRes3, recvRes2, recvRes1, rank))
+    #f.write("Recieved %s, %s, %s - rank %i" % (recvRes3, recvRes2, recvRes1, rank))
     
     sendRequest3.wait()
     sendRequest2.wait()
     sendRequest1.wait()
 
-    f.write("Rank %i, done waiting for sends" % rank)
+    #f.write("Rank %i, done waiting for sends" % rank)
     
     assert recvRes1 == content1
     assert recvRes2 == content2
@@ -75,15 +75,15 @@ elif rank == 1:
     
     recvRes2 = recvRequest2.wait()
     
-    f.write("Rank %i, done requesting" % rank)
+    #f.write("Rank %i, done requesting" % rank)
     
 
-    f.write("Recieved %s, %s, %s - rank %i" % (recvRes1, recvRes3, recvRes2, rank))
+    #f.write("Recieved %s, %s, %s - rank %i" % (recvRes1, recvRes3, recvRes2, rank))
     
     sendRequest1.wait()
     sendRequest2.wait()
 
-    f.write("Rank %i, done waiting for sends" % rank)
+    #f.write("Rank %i, done waiting for sends" % rank)
 
     assert recvRes1 == content1
     assert recvRes2 == content2
@@ -93,9 +93,9 @@ else:
     pass
 
 
-f.write( "Done for rank %d\n" % rank)
-f.flush()
-f.close()
+#f.write( "Done for rank %d\n" % rank)
+#f.flush()
+#f.close()
 
 # Close the sockets down nicely
 mpi.finalize()

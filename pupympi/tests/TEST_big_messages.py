@@ -79,8 +79,8 @@ elif rank == 1:
     msg = mpi.MPI_COMM_WORLD.recv(0,SECOND_TAG)
     assert msg == largerMsg
 
-    mpi.MPI_COMM_WORLD.send(heftyMsg, 1, THIRD_TAG)    
-    mpi.MPI_COMM_WORLD.send(largerMsg, 1, SECOND_TAG)
+    mpi.MPI_COMM_WORLD.send(heftyMsg, 0, THIRD_TAG)    
+    mpi.MPI_COMM_WORLD.send(largerMsg, 0, SECOND_TAG)
 
     msg = mpi.MPI_COMM_WORLD.recv(0,THIRD_TAG)
     assert msg == heftyMsg

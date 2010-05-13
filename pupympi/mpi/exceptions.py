@@ -35,7 +35,15 @@ class MPITopologyException(MPIException):
 
 class MPINoSuchRankException(MPIException):
     """
-    Raised in calls where an invalid rank i supplied. 
+    Raised in calls when specifying a rank in a communicator that is not a
+    member of the communicator.
+    """
+    pass
+
+class MPIInvalidRankException(MPIException):
+    """
+    Raised in calls where an invalid rank is supplied. Remember all ranks should
+    be positive integers.
     """
     pass
 
@@ -53,19 +61,22 @@ class MPIInvalidRangeException(MPIException):
 
 class MPIInvalidTagException(MPIException):
     """
-    Raised in calls where an invalid tag i supplied. Remember all
+    Raised in calls where an invalid tag is supplied. Remember all
     tags should be integers. See also the section about :ref:`TagRules`. 
     """
     pass
 
 class MPICommunicatorGroupNotSubsetOf(MPIException):
     """
-    Raised when a new communicator is created from a group that is not a subset of the parent communicator group.
+    Raised when a new communicator is created from a group that is not a subset
+    of the parent communicator group.
     """
     pass
     
 class MPICommunicatorNoNewIdAvailable(MPIException):
     """
-    Raised if it is no longer possible to create new communicators because there are no unique identifiers available. This typically happens when communicators are created locally since only 31 can be created in total. 
+    Raised if it is no longer possible to create new communicators because there
+    are no unique identifiers available. This typically happens when
+    communicators are created locally since only 31 can be created in total. 
     """
     pass
