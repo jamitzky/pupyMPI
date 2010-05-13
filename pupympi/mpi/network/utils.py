@@ -98,15 +98,6 @@ def get_raw_message(client_socket):
     return rank, cmd, receive_fixed(message_size)
     
 def prepare_message(data, rank, cmd=0):
-    # DEBUG
-    if data[2] == 9:
-        #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
-        #data = (data[0],data[1],11,data[3],data[4]) # WIN
-        data = (data[0],data[1],111,data[3],data[4]) # WIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
-        #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
 
     
     Logger().debug("Preparing message with command: %d and DATA:%s" % (cmd,data) )
