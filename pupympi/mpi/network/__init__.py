@@ -114,6 +114,7 @@ class Network(object):
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         
         self.full_network_startup = not options.disable_full_network_startup
+        
         #global done
         #done = False
 
@@ -244,6 +245,9 @@ class BaseCommunicationHandler(threading.Thread):
         # Locks for proper access to the internal socket->request structure
         self.socket_to_request_lock = threading.Lock()
 
+        # DEBUG
+        self.debug_counter = 0
+
     def finalize(self):
         self.shutdown_event.set()        
         Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )
@@ -326,10 +330,16 @@ class BaseCommunicationHandler(threading.Thread):
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
                     Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
-                    continue
+                    # DEBUG
+                    self.debug_counter += 1
+                    if self.debug_counter > 5:
+                        import sys
+                        sys.exit(42)
+                    else:
+                        continue
             except Exception, e:
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
-                
+                #break
             #Logger().debug("Received data from rank %d" % rank)
             
             if add_to_pool:

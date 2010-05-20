@@ -65,7 +65,7 @@ def get_raw_message(client_socket):
     rest is N bytes of pickled data. So we start by receiving a long and
     when using that value to unpack the remaining part.
     """
-    def receive_fixed(length):
+    def receive_fixed(length, header=False):
         """
         Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         """
@@ -84,7 +84,9 @@ def get_raw_message(client_socket):
             
             # Other side closed
             if len(data) == 0:
-                raise MPIException("Connection broke or something recieved empty")
+                #raise Exception
+                raise MPIException("Connection broke or something received empty (still missing length:%i - header:%s)" %(length,header))
+                
 
             length -= len(data)
             message += data
@@ -92,12 +94,21 @@ def get_raw_message(client_socket):
         return message
     
     header_size = struct.calcsize("lll")
-    header = receive_fixed(header_size)
+    header = receive_fixed(header_size,False)
     message_size, rank, cmd = struct.unpack("lll", header)
     
-    return rank, cmd, receive_fixed(message_size)
+    return rank, cmd, receive_fixed(message_size,True)
     
 def prepare_message(data, rank, cmd=0):
+    # DEBUG
+    #if data[2] == 9:
+        #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
+        #data = (data[0],data[1],11,data[3],data[4]) # WIN
+        #data = (data[0],data[1],111,data[3],data[4]) # WIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
+        #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
+        #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
 
     
     Logger().debug("Preparing message with command: %d and DATA:%s" % (cmd,data) )
