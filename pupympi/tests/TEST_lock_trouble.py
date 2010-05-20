@@ -6,8 +6,6 @@
 
 from mpi import MPI
 from mpi import constants
-import time
-
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -30,7 +28,6 @@ for iterations in xrange(max_iterations):
         msg =  "Iteration:%s for rank:%s got:%s \n" % (iterations, rank, recv)
     else:
         continue
-        
 
     f.write(msg)
     f.flush()
@@ -54,7 +51,6 @@ elif rank == 1:
     f.flush()
 else:
     pass
-
     
 f.write( "Done for rank %d\n" % rank)
 f.flush()

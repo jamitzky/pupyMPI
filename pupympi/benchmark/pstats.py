@@ -32,11 +32,7 @@
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-import sys
-import os
-import time
-import marshal
-import re
+import sys, os, time, cmd, marshal, re
 
 __all__ = ["Stats"]
 
@@ -136,7 +132,7 @@ class Stats:
         return
 
     def get_top_level_stats(self):
-        for func, (cc, nc, tt, ct, callers) in self.stats.items():
+        for func, (cc, nc, tt, _, callers) in self.stats.items():
             self.total_calls += nc
             self.prim_calls  += cc
             self.total_tt    += tt
@@ -234,7 +230,7 @@ class Stats:
             connector = ", "
 
         stats_list = []
-        for func, (cc, nc, tt, ct, callers) in self.stats.iteritems():
+        for func, (cc, nc, tt, ct, _) in self.stats.iteritems():
             stats_list.append((cc, nc, tt, ct) + func +
                               (func_std_string(func), func))
 
@@ -282,7 +278,7 @@ class Stats:
     def calc_callees(self):
         if self.all_callees: return
         self.all_callees = all_callees = {}
-        for func, (cc, nc, tt, ct, callers) in self.stats.iteritems():
+        for func, (_, _, _, _, callers) in self.stats.iteritems():
             if not func in all_callees:
                 all_callees[func] = {}
             for func2, caller in callers.iteritems():
@@ -355,7 +351,9 @@ class Stats:
             print >> self.stream, "(%d primitive calls)" % self.prim_calls,
         print >> self.stream, "in %.3f CPU seconds" % self.total_tt
         print >> self.stream
-        width, list = self.get_print_list(amount)
+        
+        # _ is width
+        _, list = self.get_print_list(amount)
         if list:
             self.print_title()
             for func in list:
@@ -384,7 +382,7 @@ class Stats:
         if list:
             self.print_call_heading(width, "was called by...")
             for func in list:
-                cc, nc, tt, ct, callers = self.stats[func]
+                _, _, _, _, callers = self.stats[func]
                 self.print_call_line(width, func, callers, "<-")
             print >> self.stream
             print >> self.stream
@@ -394,7 +392,7 @@ class Stats:
         print >> self.stream, "Function ".ljust(name_size) + column_title
         # print sub-header only if we have new-style callers
         subheader = False
-        for cc, nc, tt, ct, callers in self.stats.itervalues():
+        for _, _, _, _, callers in self.stats.itervalues():
             if callers:
                 value = callers.itervalues().next()
                 subheader = isinstance(value, tuple)
@@ -433,7 +431,7 @@ class Stats:
         print >> self.stream, 'filename:lineno(function)'
 
     def print_line(self, func):
-        cc, nc, tt, ct, callers = self.stats[func]
+        cc, nc, tt, ct, _ = self.stats[func]
         c = str(nc)
         if nc != cc:
             c = c + '/' + str(cc)
@@ -547,12 +545,6 @@ def f8(x):
 #**************************************************************************
 
 if __name__ == '__main__':
-    import cmd
-    try:
-        import readline
-    except ImportError:
-        pass
-
     class ProfileBrowser(cmd.Cmd):
         def __init__(self, profile=None):
             cmd.Cmd.__init__(self)
@@ -679,7 +671,6 @@ if __name__ == '__main__':
                 return stop
             return None
 
-    import sys
     if len(sys.argv) > 1:
         initprofile = sys.argv[1]
     else:

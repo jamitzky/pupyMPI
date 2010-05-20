@@ -3,7 +3,6 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 11
 
-import random
 from mpi import MPI
 
 mpi = MPI()

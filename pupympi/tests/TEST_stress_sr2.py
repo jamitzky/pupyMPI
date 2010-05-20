@@ -4,7 +4,6 @@
 # meta-minprocesses: 5
 # meta-max_runtime: 100
 
-import time
 from mpi import MPI
 from mpi import constants
 

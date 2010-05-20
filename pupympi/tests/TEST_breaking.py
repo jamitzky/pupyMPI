@@ -5,8 +5,6 @@
 # Simple pupympi program to test if horribly broken scripts manage to return their stderr
 
 from mpi import MPI
-from sys import stderr
-from threading import Thread, Condition, activeCount, currentThread 
 
 #print "Threads before initialize %s" % activeCount()
 mpi = MPI()

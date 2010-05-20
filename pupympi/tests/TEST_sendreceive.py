@@ -8,8 +8,6 @@
 from mpi import MPI
 from mpi import constants
 
-import time
-
 mpi = MPI()
 
 rank = mpi.MPI_COMM_WORLD.rank()

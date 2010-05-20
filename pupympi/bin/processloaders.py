@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-import sys, os, subprocess, select, time
+import os, subprocess, time
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 from mpi import constants
@@ -26,7 +26,7 @@ def _islocal(host):
 def popenssh(host, arguments, process_io, rank):
     """ Mixed Popen/SSH process starter. Uses Popen for localhost, otherwise SSH"""
     if _islocal(host):
-        p = popen(host, arguments, process_io, rank)
+        _ = popen(host, arguments, process_io, rank)
     else:
         ssh(host, arguments, process_io, rank)
 
@@ -85,8 +85,6 @@ def rsh(host, arguments, process_io, rank):
     
 def popen(host, arguments, process_io, rank):
     """ Process starter using subprocess. No loadbalancing yet. Process_io is ignored"""
-    logger = Logger()
-
     if _islocal(host):
         p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)

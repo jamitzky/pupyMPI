@@ -15,11 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-import threading, time
-
-from mpi import constants
-from mpi.request import BaseRequest, Request
-from mpi.exceptions import MPIException
+from mpi.request import BaseRequest
 from mpi.logger import Logger
 
 identity = lambda x : x
@@ -214,7 +210,7 @@ class CollectiveRequest(BaseRequest):
         for item in data:
             try:
                 final_data[item['rank']] = item['value']
-            except TypeError, e:
+            except TypeError:
                 Logger().error("item %s of data %s" % (item, data) )
                 raise TypeError("item %s of data %s" % (item, data) )
         
@@ -266,10 +262,9 @@ class CollectiveRequest(BaseRequest):
         # the N'th data in the inner list where N is our rank
         rank = self.communicator.rank()
         size = self.communicator.size()
-        final_data = [None for x in range(size)]
+        final_data = [None for _ in range(size)]
 
         for item in self.data:
-            sender_rank = item['rank']
             final_data[item['rank']] = item['value'][rank]
         
         self.data = final_data

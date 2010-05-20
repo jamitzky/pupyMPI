@@ -19,13 +19,10 @@
 group.py - contains class definition for Group functionality.
 """
 
-import sys
-import os
 import copy
-import unittest
 from mpi.logger import Logger
 from mpi import constants
-from mpi.exceptions import MPIException, MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
+from mpi.exceptions import MPIException, MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException, NotImplementedException
 
 
 class Group:
@@ -114,13 +111,13 @@ class Group:
         for r in ranks:
             try:
                 gRank = self.members[r]['global_rank']
-            except KeyError, e:
+            except KeyError:
                 raise MPINoSuchRankException("Can not translate to rank %i since it is not in group"%r)
             
             try:
                 # Found in the other group, now translate to that groups' local rank
                 translated.append(o[gRank])
-            except KeyError, e:
+            except KeyError:
                 # Unmatched in other group means not translatable
                 translated.append(constants.MPI_UNDEFINED)
         
@@ -182,13 +179,13 @@ class Group:
             gRank = self.members[k]['global_rank']
             try:
                 # Does k global rank exist in other group?
-                other_rank = others[gRank] # This raises ValueError if key not found
+                others[gRank] # This raises ValueError if key not found
                 intersection_members[next_rank] = self.members[k] # Keep global rank etc.
                 if self.rank() == k:
                     my_rank = next_rank
                     
                 next_rank += 1
-            except KeyError, e:
+            except KeyError:
                 continue
         
         intersection_group = Group(my_rank)
@@ -351,4 +348,3 @@ class Group:
         Marks a group for deallocation
         """
         raise NotImplementedException("free targeted for version 1.1")
-        return None

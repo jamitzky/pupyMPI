@@ -24,31 +24,29 @@ pupymark.py - Benchmark runner.
 Usage: MPI program - run with mpirun
 """
 from time import localtime, strftime
-import sys,pprint,getopt, datetime
+import sys
 
 from mpi import MPI
 from mpi import constants
 
 import comm_info as ci
 import single, collective, parallel, special
-
+import yappi # We don't know who is root yet so everybody imports yappi and starts it
 
 help_message = '''
 The help message goes here.
 '''
 
-def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, yappi=False):
+def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=False):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     The fixed_module parameter forces the benchmark to run just that one benchmark module
     """
-    if yappi: # DEBUG / PROFILE
+    if use_yappi: # DEBUG / PROFILE
         built_ins = False # Trace Python built-in functions        
-        import yappi # We don't know who is root yet so everybody imports yappi and starts it
+        
         yappi.start(built_ins) # True means also profile built-in functions
-    
     modules = [single, parallel, collective, special]
-    testlist = []
     resultlist = {}
 
     mpi = MPI()

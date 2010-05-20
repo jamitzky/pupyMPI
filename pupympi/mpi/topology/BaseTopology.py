@@ -19,8 +19,6 @@
 BaseTopology.py - 'abstract' master class for topologies
 """
 
-import sys
-import os
 import unittest
 
 class BaseTopology:
@@ -31,7 +29,6 @@ class BaseTopology:
 class TopologyTests(unittest.TestCase):
     def setUp(self):
         pass
-
 
 if __name__ == '__main__':
     unittest.main()

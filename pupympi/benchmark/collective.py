@@ -5,7 +5,7 @@ collective.py - collection of collective tests inspired by Intel MPI Benchmark (
 
 Created by Jan Wiberg on 2009-08-13.
 """
-from mpi.operations import MPI_max, MPI_list_max
+from mpi.operations import MPI_list_max
 
 import comm_info as ci
 
@@ -44,7 +44,7 @@ def test_Bcast(size, max_iterations):
     def Bcast(data, max_iterations):
         """docstring for Bcast"""
         root = 0
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             ci.communicator.bcast(data, root)
             
             # Switch root
@@ -67,8 +67,8 @@ def test_Bcast(size, max_iterations):
 def test_Allgather(size, max_iterations):
     def Allgather(data, max_iterations):
         """docstring for Allgather"""
-        for r in xrange(max_iterations):
-            received = ci.communicator.allgather( data )
+        for _ in xrange(max_iterations):
+            ci.communicator.allgather( data )
     # end of test
     
     # Allgather is not valid for size < num_procs
@@ -91,9 +91,8 @@ def test_Allgather(size, max_iterations):
 def test_Alltoall(size, max_iterations):
     def Alltoall(data, max_iterations):
         """docstring for Alltoall"""
-        for r in xrange(max_iterations):
-
-            received = ci.communicator.alltoall(data)
+        for _ in xrange(max_iterations):
+            ci.communicator.alltoall(data)
         # end of test
 
     # Alltoall is not valid for size < numprocs
@@ -118,7 +117,7 @@ def test_Alltoall(size, max_iterations):
 def test_Scatter(size, max_iterations):
     def Scatter(data, max_iterations):
         current_root = 0
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             my_data = data if ci.rank == current_root else None # NOTE: probably superflous, discuss with Rune
             ci.communicator.scatter(my_data, current_root)
             
@@ -143,8 +142,8 @@ def test_Scatter(size, max_iterations):
 def test_Gather(size, max_iterations):
     def Gather(data, max_iterations):
         current_root = 0
-        for r in xrange(max_iterations):
-            received = ci.communicator.gather(data, current_root)            
+        for _ in xrange(max_iterations):
+            ci.communicator.gather(data, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
     # end of test
@@ -163,9 +162,9 @@ def test_Reduce(size, max_iterations):
     def Reduce(data, max_iterations):
         """docstring for Reduce"""
         current_root = 0
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max over lists
-            received = ci.communicator.reduce(data, MPI_list_max, current_root)            
+            ci.communicator.reduce(data, MPI_list_max, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
     # end of test
@@ -182,9 +181,9 @@ def test_Reduce(size, max_iterations):
 
 def test_Allreduce(size, max_iterations):
     def Allreduce(data, max_iterations):
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             # For the allreduce operator we use Python built-in max
-            received = ci.communicator.allreduce(data, max)            
+            ci.communicator.allreduce(data, max)            
 
     # end of test
     
@@ -201,7 +200,7 @@ def test_Allreduce(size, max_iterations):
 def test_Barrier(size, max_iterations):
     def Barrier(max_iterations):
         """docstring for Barrier"""
-        for r in xrange(max_iterations):
+        for _ in xrange(max_iterations):
             ci.communicator.barrier()
     # end of test
 

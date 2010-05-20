@@ -3,10 +3,8 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 
-
 # rank 0 isends message to rank 1 who is a very slow receiver so rank 0 should quit early
 
-import time
 from mpi import MPI
 
 mpi = MPI()
@@ -14,11 +12,9 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-
 content = "This message was Isent"
 
 DUMMY_TAG = 1
-
 
 if rank == 0:
     # Send

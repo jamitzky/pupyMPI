@@ -9,9 +9,9 @@ even though we prefer logging in tests.
 """
 
 from mpi import MPI
-from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max, MPI_list_max
+from mpi.operations import MPI_list_max
 
-import array, random
+import random
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD

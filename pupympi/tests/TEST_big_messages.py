@@ -9,8 +9,6 @@
 
 from mpi import MPI
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidRangeException, MPIInvalidStrideException
-
 
 mpi = MPI()
 
@@ -18,14 +16,11 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-
 # Log stuff so progress is easier followed
 f = open(constants.LOGDIR+"mpi.big_messages.rank%s.log" % rank, "w")
 
-
 # Test does not make sense for 1
 assert size > 1
-
 
 #### Setup prerequisites ####
 FIRST_TAG = 111
@@ -39,8 +34,6 @@ largerMsg = 1024*string
 heftyMsg = 1024*1024*string
 # You can make a string longer than this but python (pickle) gets in trouble, you can't repr it and it takes up a lot of RAM :)
 # max for python2.5 on my machine is about 350*1024*1024 chars.. let's stay below that
-
-
 
 #### Test message passing ####
 

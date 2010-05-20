@@ -140,7 +140,8 @@ class Network(object):
         utils.robust_send(s_conn, prepare_message(data, internal_rank))        
         
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, _, raw_data = get_raw_message(s_conn)
+        # first _ is rank
+        _, _, raw_data = get_raw_message(s_conn)
         data = pickle.loads(raw_data)
         (_, _, _, all_procs) = data
 
@@ -191,14 +192,6 @@ class Network(object):
         
         Logger().debug("Network (fully) started")
 
-    def start_collective(self, request, communicator, jobtype, data, callbacks=[]):
-        Logger().info("Starting a %s collective network job with %d callbacks" % (type, len(callbacks)))
-        
-        job = {'type' : jobtype, 'data' : data, 'request' : request, 'status' : 'new', 'callbacks' : callbacks, 'communicator' : communicator, 'persistent': True}
-        tree = BroadCastTree(range(communicator.size()), communicator.rank())
-        tree.up()
-        tree.down()
-        
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the 
@@ -391,7 +384,6 @@ class BaseCommunicationHandler(threading.Thread):
                         self.socket_to_request[write_socket].remove(matched_request)
 
     def run(self):
-
         # Main loop
         while not self.shutdown_event.is_set():
             (in_list, out_list, error_list) = self.select()
@@ -504,10 +496,9 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
         
         with self.kqueue_changelist_lock:
             self.kqueue_changelist.append(event)
-        print "Changelist", self.kqueue_changelist
         self.in_ident_to_socket[event.ident] = client_socket
-        Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-        Logger().debug("Called, add in socket %s", self.kqueue_changelist)
+        #Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
+        #Logger().debug("Called, add in socket %s", self.kqueue_changelist)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
@@ -527,10 +518,8 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
         #print self.kqueue_changelist
         with self.kqueue_changelist_lock:
             events = self.kqueue.control(self.kqueue_changelist, 10, 0)
-            if events:
-                print "events", events
             for event in events:
-                Logger().debug("Found event with ident: %s" % event.ident)
+                #Logger().debug("Found event with ident: %s" % event.ident)
                 if event.filter == select.KQ_FILTER_READ:
                     socket = self.in_ident_to_socket.get(event.ident, None)
                     if socket:
@@ -554,5 +543,4 @@ class CommunicationHandlerSelect(BaseCommunicationHandler):
             return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
         except Exception, e:
             Logger().error("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
-            Logger().error("sockets_in: %s, sockets_out: %s \n in_list: %s, out_list: %s, error_list: %s" % (self.sockets_in, self.sockets_out, in_list, out_list, error_list) )
 

@@ -23,6 +23,9 @@ class MPIException(Exception):
     specific function for the actual cause of this exception. 
     """
     pass
+
+class NotImplementedException(MPIException):
+    pass
     
 class MPITopologyException(MPIException): 
     """

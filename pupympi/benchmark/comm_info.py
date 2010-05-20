@@ -5,7 +5,7 @@ comm_info.py
 
 per process settings at top, and assist functions at bottom
 """
-import time, array, random
+import time, array
 from mpi import constants
  
 N_BARR = 2                  # Number of calls to barrier deemed neccessary for sync
@@ -61,7 +61,7 @@ def get_tags_single():
     
 def synchronize_processes():
     """docstring for barrier"""
-    for b in xrange(N_BARR):
+    for _ in xrange(N_BARR):
         communicator.barrier()
     
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

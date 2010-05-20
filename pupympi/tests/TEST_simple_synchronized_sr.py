@@ -3,7 +3,6 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 
-import time
 from mpi import MPI
 from mpi import constants
 

@@ -1,6 +1,4 @@
-import time
 from mpi import MPI
-from mpi import constants
 
 mpi = MPI()
 

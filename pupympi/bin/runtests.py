@@ -22,7 +22,7 @@ runtests.py - test runner for pupympi
 """
 
 import sys
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser
 import subprocess
 import os
 from threading import Thread
@@ -263,9 +263,10 @@ def main():
 
     parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from.')
 
-    options, args = parser.parse_args()
-   
-    run_tests( get_testnames(options.skipto), options )
+    # _ is args
+    options, _ = parser.parse_args()
+
+    run_tests( get_testnames(), options )
 
 if __name__ == "__main__":
     sys.exit(main())
