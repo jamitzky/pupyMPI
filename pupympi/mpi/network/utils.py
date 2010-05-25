@@ -101,25 +101,30 @@ def get_raw_message(client_socket):
     
 def prepare_message(data, rank, cmd=0):
     # DEBUG
-    #if data[2] == 9:
+    if data[2] == 44:
         #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
-        #data = (data[0],data[1],11,data[3],data[4]) # WIN
+        #data = (data[0],data[1],7,data[3],data[4]) # WIN
         #data = (data[0],data[1],111,data[3],data[4]) # WIN
         #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
         #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
         #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
         #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
+        pass
 
     
-    Logger().debug("Preparing message with command: %d and DATA:%s" % (cmd,data) )
+    
     pickled_data = pickle.dumps(data)
     lpd = len(pickled_data)
-    #if data[2] == 9:
-    #    lpd +=  1
+    #Logger().debug("Prepared message with command: %d, DATA:%s and lpd:%i" % (cmd,data,lpd) )
+    # DEBUG
+    # This actually allows the message to be sent, receiver fails since last byte promised is never sent
+    #if data[2] == 44:
+    #    lpd += 1        
     #if lpd % 2 != 0:
     #    lpd +=  1
-    
+
     header = struct.pack("lll",lpd , rank, cmd)
+    Logger().debug("Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data)) )
     return header+pickled_data
 
 def _nice_data(data):
@@ -160,11 +165,11 @@ def robust_send(socket, message):
     """
     target = len(message) # how many bytes to send
     transmitted_bytes = 0
-    #Logger().debug("robust_send message:%s" %(message))
+    Logger().debug("... robust_send target:%i, message:%s" %(target,message))
     while target > transmitted_bytes:        
         delta = socket.send(message)
         transmitted_bytes += delta
-        
+        Logger().debug("... target")
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]
             Logger().debug("Message sliced because it was too large for one send.")

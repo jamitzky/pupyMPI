@@ -12,6 +12,22 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    
+def robust_send(socket, message):
+    """
+    Python docs state that using socket.send the application is responsible for
+    handling any unsent bytes. Even though we have not really seen it yet we use
+    this wrapper to ensure that it all really gets sent.
+    """
+    target = len(message) # how many bytes to send
+    transmitted_bytes = 0
+    print "... robust_send target:%i, message:%s" %(target,message)
+    while target > transmitted_bytes:        
+        delta = socket.send(message)
+        transmitted_bytes += delta
+        if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
+            message = message[transmitted_bytes:]
+            print "Message sliced because it was too large for one send."
 
 def get_raw_message(client_socket):
     """
@@ -53,28 +69,29 @@ def get_raw_message(client_socket):
 
 def prepare_message(data, rank, cmd=0):
     # DEBUG
-    if data[2] == 9:
+    if data[2] == 44:
         #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
         #data = (data[0],data[1],11,data[3],data[4]) # WIN
         #data = (data[0],data[1],111,data[3],data[4]) # WIN
         #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
-        data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
+        #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
         #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
         #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
+        pass
 
     
     pickled_data = pickle.dumps(data)
     lpd = len(pickled_data)
-    #if data[2] == 9:
+    #if data[2] == 44:
     #    lpd +=  1
     #if lpd % 2 != 0:
     #    lpd +=  1
     
     header = struct.pack("lll",lpd , rank, cmd)
+    print "Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data))
     return header+pickled_data
 
 
-### STRINGS
 
 def prp_receiver(address,port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -99,30 +116,21 @@ def prp_receiver(address,port):
     conn.close()
     
 def prp_sender(address,port):
-    t0 = time.time()    
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((address,port))
     print "string sender connected"
     
-    t1 = time.time()
+    tag = 44
     
-    #tag = 9
-    tag = 11
-    
-    message = "This message was Isent"
+    message = "This message was sent"
 
     data = (0, 0, tag, False, message)
-    requestdata = prepare_message(data, 0, 0)
-    
-    t2 = time.time()    
+    requestdata = prepare_message(data, 0, 0)    
 
-    s.send(requestdata)
+    robust_send(s,requestdata)
     
-    t3 = time.time()
-    print "string sender done in %f seconds" % (t3-t2)
+    print "sender done"
     s.close()    
-    t4 = time.time()
-    return (t0,t1,t2,t3,t4)   
     
 
     
@@ -132,23 +140,15 @@ def prp_sender(address,port):
 def starter():
     port = 2525
     address = "localhost"
-    times = 1000
-    size = 50
     server = False
-    struct = False
-    buffer = False
-    array = False
-    byte = False
-    all = False
+
     sleeptime = 3
-    global message_size
-    message_size = size
 
     for arg in sys.argv:
         if arg == "server":
             server = True
         elif arg.find("port:") > -1:
-            l = arg.split(':')
+            token,sep,port = arg.partition(':')
 
     if server:
         prp_receiver(address,port)
