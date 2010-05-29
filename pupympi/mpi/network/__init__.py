@@ -294,7 +294,8 @@ class BaseCommunicationHandler(threading.Thread):
         for read_socket in readlist:
             add_to_pool = False
             try:
-                (conn, sender_address) = read_socket.accept()
+                # _ is sender_address
+                (conn, _) = read_socket.accept()
                 
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
@@ -376,14 +377,16 @@ class BaseCommunicationHandler(threading.Thread):
     def run(self):
         # Main loop
         while not self.shutdown_event.is_set():
-            (in_list, out_list, error_list) = self.select()
+            # _ is errorlist
+            (in_list, out_list, _) = self.select()
             self._handle_readlist(in_list)
             self._handle_writelist(out_list)
         
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then close the sockets.
         while self.socket_to_request:
-            (in_list, out_list, error_list) = self.select()
+            # _ is errorlist
+            (in_list, out_list, _) = self.select()
             self._handle_writelist(out_list)
 
             removal = []
@@ -393,7 +396,7 @@ class BaseCommunicationHandler(threading.Thread):
             
             for r in removal:
                 del self.socket_to_request[r]
-                
+
 class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerEpoll, self).__init__(*args, **kwargs)
