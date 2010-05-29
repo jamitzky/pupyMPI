@@ -9,7 +9,7 @@ import cPickle
 import pickle
 
 resp = 0
-prompt = "Type 1 to use cPickle (should segfault) or 2 for ordinary pickle (should throw a proper exception)"
+prompt = "Type 1 to use cPickle (should segfault) or 2 for ordinary pickle (should throw a proper exception): "
 while not resp in ("1","2"):
     resp = raw_input(prompt)
 
