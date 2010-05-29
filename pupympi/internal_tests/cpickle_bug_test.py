@@ -10,10 +10,10 @@ import pickle
 
 resp = 0
 prompt = "Type 1 to use cPickle (should segfault) or 2 for ordinary pickle (should throw a proper exception): "
-while not resp in ("1","2"):
+while not resp in ("a","b"):
     resp = raw_input(prompt)
 
-if resp == "1":
+if resp == "a":
     cPickle.load( io.StringIO( '0' ) )
 else:
     pickle.load( io.StringIO( '0' ) )
