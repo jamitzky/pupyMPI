@@ -67,6 +67,7 @@ class Communicator:
         # act like a caching system, so we don't end up generating trees
         # all the time.
         if root not in self.bc_trees:
+            Logger().warning("Creating a new tree with root %d" % root)
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
             self.bc_trees[root]
         
