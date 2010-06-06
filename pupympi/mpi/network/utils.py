@@ -74,12 +74,12 @@ def get_raw_message(client_socket):
             try:
                 data = client_socket.recv(min(length, 4096))
             except socket.error, e:
-                Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
+                #Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("recieve_fixed threw socket error: %s" % e)
                 # NOTE: We can maybe recover more gracefully here but that requires
                 # throwing status besides message and rank upwards.
             except Exception, e:
-                Logger().error("get_raw_message: Raised error: %s" %e)
+                #Logger().error("get_raw_message: Raised error: %s" %e)
                 raise MPIException("recieve_fixed threw other error: %s" % e)
             
             # Other side closed
@@ -103,7 +103,7 @@ def prepare_message(data, rank, cmd=0):
     lpd = len(pickled_data)
 
     header = struct.pack("lll",lpd , rank, cmd)
-    Logger().debug("Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data)) )
+    #Logger().debug("Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data)) )
     return header+pickled_data
 
 def _nice_data(data):
@@ -144,11 +144,9 @@ def robust_send(socket, message):
     """
     target = len(message) # how many bytes to send
     transmitted_bytes = 0
-    Logger().debug("... robust_send target:%i, message:%s" %(target,message))
     while target > transmitted_bytes:        
         delta = socket.send(message)
         transmitted_bytes += delta
-        Logger().debug("... target")
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]
             Logger().debug("Message sliced because it was too large for one send.")
