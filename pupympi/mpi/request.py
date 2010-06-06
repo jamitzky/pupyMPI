@@ -79,7 +79,7 @@ class Request(BaseRequest):
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
     
     def update(self, status, data=None):
-        Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
+        #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
         if self.status not in ("finished", "cancelled"): # No updating on dead requests
             self.status = status
         else:
@@ -121,15 +121,14 @@ class Request(BaseRequest):
         On successfull completion the ressources occupied by this request object will
         be garbage collected.
         """
-        Logger().info("Starting a %s wait, tag: %s" % (self.request_type,self.tag) )
+        #Logger().info("Starting a %s wait, tag: %s" % (self.request_type,self.tag) )
         
         if self.status == "cancelled":
-            Logger().debug("WAIT on cancel illegality")
+            #Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
         
         self._waitevent.wait()
-        #Logger().debug("Waiting done for request with data:%s" % _nice_data(self.data) )
-        Logger().info("Waiting done for request %s wait, tag: %s" % (self.request_type,self.tag) )
+        #Logger().info("Waiting done for request %s wait, tag: %s" % (self.request_type,self.tag) )
         
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
