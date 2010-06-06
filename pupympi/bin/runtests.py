@@ -164,7 +164,7 @@ def get_testnames(skipto = 0):
         tests = tests[skipto:]
     elif skipto < 0: # skip some tests from the end
         tests = tests[:skipto]
-
+    
     return tests
 
     
@@ -236,10 +236,10 @@ def run_tests(test_files, options):
     #     global latex_output
     #     latex_output = latex
     
-        # We run tests sequentially since many of them are rather hefty and may
-        # interfere with others. Also breakage can lead to side effects and so
-        # non-breaking tests may appear to break when in fact the cause is another
-        # test running at the same time
+    # We run tests sequentially since many of them are rather hefty and may
+    # interfere with others. Also breakage can lead to side effects and so
+    # non-breaking tests may appear to break when in fact the cause is another
+    # test running at the same time
     for test in test_files:
         t = RunTest(test, logfile_prefix, options, get_test_data(test))
         threadlist.append(t)
@@ -261,12 +261,12 @@ def main():
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
 
-    parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from.')
+    parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from. Negative values leave out tests from the end as with slicing.')
 
     # _ is args
     options, _ = parser.parse_args()
 
-    run_tests( get_testnames(), options )
+    run_tests( get_testnames(options.skipto), options )
 
 if __name__ == "__main__":
     sys.exit(main())
