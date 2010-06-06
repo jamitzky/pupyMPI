@@ -331,12 +331,18 @@ class BaseCommunicationHandler(threading.Thread):
             if add_to_pool:
                 self.network.socket_pool.add_created_socket(conn, rank)
             
-            #Logger().info("Received message with command: %d" % msg_command)
+            Logger().info("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
-                with self.network.mpi.raw_data_lock:
-                    self.network.mpi.raw_data_queue.append(raw_data)
-                    self.network.mpi.raw_data_has_work.set()
-                    self.network.mpi.has_work_event.set()
+                try:
+                    with self.network.mpi.raw_data_lock:
+                        self.network.mpi.raw_data_queue.append(raw_data)
+                        self.network.mpi.raw_data_has_work.set()
+                        self.network.mpi.has_work_event.set()
+                except AttributeError, e:
+                    Logger().error("Failed grabbing raw_data_lock!")
+                except Exception, e:
+                    Logger().error("Strange error - Failed grabbing raw_data_lock!")
+                    
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
