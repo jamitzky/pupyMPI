@@ -84,7 +84,6 @@ def get_raw_message(client_socket):
             
             # Other side closed
             if len(data) == 0:
-                #raise Exception
                 raise MPIException("Connection broke or something received empty (still missing length:%i - header:%s)" %(length,header))
                 
 
@@ -99,29 +98,9 @@ def get_raw_message(client_socket):
     
     return rank, cmd, receive_fixed(message_size,True)
     
-def prepare_message(data, rank, cmd=0):
-    # DEBUG
-    if data[2] == 44:
-        #data = (data[0],data[1],data[2],data[3],data[4][0:-1])2
-        #data = (data[0],data[1],7,data[3],data[4]) # WIN
-        #data = (data[0],data[1],111,data[3],data[4]) # WIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"wwww") # WINWIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"www") # FAIL
-        #data = (data[0],data[1],data[2],data[3],data[4]+"ww") # WIN
-        #data = (data[0],data[1],data[2],data[3],data[4]+"w") # WIN
-        pass
-
-    
-    
+def prepare_message(data, rank, cmd=0):    
     pickled_data = pickle.dumps(data)
     lpd = len(pickled_data)
-    #Logger().debug("Prepared message with command: %d, DATA:%s and lpd:%i" % (cmd,data,lpd) )
-    # DEBUG
-    # This actually allows the message to be sent, receiver fails since last byte promised is never sent
-    #if data[2] == 44:
-    #    lpd += 1        
-    #if lpd % 2 != 0:
-    #    lpd +=  1
 
     header = struct.pack("lll",lpd , rank, cmd)
     Logger().debug("Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data)) )
