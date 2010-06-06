@@ -2,6 +2,7 @@
 # meta-description: Allreduce, actually computes factorial of mpi_size
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# meta-max_runtime: 25
 
 from mpi import MPI
 from mpi.operations import MPI_prod
