@@ -2,6 +2,7 @@
 """
 http://bugs.python.org/issue7758
 http://bugs.python.org/issue7455
+http://bugs.python.org/issue7542
 """
 
 import cStringIO as io
@@ -13,7 +14,12 @@ prompt = "Type a to use cPickle (should segfault) or b for ordinary pickle (shou
 while not resp in ("a","b"):
     resp = raw_input(prompt)
 
+#if resp == "a":
+#    cPickle.load( io.StringIO( '0' ) )
+#else:
+#    pickle.load( io.StringIO( '0' ) )
+
 if resp == "a":
-    cPickle.load( io.StringIO( '0' ) )
+    cPickle.loads( '0')
 else:
-    pickle.load( io.StringIO( '0' ) )
+    pickle.loads( '0' )

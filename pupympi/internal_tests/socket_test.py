@@ -39,7 +39,7 @@ import ctypes
 import array
 
 class Point(ctypes.Structure):
-     _fields_ = [ ('x',ctypes.c_double), ('y',ctypes.c_double), ('z',ctypes.c_double) ]
+    _fields_ = [ ('x',ctypes.c_double), ('y',ctypes.c_double), ('z',ctypes.c_double) ]
 
 # Message struct with fixed size content buffer
 class Message500(ctypes.Structure):    
