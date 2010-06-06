@@ -365,6 +365,10 @@ class BaseCommunicationHandler(threading.Thread):
                         Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
+                    except Exception, e:
+                        Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        # Send went wrong, do not update, but hope for better luck next time
+                        continue
                     
                     removal.append((write_socket, request))
                     
