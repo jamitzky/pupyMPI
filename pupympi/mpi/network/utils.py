@@ -98,7 +98,7 @@ def get_raw_message(client_socket):
     
     return rank, cmd, receive_fixed(message_size,True)
     
-def prepare_message(data, rank, cmd=0):    
+def prepare_message(data, rank, cmd=0):
     pickled_data = pickle.dumps(data)
     lpd = len(pickled_data)
 
@@ -144,9 +144,11 @@ def robust_send(socket, message):
     """
     target = len(message) # how many bytes to send
     transmitted_bytes = 0
+    
     while target > transmitted_bytes:        
         delta = socket.send(message)
         transmitted_bytes += delta
+    
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]
             Logger().debug("Message sliced because it was too large for one send.")
