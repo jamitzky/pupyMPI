@@ -2,6 +2,7 @@
 # meta-description: Test reduce, first compute factorial of mpi_size, then compare builtin ops max, min, sum to Python built-ins
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# meta-max_runtime: 60
 
 from mpi import MPI
 from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max
