@@ -32,6 +32,11 @@ from mpi.network.utils import pickle
 
 from mpi.request import Request
 
+try:
+    import yappi
+except ImportError:
+    pass
+
 class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
@@ -90,6 +95,7 @@ class MPI(Thread):
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
+        parser.add_option('--yappi', dest='yappi', default=False)
 
         # _ is args
         options, _ = parser.parse_args()
@@ -115,6 +121,17 @@ class MPI(Thread):
             
         # First check for required Python version
         self._version_check()
+
+        # Check for yappi support
+        self._yappi_enabled = False
+        if options.yappi:
+            try:
+                import yappi
+                self._yappi_enabled = True
+                logger.debug("Yappi enabled")
+            except ImportError:
+                logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
+                self._yappi_enabled = False
 
         self.network = Network(self, options)
         
@@ -238,6 +255,9 @@ class MPI(Thread):
 
     def run(self):
 
+        if self._yappi_enabled:
+            yappi.start()
+
         while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
@@ -303,7 +323,14 @@ class MPI(Thread):
         
         self.queues_flushed.set()
 
-        #Logger().debug("Queues flushed and user thread has been signalled.")
+        if self._yappi_enabled:
+            yappi.stop()
+            print "\n\n*** Yappi stats follow ***"
+            stats = yappi.get_stats()
+            for stat in stats:
+                print stat
+            yappi.clear_stats()
+
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
         

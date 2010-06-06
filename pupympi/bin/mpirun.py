@@ -68,7 +68,7 @@ def parse_options():
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
     parser_adv_group.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
-    #parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
+    parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser.add_option_group( parser_adv_group )
 
     try:
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
-    
+
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
@@ -207,6 +207,12 @@ if __name__ == "__main__":
     
     if options.disable_full_network_startup:
         global_run_options.append('--disable-full-network-startup')
+
+    if options.enable_profiling:
+        global_run_options.append('--enable-profiling')
+
+    if options.yappi:
+        global_run_options.append('--yappi')
 
     for flag in ("quiet", "debug"):
         value = getattr(options, flag, None)
@@ -298,5 +304,5 @@ if __name__ == "__main__":
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
-    
+
     sys.exit(1 if any_failures else 0)
