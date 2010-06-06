@@ -2,6 +2,7 @@
 # meta-description: Test alltoall, sending individual data from all to all
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# meta-max_runtime: 25
 
 from mpi import MPI
 
