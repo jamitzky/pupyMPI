@@ -139,9 +139,6 @@ class MPI(Thread):
         user_options.extend(sys.argv[sys.argv.index("--")+1:])
         sys.argv = user_options
 
-        # Set a static attribute on the class so we know it is initialised.
-        self.__class__._initialized = True
-        
         # Set up the global mpi constants
         constants.MPI_GROUP_EMPTY = Group()
         
@@ -188,6 +185,9 @@ class MPI(Thread):
         self.network.start_full_network()
         #logger.info("MPI environment is up and running.")
 
+        # Set a static attribute on the class so we know it is initialised.
+        self.__class__._initialized = True
+        
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
