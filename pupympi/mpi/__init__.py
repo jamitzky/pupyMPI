@@ -206,7 +206,6 @@ class MPI(Thread):
         #logger.info("MPI environment is up and running.")
 
     def match_pending(self, request):
-        Logger().debug("-- Match pending called on request:%s" % request)
         """
         Tries to match a pending request with something in
         the received data.
@@ -221,7 +220,7 @@ class MPI(Thread):
         match = False
         remove = [] 
         with self.received_data_lock:
-            Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
+            #Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
 
             for data in self.received_data:
                 (communicator_id, sender, tag, acknowledge, message) = data
@@ -251,7 +250,7 @@ class MPI(Thread):
                         
             for data in remove:
                 self.received_data.remove(data)
-        Logger().debug("-- Match pending released lock! Match:%s" % match)
+        #Logger().debug("-- Match pending released lock! Match:%s" % match)
         return match
 
     def run(self):
@@ -304,8 +303,8 @@ class MPI(Thread):
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
         
-        Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
-        Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
+        #Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
+        #Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
@@ -315,16 +314,14 @@ class MPI(Thread):
             self.unstarted_requests = []
             self.unstarted_requests_has_work.clear()
             
-        Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
-        Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
-        Logger().debug("QUITTING: recieved data: %s" % self.received_data)
-        Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
-        Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
-        Logger().info("MPI environment shutting down.")
+        #Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
+        #Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
+        #Logger().debug("QUITTING: recieved data: %s" % self.received_data)
+        #Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
+        #Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
+        #Logger().info("MPI environment shutting down.")
         
         self.queues_flushed.set()
-
-        Logger().debug("Queues flushed and user thread has been signalled.")
 
         if self._yappi_enabled:
             yappi.stop()
@@ -391,13 +388,13 @@ class MPI(Thread):
             don't need to wait() on all your started isends before you call 
             finalize. 
         """
-        Logger().debug("--- Finalize has been called ---")
+        #Logger().debug("--- Finalize has been called ---")
         self.shutdown_event.set() # signal shutdown to mpi thread
         self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work        
         
         self.queues_flushed.wait()
         
-        Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
+        #Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
             
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
