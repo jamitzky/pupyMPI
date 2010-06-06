@@ -95,7 +95,7 @@ class MPI(Thread):
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
-        parser.add_option('--yappi', dest='yappi', default=False)
+        parser.add_option('--yappi', dest='yappi', action='store_true', default=False)
 
         # _ is args
         options, _ = parser.parse_args()
