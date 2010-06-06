@@ -79,6 +79,43 @@ class MPI(Thread):
             mpi.finalize()
             
         """
+        # Data structures for jobs.
+        # The locks are for guarding the data structures
+        # The events are for signalling change in data structures
+        
+        # Unstarted requests are both send and receive requests, held here so the user thread can return quickly
+        self.unstarted_requests = []
+        self.unstarted_requests_lock = threading.Lock()
+        self.unstarted_requests_has_work = threading.Event()
+        
+        # Pending requests are recieve requests where the data may or may not have arrived
+        self.pending_requests = []
+        self.pending_requests_lock = threading.Lock()
+        self.pending_requests_has_work = threading.Event()
+        
+        # Raw data are messages that have arrived but not been unpickled yet
+        self.raw_data_queue = []
+        self.raw_data_lock = threading.Lock()
+        self.raw_data_has_work = threading.Event() 
+        
+        # Recieved data are messages that have arrived and are unpickled
+        # (ie. ready for matching with a posted recv request)
+        #There are no events as this is handled through the "pending_request_" event.
+        self.received_data = []
+        self.received_data_lock = threading.Lock()
+
+        # General event to wake up main mpi thread
+        self.has_work_event = threading.Event()
+        
+        # Shutdown signals
+        self.shutdown_event = threading.Event() # MPI finalize has been called, shutdown in progress
+        self.queues_flushed = threading.Event() # Queues are flushed, shutting down network threads can begin
+        
+        # Lock and counter for enumerating request ids
+        self.current_request_id_lock = threading.Lock()
+        self.current_request_id = 0
+        
+
         
         parser = OptionParser()
         parser.add_option('--rank', type='int')
@@ -158,42 +195,6 @@ class MPI(Thread):
 
         # Set up the global mpi constants
         constants.MPI_GROUP_EMPTY = Group()
-        
-        # Data structures for jobs.
-        # The locks are for guarding the data structures
-        # The events are for signalling change in data structures
-        
-        # Unstarted requests are both send and receive requests, held here so the user thread can return quickly
-        self.unstarted_requests = []
-        self.unstarted_requests_lock = threading.Lock()
-        self.unstarted_requests_has_work = threading.Event()
-        
-        # Pending requests are recieve requests where the data may or may not have arrived
-        self.pending_requests = []
-        self.pending_requests_lock = threading.Lock()
-        self.pending_requests_has_work = threading.Event()
-        
-        # Raw data are messages that have arrived but not been unpickled yet
-        self.raw_data_queue = []
-        self.raw_data_lock = threading.Lock()
-        self.raw_data_has_work = threading.Event() 
-        
-        # Recieved data are messages that have arrived and are unpickled
-        # (ie. ready for matching with a posted recv request)
-        #There are no events as this is handled through the "pending_request_" event.
-        self.received_data = []
-        self.received_data_lock = threading.Lock()
-
-        # General event to wake up main mpi thread
-        self.has_work_event = threading.Event()
-        
-        # Shutdown signals
-        self.shutdown_event = threading.Event() # MPI finalize has been called, shutdown in progress
-        self.queues_flushed = threading.Event() # Queues are flushed, shutting down network threads can begin
-        
-        # Lock and counter for enumerating request ids
-        self.current_request_id_lock = threading.Lock()
-        self.current_request_id = 0
         
         self.daemon = True
         self.start()
