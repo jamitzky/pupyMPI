@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
     
-    logger.debug("Hosts are now configured: " + str(mappedHosts))
+    #logger.debug("Hosts are now configured: " + str(mappedHosts))
     s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
     s.listen(5)
 
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
             
-        logger.debug("Process with rank %d started" % rank)
+        #logger.debug("Process with rank %d started" % rank)
 
 
     """
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     # Listing of socket connections to all the processes
     sender_conns = []
 
-    logger.debug("Waiting for %d processes" % options.np)
+    #logger.debug("Waiting for %d processes" % options.np)
     
     # Recieve listings from newly started proccesses phoning in
     for i in range(options.np):       
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         (communicator, sender, tag, message) = data
         
         all_procs.append( message ) # add (rank,host,port) for process to the listing
-    logger.debug("Received information for all %d processes" % options.np)
+    #logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
     COMM_ID = -1

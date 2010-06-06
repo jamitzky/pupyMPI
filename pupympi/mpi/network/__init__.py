@@ -190,7 +190,7 @@ class Network(object):
             # Full network start up means a static socket pool
             self.socket_pool.readonly = True
         
-        Logger().debug("Network (fully) started")
+        #Logger().debug("Network (fully) started")
 
     def finalize(self):
         """
@@ -243,7 +243,7 @@ class BaseCommunicationHandler(threading.Thread):
 
     def finalize(self):
         self.shutdown_event.set()        
-        Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )
+        #Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )
 
     def add_out_request(self, request):
         """
@@ -260,7 +260,6 @@ class BaseCommunicationHandler(threading.Thread):
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
         #print "We found cmd: %d" % request.cmd
         request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
-        Logger().debug("Prepare len: %i, message: %s" % (len(request.data),request.data) )
 
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
@@ -291,7 +290,7 @@ class BaseCommunicationHandler(threading.Thread):
                 #s.shutdown(2)   # Further sends and receives are disallowed.
                 s.close()                
             except Exception, e:
-                Logger().debug("Got error when closing socket: %s" % e)
+                Logger().error("Got error when closing socket: %s" % e)
 
     def _handle_readlist(self, readlist):
         #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
@@ -304,7 +303,7 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True
-                Logger().debug("Accepted connection on the main socket")
+                #Logger().debug("Accepted connection on the main socket")
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
                 # This means that if accept fails it is normally just data coming in
@@ -318,23 +317,16 @@ class BaseCommunicationHandler(threading.Thread):
             except MPIException, e:                    
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
-                    Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
+                    #Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
                     break # We don't care about incoming during shutdown
                 else:
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
-                    Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
-                    # DEBUG
-                    self.debug_counter += 1
-                    if self.debug_counter > 5:
-                        import sys
-                        sys.exit(42)
-                    else:
-                        continue
+                    #Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
+                    continue
             except Exception, e:
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
-                #break
-            #Logger().debug("Received data from rank %d" % rank)
+                continue
             
             if add_to_pool:
                 self.network.socket_pool.add_created_socket(conn, rank)
@@ -357,12 +349,12 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":                        
-                    Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
                         utils.robust_send(write_socket,request.data)
                     except socket.error, e:
-                        Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        #Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     except Exception, e:
