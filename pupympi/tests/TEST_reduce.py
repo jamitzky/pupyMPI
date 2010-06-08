@@ -16,6 +16,7 @@ def fact(n):
 mpi = MPI()
 
 root = 4
+root = 0
 
 # We start n processes, and try to calculate n!
 rank = mpi.MPI_COMM_WORLD.rank()

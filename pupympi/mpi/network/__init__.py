@@ -496,35 +496,44 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
         
-        # Create a kqueue event and add it to the kqueue environment.
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        
         with self.kqueue_changelist_lock:
+            # Create a kqueue event and add it to the kqueue environment.
+            event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
             self.kqueue_changelist.append(event)
-        self.in_ident_to_socket[event.ident] = client_socket
+        
+            # FIXME TEST
+            #self.in_ident_to_socket[event.ident] = client_socket
+            self.in_ident_to_socket[client_socket.fileno()] = client_socket
         #Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
         #Logger().debug("Called, add in socket %s", self.kqueue_changelist)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
-
-        # Create a kqueue event and add it to the kqueue environment.
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+        
         with self.kqueue_changelist_lock:
+            # Create a kqueue event and add it to the kqueue environment.
+            event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
             self.kqueue_changelist.append(event)
-        print "Changelist", self.kqueue_changelist
+        
+            # FIXME: TEst
+            #self.out_ident_to_socket[event.ident] = client_socket
+            self.out_ident_to_socket[client_socket.fileno()] = client_socket
+        
         Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-        self.out_ident_to_socket[event.ident] = client_socket
 
     def select(self):
         in_list = []
         out_list = []
         error_list = []
-        #print self.kqueue_changelist
         with self.kqueue_changelist_lock:
-            events = self.kqueue.control(self.kqueue_changelist, 10, 0)
+            events = []
+            for kevent in self.kqueue_changelist: 
+                new_events = self.kqueue.control([kevent], 10, 0)
+                events.extend(new_events)
+                
+            new_events = self.kqueue.control(None, 10, 0)
+            events.extend(new_events)
             for event in events:
-                #Logger().debug("Found event with ident: %s" % event.ident)
                 if event.filter == select.KQ_FILTER_READ:
                     socket = self.in_ident_to_socket.get(event.ident, None)
                     if socket:
@@ -533,6 +542,10 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
                     socket = self.out_ident_to_socket.get(event.ident, None)
                     if socket:
                         out_list.append(socket)
+                else:
+                    if event.flags == select.KQ_EV_ERROR:
+                        Logger().warning("Error detected in kqueue control call. ")
+                        Logger().warning("We received an event with identifier (%s), filter (%s), flags (%s) fflags (%s) udata(%s)" % (event.ident, event.filter, event.flags, event.fflags, event.udata))
             
             # Reset the change list
             self.kqueue_changelist = []
