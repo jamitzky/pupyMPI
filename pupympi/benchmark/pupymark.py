@@ -31,7 +31,7 @@ from mpi import constants
 
 import comm_info as ci
 import single, collective, parallel, special
-import yappi # We don't know who is root yet so everybody imports yappi and starts it
+
 
 help_message = '''
 The help message goes here.
@@ -225,7 +225,8 @@ def main(argv=None):
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
         if arg.startswith("--yappi"): # forces an upper limit on the test data size
-            yappi = True
+            import yappi # We don't know who is root yet so everybody imports yappi and starts it
+            yappi = True    
     testrunner(module, test, limit, yappi)
     
 
