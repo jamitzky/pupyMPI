@@ -2,8 +2,6 @@
 # encoding: utf-8
 """
 collective.py - collection of collective tests inspired by Intel MPI Benchmark (IMB)
-
-Created by Jan Wiberg on 2009-08-13.
 """
 from mpi.operations import MPI_list_max
 
@@ -11,8 +9,8 @@ import comm_info as ci
 
 meta_has_meta = True
 meta_requires_data_ranks_adjunct = False
-meta_min_processes = 4
-meta_processes_required = -1
+meta_processes_required = 4
+meta_enlist_all = True
 
 meta_schedule = {
     0: 10,
