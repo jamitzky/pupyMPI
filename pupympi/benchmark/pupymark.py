@@ -21,7 +21,9 @@
 """
 pupymark.py - Benchmark runner.
 
-Usage: MPI program - run with mpirun
+Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
+        mpirun and more than 4 processes unless you just want the single module
+        (consisting only of point-to-point tests)
 """
 from time import localtime, strftime
 import sys
@@ -40,12 +42,18 @@ The help message goes here.
 def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=False):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
-    The fixed_module parameter forces the benchmark to run just that one benchmark module
+    
+    The fixed_module parameter forces the benchmark to run just that one benchmark module (collection of tests)
+    The fixed_test parameter forces the benchmark to run just that one test
+    The limit parameter sets the upper bound on size of testdata
+    use_yappi flag turns on profiling with yappi
     """
-    if use_yappi: # DEBUG / PROFILE
-        built_ins = False # Trace Python built-in functions        
-        
+    
+    if use_yappi: # PROFILE
+        built_ins = False # Do not trace Python built-in functions
+        #built_ins = True # Trace Python built-in functions                
         yappi.start(built_ins) # True means also profile built-in functions
+    
     modules = [single, parallel, collective, special]
     resultlist = {}
 
@@ -106,20 +114,21 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         
         ci.select_source = True 
         ci.select_tag = True         
-
-        if hasattr(module, "meta_has_meta"):
-            if ci.w_num_procs < module.meta_min_processes:
-                raise Exception("Not enough processes active to invoke module %s" % module.__name__)
-            
-            if module.meta_processes_required == -1:
-                processes_required = ci.w_num_procs #e nlist everybody active.
-            else:
-                processes_required = module.meta_processes_required
-                
-            new_group = mpi.MPI_COMM_WORLD.group().incl(range(processes_required))
-            ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
-        else:
+        
+        # TODO: Check on actual required meta tags not the meta meta... my eyes! the abstractions!!!
+        if not hasattr(module, "meta_has_meta"):
             raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
+
+        if ci.w_num_procs < module.meta_processes_required:
+            raise Exception("Not enough processes active to invoke module %s" % module.__name__)
+        
+        if module.meta_enlist_all:
+            active_processes = ci.w_num_procs #enlist everybody active.
+        else:
+            active_processes = module.meta_processes_required
+            
+        new_group = mpi.MPI_COMM_WORLD.group().incl(range(active_processes))
+        ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
 
         if ci.communicator is not None:
             ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
@@ -131,11 +140,20 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         # end of set up environment subfunction
     
     for module in modules:
-        if fixed_module is not None and module.__name__ != fixed_module:
+        
+        # Run only the desired modules
+        if fixed_module is not None and module.__name__ != fixed_module: # If a specific module is requested and this was not it, we move on
             ci.log("Skipping module %s" % module.__name__)
             continue
-
-        _set_up_environment(mpi, module)        
+        elif fixed_test is not None and ("test_"+fixed_test) not in dir(module): # If a specific test is requested and this module does not contain that test, we move on
+            ci.log("Skipping module %s" % module.__name__)
+            continue
+            
+        try:
+            _set_up_environment(mpi, module)
+        except Exception, e:
+            print "Could not setup test environment for module %s. Error: %s" % (module.__name__,e)
+            continue
         
         if ci.rank == -1: # hold in barrier unless THIS process participates
             mpi.MPI_COMM_WORLD.barrier()
@@ -143,18 +161,18 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
             for function in dir(module):
                 if function.startswith("test_"):
                     if fixed_test is not None and not function.endswith(fixed_test):
-                        ci.log( "Skipping test %s" % function)
+                        ci.log( "Skipping %s" % function)
                         continue
                         
                     f = getattr(module, function)
                     result = run_benchmark(module, f)
                     resultlist[function] = result
-                    mpi.MPI_COMM_WORLD.barrier() # join the barrier from above.
+            mpi.MPI_COMM_WORLD.barrier() # join the barrier holding non-participants
 
     mpi.finalize()
     
     # DEBUG / PROFILING
-    if yappi:
+    if use_yappi:
         if root:
             sorttype = yappi.SORTTYPE_TSUB            
             # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
@@ -215,19 +233,19 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
-    yappi = False
+    use_yappi = False
     
     for arg in sys.argv:
-        if arg.startswith("--module="): # forces a specific test module
+        if arg.startswith("--module="): # forces a specific test module (collection of tests)
             module = arg.split("=")[1]
-        if arg.startswith("--test="): # forces one specific test - can be combined with module
+        if arg.startswith("--test="): # forces one specific test 
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-        if arg.startswith("--yappi"): # forces an upper limit on the test data size
+        if arg.startswith("--yappi"): # turns on profiling with yappi
             import yappi # We don't know who is root yet so everybody imports yappi and starts it
-            yappi = True    
-    testrunner(module, test, limit, yappi)
+            use_yappi = True    
+    testrunner(module, test, limit, use_yappi)
     
 
 if __name__ == "__main__":
