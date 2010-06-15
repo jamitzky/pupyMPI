@@ -24,6 +24,7 @@ from threading import Thread
         
 from mpi.communicator import Communicator
 from mpi.logger import Logger
+from mpi.profiler import Profiler
 from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
@@ -96,6 +97,7 @@ class MPI(Thread):
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
         parser.add_option('--yappi', dest='yappi', action='store_true', default=False)
+        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
 
         # _ is args
         options, _ = parser.parse_args()
@@ -132,6 +134,10 @@ class MPI(Thread):
             except ImportError:
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
+
+        # Start built-in profiling facility
+        if options.enable_profiling:
+            Profiler().start()
 
         self.network = Network(self, options)
         
