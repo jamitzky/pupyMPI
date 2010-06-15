@@ -6,6 +6,7 @@
 # rank 0 isends message to rank 1 who is a very slow receiver so rank 0 should quit early
 
 from mpi import MPI
+import time
 
 mpi = MPI()
 
