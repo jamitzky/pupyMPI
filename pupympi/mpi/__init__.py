@@ -80,94 +80,6 @@ class MPI(Thread):
             mpi.finalize()
             
         """
-        
-        parser = OptionParser()
-        parser.add_option('--rank', type='int')
-        parser.add_option('--size', type='int')
-        parser.add_option('--verbosity', type='int')
-        parser.add_option('--debug', action='store_true')
-        parser.add_option('--quiet', action='store_true')
-        parser.add_option('--log-file', dest='logfile', default="mpi")
-        parser.add_option('--network-type', dest='network_type')
-        parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
-        parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
-        parser.add_option('--single-communication-thread', dest='single_communication_thread')
-        parser.add_option('--process-io', dest='process_io')
-        parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
-        parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
-        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
-        parser.add_option('--yappi', dest='yappi', action='store_true', default=False)
-        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
-
-        # _ is args
-        options, _ = parser.parse_args()
-
-        if options.process_io == "remotefile": 
-            # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
-            filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
-            logger.debug("Opening file for I/O: %s" % filename)
-            output = open(filename, "w")
-            sys.stdout = output
-            sys.stderr = output
-        elif options.process_io == "none":
-            # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
-            logger.debug("Closing stdout")
-            sys.stdout = None
-        else:
-            # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
-        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
-            
-        # First check for required Python version
-        self._version_check()
-
-        # Check for yappi support
-        self._yappi_enabled = False
-        if options.yappi:
-            try:
-                import yappi
-                self._yappi_enabled = True
-                logger.debug("Yappi enabled")
-            except ImportError:
-                logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
-                self._yappi_enabled = False
-
-        # Start built-in profiling facility
-        if options.enable_profiling:
-            Profiler().start()
-
-        self.network = Network(self, options)
-        
-        # Create the initial global Group, and assign the network all_procs as members
-        world_Group = Group(options.rank)
-        world_Group.members = self.network.all_procs
-
-        # Create the initial communicator MPI_COMM_WORLD. It is initialized with 
-        # the rank of the process that holds it and size.
-        # The members are filled out after the network is initialized.
-        self.communicators = {}
-
-        self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
-
-        # Tell the network about the global MPI_COMM_WORLD, and let it start to 
-        # listen on the corresponding network channels
-        self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
-        
-        # Change the contents of sys.argv runtime, so the user processes 
-        # can't see all the mpi specific parameters we start with.
-        user_options =[sys.argv[0], ] 
-        user_options.extend(sys.argv[sys.argv.index("--")+1:])
-        sys.argv = user_options
-
-        # Set a static attribute on the class so we know it is initialised.
-        self.__class__._initialized = True
-        
-        # Set up the global mpi constants
-        constants.MPI_GROUP_EMPTY = Group()
-        
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
@@ -204,6 +116,108 @@ class MPI(Thread):
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
         
+
+        
+        parser = OptionParser()
+        parser.add_option('--rank', type='int')
+        parser.add_option('--size', type='int')
+        parser.add_option('--verbosity', type='int')
+        parser.add_option('--debug', action='store_true')
+        parser.add_option('--quiet', action='store_true')
+        parser.add_option('--log-file', dest='logfile', default="mpi")
+        parser.add_option('--network-type', dest='network_type')
+        parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
+        parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
+        parser.add_option('--single-communication-thread', dest='single_communication_thread')
+        parser.add_option('--process-io', dest='process_io')
+        parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
+        parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
+        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
+        parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
+        parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
+        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
+
+        # _ is args
+        options, _ = parser.parse_args()
+
+        if options.process_io == "remotefile": 
+            # Initialise the logger
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
+            logger.debug("Opening file for I/O: %s" % filename)
+            output = open(filename, "w")
+            sys.stdout = output
+            sys.stderr = output
+        elif options.process_io == "none":
+            # Initialise the logger
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            logger.debug("Closing stdout")
+            sys.stdout = None
+        else:
+            # Initialise the logger
+            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+
+        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
+            
+        # First check for required Python version
+        self._version_check()
+
+        # Check for yappi support
+        self._yappi_enabled = False
+        if options.yappi:
+            try:
+                import yappi
+                self._yappi_enabled = True
+                self._yappi_sorttype = yappi.SORTTYPE_NCALL
+
+                if options.yappi_sorttype:
+                    if options.yappi_sorttype == 'name':
+                        self._yappi_sorttype = yappi.SORTTYPE_NAME
+                    elif options.yappi_sorttype == 'ncall':
+                        self._yappi_sorttype = yappi.SORTTYPE_NCALL
+                    elif options.yappi_sorttype == 'ttotal':
+                        self._yappi_sorttype = yappi.SORTTYPE_TTOTAL
+                    elif options.yappi_sorttype == 'tsub':
+                        self._yappi_sorttype = yappi.SORTTYPE_TSUB
+                    elif options.yappi_sorttype == 'tavg':
+                        self._yappi_sorttype = yappi.SORTTYPE_TAVG
+                    else:
+                        logger.warn("Unknown yappi sorttype '%s' - defaulting to ncall." % options.yappi_sorttype)
+                
+            except ImportError:
+                logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
+                self._yappi_enabled = False
+
+        # Start built-in profiling facility
+        if options.enable_profiling:
+            Profiler().start()
+
+        self.network = Network(self, options)
+        
+        # Create the initial global Group, and assign the network all_procs as members
+        world_Group = Group(options.rank)
+        world_Group.members = self.network.all_procs
+
+        # Create the initial communicator MPI_COMM_WORLD. It is initialized with 
+        # the rank of the process that holds it and size.
+        # The members are filled out after the network is initialized.
+        self.communicators = {}
+
+        self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
+
+        # Tell the network about the global MPI_COMM_WORLD, and let it start to 
+        # listen on the corresponding network channels
+        self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
+        
+        # Change the contents of sys.argv runtime, so the user processes 
+        # can't see all the mpi specific parameters we start with.
+        user_options =[sys.argv[0], ] 
+        user_options.extend(sys.argv[sys.argv.index("--")+1:])
+        sys.argv = user_options
+
+        # Set up the global mpi constants
+        constants.MPI_GROUP_EMPTY = Group()
+        
         self.daemon = True
         self.start()
 
@@ -211,6 +225,9 @@ class MPI(Thread):
         self.network.start_full_network()
         #logger.info("MPI environment is up and running.")
 
+        # Set a static attribute on the class so we know it is initialised.
+        self.__class__._initialized = True
+        
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
@@ -257,6 +274,7 @@ class MPI(Thread):
             for data in remove:
                 self.received_data.remove(data)
         #Logger().debug("-- Match pending released lock! Match:%s" % match)
+        #Logger().warning("Show some request!: %s" % request)
         return match
 
     def run(self):
@@ -275,6 +293,7 @@ class MPI(Thread):
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
                     for request in self.unstarted_requests:
+                        #Logger().warning("Show some request!: %s" % request)
                         self.network.t_out.add_out_request(request)
 
                     self.unstarted_requests = []
@@ -331,11 +350,18 @@ class MPI(Thread):
 
         if self._yappi_enabled:
             yappi.stop()
-            print "\n\n*** Yappi stats follow ***"
-            stats = yappi.get_stats()
+            
+            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            Logger().debug("Writing yappi stats to %s" % filename)
+            f = open(filename, "w")
+            
+            stats = yappi.get_stats(self._yappi_sorttype)
+            
             for stat in stats:
-                print stat
+                print >>f, stat
             yappi.clear_stats()
+
+            f.close()
 
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out

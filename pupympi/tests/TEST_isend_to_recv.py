@@ -5,6 +5,8 @@
 
 # rank 0 isends message to rank 1 who is a very slow receiver so rank 0 should quit early
 
+import time
+
 from mpi import MPI
 import time
 
@@ -28,7 +30,8 @@ if rank == 0:
     #print "Rank: %d ALL DONE" % (rank)
 elif rank == 1: 
     # Waaaaait for it...
-    time.sleep(1)
+    time.sleep(3)
+    
     neighbour = 0
     
     # Receive

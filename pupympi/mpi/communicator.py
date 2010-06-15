@@ -67,7 +67,7 @@ class Communicator:
         # act like a caching system, so we don't end up generating trees
         # all the time.
         if root not in self.bc_trees:
-            Logger().warning("Creating a new tree with root %d" % root)
+            Logger().debug("Creating a new tree with root %d" % root)
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
             self.bc_trees[root]
         
@@ -354,7 +354,7 @@ class Communicator:
             self.mpi.pending_requests.append(handle)
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
-        
+            
         return handle
 
     def _add_unstarted_request(self, requests):
@@ -436,6 +436,7 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
+        ##Logger().warning("NEW request %s -->> DATA:%s" % (handle,content))
         self._add_unstarted_request(handle)
 
         return handle
