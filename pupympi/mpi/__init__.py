@@ -182,7 +182,6 @@ class MPI(Thread):
                     else:
                         logger.warn("Unknown yappi sorttype '%s' - defaulting to ncall." % options.yappi_sorttype)
                 
-                logger.debug("Yappi enabled with sorttype %s" % self._yappi_sorttype)
             except ImportError:
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
@@ -345,12 +344,18 @@ class MPI(Thread):
 
         if self._yappi_enabled:
             yappi.stop()
-            print "\n\n*** Yappi stats follow ***"
+            
+            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            Logger().debug("Writing yappi stats to %s" % filename)
+            f = open(filename, "w")
+            
             stats = yappi.get_stats(self._yappi_sorttype)
             
             for stat in stats:
-                print stat
+                print >>f, stat
             yappi.clear_stats()
+
+            f.close()
 
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
