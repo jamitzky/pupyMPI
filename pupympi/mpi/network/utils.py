@@ -127,6 +127,7 @@ def _nice_data(data):
         unpickled = pickle.loads(data)
         return unpickled
     except Exception:
+        #Logger().warning("Was NOT pickled")
         # This is an equally hackish way of removing nasty printing chars
         # a nicer way would be to use str.translate with appropriate mappings
         sdata = str(data)
@@ -135,6 +136,7 @@ def _nice_data(data):
         # Now tcp control chars garble garble has been removed
         data = (sep+rest).replace("\n","<n>")
         return data
+
 
 def robust_send(socket, message):
     """

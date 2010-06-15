@@ -1,6 +1,7 @@
 # meta-description: A allreduce showing that numpy objects can be transferred with collective operations
 # meta-expectedresult: 0
 # meta-minprocesses: 10
+# meta-max_runtime: 25
 
 from mpi import MPI
 mpi = MPI()

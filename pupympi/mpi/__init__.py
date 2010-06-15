@@ -252,6 +252,7 @@ class MPI(Thread):
             for data in remove:
                 self.received_data.remove(data)
         #Logger().debug("-- Match pending released lock! Match:%s" % match)
+        #Logger().warning("Show some request!: %s" % request)
         return match
 
     def run(self):
@@ -270,6 +271,7 @@ class MPI(Thread):
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
                     for request in self.unstarted_requests:
+                        #Logger().warning("Show some request!: %s" % request)
                         self.network.t_out.add_out_request(request)
 
                     self.unstarted_requests = []

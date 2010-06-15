@@ -7,8 +7,8 @@ parallel.py - collection of parallel tests inspired by Intel MPI Benchmark (IMB)
 import comm_info as ci
 
 meta_has_meta = True
-meta_processes_required = -1
-meta_min_processes = 2
+meta_processes_required = 4
+meta_enlist_all = True
 meta_schedule = {
     0: 1000,
     1: 1000,
@@ -37,8 +37,7 @@ meta_schedule = {
 }
 
 def test_Sendrecv(size, max_iterations):
-    def get_srcdest_chained(): # this fails for c=2, obviously. Since we want to run for 8 or 32, no reason to fix
-        assert ci.num_procs > 2 # 
+    def get_srcdest_chained():
         dest   = (ci.rank + 1) % ci.num_procs
         source = (ci.rank + ci.num_procs-1) % ci.num_procs
         return (source, dest)

@@ -31,7 +31,7 @@ if rank == 0:
 elif rank == 1:
     neighbour = 0
     # Recieve
-    request1 = mpi.MPI_COMM_WORLD.irecv(neighbour,ANOTHER_TAG)
+    request1 = mpi.MPI_COMM_WORLD.irecv(neighbour,ANOTHER_TAG)    
     recieved1 = request1.wait()
 
     request2 = mpi.MPI_COMM_WORLD.irecv(neighbour,DUMMY_TAG)
