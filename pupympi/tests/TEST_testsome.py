@@ -2,6 +2,7 @@
 # meta-description: Test of testsome
 # meta-expectedresult: 0
 # meta-minprocesses: 4
+# meta-max_runtime: 30
 
 from mpi import MPI
 from mpi import constants

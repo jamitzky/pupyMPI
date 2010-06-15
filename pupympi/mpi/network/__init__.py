@@ -260,7 +260,9 @@ class BaseCommunicationHandler(threading.Thread):
         data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
         #print "We found cmd: %d" % request.cmd
         request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
-
+        
+        ##Logger().warning("SHOW request %s" % request)
+        
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
@@ -331,12 +333,18 @@ class BaseCommunicationHandler(threading.Thread):
             if add_to_pool:
                 self.network.socket_pool.add_created_socket(conn, rank)
             
-            #Logger().info("Received message with command: %d" % msg_command)
+            Logger().info("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
-                with self.network.mpi.raw_data_lock:
-                    self.network.mpi.raw_data_queue.append(raw_data)
-                    self.network.mpi.raw_data_has_work.set()
-                    self.network.mpi.has_work_event.set()
+                try:
+                    with self.network.mpi.raw_data_lock:
+                        self.network.mpi.raw_data_queue.append(raw_data)
+                        self.network.mpi.raw_data_has_work.set()
+                        self.network.mpi.has_work_event.set()
+                except AttributeError, e:
+                    Logger().error("Failed grabbing raw_data_lock!")
+                except Exception, e:
+                    Logger().error("Strange error - Failed grabbing raw_data_lock!")
+                    
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
          
@@ -349,7 +357,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":                        
-                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
                         utils.robust_send(write_socket,request.data)
@@ -409,8 +417,6 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         
         # Add a special epoll environment we can later use to poll
         # the system. 
-        self.epoll_lock = threading.Lock()
-
         self.epoll = select.epoll()
 
         self.in_fd_to_socket = {}
