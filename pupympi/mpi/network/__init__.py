@@ -415,8 +415,6 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         
         # Add a special epoll environment we can later use to poll
         # the system. 
-        self.epoll_lock = threading.Lock()
-
         self.epoll = select.epoll()
 
         self.in_fd_to_socket = {}
