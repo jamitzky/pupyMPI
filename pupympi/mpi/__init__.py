@@ -132,7 +132,8 @@ class MPI(Thread):
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
-        parser.add_option('--yappi', dest='yappi', default=False)
+        parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
+        parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
 
         # _ is args
         options, _ = parser.parse_args()
@@ -165,7 +166,23 @@ class MPI(Thread):
             try:
                 import yappi
                 self._yappi_enabled = True
-                logger.debug("Yappi enabled")
+                self._yappi_sorttype = yappi.SORTTYPE_NCALL
+
+                if options.yappi_sorttype:
+                    if options.yappi_sorttype == 'name':
+                        self._yappi_sorttype = yappi.SORTTYPE_NAME
+                    elif options.yappi_sorttype == 'ncall':
+                        self._yappi_sorttype = yappi.SORTTYPE_NCALL
+                    elif options.yappi_sorttype == 'ttotal':
+                        self._yappi_sorttype = yappi.SORTTYPE_TTOTAL
+                    elif options.yappi_sorttype == 'tsub':
+                        self._yappi_sorttype = yappi.SORTTYPE_TSUB
+                    elif options.yappi_sorttype == 'tavg':
+                        self._yappi_sorttype = yappi.SORTTYPE_TAVG
+                    else:
+                        logger.warn("Unknown yappi sorttype '%s' - defaulting to ncall." % options.yappi_sorttype)
+                
+                logger.debug("Yappi enabled with sorttype %s" % self._yappi_sorttype)
             except ImportError:
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
@@ -329,7 +346,8 @@ class MPI(Thread):
         if self._yappi_enabled:
             yappi.stop()
             print "\n\n*** Yappi stats follow ***"
-            stats = yappi.get_stats()
+            stats = yappi.get_stats(self._yappi_sorttype)
+            
             for stat in stats:
                 print stat
             yappi.clear_stats()
