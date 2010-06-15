@@ -8,7 +8,7 @@ import comm_info as ci
 
 meta_has_meta = True
 meta_processes_required = 8
-meta_min_processes = 2
+meta_enlist_all = False
 meta_result_configuration = "special"
 meta_schedule = {
     0: 10000,
