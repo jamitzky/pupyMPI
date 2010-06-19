@@ -72,8 +72,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
         for size in sizekeys:
-            if size > limit:
-                break
+            if limit > 0:
+                if size > limit:
+                    break
+            else:
+                if size < abs(limit):
+                    continue
                 
             total = test(size, module.meta_schedule[size])
             if total is None:
@@ -131,7 +135,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
 
         if ci.communicator is not None:
-            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
+            if limit > 0:
+                testdataSize = min(limit, max(module.meta_schedule))
+            else:
+                testdataSize = max(module.meta_schedule)
+            
+            ci.data = ci.gen_testset(testdataSize)
             ci.num_procs = ci.communicator.size() 
             ci.rank = ci.communicator.rank() 
         else:
@@ -201,7 +210,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         f = open(constants.LOGDIR+filename, "w")
         
         # Column headers for easier reading
-        row = "datasize,repetitions,total time,time/repetition,Mb/second,nodes,name of test,timestamp of testrun,nodes"
+        row = "datasize,repetitions,total time,time/repetition,Mb/second,nodes,name of test,timestamp of testrun"
         f.write(row+"\n")
 
         for testname in resultlist:
