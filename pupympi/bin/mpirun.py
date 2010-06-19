@@ -20,15 +20,9 @@ import sys, os, copy, signal
 from optparse import OptionParser, OptionGroup
 import select, time
 
-# This should allow the user to import mpi without specifying
-# PYTHONPATH in the environment
-cwd = os.getcwd() # called from where
-mpirunpath = sys.argv[0] # Path to mpirun.py
-if mpirunpath.startswith('.'): # if called in /bin then path will have "./" which should be removed
-    mpirunpath = mpirunpath[2:]    
-scriptpath = os.path.join(cwd,mpirunpath) # absolute path to mpirun.py
-p,fname = os.path.split(scriptpath) # separate out the filename
-mpipath,rest = os.path.split(p) # separate out the bin dir (dir above is the target)
+# Allow the user to import mpi without specifying PYTHONPATH in the environment
+mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
+mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
 import processloaders 
