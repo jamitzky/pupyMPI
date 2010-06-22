@@ -38,6 +38,8 @@ import socket
 import ctypes
 import array
 
+### AUXILLARY FUNCTIONS ###
+
 class Point(ctypes.Structure):
     _fields_ = [ ('x',ctypes.c_double), ('y',ctypes.c_double), ('z',ctypes.c_double) ]
 
