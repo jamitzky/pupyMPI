@@ -954,6 +954,8 @@ class Communicator:
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
+        
+        Logger().debug("--------------------------- REDUCE DONE ---------------------------")
 
         if self.rank() == root:
             return data
