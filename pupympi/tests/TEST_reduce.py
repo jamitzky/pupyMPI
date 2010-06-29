@@ -16,10 +16,14 @@ def fact(n):
 mpi = MPI()
 
 root = 4
+root = 0
 
 # We start n processes, and try to calculate n!
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
+
+def b():
+    mpi.MPI_COMM_WORLD.barrier()
 
 dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, MPI_prod, root=root)
 dist_mpi_sum = mpi.MPI_COMM_WORLD.reduce(rank, MPI_sum, root=root)
