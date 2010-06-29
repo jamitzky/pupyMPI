@@ -356,14 +356,15 @@ class Communicator:
             self.mpi.has_work_event.set()
             
         return handle
-
+    
+    # Add an outbound request to the queue
     def _add_unstarted_request(self, requests):
         with self.mpi.unstarted_requests_lock:
             self.mpi.unstarted_requests.append( requests )
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
     
-    # Add a request that for communication with self
+    # Add a request for communication with self
     def _send_to_self(self, request):
         # The sending request is complete, so we update it right away
         # so the user will be able to wait() for it.

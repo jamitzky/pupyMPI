@@ -83,7 +83,7 @@ class MPI(Thread):
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
         
-        # Unstarted requests are both send and receive requests, held here so the user thread can return quickly
+        # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
         self.unstarted_requests_has_work = threading.Event()
@@ -283,7 +283,7 @@ class MPI(Thread):
             self.has_work_event.wait()
             self.has_work_event.clear()
             
-            # Schedule unstarted requests (may be in- or outbound)
+            # Schedule unstarted requests (outbound requests)
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
                     for request in self.unstarted_requests:
