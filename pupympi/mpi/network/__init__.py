@@ -314,6 +314,7 @@ class BaseCommunicationHandler(threading.Thread):
             
             try:
                 rank, msg_command, raw_data = get_raw_message(conn)
+                Logger().info("Found rank %d and comamnd %s" % (rank, msg_command))
             except MPIException, e:                    
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -335,9 +336,11 @@ class BaseCommunicationHandler(threading.Thread):
             if msg_command == constants.CMD_USER:
                 try:
                     with self.network.mpi.raw_data_lock:
+                        Logger().debug("Got lock")
                         self.network.mpi.raw_data_queue.append(raw_data)
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
+                        Logger().debug("Releasing lock")
                 except AttributeError, e:
                     Logger().error("Failed grabbing raw_data_lock!")
                 except Exception, e:
@@ -355,12 +358,12 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":                        
-                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
                         utils.robust_send(write_socket,request.data)
                     except socket.error, e:
-                        #Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     except Exception, e:
@@ -495,37 +498,24 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
 
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
-        
-        with self.kqueue_changelist_lock:
-            # Create a kqueue event and add it to the kqueue environment.
-            event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-            self.kqueue_changelist.append(event)
-        
-            # FIXME TEST
-            #self.in_ident_to_socket[event.ident] = client_socket
-            self.in_ident_to_socket[client_socket.fileno()] = client_socket
-        #Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-        #Logger().debug("Called, add in socket %s", self.kqueue_changelist)
+        self.in_ident_to_socket[client_socket.fileno()] = client_socket
+        event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+        self.kqueue_changelist.append(event)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
-        
-        with self.kqueue_changelist_lock:
-            # Create a kqueue event and add it to the kqueue environment.
-            event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-            self.kqueue_changelist.append(event)
-        
-            # FIXME: TEst
-            #self.out_ident_to_socket[event.ident] = client_socket
-            self.out_ident_to_socket[client_socket.fileno()] = client_socket
-        
+        self.out_ident_to_socket[client_socket.fileno()] = client_socket
+        event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+        self.kqueue_changelist.append(event)
         Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
 
     def select(self):
         in_list = []
         out_list = []
         error_list = []
+        
         with self.kqueue_changelist_lock:
+
             events = []
             for kevent in self.kqueue_changelist: 
                 new_events = self.kqueue.control([kevent], 10, 0)
@@ -533,23 +523,32 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
                 
             new_events = self.kqueue.control(None, 10, 0)
             events.extend(new_events)
+            
             for event in events:
                 if event.filter == select.KQ_FILTER_READ:
+                    Logger().warning("--------------> read: event ident %s and flag %s" % (event.ident, event.flags))
+
                     socket = self.in_ident_to_socket.get(event.ident, None)
                     if socket:
                         in_list.append(socket)
+                    else:
+                        Logger().warning("read: Throwing socket away for event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
+                        
                 elif event.filter == select.KQ_FILTER_WRITE:
                     socket = self.out_ident_to_socket.get(event.ident, None)
                     if socket:
                         out_list.append(socket)
+                    else:
+                        Logger().warning("write: Throwing socket away for event ident %s and flag %s" % (event.ident, event.flags))
                 else:
+                    Logger.warning("==============> unknown event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
                     if event.flags == select.KQ_EV_ERROR:
                         Logger().warning("Error detected in kqueue control call. ")
                         Logger().warning("We received an event with identifier (%s), filter (%s), flags (%s) fflags (%s) udata(%s)" % (event.ident, event.filter, event.flags, event.fflags, event.udata))
-            
+                    
             # Reset the change list
             self.kqueue_changelist = []
-                
+            
         return (in_list, out_list, error_list)
         
 class CommunicationHandlerSelect(BaseCommunicationHandler):

@@ -22,6 +22,9 @@ root = 0
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
+def b():
+    mpi.MPI_COMM_WORLD.barrier()
+
 dist_fact = mpi.MPI_COMM_WORLD.reduce(rank+1, MPI_prod, root=root)
 dist_mpi_sum = mpi.MPI_COMM_WORLD.reduce(rank, MPI_sum, root=root)
 dist_mpi_min = mpi.MPI_COMM_WORLD.reduce(rank, MPI_min, root=root)
