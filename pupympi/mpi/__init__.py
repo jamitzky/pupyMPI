@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = 0.6 # It bumps the version or else it gets the hose again!
+__version__ = 0.7 # It bumps the version or else it gets the hose again!
 
 import sys
 from optparse import OptionParser, OptionGroup
