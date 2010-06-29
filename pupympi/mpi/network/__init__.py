@@ -228,14 +228,18 @@ class BaseCommunicationHandler(threading.Thread):
         # a dict mapping a socket key to a list of requests on that socket
         self.socket_to_request = {}
         
+        self.outbound_requests = 0 # Number of send requests queued (only acessed with socket_to_request_lock)
         self.rank = rank
         self.socket_pool = socket_pool
         
         self.type = "unset" # Will be set to "in","out" or "combo" and allow easy way of detecting role
         
-        self.shutdown_event = threading.Event()            
+        self.shutdown_event = threading.Event() # signal for shutdown        
+        #self.outbound_requests_event = threading.Event() # signal for something to send
         
-        # Locks for proper access to the internal socket->request structure
+        
+        
+        # Locks for proper access to the internal socket->request structure and counter
         self.socket_to_request_lock = threading.Lock()
 
         # DEBUG
@@ -271,7 +275,8 @@ class BaseCommunicationHandler(threading.Thread):
 
         with self.socket_to_request_lock:
             try:
-                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list                
+                self.outbound_requests += 1
             except Exception, e: # This should not happen
                 Logger().error("Network-thread (%s) got error: %s of type: %s, socket_to_request was: %s" % (self.type, e, type(e), self.network.t_out.socket_to_request ) )
 
@@ -383,21 +388,28 @@ class BaseCommunicationHandler(threading.Thread):
                     #        (request.status, request.request_type, request.tag, request.participant))
                     
             # Remove the requests (messages) that was successfully sent from the list for that socket
-            if removal:  
-                with self.socket_to_request_lock:
+            if removal:
+                removed = len(removal)
+                with self.socket_to_request_lock:                
                     for (write_socket,matched_request) in removal:
                         self.socket_to_request[write_socket].remove(matched_request)
+                    
+                    self.outbound_requests -= removed
 
     def run(self):
+        # TODO: Consider differentiating here for dual network threads
+        
         # Main loop
         while not self.shutdown_event.is_set():
             # _ is errorlist
             (in_list, out_list, _) = self.select()
             self._handle_readlist(in_list)
-            self._handle_writelist(out_list)
+            
+            if self.outbound_requests > 0:
+                self._handle_writelist(out_list)
         
         # The shutdown events is called, so we're finishing the network. This means
-        # flushing all the send jobs we have and then close the sockets.
+        # flushing all the send jobs we have and then closing the sockets.
         while self.socket_to_request:
             # _ is errorlist
             (in_list, out_list, _) = self.select()
