@@ -280,7 +280,12 @@ class MPI(Thread):
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
-            self.has_work_event.wait()
+            self.has_work_event.wait(5)
+            #Logger().debug("Waited for the has_work_event")
+            #Logger().debug("Raw_data_event is set (%s) and contains: %s" % (self.raw_data_has_work.is_set(), self.raw_data_queue))
+            #Logger().debug("unstarted_requests_has_work is set (%s) and contains: %s" % (self.unstarted_requests_has_work.is_set(), self.unstarted_requests))
+            #Logger().debug("pending_requests_has_work is set (%s) and contains: %s" % (self.pending_requests_has_work.is_set(), self.pending_requests))
+            
             self.has_work_event.clear()
             
             # Schedule unstarted requests (may be in- or outbound)
@@ -295,11 +300,14 @@ class MPI(Thread):
                 
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
+                Logger().info("raw_data_has_work is set")
                 with self.raw_data_lock:
                     with self.received_data_lock:
+                        Logger().info("got both locks")
                         for raw_data in self.raw_data_queue:
                             data = pickle.loads(raw_data)
                             self.received_data.append(data)
+                            #Logger().debug("Adding data: %s" % data)
                         
                         self.pending_requests_has_work.set()
                         self.raw_data_queue = []

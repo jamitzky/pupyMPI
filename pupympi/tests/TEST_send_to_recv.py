@@ -27,6 +27,7 @@ if rank == 0:
 elif rank == 1: 
     neighbour = 0
     recieved = mpi.MPI_COMM_WORLD.recv(neighbour,DUMMY_TAG)    
+    assert content == recieved
 else:
     pass
 
