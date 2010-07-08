@@ -280,7 +280,8 @@ class MPI(Thread):
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
-            self.has_work_event.wait(5)
+            self.has_work_event.wait()
+            #self.has_work_event.wait(5) # 5 is bad, Fred no unnerstand
             #Logger().debug("Waited for the has_work_event")
             #Logger().debug("Raw_data_event is set (%s) and contains: %s" % (self.raw_data_has_work.is_set(), self.raw_data_queue))
             #Logger().debug("unstarted_requests_has_work is set (%s) and contains: %s" % (self.unstarted_requests_has_work.is_set(), self.unstarted_requests))
