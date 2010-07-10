@@ -105,15 +105,15 @@ class SocketPool(object):
             #Logger().debug("Bad conn to rank %i with metainfo:%s and sockets:%s" % (global_rank, self.metainfo, self.sockets))
             raise Exception("Can't add accepted socket. We're in readonly mode")        
 
-        Logger().debug("SocketPool.add_accepted_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
+        #Logger().debug("SocketPool.add_accepted_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
         known_socket = self._get_socket_for_rank(global_rank)
         
         if known_socket == socket_connection:
-            #Logger().debug("SocketPool.add_created_socket: We were very close to pushing a socket out and putting it in again. BAD")
+            Logger().error("SocketPool.add_accepted_socket: Trying to add a socket_connection that is already in the pool?!")
             return
         
         if known_socket:
-            Logger().debug("There is already a socket in the pool for an accepted connection.. Possible loop stuff.. ")
+            Logger().debug("Already a socket in the pool:%s for an accepted connection:%s to rank:%i" % (known_socket,socket_connection,global_rank))
         
         
         if len(self.sockets) > self.max_size: # Throw one out if there are too many
@@ -127,8 +127,12 @@ class SocketPool(object):
         Finds the first element that already had its second chance and
         remove it from the list.
         
-        NOTE: We don't explicitly close the socket once removed. This has nothing
-        to do with correctness but we should clean up after ourselves. See issue#
+        NOTE:
+        We don't explicitly close the socket once removed. Or remove it from the
+        socket_to_request dict.
+        This has nothing to do with correctness but it is wasteful and we should
+        clean up after ourselves.
+        See also issue #13 Socket pool does not limit connections properly
         """
         foundOne = False
         with self.sockets_lock:
@@ -178,7 +182,7 @@ class SocketPool(object):
         return None
     
     def _add(self, rank, client_socket, force_persistent):
-        Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
+        #Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
         with self.sockets_lock:
             self.metainfo[client_socket] = (rank, False, force_persistent)
             self.sockets.append(client_socket)
