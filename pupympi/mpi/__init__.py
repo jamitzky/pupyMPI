@@ -301,10 +301,10 @@ class MPI(Thread):
                 
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
-                Logger().info("raw_data_has_work is set")
+                #Logger().debug("raw_data_has_work is set")
                 with self.raw_data_lock:
                     with self.received_data_lock:
-                        Logger().info("got both locks")
+                        #Logger().debug("got both locks")
                         for raw_data in self.raw_data_queue:
                             data = pickle.loads(raw_data)
                             self.received_data.append(data)
@@ -407,7 +407,7 @@ class MPI(Thread):
 
     def handle_system_message(self, rank, command, raw_data):
         if command == constants.CMD_ABORT:
-            Logger().info("Got abort command!")
+            #Logger().debug("Got abort command!")
             sys.exit(1)
 
     def finalize(self):

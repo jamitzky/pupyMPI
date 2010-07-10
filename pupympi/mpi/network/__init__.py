@@ -69,16 +69,18 @@ def get_communicator_class(socket_poll_method=False):
         if not c_class:
             c_class = CommunicationHandlerSelect
     
-    Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
+    #Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
     return c_class
 
 class Network(object):
     def __init__(self, mpi, options):
 
-        if options.disable_full_network_startup:
+        if options.disable_full_network_startup:            
             socket_pool_size = options.socket_pool_size
+            Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
             socket_pool_size = options.size
+            Logger().debug("Socket Pool STATIC size:%i" % socket_pool_size)
 
         self.socket_pool = SocketPool(socket_pool_size)
 
@@ -153,11 +155,12 @@ class Network(object):
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
     def start_full_network(self):
+        # TODO: This condition should be moved up to caller and the whole function call made conditional in mpi/__init__.py
         if self.full_network_startup:
-            #Logger().debug("Starting a full network startup")
+            Logger().debug("Starting a full network startup")
 
             # We make a full network startup by receiving from all with lower ranks and 
-            # send to higher ranks
+            # sending to higher ranks
             our_rank = self.mpi.MPI_COMM_WORLD.rank()
             size = self.mpi.MPI_COMM_WORLD.size()
 
@@ -199,8 +202,8 @@ class Network(object):
         the shutdown procedure. 
         """
         #Logger().debug("Network got finalize call")
-        Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
-        Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
+        #Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
+        #Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
         self.t_in.finalize()
 
         if not self.options.single_communication_thread:
@@ -267,6 +270,7 @@ class BaseCommunicationHandler(threading.Thread):
         
         ##Logger().warning("SHOW request %s" % request)
         
+        Logger().warning("rank:%i calling get_socket ofr globrank:%i" % (self.rank, global_rank))
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
@@ -301,6 +305,7 @@ class BaseCommunicationHandler(threading.Thread):
 
     def _handle_readlist(self, readlist):
         #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
+        testCounter = 0
         for read_socket in readlist:
             add_to_pool = False
             try:
@@ -310,7 +315,9 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True
-                #Logger().debug("Accepted connection on the main socket")
+                Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
+                if testCounter != 0:
+                    Logger().error("WOW, look at that counter ... just look at it!!! (%i)" % testCounter)
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
                 # This means that if accept fails it is normally just data coming in
@@ -321,7 +328,7 @@ class BaseCommunicationHandler(threading.Thread):
             
             try:
                 rank, msg_command, raw_data = get_raw_message(conn)
-                Logger().info("Found rank %d and comamnd %s" % (rank, msg_command))
+                #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
             except MPIException, e:                    
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -339,22 +346,24 @@ class BaseCommunicationHandler(threading.Thread):
             if add_to_pool:
                 self.network.socket_pool.add_created_socket(conn, rank)
             
-            Logger().info("Received message with command: %d" % msg_command)
+            #Logger().debug("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
                 try:
                     with self.network.mpi.raw_data_lock:
-                        Logger().debug("Got lock")
+                        #Logger().debug("Got lock")
                         self.network.mpi.raw_data_queue.append(raw_data)
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
-                        Logger().debug("Releasing lock")
+                        #Logger().debug("Releasing lock")
                 except AttributeError, e:
-                    Logger().error("Failed grabbing raw_data_lock!")
+                    #Logger().error("Failed grabbing raw_data_lock!")
+                    pass
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
                     
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
+            testCounter += 1
          
     def _handle_writelist(self, writelist):
         for write_socket in writelist:
@@ -365,7 +374,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":                        
-                    Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
                         utils.robust_send(write_socket,request.data)
@@ -408,6 +417,9 @@ class BaseCommunicationHandler(threading.Thread):
             (in_list, out_list, _) = self.select()
             self._handle_readlist(in_list)
             
+            # Only look at outbound if there are any
+            # (we don't take the socket_to_request_lock but worst case is we
+            # might miss a send or handle_writelist once too much, which is ok)
             if self.outbound_requests > 0:
                 self._handle_writelist(out_list)
         
