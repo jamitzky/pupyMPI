@@ -270,7 +270,7 @@ class BaseCommunicationHandler(threading.Thread):
         
         ##Logger().warning("SHOW request %s" % request)
         
-        Logger().warning("rank:%i calling get_socket ofr globrank:%i" % (self.rank, global_rank))
+        Logger().debug("rank:%i calling get_socket for globrank:%i" % (self.rank, global_rank))
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
@@ -344,7 +344,7 @@ class BaseCommunicationHandler(threading.Thread):
                 continue
             
             if add_to_pool:
-                self.network.socket_pool.add_created_socket(conn, rank)
+                self.network.socket_pool.add_accepted_socket(conn, rank)
             
             #Logger().debug("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
