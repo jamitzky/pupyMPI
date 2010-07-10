@@ -100,16 +100,16 @@ class RunTest(Thread):
     #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     # With dynamic socket pool
-    cmd = "bin/mpirun.py --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "bin/mpirun.py --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, primary_log, options, meta):
+    def __init__(self, test, primary_log, options, test_meta_data):
         Thread.__init__(self)
         self.test = test
-        self.meta = meta
+        self.meta = test_meta_data
         self.primary_log = primary_log
-        self.processes = meta.get("minprocesses", options.np)
-        self.expectedresult = int(meta.get("expectedresult", 0))
+        self.processes = test_meta_data.get("minprocesses", options.np)
+        self.expectedresult = int(test_meta_data.get("expectedresult", 0))
         self.cmd = self.cmd.replace("PROCESSES_REQUIRED", str(self.processes))
         self.cmd = self.cmd.replace("LOG_VERBOSITY", str(options.verbosity))
         self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
@@ -117,14 +117,21 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
         
+        # If socket pool size is specified in meta description we add appropriate parameter
+        if "socket-pool-size" in test_meta_data:
+            self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size "+test_meta_data["socket-pool-size"])
+        else:
+            self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
+            #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
+        
         # Adds user arguments to the test if there are meta descriptions for it. 
-        if "userargs" in meta:
-            self.cmd += " -- " + meta['userargs']
+        if "userargs" in test_meta_data:
+            self.cmd += " -- " + test_meta_data['userargs']
         
         output( "Launching %s: " % self.cmd, newline=False)
-        self.process = subprocess.Popen(self.cmd.split(" "))
+        self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
-        self.time_to_get_result_or_die = int(meta["max_runtime"]) if "max_runtime" in meta else TEST_MAX_RUNTIME
+        self.time_to_get_result_or_die = int(test_meta_data["max_runtime"]) if "max_runtime" in test_meta_data else TEST_MAX_RUNTIME
 
     def run(self):
         """runs the testthread, logs realtime'ish results and kills the subprocess if it takes too long."""
@@ -249,7 +256,7 @@ class Usage(Exception):
 
 def main():
     usage = 'usage: %prog [options]'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.6")
+    parser = OptionParser(usage=usage, version="Pupympi version 0.7")
     parser.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')

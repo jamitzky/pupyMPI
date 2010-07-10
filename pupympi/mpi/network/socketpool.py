@@ -83,14 +83,15 @@ class SocketPool(object):
             ##client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
             #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
             
-            if len(self.sockets) > self.max_size: # Throw one out if there are too many
+            if len(self.sockets) >= self.max_size: # Throw one out if there are too many
+                Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
                 self._remove_element()
                 
             # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
             newly_created = True
             
-        Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
+        #Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
         return client_socket, newly_created
     
     def add_accepted_socket(self, socket_connection, global_rank):
@@ -161,23 +162,6 @@ class SocketPool(object):
                 if not foundOne:
                     # Alert the user, harshly
                     raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
-        #
-        #with self.sockets_lock:
-        #    for _ in range(2): # Run through twice
-        #        for client_socket in self.sockets:
-        #            (srank, sreference, force_persistent) = self.metainfo[client_socket]
-        #            if force_persistent: # We do not remove persistent connections
-        #                Logger.debug("FOUND A PERSISTENT ONE!")
-        #                continue
-        #            
-        #            if sreference: # Mark second chance
-        #                self.metainfo[client_socket] = (srank, False, force_persistent)
-        #            else: # Has already had its second chance
-        #                self.sockets.remove(client_socket) # remove from socket pool
-        #                del self.metainfo[client_socket] # delete metainfo
-        #                break
-        #
-        #raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
     
     def _get_socket_for_rank(self, rank):
         """
@@ -194,7 +178,7 @@ class SocketPool(object):
         return None
     
     def _add(self, rank, client_socket, force_persistent):
-        Logger().error("SocketPool._add: for rank %d: %s" % (rank, client_socket))
+        Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
         with self.sockets_lock:
             self.metainfo[client_socket] = (rank, False, force_persistent)
             self.sockets.append(client_socket)
