@@ -314,7 +314,7 @@ class BaseCommunicationHandler(threading.Thread):
                 
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
-                add_to_pool = True
+                add_to_pool = True                
                 Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
                 if testCounter != 0:
                     Logger().error("WOW, look at that counter ... just look at it!!! (%i)" % testCounter)
@@ -343,6 +343,7 @@ class BaseCommunicationHandler(threading.Thread):
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                 continue
             
+            # Now that we know the rank of sender we can add the socket to the pool
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
             
