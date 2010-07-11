@@ -271,6 +271,7 @@ class BaseCommunicationHandler(threading.Thread):
         ##Logger().warning("SHOW request %s" % request)
         
         #Logger().debug("rank:%i calling get_socket for globrank:%i" % (self.rank, global_rank))
+        # TODO: This call should be extended to allow asking for a persistent connection
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
