@@ -955,7 +955,7 @@ class Communicator:
         cr.start_allreduce(op)
         data = cr.wait()
         
-        Logger().debug("--------------------------- REDUCE DONE ---------------------------")
+        #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
 
         if self.rank() == root:
             return data

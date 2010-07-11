@@ -315,9 +315,10 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True                
-                Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
-                if testCounter != 0:
-                    Logger().error("WOW, look at that counter ... just look at it!!! (%i)" % testCounter)
+                #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
+                #if testCounter != 0:
+                #    #if (read_socket == self.sockets_in[0])
+                #    Logger().error("WOW, look at that counter ... just look at it!!! (%i) ... %s" % (testCounter,(read_socket == self.sockets_in[0]) ))
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
                 # This means that if accept fails it is normally just data coming in
@@ -380,11 +381,11 @@ class BaseCommunicationHandler(threading.Thread):
                     try:
                         utils.robust_send(write_socket,request.data)
                     except socket.error, e:
-                        Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        #Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     except Exception, e:
-                        Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        #Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     
@@ -392,7 +393,7 @@ class BaseCommunicationHandler(threading.Thread):
                     
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
-                        Logger().debug("Ssend done, status set to unacked")
+                        #Logger().debug("Ssend done, status set to unacked")
                     else:                            
                         request.update("ready") # update status and signal anyone waiting on this request                            
                 else:
