@@ -89,15 +89,16 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
                 results.append((size, module.meta_schedule[size], 0, 0, 0, ci.num_procs))
             else:
                 per_it = total / module.meta_schedule[size]
-                mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
+                # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
+                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
                 ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" %  (\
                 size, \
                 module.meta_schedule[size], \
                 round(total, 2), \
                 round(per_it * 1000000, 2), \
-                round(mbsec, 5)))
+                round(mbytessec, 5)))
                     
-                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbsec, ci.num_procs))
+                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbytessec, ci.num_procs))
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
@@ -210,7 +211,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         f = open(constants.LOGDIR+filename, "w")
         
         # Column headers for easier reading
-        row = "datasize,repetitions,total time,time/repetition,Mb/second,nodes,name of test,timestamp of testrun"
+        row = "datasize,repetitions,total time,time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
         f.write(row+"\n")
 
         for testname in resultlist:
