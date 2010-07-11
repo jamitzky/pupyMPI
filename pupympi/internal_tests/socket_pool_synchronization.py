@@ -1,8 +1,9 @@
 #!/usr/bin/env python2.6
-# meta-description: Test to provoke duplicate connections where processes try to send more or less simultaneously to each other resulting
-# meta-expectedresult: 0
-# meta-minprocesses: 4
+"""
+Test to provoke duplicate connections where processes try to send more or less simultaneously to each other resulting
 
+Run with 4 procs and logging to show when _get_socket_for_rank returns a known socket in socketpool.add_accepted_socket
+"""
 from mpi import MPI
 from mpi import constants
 
@@ -17,8 +18,6 @@ DUMMY_TAG = 1
 
 
 neighbours = range(size)
-#random.seed(7) # Best kind of random is predictable random
-#random.shuffle(neighbours)
 
 rRequests = []
 sRequests = []

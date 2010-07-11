@@ -113,7 +113,10 @@ class SocketPool(object):
             return
         
         if known_socket:
-            Logger().debug("Already a socket in the pool:%s for an accepted connection:%s to rank:%i" % (known_socket,socket_connection,global_rank))
+            # When two procs send to each other simultaneously the result can be
+            # adding a duplicate connection
+            #Logger().debug("Already a socket in the pool:%s for an accepted connection:%s to rank:%i" % (known_socket,socket_connection,global_rank))
+            pass
         
         
         if len(self.sockets) > self.max_size: # Throw one out if there are too many
