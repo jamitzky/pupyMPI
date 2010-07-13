@@ -39,20 +39,14 @@ help_message = '''
 The help message goes here.
 '''
 
-def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=False):
+def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     
     The fixed_module parameter forces the benchmark to run just that one benchmark module (collection of tests)
     The fixed_test parameter forces the benchmark to run just that one test
     The limit parameter sets the upper bound on size of testdata
-    use_yappi flag turns on profiling with yappi
     """
-    
-    if use_yappi: # PROFILE
-        built_ins = False # Do not trace Python built-in functions
-        #built_ins = True # Trace Python built-in functions                
-        yappi.start(built_ins) # True means also profile built-in functions
     
     modules = [single, parallel, collective, special]
     resultlist = {}
@@ -181,29 +175,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
 
     mpi.finalize()
     
-    # DEBUG / PROFILING
-    if use_yappi:
-        if root:
-            sorttype = yappi.SORTTYPE_TSUB            
-            # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
-            # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
-            #   Subtime means the total spent time in the function minus the total
-            #   time spent in the other functions called from this function.
-            stats = yappi.get_stats(sorttype,yappi.SORTORDER_DESCENDING, 50 )
-
-            stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
-            filename = "yappi.%s.%s-%s-%s.sorttype-%s.trace" % (stamp,fixed_module,fixed_test,limit, sorttype)
-            f = open(constants.LOGDIR+filename, "w")
-            
-            for stat in stats:
-                print stat
-                f.write(stat+"\n")
-                
-            f.flush()
-            f.close()
-
-        yappi.stop()
-    
     # Output to .csv file
     if root:
         stamp = strftime("%Y-%m-%d_%H-%M-%S", localtime())
@@ -243,7 +214,6 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
-    use_yappi = False
     
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module (collection of tests)
@@ -252,9 +222,6 @@ def main(argv=None):
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-        if arg.startswith("--yappi"): # turns on profiling with yappi
-            import yappi # We don't know who is root yet so everybody imports yappi and starts it
-            use_yappi = True    
     testrunner(module, test, limit, use_yappi)
     
 
