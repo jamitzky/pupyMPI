@@ -342,7 +342,7 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True
-                Logger().warning("Yes it shows")
+                #Logger().warning("Yes it shows")
                 #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
@@ -452,6 +452,8 @@ class BaseCommunicationHandler(threading.Thread):
             # might miss a send or handle_writelist once too much, which is ok)
             if self.outbound_requests > 0:
                 self._handle_writelist(out_list)
+            
+            time.sleep(0.01)
         
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then closing the sockets.
