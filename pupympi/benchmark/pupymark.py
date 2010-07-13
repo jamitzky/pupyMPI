@@ -222,7 +222,7 @@ def main(argv=None):
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-    testrunner(module, test, limit, use_yappi)
+    testrunner(module, test, limit)
     
 
 if __name__ == "__main__":
