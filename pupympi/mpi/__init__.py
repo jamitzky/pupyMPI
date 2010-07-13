@@ -143,7 +143,11 @@ class MPI(Thread):
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
-            output = open(filename, "w")
+            try:
+                output = open(filename, "w")
+            except:            
+                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+            
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
@@ -356,7 +360,10 @@ class MPI(Thread):
             
             filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
-            f = open(filename, "w")
+            try:
+                f = open(filename, "w")
+            except:            
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
             
             stats = yappi.get_stats(self._yappi_sorttype)
             
