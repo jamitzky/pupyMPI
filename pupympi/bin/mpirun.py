@@ -158,6 +158,8 @@ if __name__ == "__main__":
 
     # Set log dir
     logdir = constants.LOGDIR # NOTE: This could be command line option
+    if not os.access(logdir, os.W_OK):
+        raise Exception("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
     
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
@@ -184,8 +186,8 @@ if __name__ == "__main__":
     # FIXME: The line below is something I removed. The <<rank>> variable is not defined, and how could it?
     # We don't have a rank for mpirun.py and we send out ranks later in the script. I replaced the <<rank>>
     # with -1.
-    #profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,rank)) if options.enable_profiling else ""
-    profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(constants.LOGDIR,-1)) if options.enable_profiling else ""
+    #profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(logdir,rank)) if options.enable_profiling else ""
+    profiler = (" -m cProfile -o %spupympi.profiling.rank%s" %(logdir,-1)) if options.enable_profiling else ""
 
     # Mimic our cli call structure also for remotely started processes
     global_run_options = [options.remote_python, "-u", profiler, executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,

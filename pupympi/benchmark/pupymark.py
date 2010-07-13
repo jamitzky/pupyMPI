@@ -179,7 +179,11 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     if root:
         stamp = strftime("%Y-%m-%d_%H-%M-%S", localtime())
         filename = "pupymark.output."+stamp+".csv"
-        f = open(constants.LOGDIR+filename, "w")
+        try:
+            f = open(constants.LOGDIR+filename, "w")
+        except:            
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+        
         
         # Column headers for easier reading
         row = "datasize,repetitions,total time,time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
