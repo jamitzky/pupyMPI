@@ -342,7 +342,7 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
                 add_to_pool = True
-                Logger().warning("Yes it shows")
+                #Logger().warning("Yes it shows")
                 #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
@@ -452,6 +452,16 @@ class BaseCommunicationHandler(threading.Thread):
             # might miss a send or handle_writelist once too much, which is ok)
             if self.outbound_requests > 0:
                 self._handle_writelist(out_list)
+            
+            
+            # NOTE:
+            # This microsleep is to avoid busy waiting which starves the other threads
+            # especially on a single node (localhost testing) this has significant effect
+            # but also on the cluster it halves the time required for the single module!
+            # And furthermore increases max transferrate by 25% to about 40MB/s!
+            # Also it seems to improve the speed of high computation-to-communication like
+            # in the Monte Carlo Pi application where 20% speed has been observed
+            time.sleep(0.00001)
         
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then closing the sockets.

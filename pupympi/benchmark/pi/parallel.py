@@ -3,6 +3,9 @@
 parallel.py
 
 pupyMPI parallelized version of Monte Carlo Pi approximator
+
+This is an example of an application with very little communication. Only a
+barrier to start with and a gather to sum up results.
 """
 
 import math, random, sys, time
@@ -31,7 +34,7 @@ max = max_cmdline / size
 t1 = time.time()
 
 # algorithm
-random.seed()
+random.seed(42) # for benchmarking we seed to get predictable randomness... the best kind
 for i in xrange(max):
     x = random.uniform(0,1)
     y = random.uniform(0,1)
