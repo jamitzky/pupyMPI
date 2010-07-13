@@ -453,7 +453,13 @@ class BaseCommunicationHandler(threading.Thread):
             if self.outbound_requests > 0:
                 self._handle_writelist(out_list)
             
-            time.sleep(0.01)
+            
+            # NOTE:
+            # This microsleep is to avoid busy waiting which starves the other threads
+            # especially on a single node (localhost testing) this has significant effect
+            # but also on the cluster it halves the time required for the single module!
+            # And furthermore increases max transferrate by 25% to about 40MB/s!
+            time.sleep(0.00001)
         
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then closing the sockets.
