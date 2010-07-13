@@ -72,7 +72,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
         for size in sizekeys:
-            if limit > 0:
+            if limit >= 0:
                 if size > limit:
                     break
             else:

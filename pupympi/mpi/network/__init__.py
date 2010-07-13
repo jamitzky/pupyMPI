@@ -102,12 +102,13 @@ class Network(object):
             self.t_out.type = "out"
             self.t_in.type = "in"
         
+        # Create the main receieve socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
         self.hostname = hostname
         server_socket.listen(5)
         self.main_receive_socket = server_socket
-        
+        # Put main receieve socket on incoming list
         self.t_in.add_in_socket(self.main_receive_socket)
         
         #Logger().debug("main socket is: %s" % server_socket)
@@ -305,8 +306,33 @@ class BaseCommunicationHandler(threading.Thread):
                 Logger().error("Got error when closing socket: %s" % e)
 
     def _handle_readlist(self, readlist):
+        # TODO: Consider moving this to separate function
+        # handle incoming connections
+        #if (read_socket == self.sockets_in[0])
+        
         #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
-        testCounter = 0
+        
+        #accepting_socket = self.sockets_in[0] # The only socket taking incoming connections
+        #for read_socket in readlist:
+        #    add_to_pool = False
+        #    if (read_socket == accepting_socket):
+        #        # Looks like main server socket - must be incoming connection attempt
+        #        try:                    
+        #            # _ is sender_address
+        #            (conn, _) = read_socket.accept()
+        #            
+        #            self.network.t_in.add_in_socket(conn)
+        #            self.network.t_out.add_out_socket(conn)
+        #            add_to_pool = True
+        #            Logger().warning("Accepted connection")
+        #            #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
+        #        except Exception, e:
+        #            Logger().error("_handle_readlist: Unexpected exception! Error was: %s" % e)
+        #    else:
+        #        Logger().warning("Preestablished connection")
+        #        # socket already has an accepted connection
+        #        conn = read_socket
+
         for read_socket in readlist:
             add_to_pool = False
             try:
@@ -315,11 +341,9 @@ class BaseCommunicationHandler(threading.Thread):
                 
                 self.network.t_in.add_in_socket(conn)
                 self.network.t_out.add_out_socket(conn)
-                add_to_pool = True                
+                add_to_pool = True
+                Logger().warning("Yes it shows")
                 #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
-                #if testCounter != 0:
-                #    #if (read_socket == self.sockets_in[0])
-                #    Logger().error("WOW, look at that counter ... just look at it!!! (%i) ... %s" % (testCounter,(read_socket == self.sockets_in[0]) ))
             except socket.error, e:
                 # We try to accept on all sockets, even ones that are already in use.
                 # This means that if accept fails it is normally just data coming in
@@ -331,6 +355,10 @@ class BaseCommunicationHandler(threading.Thread):
             try:
                 rank, msg_command, raw_data = get_raw_message(conn)
                 #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
+                #if add_to_pool:
+                #    Logger().warning("Read from accepted connection")
+                #else:
+                #    Logger().warning("Normal read")
             except MPIException, e:                    
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -366,8 +394,7 @@ class BaseCommunicationHandler(threading.Thread):
                     
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
-            testCounter += 1
-         
+
     def _handle_writelist(self, writelist):
         for write_socket in writelist:
             removal = []
@@ -480,7 +507,7 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerPoll, self).__init__(*args, **kwargs)
         
-        # Add a special epoll environment we can later use to poll
+        # Add a special poll environment we can later use to poll
         # the system. 
         self.poll = select.poll()
 
