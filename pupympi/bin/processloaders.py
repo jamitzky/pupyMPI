@@ -19,6 +19,7 @@ import os, subprocess, time
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 from mpi import constants
+import sys
 
 def _islocal(host):
     return host == "localhost" or host == "127.0.0.1"
@@ -39,7 +40,7 @@ def ssh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
 
-    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     #logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
     
@@ -62,7 +63,7 @@ def ssh(host, arguments, process_io, rank):
 def rsh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
-    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
     exec_str = "rsh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s with process_io type %s" % (exec_str, process_io))
 
