@@ -39,7 +39,8 @@ io_target_list = []
 def ssh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
-
+    
+    # We join the sys.path here to allow user modifications to PYTHONPATH to take effect remotelyy
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     #logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
