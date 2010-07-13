@@ -13,8 +13,8 @@ rank = world.rank()
 
 f = open(constants.LOGDIR+"mpi.stress_sr.rank%s.log" % rank, "w")
 
-max_iterations = 10
-#max_iterations = 500
+#max_iterations = 10
+max_iterations = 500
 
 t1 = world.Wtime()    
 
