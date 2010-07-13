@@ -459,6 +459,8 @@ class BaseCommunicationHandler(threading.Thread):
             # especially on a single node (localhost testing) this has significant effect
             # but also on the cluster it halves the time required for the single module!
             # And furthermore increases max transferrate by 25% to about 40MB/s!
+            # Also it seems to improve the speed of high computation-to-communication like
+            # in the Monte Carlo Pi application where 20% speed has been observed
             time.sleep(0.00001)
         
         # The shutdown events is called, so we're finishing the network. This means

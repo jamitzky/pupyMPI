@@ -3,6 +3,9 @@
 parallel.py
 
 pupyMPI parallelized version of Monte Carlo Pi approximator
+
+This is an example of an application with very little communication. Only a
+barrier to start with and a gather to sum up results.
 """
 
 import math, random, sys, time
