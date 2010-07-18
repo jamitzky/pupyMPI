@@ -1,0 +1,91 @@
+============== PYTHON 8 NODE PARALLEL ===============
+jaws@klynge:~/pupympi$ time PYTHONPATH=. bin/mpirun.py -c 8 --host-file ../hosts_all benchmark/pi/parallel.py --  100000000
+Rank 5: total is 100000000, num_in is 9814932
+Rank 7: total is 100000000, num_in is 9816756
+Rank 1: total is 100000000, num_in is 9819436
+Rank 6: total is 100000000, num_in is 9816773
+Rank 2: total is 100000000, num_in is 9816017
+Rank 4: total is 100000000, num_in is 9817264
+Rank 0: total is 100000000, num_in is 9818733
+Rank 3: total is 100000000, num_in is 9816037
+Rank 0: total is 100000000, summed_num_in is 78535948
+Within circle: 78535948
+Total: 100000000
+Ratio: 0.78535948
+Python's Internal Pi: 3.14159265359
+*** Approx. Pi: 3.14143792 ***
+Discrepancy: 0.000154733589793
+
+real    0m46.445s
+user    0m0.110s
+sys     0m0.110s
+
+============== PYTHON SEQUENTIAL ===============
+jaws@klynge:~/pupympi$ time python benchmark/pi/sequential.py 100000000
+Within circle: 78534473
+Total: 100000000
+Ratio: 0.78534473
+Python's Internal Pi: 3.14159265359
+*** Approx. Pi: 3.14137892 ***
+Discrepancy: 0.000213733589793
+
+real    2m53.274s
+user    2m53.170s
+sys     0m0.020s
+
+============== C SEQUENTIAL ===============
+
+jaws@klynge:~/pupympi$ time benchmark/pi/sequential 
+Enter the number of iterations used to estimate pi: 100000000
+# of trials= 100000000 , estimate of pi is 3.14168 
+
+real    0m5.370s
+user    0m3.980s
+sys     0m0.000s
+
+============== INTERNAL TIMER, v1 ===============
+
+jaws@klynge:~/pupympi$ time PYTHONPATH=. bin/mpirun.py -c 8 --host-file ../hosts_all benchmark/pi/parallel.py --  100000000
+Rank 6: total is 100000000, num_in is 9816898
+Rank 5: total is 100000000, num_in is 9817570
+Rank 0: total is 100000000, num_in is 9816044
+Rank 1: total is 100000000, num_in is 9818602
+Rank 3: total is 100000000, num_in is 9818360
+Rank 2: total is 100000000, num_in is 9814328
+Rank 4: total is 100000000, num_in is 9819847
+Rank 7: total is 100000000, num_in is 9816753
+Rank 0: total is 100000000, summed_num_in is 78538402
+Within circle: 78538402
+Total: 100000000
+Ratio: 0.78538402
+Python's Internal Pi: 3.14159265359
+*** Approx. Pi: 3.14153608 ***
+Discrepancy: 5.65735897933e-05
+Internal time: 37.340512991
+
+real    0m41.379s
+user    0m0.110s
+sys     0m0.070s
+
+============== INTERNAL TIMER, v2 ===============
+jaws@klynge:~/pupympi$ time PYTHONPATH=. bin/mpirun.py -c 8 --host-file ../hosts_all benchmark/pi/parallel.py --  100000000
+Rank 3: total is 100000000, num_in is 9817164, time 33.9849140644
+Rank 5: total is 100000000, num_in is 9815723, time 34.621078968
+Rank 2: total is 100000000, num_in is 9817814, time 35.3184638023
+Rank 6: total is 100000000, num_in is 9818503, time 36.6570549011
+Rank 0: total is 100000000, num_in is 9820146, time 36.9304158688
+Rank 4: total is 100000000, num_in is 9816407, time 37.3689949512
+Rank 7: total is 100000000, num_in is 9816494, time 37.6354949474
+Rank 1: total is 100000000, num_in is 9817872, time 38.503111124
+Rank 0: total is 100000000, summed_num_in is 78540123
+Within circle: 78540123
+Total: 100000000
+Ratio: 0.78540123
+Python's Internal Pi: 3.14159265359
+*** Approx. Pi: 3.14160492 ***
+Discrepancy: -1.22664102067e-05
+Internal time: 38.5113928318
+
+real    0m42.270s
+user    0m0.140s
+sys     0m0.040s
