@@ -219,8 +219,9 @@ class MPI(Thread):
         self.daemon = True
         self.start()
 
-        # Makes every node connect to each other if the settings allow us to do that.
-        self.network.start_full_network()
+        # Make every node connect to each other if settings specify it
+        if not options.disable_full_network_startup:
+            self.network.start_full_network()
         #logger.info("MPI environment is up and running.")
 
         # Set a static attribute on the class so we know it is initialised.
