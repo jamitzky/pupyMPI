@@ -25,8 +25,10 @@ Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
         mpirun and more than 4 processes unless you just want the single module
         (consisting only of point-to-point tests)
 """
-from time import localtime, strftime
+import time
+import datetime
 import sys
+import platform
 
 from mpi import MPI
 from mpi import constants
@@ -38,6 +40,33 @@ import single, collective, parallel, special
 help_message = '''
 The help message goes here.
 '''
+# Auxillary
+def pmap(limit=22):
+    """
+    pregenerate nice formats for counting bytes
+    dict is indexed [bytecount] = (exponent,normalized,longprefix,oneletterprefix)
+    eg. {2048 : (11,2,"Kilo","K"), ... }
+    """    
+    prefixMap = {}    
+    for i in range(limit+1):
+        pre = ""
+        if i < 10:
+            div = 1
+            pre = ""
+        elif i < 20:
+            div = 1024
+            pre = "Kilo"
+        elif i < 30:
+            div = 1024**2
+            pre = "Mega"
+        elif i < 40:
+            div = 1024**3
+            pre = "Giga"        
+        prefixMap[2**i] = (i,(2**i)/div,pre,pre[0:1])   
+    return prefixMap
+
+
+# Main functions
 
 def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     """
@@ -47,6 +76,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     The fixed_test parameter forces the benchmark to run just that one test
     The limit parameter sets the upper bound on size of testdata
     """
+    starttime = time.time()
     
     modules = [single, parallel, collective, special]
     resultlist = {}
@@ -177,13 +207,43 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     
     # Output to .csv file
     if root:
-        stamp = strftime("%Y-%m-%d_%H-%M-%S", localtime())
-        filename = "pupymark.output."+stamp+".csv"
+        prefixMap = pmap()
+        (c,n,sp,lp) = prefixMap[limit]
+        nicelimit = "%i%sB" % (n,sp)
+        
+        if fixed_module is None:
+            nicetype = fixed_test
+        else:
+            nicetype = fixed_module[0:4] # 4 chars is enough to get the type
+
+        endtime = time.time()
+        tdelta = endtime-starttime
+        niceelapsed = datetime.timedelta(seconds=tdelta)
+        niceend = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(endtime))
+        nicestart = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(starttime))            
+        tstamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(endtime))
+        
+        filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
             f = open(constants.LOGDIR+filename, "w")
         except:            
             raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
         
+        # Test parameters
+        header = "# =============================================================\n"
+        header += "# pupyMark - pupyMPI benchmarking\n"        
+        header += "# \n"
+        header += "# start: %s \n" % nicestart
+        header += "# end: %s \n" % niceend
+        header += "# elapsed (wall clock): %s \n" % niceelapsed
+        header += "# \n"
+        header += "# parameters: %s limit=%s np=%i\n" % (("test="+fixed_test if fixed_test is not None else "module="+fixed_module),limit,ci.w_num_procs)
+        header += "# switches: (COMING SOON)\n"
+        header += "# \n"
+        header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
+        header += "# %s version:%s\n" % (platform.python_implementation(),platform.python_version())
+        header += "# =============================================================\n\n"
+        f.write(header+"\n")
         
         # Column headers for easier reading
         row = "datasize,repetitions,total time,time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
@@ -199,7 +259,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
                 except:
                     print "Res is",res
                 # and we add testname and date for easy pivoting
-                row += ",%s,%s" % (testname, stamp)
+                row += ",%s,%s" % (testname, tstamp)
                 f.write(row+"\n")
             # Empty row for easier reading
             f.write("\n")
