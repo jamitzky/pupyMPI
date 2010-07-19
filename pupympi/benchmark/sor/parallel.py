@@ -25,7 +25,7 @@ except:
 #This solves the system of partial differential equations
 #Parameter is
 #  data - the problem instance matrix with temperatures
-def solve(data):
+def solve(data, rboffset):
   global update_freq, mpi
 
   comm = mpi.MPI_COMM_WORLD
@@ -34,12 +34,15 @@ def solve(data):
   ROW_TAG = 50
   DELTA_TAG = 51
 
-  if rank == 0:
-  
+  y0 = 0
+
   h=len(data)-1
   w=len(data[0])-1
   
-  if rank == wsize - 1:
+  if rank == 0: # Do not update first row
+    y0 = 1
+  
+  if rank == wsize - 1: # Do not update last row
     h -= 1
 
   epsilon=.1*h*w
@@ -52,24 +55,25 @@ def solve(data):
       if useGraphics:
         g.update(data)
       cnt=0
-    # receive from neighbors
+    # Receive black points
     if rank == 0:
         top_row = data[0]
     else:
-        # top neighbor
         top_row = comm.recv(rank-1, ROW_TAG)
 
     if rank == wsize - 1:
         btm_row = data[-1]
     else:
-        # bottom neighbor
         btm_row = comm.recv(rank+1, ROW_TAG)
 
-    for y in range(1,h):
-      for x in range(1,w):
+    # Update red points
+    x0 = 2-rboffset
+    for y in range(y0,h):
+      for x in range(x0,w,2):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
         delta+=abs(old-data[y,x])
+      x0 = (1 == x0 ? 2 : 1)
 
     # send to neighbors
     if rank > 0:
@@ -133,8 +137,10 @@ if useGraphics:
 timer=timer.StopWatch()
 timer.Start()
 
+print "solving with rb offset %d" % (ymin % 2)
+
 #Start solving the heat equation
-# solve(problem)
+# solve(problem, ymin % 2)
 
 mpi.finalize()
 
