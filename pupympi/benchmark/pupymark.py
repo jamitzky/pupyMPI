@@ -41,7 +41,7 @@ help_message = '''
 The help message goes here.
 '''
 # Auxillary
-def pmap(limit=22):
+def pmap(limit=32):
     """
     pregenerate nice formats for counting bytes
     dict is indexed [bytecount] = (exponent,normalized,longprefix,oneletterprefix)
@@ -84,22 +84,38 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
     
+    # Gauge how many tests are to be run (to provide progression status during long tests)
+    global testsToRun, testsDone
+    if fixed_test:
+        testsToRun = 1
+    elif fixed_module:
+        testsToRun = 0
+        for module in modules:
+            # Count only tests in the desired module
+            if module.__name__ == fixed_module:
+                for function in dir(module):
+                    if function.startswith("test_"):
+                        testsToRun += 1
+    testsDone = 0
+    
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
+        global testsDone
+        testsDone += 1
         results = []
 
         ci.log("%s processes participating - %s waiting in barrier" %( ci.num_procs, ci.w_num_procs - ci.num_procs ))
-        ci.log("%s - %s" % (module.__name__, test.__name__)) 
+        ci.log("%s - %s (test %i of %i)" % (module.__name__, test.__name__, testsDone, testsToRun)) 
         ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))        
         ci.log("--------------------------------------------------------------------------")
         
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
         for size in sizekeys:
-            if limit >= 0:
+            if limit >= 0: # for positive limits we stop at first size over the limit
                 if size > limit:
                     break
-            else:
+            else: # for negative limits we ignore all sizes under the (abs) limit
                 if size < abs(limit):
                     continue
                 
@@ -123,6 +139,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
                 round(mbytessec, 5)))
                     
                 results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbytessec, ci.num_procs))
+                
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
@@ -207,8 +224,22 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     
     # Output to .csv file
     if root:
+        
+        sizekeys = [0]+[(2**i) for i in range(23)]
+        # Find out what the practical limit was
+        actual_limit = 0
+        if limit  >= 0:
+            for size in sizekeys:
+                if size <= limit:
+                    actual_limit = size
+                    continue
+                else:                    
+                    break
+        else:            
+            actual_limit = max(sizekeys)
+        
         prefixMap = pmap()
-        (c,n,sp,lp) = prefixMap[limit]
+        (c,n,lp,sp) = prefixMap[actual_limit]
         nicelimit = "%i%sB" % (n,sp)
         
         if fixed_module is None:
@@ -233,13 +264,14 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         header = "# =============================================================\n"
         header += "# pupyMark - pupyMPI benchmarking\n"        
         header += "# \n"
+        header += "# %s limit:%s processes:%i\n" % (("test:"+fixed_test if fixed_test is not None else "module:"+fixed_module),nicelimit,ci.w_num_procs)
+        header += "# \n"
         header += "# start: %s \n" % nicestart
         header += "# end: %s \n" % niceend
         header += "# elapsed (wall clock): %s \n" % niceelapsed
+        # TODO: Show mpirun parameters here
         header += "# \n"
-        header += "# parameters: %s limit=%s np=%i\n" % (("test="+fixed_test if fixed_test is not None else "module="+fixed_module),limit,ci.w_num_procs)
-        header += "# switches: (COMING SOON)\n"
-        header += "# \n"
+        header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)        
         header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
         header += "# %s version:%s\n" % (platform.python_implementation(),platform.python_version())
         header += "# =============================================================\n\n"

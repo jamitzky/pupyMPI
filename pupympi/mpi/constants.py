@@ -25,7 +25,7 @@ It is intended to be read-only (except for LOGDIR) and changing anything voids t
 import os
 
 #### PUBLIC VALUES BELOW ####
-
+PUPYVERSION = "0.7.2" # NOTE: Would be nice if this could be set automatically from hg tags or vice versa
 LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
 
 # Predefined tags
