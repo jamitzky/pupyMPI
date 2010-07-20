@@ -1,5 +1,0 @@
-These benchmark runs were done with version 0.7 of pupyMPI
-(up to at least commit 1179)
-======================================
-
-Changes from 0.6 are the use of epoll and poll
