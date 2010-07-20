@@ -318,71 +318,6 @@ class BaseCommunicationHandler(threading.Thread):
         
         for read_socket in readlist:
             add_to_pool = False
-            try:
-                Logger().warning("Yes it shows")
-                # _ is sender_address
-                (conn, _) = read_socket.accept()
-                
-                self.network.t_in.add_in_socket(conn)
-                self.network.t_out.add_out_socket(conn)
-                add_to_pool = True
-                
-                #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
-            except socket.error, e:
-                # We try to accept on all sockets, even ones that are already in use.
-                # This means that if accept fails it is normally just data coming in
-                #Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
-                conn = read_socket
-            except Exception, e:
-                Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
-            
-            try:
-                rank, msg_command, raw_data = get_raw_message(conn)
-                #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
-                #if add_to_pool:
-                #    Logger().warning("Read from accepted connection")
-                #else:
-                #    Logger().warning("Normal read")
-            except MPIException, e:                    
-                # Broken connection is ok when shutdown is going on
-                if self.shutdown_event.is_set():
-                    #Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
-                    break # We don't care about incoming during shutdown
-                else:
-                    # We have no way of knowing whether other party has reached shutdown or this was indeed an error
-                    # so we just try listening to next socket
-                    #Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
-                    continue
-            except Exception, e:
-                Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
-                continue
-            
-            # Now that we know the rank of sender we can add the socket to the pool
-            if add_to_pool:
-                self.network.socket_pool.add_accepted_socket(conn, rank)
-            
-            #Logger().debug("Received message with command: %d" % msg_command)
-            if msg_command == constants.CMD_USER:
-                try:
-                    with self.network.mpi.raw_data_lock:
-                        #Logger().debug("Got lock")
-                        self.network.mpi.raw_data_queue.append(raw_data)
-                        self.network.mpi.raw_data_has_work.set()
-                        self.network.mpi.has_work_event.set()
-                        #Logger().debug("Releasing lock")
-                except AttributeError, e:
-                    #Logger().error("Failed grabbing raw_data_lock!")
-                    pass
-                except Exception, e:
-                    Logger().error("Strange error - Failed grabbing raw_data_lock!")
-                    
-            else:
-                self.network.mpi.handle_system_message(rank, msg_command, raw_data)
-
-    def _handle_readlist2(self, readlist):
-        
-        for read_socket in readlist:
-            add_to_pool = False
 
             if read_socket == self.main_receive_socket:
                 #Logger().warning("Yes it shows")
@@ -503,8 +438,7 @@ class BaseCommunicationHandler(threading.Thread):
             while not self.shutdown_event.is_set():
                 # _ is errorlist
                 (in_list, out_list, _) = self.select_combo()
-                #self._handle_readlist(in_list)
-                self._handle_readlist2(in_list)
+                self._handle_readlist(in_list)
                 
                 # Only look at outbound if there are any
                 # (we don't take the socket_to_request_lock but worst case is we
@@ -527,8 +461,7 @@ class BaseCommunicationHandler(threading.Thread):
             while not self.shutdown_event.is_set():
                 #Logger().debug("Select in - for base communication handler type:%s" %(self.type))   
                 (in_list, _, _) = self.select_in()
-                #self._handle_readlist(in_list)
-                self._handle_readlist2(in_list)
+                self._handle_readlist(in_list)
                 time.sleep(0.00001)
         
         elif self.type == "out":
