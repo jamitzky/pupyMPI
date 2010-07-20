@@ -28,6 +28,7 @@ def solve(data):
   h=len(data)-1
   w=len(data[0])-1
   epsilon=.1*h*w
+  print "Epsilon is ", epsilon
   delta=epsilon+1.
   cnt=update_freq-1
   while(delta>epsilon):
@@ -42,6 +43,9 @@ def solve(data):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
         delta+=abs(old-data[y,x])
+    
+    print "Iteration %d delta=%f epsilon=%f" % (cnt, delta, epsilon)
+    return
 
 #Default problem size
 xsize=500
