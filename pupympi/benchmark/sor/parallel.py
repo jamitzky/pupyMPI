@@ -26,7 +26,7 @@ except:
 #Parameter is
 #  data - the problem instance matrix with temperatures
 def solve(data, rboffset):
-  global update_freq, mpi
+  global update_freq, mpi, epsilon
 
   comm = mpi.MPI_COMM_WORLD
   rank = comm.rank()
@@ -40,11 +40,11 @@ def solve(data, rboffset):
   h=len(data)
   w=len(data[0])-1
   
-  initx0 = 1+rboffset
+  initx0 = 1+int(rboffset)
 
   if rank == 0: # Do not update first row
     y0 = 1
-    initx0 = 2-rboffset
+    initx0 = 2-int(rboffset)
   
   if rank == wsize - 1: # Do not update last row
     h -= 1
@@ -59,7 +59,6 @@ def solve(data, rboffset):
 
   print "[%d] isent initial black points" % (rank)
 
-  epsilon=.1*h*w
   delta=epsilon+1.
   cnt=update_freq-1
   while(delta>epsilon):
@@ -110,8 +109,8 @@ def solve(data, rboffset):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
       delta += abs(old-data[y,x])
-    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y0, 2-rboffset)
-    for x in range(2-rboffset,w,2):
+    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y0, 2-int(rboffset))
+    for x in range(2-int(rboffset),w,2):
       old=data[h-1,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
       delta += abs(old-data[y,x])
@@ -159,8 +158,8 @@ def solve(data, rboffset):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
       delta += abs(old-data[y,x])
-    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 2-rboffset)
-    for x in range(1-rboffset,w,2):
+    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 2-int(rboffset))
+    for x in range(1-int(rboffset),w,2):
       old=data[h-1,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
       delta += abs(old-data[y,x])
@@ -172,14 +171,12 @@ def solve(data, rboffset):
       tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
 
     # reduceall epsilon
+    owndelta = delta
     delta = comm.allreduce(delta, sum)
     
     # print "[%d] allreduce delta = %d" % (rank, delta)
     if cnt==update_freq:
         print "[%d] allreduce delta = %d" % (rank, delta)
-
-    print "[%d] allreduce delta = %d" % (rank, delta)
-    return
 
 #Default problem size
 xsize=500
@@ -209,6 +206,7 @@ wsize = comm.size()
 
 ymin = floor(rank * ysize / wsize)
 ymax = floor((rank + 1) * ysize / wsize)
+epsilon=.1*(xsize-1)*(ysize-1)
 
 problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
 
@@ -234,7 +232,7 @@ timer.Start()
 print "solving with rb offset %d" % (ymin % 2)
 
 #Start solving the heat equation
-solve(problem, int(ymin % 2))
+solve(problem, int(ymin % 2)==1)
 
 mpi.finalize()
 
