@@ -31,19 +31,33 @@ def solve(data, rboffset):
   comm = mpi.MPI_COMM_WORLD
   rank = comm.rank()
 
-  ROW_TAG = 50
-  DELTA_TAG = 51
+  BLACK_ROW_TAG = 50
+  RED_ROW_TAG = 51
+  DELTA_TAG = 52
 
   y0 = 0
 
-  h=len(data)-1
+  h=len(data)
   w=len(data[0])-1
   
+  initx0 = 1+rboffset
+
   if rank == 0: # Do not update first row
     y0 = 1
+    initx0 = 2-rboffset
   
   if rank == wsize - 1: # Do not update last row
     h -= 1
+
+  print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, initx0, y0, h, w)
+
+  # Send initial black points
+  if 0 < rank:
+    tx1 = comm.isend(data[0], rank-1, BLACK_ROW_TAG)
+  if wsize - 1 > rank:
+    tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
+
+  print "[%d] isent initial black points" % (rank)
 
   epsilon=.1*h*w
   delta=epsilon+1.
@@ -51,41 +65,121 @@ def solve(data, rboffset):
   while(delta>epsilon):
     delta=0.
     cnt=cnt+1
+    x0 = initx0
+
+    # Update graphics (rank 0 only!) {{{
     if cnt==update_freq:
       if useGraphics:
         g.update(data)
       cnt=0
+    # }}}
+
     # Receive black points
     if rank == 0:
         top_row = data[0]
     else:
-        top_row = comm.recv(rank-1, ROW_TAG)
+        rx1 = comm.irecv(rank-1, BLACK_ROW_TAG)
 
     if rank == wsize - 1:
         btm_row = data[-1]
     else:
-        btm_row = comm.recv(rank+1, ROW_TAG)
+        rx2 = comm.irecv(rank+1, BLACK_ROW_TAG)
 
     # Update red points
-    x0 = 2-rboffset
-    for y in range(y0,h):
+    for y in range(y0+1,h-1):
+      print "[%d] [red] Updating row %d with x0 = %d" % (rank, y, x0)
       for x in range(x0,w,2):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
         delta+=abs(old-data[y,x])
-      x0 = (1 == x0 ? 2 : 1)
+      if x0 == 1:
+        x0 = 2
+      else:
+        x0 = 1
 
-    # send to neighbors
-    if rank > 0:
-        comm.isend(data[0], rank-1, ROW_TAG)
+    # Complete receive of black points
+    if 0 < rank:
+        top_row = rx1.wait()
+    if rank < wsize-1:
+        btm_row = rx2.wait()
+
+    # Update last and first red row
+    y = h-1
+    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y, x0)
+    for x in range(x0,w,2):
+      old=data[y0,x]
+      data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
+      delta += abs(old-data[y,x])
+    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y0, 2-rboffset)
+    for x in range(2-rboffset,w,2):
+      old=data[h-1,x]
+      data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
+      delta += abs(old-data[y,x])
+
+    # Send/receive red points
+    if 0 < rank:
+      tx1 = comm.isend(data[0], rank-1, RED_ROW_TAG)
+      rx1 = comm.irecv(rank-1, RED_ROW_TAG)
+    else:
+      top_row = data[0]
+    if wsize - 1 > rank:
+      tx2 = comm.isend(data[-1], rank+1, RED_ROW_TAG)
+      rx2 = comm.irecv(rank+1, RED_ROW_TAG)
+    else:
+      btm_row = data[-1]
+
+    # Switch x0 to opposite of initial
+    if initx0 == 1:
+        x0 = 2
+    else:
+        x0 = 1
+
+    # Update black points
+    for y in range(y0+1,h-1):
+      print "[%d] [black] Updating row %d with x0 = %d" % (rank, y, x0)
+      for x in range(x0,w,2):
+        old=data[y,x]
+        data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
+        delta+=abs(old-data[y,x])
+      if x0 == 1:
+        x0 = 2
+      else:
+        x0 = 1
+
+    # Complete receive of red points
+    if 0 < rank:
+        top_row = rx1.wait()
+    if rank < wsize-1:
+        btm_row = rx2.wait()
+
+    # Update last and first black row
+    y = h-1
+    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y, x0)
+    for x in range(x0,w,2):
+      old=data[y0,x]
+      data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
+      delta += abs(old-data[y,x])
+    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 2-rboffset)
+    for x in range(1-rboffset,w,2):
+      old=data[h-1,x]
+      data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
+      delta += abs(old-data[y,x])
+
+    # Send black points
+    if 0 < rank:
+      tx1 = comm.isend(data[0], rank-1, BLACK_ROW_TAG)
     if rank < wsize - 1:
-        comm.isend(data[-1], rank+1, ROW_TAG)
+      tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
 
     # reduceall epsilon
     delta = comm.allreduce(delta, sum)
     
+    # print "[%d] allreduce delta = %d" % (rank, delta)
     if cnt==update_freq:
-        print "Rank %d: allreduce delta = %d" (rank, delta)
+        print "[%d] allreduce delta = %d" % (rank, delta)
+
+    print "[%d] allreduce delta = %d" % (rank, delta)
+    return
 
 #Default problem size
 xsize=500
@@ -116,7 +210,7 @@ wsize = comm.size()
 ymin = floor(rank * ysize / wsize)
 ymax = floor((rank + 1) * ysize / wsize)
 
-problem=pl.zeros((xsize,ymax-ymin),dtype=pl.float32)
+problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
 
 if rank == 0:
     problem[0,1:-1]=40. #Top
@@ -140,7 +234,7 @@ timer.Start()
 print "solving with rb offset %d" % (ymin % 2)
 
 #Start solving the heat equation
-# solve(problem, ymin % 2)
+solve(problem, int(ymin % 2))
 
 mpi.finalize()
 
