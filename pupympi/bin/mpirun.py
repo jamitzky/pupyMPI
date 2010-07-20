@@ -37,11 +37,11 @@ from mpi.network.utils import pickle
 
 def parse_options():
     usage = 'usage: %prog [options] arg'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.6 (beta)")
+    parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
     parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
     parser.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
-    # Add a logging and debugging
+    # Add logging and debugging options
     parser_debug_group = OptionGroup(parser, "Logging and debugging", 
             "Use these settings to control the level of output to the program. The --debug and --quiet options can't be used at the same time. Trying to will result in an error.")
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
@@ -51,6 +51,7 @@ def parse_options():
     parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
     parser.add_option_group( parser_debug_group )
 
+    # Add advanced options
     parser_adv_group = OptionGroup(parser, "Advanced options", 
             "Be careful. You could do strange things here.")
     parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", help='Path to Python 2.6 on remote hosts. Defaults to  %default')
@@ -68,7 +69,7 @@ def parse_options():
 
     try:
         options, args = parser.parse_args()
-
+        
         if options.debug and options.quiet:
             parser.error("options --debug and -quiet are mutually exclusive")
             

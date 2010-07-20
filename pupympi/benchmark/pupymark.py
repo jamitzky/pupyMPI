@@ -248,13 +248,14 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         header = "# =============================================================\n"
         header += "# pupyMark - pupyMPI benchmarking\n"        
         header += "# \n"
+        header += "# %s limit:%s processes:%i\n" % (("test:"+fixed_test if fixed_test is not None else "module:"+fixed_module),nicelimit,ci.w_num_procs)
+        header += "# \n"
         header += "# start: %s \n" % nicestart
         header += "# end: %s \n" % niceend
         header += "# elapsed (wall clock): %s \n" % niceelapsed
-        header += "# \n"
-        header += "# %s limit:%s processes:%i\n" % (("test="+fixed_test if fixed_test is not None else "module="+fixed_module),nicelimit,ci.w_num_procs)
         # TODO: Show mpirun parameters here
         header += "# \n"
+        header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)        
         header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
         header += "# %s version:%s\n" % (platform.python_implementation(),platform.python_version())
         header += "# =============================================================\n\n"
