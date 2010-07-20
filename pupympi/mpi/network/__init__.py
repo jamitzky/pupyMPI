@@ -425,6 +425,9 @@ class BaseCommunicationHandler(threading.Thread):
                     self.outbound_requests -= removed
 
     def run(self):
+        # DEBUG
+        emptyreads = 0
+        emptywrites = 0
         
         # Stall until network thread type is set
         # TODO: This hack should be refactored.
@@ -461,6 +464,12 @@ class BaseCommunicationHandler(threading.Thread):
             while not self.shutdown_event.is_set():
                 #Logger().debug("Select in - for base communication handler type:%s" %(self.type))   
                 (in_list, _, _) = self.select_in()
+                
+                #DEBUG
+                if not in_list:
+                    #Logger().warning("empty IN list")
+                    emptyreads += 1
+                    
                 self._handle_readlist(in_list)
                 time.sleep(0.00001)
         
@@ -469,6 +478,10 @@ class BaseCommunicationHandler(threading.Thread):
             while not self.shutdown_event.is_set():
                 if self.outbound_requests > 0:
                     (_, out_list, _) = self.select_out()
+                    #DEBUG
+                    if not out_list:
+                        #Logger().warning("empty OUT list")
+                        emptywrites += 1
                     self._handle_writelist(out_list)
                     
                 time.sleep(0.00001)
@@ -489,7 +502,7 @@ class BaseCommunicationHandler(threading.Thread):
                 for r in removal:
                     del self.socket_to_request[r]
         
-        Logger().debug("Run done for base communication handler type:%s" %(self.type))        
+        #Logger().warning("Done for base communication handler - type:%s emptyreads:%i emptywrites:%i" %(self.type,emptyreads,emptywrites))        
 
 class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
@@ -532,7 +545,8 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         in_list = []
         error_list = []
         
-        events = self.epoll.poll(1) # TODO: This busy wait should be worked around
+        #events = self.epoll.poll(1) # TODO: This busy wait should be worked around
+        events = self.epoll.poll(0.00001)
         #events = self.epoll.poll()
         for fileno, event in events:    
             if event & select.EPOLLIN:
@@ -544,8 +558,8 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         out_list = []
         error_list = []
         
-        events = self.epoll.poll(1)
-        #events = self.epoll.poll()
+        #events = self.epoll.poll(1)
+        events = self.epoll.poll()
         for fileno, event in events:    
             if event & select.EPOLLOUT:
                 out_list.append(self.out_fd_to_socket.get(fileno))
