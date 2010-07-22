@@ -94,7 +94,6 @@ def solve(data, rboffset):
 
     # Update red points
     for y in range(y0+1,h-1):
-      print "[%d] [red] Updating row %d with x0 = %d" % (rank, y, x0)
       for x in range(x0,w,2):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
@@ -112,12 +111,10 @@ def solve(data, rboffset):
 
     # Update last and first red row
     y = h-1
-    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y, x0)
     for x in range(x0,w,2):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
       delta += abs(old-data[y0,x])
-    print "[%d] [red] Updating row %d with x0 = %d" % (rank, y0, 2-int(rboffset))
     for x in range(2-int(rboffset),w,2):
       old=data[y,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
@@ -140,7 +137,6 @@ def solve(data, rboffset):
 
     # Update black points
     for y in range(y0+1,h-1):
-      print "[%d] [black] Updating row %d with x0 = %d" % (rank, y, x0)
       for x in range(x0,w,2):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
@@ -158,12 +154,10 @@ def solve(data, rboffset):
 
     # Update last and first black row
     y = h-1
-    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y, x0)
     for x in range(x0,w,2):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
       delta += abs(old-data[y0,x])
-    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 1+(rboffset))
     for x in range(1+(rboffset),w,2):
       old=data[y,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
@@ -182,8 +176,6 @@ def solve(data, rboffset):
     if cnt==update_freq:
       print "[%d] allreduce my delta = %f consensus delta = %f > epsilon = %f" % (rank, owndelta, delta, epsilon)
       cnt=0
-
-    return
 
 #Default problem size
 xsize=500
