@@ -43,9 +43,9 @@ def solve(data):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
         delta+=abs(old-data[y,x])
+    if cnt==0:
+      print "Iteration %d delta=%f epsilon=%f" % (cnt, delta, epsilon)
     
-    print "Iteration %d delta=%f epsilon=%f" % (cnt, delta, epsilon)
-    return
 
 #Default problem size
 xsize=500
