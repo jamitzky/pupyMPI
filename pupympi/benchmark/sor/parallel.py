@@ -34,22 +34,21 @@ def solve(data, rboffset):
   BLACK_ROW_TAG = 50
   RED_ROW_TAG = 51
   DELTA_TAG = 52
+  GRAPHICS_DATA_TAG = 53
 
   y0 = 0
 
   h=len(data)
   w=len(data[0])-1
   
-  initx0 = 1+int(rboffset)
-
   if rank == 0: # Do not update first row
     y0 = 1
-    initx0 = 2-int(rboffset)
+    rboffset = not rboffset # Also, begin at different offset ;-)
   
   if rank == wsize - 1: # Do not update last row
     h -= 1
 
-  print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, initx0, y0, h, w)
+  print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
 
   # Send initial black points
   if 0 < rank:
@@ -57,20 +56,29 @@ def solve(data, rboffset):
   if wsize - 1 > rank:
     tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
 
-  print "[%d] isent initial black points" % (rank)
-
   delta=epsilon+1.
   cnt=update_freq-1
   while(delta>epsilon):
     delta=0.
     cnt=cnt+1
-    x0 = initx0
+    x0 = 1+rboffset
 
     # Update graphics (rank 0 only!) {{{
-    if cnt==update_freq:
-      if useGraphics:
-        g.update(data)
-      cnt=0
+    # XXX This is horribly inefficient. Don't use this for anything else than debugging!
+    if cnt==update_freq and useGraphics:
+      if 0==rank:
+          for y in range(0,len(data)):
+            wholeproblem[y] = data[y]
+
+          for n in range(1,comm.size()):
+            ndata = comm.recv(n, GRAPHICS_DATA_TAG)
+            for ny in range(0,len(ndata)):
+              y += 1
+              wholeproblem[y] = ndata[ny]
+
+          g.update(wholeproblem)
+      else:
+          comm.isend(data, 0, GRAPHICS_DATA_TAG)
     # }}}
 
     # Receive black points
@@ -108,10 +116,10 @@ def solve(data, rboffset):
     for x in range(x0,w,2):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
-      delta += abs(old-data[y,x])
+      delta += abs(old-data[y0,x])
     print "[%d] [red] Updating row %d with x0 = %d" % (rank, y0, 2-int(rboffset))
     for x in range(2-int(rboffset),w,2):
-      old=data[h-1,x]
+      old=data[y,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
       delta += abs(old-data[y,x])
 
@@ -128,10 +136,7 @@ def solve(data, rboffset):
       btm_row = data[-1]
 
     # Switch x0 to opposite of initial
-    if initx0 == 1:
-        x0 = 2
-    else:
-        x0 = 1
+    x0 = 1+(not rboffset)
 
     # Update black points
     for y in range(y0+1,h-1):
@@ -157,10 +162,10 @@ def solve(data, rboffset):
     for x in range(x0,w,2):
       old=data[y0,x]
       data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
-      delta += abs(old-data[y,x])
-    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 2-int(rboffset))
-    for x in range(1-int(rboffset),w,2):
-      old=data[h-1,x]
+      delta += abs(old-data[y0,x])
+    print "[%d] [black] Updating row %d with x0 = %d" % (rank, y0, 1+(rboffset))
+    for x in range(1+(rboffset),w,2):
+      old=data[y,x]
       data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
       delta += abs(old-data[y,x])
 
@@ -174,9 +179,11 @@ def solve(data, rboffset):
     owndelta = delta
     delta = comm.allreduce(delta, sum)
     
-    # print "[%d] allreduce delta = %d" % (rank, delta)
     if cnt==update_freq:
-        print "[%d] allreduce delta = %d" % (rank, delta)
+      print "[%d] allreduce my delta = %f consensus delta = %f > epsilon = %f" % (rank, owndelta, delta, epsilon)
+      cnt=0
+
+    return
 
 #Default problem size
 xsize=500
@@ -210,20 +217,22 @@ epsilon=.1*(xsize-1)*(ysize-1)
 
 problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
 
+problem[:,:1]=-273.15 #Left
+problem[:,-1:]=-273.15 #Right
+
 if rank == 0:
+    if useGraphics:
+        wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
     problem[0,1:-1]=40. #Top
 
 if rank == wsize - 1:
     problem[-1]=-273.15 #Bottom
 
-problem[0:-1,:1]=-273.15 #Left
-problem[0:-1,-1:]=-273.15 #Right
-
 print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
 print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
 
 update_freq=10
-if useGraphics:
+if 0==rank and useGraphics:
   g=sorgraphics.GraphicsScreen(xsize,ysize)
 
 timer=timer.StopWatch()
@@ -239,5 +248,5 @@ mpi.finalize()
 timer.Stop()
 print "Solved the successive over-relaxation in %s" % (timer.timeString())
 
-if useGraphics:
+if 0==rank and useGraphics:
   timer.Sleep(5)
