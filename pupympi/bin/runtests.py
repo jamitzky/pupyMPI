@@ -103,7 +103,7 @@ class RunTest(Thread):
     cmd = "bin/mpirun.py --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, primary_log, options, test_meta_data):
+    def __init__(self, test, number, primary_log, options, test_meta_data):
         Thread.__init__(self)
         self.test = test
         self.meta = test_meta_data
@@ -128,7 +128,7 @@ class RunTest(Thread):
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
         
-        output( "Launching %s: " % self.cmd, newline=False)
+        output( "Launching(%i) %s: " % (number, self.cmd), newline=False)
         self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
         self.time_to_get_result_or_die = int(test_meta_data["max_runtime"]) if "max_runtime" in test_meta_data else TEST_MAX_RUNTIME
@@ -187,7 +187,7 @@ def format_output(threads):
     output("--------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
-        output("%3i %-40s\t\t%s\t%s\t%s" % (testcounter, \
+        output("%3i %-40s\t\t%4s\t%s\t%s" % (testcounter, \
                                             thread.test, \
                                             round(thread.executiontime, 1), \
                                             "KILLED" if thread.killed else "no", \
@@ -240,15 +240,17 @@ def run_tests(test_files, options):
     #     global latex_output
     #     latex_output = latex
     
+    testcounter = 1
     # We run tests sequentially since many of them are rather hefty and may
     # interfere with others. Also breakage can lead to side effects and so
     # non-breaking tests may appear to break when in fact the cause is another
     # test running at the same time
     for test in test_files:
-        t = RunTest(test, logfile_prefix, options, get_test_data(test))
+        t = RunTest(test, testcounter, logfile_prefix, options, get_test_data(test))
         threadlist.append(t)
         t.start()
         t.join()
+        testcounter += 1
 
     format_output(threadlist)
     combine_logs(logfile_prefix)
