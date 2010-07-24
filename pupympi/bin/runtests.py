@@ -180,20 +180,23 @@ def _status_str(ret, expres):
         
 def format_output(threads):
     """prints the final output in purty colors, and logs to latex for report inclusion"""
+    testcounter = 1
     total_time = 0
     odd = False
-    output("TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE") 
-    output( "-----------------------------------------------------------------------------------------------------------")
+    output("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED") 
+    output("--------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
-        output("%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, \
-                                                    round(thread.executiontime, 1), \
-                                                    "KILLED" if thread.killed else "no", \
-                                                    _status_str(thread.returncode, thread.expectedresult)),
-                                                    color=OKOFFWHITE if odd else OKBLACK,
-                                                    block="Results table console")                                                    
+        output("%3i %-40s\t\t%s\t%s\t%s" % (testcounter, \
+                                            thread.test, \
+                                            round(thread.executiontime, 1), \
+                                            "KILLED" if thread.killed else "no", \
+                                            _status_str(thread.returncode, thread.expectedresult)),
+                                            color=OKOFFWHITE if odd else OKBLACK,
+                                            block="Results table console")                                                    
         odd = True if odd == False else False
-        # output_latex(thread)                                                    
+        # output_latex(thread)
+        testcounter += 1
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
