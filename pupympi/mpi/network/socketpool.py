@@ -119,7 +119,7 @@ class SocketPool(object):
             pass
         
         
-        if len(self.sockets) > self.max_size: # Throw one out if there are too many
+        if len(self.sockets) >= self.max_size: # Throw one out if there are too many
                 Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
                 self._remove_element()
                 
