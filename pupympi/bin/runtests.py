@@ -124,6 +124,9 @@ class RunTest(Thread):
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
             #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
         
+        # Adds testswitches if used
+        if options.socket_poll_method:
+            self.cmd += " --socket-poll-method=" + options.socket_poll_method
         # Adds user arguments to the test if there are meta descriptions for it. 
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
@@ -266,11 +269,13 @@ def main():
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
+    parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
 
     parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from. Negative values leave out tests from the end as with slicing.')
 
     # _ is args
     options, _ = parser.parse_args()
+    print options
 
     run_tests( get_testnames(options.skipto), options )
 
