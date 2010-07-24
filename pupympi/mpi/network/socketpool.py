@@ -51,7 +51,7 @@ class SocketPool(object):
     def __init__(self, max_size):
         self.sockets = []
         self.max_size = max_size
-        self.readonly = False
+        self.readonly = False #This will be set True during network initialization if a static socket pool is specified
         self.metainfo = {}
         
         self.sockets_lock = threading.Lock()
