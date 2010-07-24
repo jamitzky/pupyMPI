@@ -41,6 +41,5 @@ assert ((t2 - t1) > 4.95), " Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t
 #    print "Ok for rank %i with (t2 - t1) = %s " % (rank, (t2-t1))
 #print "%s: I am the process with rank %d of %d processes, past barrier" % (datetime.now(), rank, size)
 
-time.sleep(1)
 # Close the sockets down nicely
 mpi.finalize()

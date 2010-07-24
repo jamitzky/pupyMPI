@@ -3,6 +3,7 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 # meta-socket-pool-size: 5
+# meta-max_runtime: 25
 
 """
 NOTE: This test deviates from most other tests in that we have to peek into the
@@ -70,16 +71,16 @@ while rRequests or sRequests:
 
 
 # This test only makes sense for a dynamic socket pool
-assert not mpi.network.socket_pool.readonly, "This test only makes sense for dynamic socket pool" 
-# There should only be 5 connections as specified in meta-socket-pool-size
-pool_size = len(mpi.network.socket_pool.sockets)
-assert pool_size == 5    
+if mpi.network.socket_pool.readonly:
+    f.write("Test skipped for rank %d since socket pool was static\n" % rank)
+else:
+    pool_size = len(mpi.network.socket_pool.sockets)
+    # There should only be 5 connections as specified in meta-socket-pool-size
+    assert pool_size == 5, "whoops pool size was not 5 but %i"%pool_size    
+    f.write("Done for rank %d\n" % rank)
 
-f.write("Done for rank %d\n" % rank)
 f.flush()
 f.close()
-
-
 
 # Close the sockets down nicely
 mpi.finalize()
