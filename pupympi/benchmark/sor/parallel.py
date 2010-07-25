@@ -66,6 +66,7 @@ def solve(data, rboffset):
     # Update graphics (rank 0 only!) {{{
     # XXX This is horribly inefficient. Don't use this for anything else than debugging!
     if cnt==update_freq and useGraphics:
+      cnt=0
       if 0==rank:
           for y in range(0,len(data)):
             wholeproblem[y] = data[y]
@@ -172,10 +173,6 @@ def solve(data, rboffset):
     # reduceall epsilon
     owndelta = delta
     delta = comm.allreduce(delta, sum)
-    
-    if cnt==update_freq:
-      print "[%d] allreduce my delta = %f consensus delta = %f > epsilon = %f" % (rank, owndelta, delta, epsilon)
-      cnt=0
 
 #Default problem size
 xsize=500
