@@ -1,0 +1,12 @@
+Changes to version 0.7.1:
+
+* Handle writelist only when outgoing requests exist
+
+Changes to version 0.7.0:
+
+* Implemented use of poll and epoll (Linux only)
+* Added initial support for Kqueue (*BSD only)
+
+Changes to version 0.6:
+
+* Initial pupyMPI release
