@@ -25,8 +25,10 @@ Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
         mpirun and more than 4 processes unless you just want the single module
         (consisting only of point-to-point tests)
 """
-from time import localtime, strftime
+import time
+import datetime
 import sys
+import platform
 
 from mpi import MPI
 from mpi import constants
@@ -38,21 +40,43 @@ import single, collective, parallel, special
 help_message = '''
 The help message goes here.
 '''
+# Auxillary
+def pmap(limit=32):
+    """
+    pregenerate nice formats for counting bytes
+    dict is indexed [bytecount] = (exponent,normalized,longprefix,oneletterprefix)
+    eg. {2048 : (11,2,"Kilo","K"), ... }
+    """    
+    prefixMap = {}    
+    for i in range(limit+1):
+        pre = ""
+        if i < 10:
+            div = 1
+            pre = ""
+        elif i < 20:
+            div = 1024
+            pre = "Kilo"
+        elif i < 30:
+            div = 1024**2
+            pre = "Mega"
+        elif i < 40:
+            div = 1024**3
+            pre = "Giga"        
+        prefixMap[2**i] = (i,(2**i)/div,pre,pre[0:1])   
+    return prefixMap
 
-def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=False):
+
+# Main functions
+
+def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     
     The fixed_module parameter forces the benchmark to run just that one benchmark module (collection of tests)
     The fixed_test parameter forces the benchmark to run just that one test
     The limit parameter sets the upper bound on size of testdata
-    use_yappi flag turns on profiling with yappi
     """
-    
-    if use_yappi: # PROFILE
-        built_ins = False # Do not trace Python built-in functions
-        #built_ins = True # Trace Python built-in functions                
-        yappi.start(built_ins) # True means also profile built-in functions
+    starttime = time.time()
     
     modules = [single, parallel, collective, special]
     resultlist = {}
@@ -60,20 +84,40 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
     
+    # Gauge how many tests are to be run (to provide progression status during long tests)
+    global testsToRun, testsDone
+    if fixed_test:
+        testsToRun = 1
+    elif fixed_module:
+        testsToRun = 0
+        for module in modules:
+            # Count only tests in the desired module
+            if module.__name__ == fixed_module:
+                for function in dir(module):
+                    if function.startswith("test_"):
+                        testsToRun += 1
+    testsDone = 0
+    
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
+        global testsDone
+        testsDone += 1
         results = []
 
         ci.log("%s processes participating - %s waiting in barrier" %( ci.num_procs, ci.w_num_procs - ci.num_procs ))
-        ci.log("%s - %s" % (module.__name__, test.__name__)) 
+        ci.log("%s - %s (test %i of %i)" % (module.__name__, test.__name__, testsDone, testsToRun)) 
         ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))        
         ci.log("--------------------------------------------------------------------------")
         
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
         for size in sizekeys:
-            if size > limit:
-                break
+            if limit >= 0: # for positive limits we stop at first size over the limit
+                if size > limit:
+                    break
+            else: # for negative limits we ignore all sizes under the (abs) limit
+                if size < abs(limit):
+                    continue
                 
             total = test(size, module.meta_schedule[size])
             if total is None:
@@ -81,19 +125,21 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
                 # (eg. Barrier for different datasizes does not make sense)
                 continue
             if total < 0: # Tests returning negative signals an error
-                ci.log("%-10s\t%-10s\t(benchmark failed - datapoint invalid)" % (size, module.meta_schedule[size]))
+                ci.log("%-10s\t%-10s\t(benchmark aborted - datapoint invalid)" % (size, module.meta_schedule[size]))
                 results.append((size, module.meta_schedule[size], 0, 0, 0, ci.num_procs))
             else:
                 per_it = total / module.meta_schedule[size]
-                mbsec = ((1.0 / total) * (module.meta_schedule[size] * size)) / 1048576
+                # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
+                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
                 ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" %  (\
                 size, \
                 module.meta_schedule[size], \
                 round(total, 2), \
                 round(per_it * 1000000, 2), \
-                round(mbsec, 5)))
+                round(mbytessec, 5)))
                     
-                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbsec, ci.num_procs))
+                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbytessec, ci.num_procs))
+                
         
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
@@ -131,7 +177,12 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
         ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
 
         if ci.communicator is not None:
-            ci.data = ci.gen_testset(min(limit, max(module.meta_schedule)))
+            if limit > 0:
+                testdataSize = min(limit, max(module.meta_schedule))
+            else:
+                testdataSize = max(module.meta_schedule)
+            
+            ci.data = ci.gen_testset(testdataSize)
             ci.num_procs = ci.communicator.size() 
             ci.rank = ci.communicator.rank() 
         else:
@@ -171,37 +222,63 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
 
     mpi.finalize()
     
-    # DEBUG / PROFILING
-    if use_yappi:
-        if root:
-            sorttype = yappi.SORTTYPE_TSUB            
-            # yappi.SORTTYPE_TTOTAL: Sorts the results according to their total time.
-            # yappi.SORTTYPE_TSUB : Sorts the results according to their total subtime.
-            #   Subtime means the total spent time in the function minus the total
-            #   time spent in the other functions called from this function.
-            stats = yappi.get_stats(sorttype,yappi.SORTORDER_DESCENDING, 50 )
-
-            stamp = strftime("%Y-%m-%d %H-%M-%S", localtime())
-            filename = "yappi.%s.%s-%s-%s.sorttype-%s.trace" % (stamp,fixed_module,fixed_test,limit, sorttype)
-            f = open(constants.LOGDIR+filename, "w")
-            
-            for stat in stats:
-                print stat
-                f.write(stat+"\n")
-                
-            f.flush()
-            f.close()
-
-        yappi.stop()
-    
     # Output to .csv file
     if root:
-        stamp = strftime("%Y-%m-%d_%H-%M-%S", localtime())
-        filename = "pupymark.output."+stamp+".csv"
-        f = open(constants.LOGDIR+filename, "w")
+        
+        sizekeys = [0]+[(2**i) for i in range(23)]
+        # Find out what the practical limit was
+        actual_limit = 0
+        if limit  >= 0:
+            for size in sizekeys:
+                if size <= limit:
+                    actual_limit = size
+                    continue
+                else:                    
+                    break
+        else:            
+            actual_limit = max(sizekeys)
+        
+        prefixMap = pmap()
+        (c,n,lp,sp) = prefixMap[actual_limit]
+        nicelimit = "%i%sB" % (n,sp)
+        
+        if fixed_module is None:
+            nicetype = fixed_test
+        else:
+            nicetype = fixed_module[0:4] # 4 chars is enough to get the type
+
+        endtime = time.time()
+        tdelta = endtime-starttime
+        niceelapsed = datetime.timedelta(seconds=tdelta)
+        niceend = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(endtime))
+        nicestart = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(starttime))            
+        tstamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(endtime))
+        
+        filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
+        try:
+            f = open(constants.LOGDIR+filename, "w")
+        except:            
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+        
+        # Test parameters
+        header = "# =============================================================\n"
+        header += "# pupyMark - pupyMPI benchmarking\n"        
+        header += "# \n"
+        header += "# %s limit:%s processes:%i\n" % (("test:"+fixed_test if fixed_test is not None else "module:"+fixed_module),nicelimit,ci.w_num_procs)
+        header += "# \n"
+        header += "# start: %s \n" % nicestart
+        header += "# end: %s \n" % niceend
+        header += "# elapsed (wall clock): %s \n" % niceelapsed
+        # TODO: Show mpirun parameters here
+        header += "# \n"
+        header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)        
+        header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
+        header += "# %s version:%s\n" % (platform.python_implementation(),platform.python_version())
+        header += "# =============================================================\n\n"
+        f.write(header+"\n")
         
         # Column headers for easier reading
-        row = "datasize,repetitions,total time,time/repetition,Mb/second,nodes,name of test,timestamp of testrun,nodes"
+        row = "datasize,repetitions,total time,time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
         f.write(row+"\n")
 
         for testname in resultlist:
@@ -214,7 +291,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32, use_yappi=
                 except:
                     print "Res is",res
                 # and we add testname and date for easy pivoting
-                row += ",%s,%s" % (testname, stamp)
+                row += ",%s,%s" % (testname, tstamp)
                 f.write(row+"\n")
             # Empty row for easier reading
             f.write("\n")
@@ -233,7 +310,6 @@ def main(argv=None):
     module = None
     test = None
     limit = 2**32
-    use_yappi = False
     
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module (collection of tests)
@@ -242,10 +318,7 @@ def main(argv=None):
             test = arg.split("=")[1]
         if arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-        if arg.startswith("--yappi"): # turns on profiling with yappi
-            import yappi # We don't know who is root yet so everybody imports yappi and starts it
-            use_yappi = True    
-    testrunner(module, test, limit, use_yappi)
+    testrunner(module, test, limit)
     
 
 if __name__ == "__main__":

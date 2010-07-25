@@ -55,7 +55,7 @@ def parse_hostfile(hostfile):
 
         fh.close()
     except:
-        logger.info("No hostfile specified or hostfile invalid - all processes will run on default machines (typically localhost)")
+        #logger.debug("No hostfile specified or hostfile invalid - all processes will run on default machines (typically localhost)")
         hosts = [("localhost",defaults)]
     
     # Fall back to defaults if user messed up the hostfile    

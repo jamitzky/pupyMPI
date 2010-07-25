@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = 0.6 # It bumps the version or else it gets the hose again!
+__version__ = 0.7 # It bumps the version or else it gets the hose again!
 
 import sys
 from optparse import OptionParser, OptionGroup
@@ -88,7 +88,7 @@ class MPI(Thread):
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
         
-        # Unstarted requests are both send and receive requests, held here so the user thread can return quickly
+        # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
         self.unstarted_requests_has_work = threading.Event()
@@ -149,7 +149,11 @@ class MPI(Thread):
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
-            output = open(filename, "w")
+            try:
+                output = open(filename, "w")
+            except:            
+                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+            
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
@@ -227,8 +231,9 @@ class MPI(Thread):
         self.daemon = True
         self.start()
 
-        # Makes every node connect to each other if the settings allow us to do that.
-        self.network.start_full_network()
+        # Make every node connect to each other if settings specify it
+        if not options.disable_full_network_startup:
+            self.network.start_full_network()
         #logger.info("MPI environment is up and running.")
 
         # Set a static attribute on the class so we know it is initialised.
@@ -293,9 +298,15 @@ class MPI(Thread):
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
+            #self.has_work_event.wait(5) # 5 is bad, Fred no unnerstand
+            #Logger().debug("Waited for the has_work_event")
+            #Logger().debug("Raw_data_event is set (%s) and contains: %s" % (self.raw_data_has_work.is_set(), self.raw_data_queue))
+            #Logger().debug("unstarted_requests_has_work is set (%s) and contains: %s" % (self.unstarted_requests_has_work.is_set(), self.unstarted_requests))
+            #Logger().debug("pending_requests_has_work is set (%s) and contains: %s" % (self.pending_requests_has_work.is_set(), self.pending_requests))
+            
             self.has_work_event.clear()
             
-            # Schedule unstarted requests (may be in- or outbound)
+            # Schedule unstarted requests (outbound requests)
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
                     for request in self.unstarted_requests:
@@ -307,11 +318,14 @@ class MPI(Thread):
                 
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
+                #Logger().debug("raw_data_has_work is set")
                 with self.raw_data_lock:
                     with self.received_data_lock:
+                        #Logger().debug("got both locks")
                         for raw_data in self.raw_data_queue:
                             data = pickle.loads(raw_data)
                             self.received_data.append(data)
+                            #Logger().debug("Adding data: %s" % data)
                         
                         self.pending_requests_has_work.set()
                         self.raw_data_queue = []
@@ -364,7 +378,10 @@ class MPI(Thread):
             
             filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
-            f = open(filename, "w")
+            try:
+                f = open(filename, "w")
+            except:            
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
             
             stats = yappi.get_stats(self._yappi_sorttype)
             
@@ -415,7 +432,7 @@ class MPI(Thread):
 
     def handle_system_message(self, rank, command, raw_data):
         if command == constants.CMD_ABORT:
-            Logger().info("Got abort command!")
+            #Logger().debug("Got abort command!")
             sys.exit(1)
 
     def finalize(self):

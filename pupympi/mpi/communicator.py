@@ -67,7 +67,7 @@ class Communicator:
         # act like a caching system, so we don't end up generating trees
         # all the time.
         if root not in self.bc_trees:
-            Logger().debug("Creating a new tree with root %d" % root)
+            #Logger().debug("Creating a new tree with root %d" % root)
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
             self.bc_trees[root]
         
@@ -356,14 +356,15 @@ class Communicator:
             self.mpi.has_work_event.set()
             
         return handle
-
+    
+    # Add an outbound request to the queue
     def _add_unstarted_request(self, requests):
         with self.mpi.unstarted_requests_lock:
             self.mpi.unstarted_requests.append( requests )
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
     
-    # Add a request that for communication with self
+    # Add a request for communication with self
     def _send_to_self(self, request):
         # The sending request is complete, so we update it right away
         # so the user will be able to wait() for it.
@@ -953,6 +954,8 @@ class Communicator:
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
+        
+        #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
 
         if self.rank() == root:
             return data

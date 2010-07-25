@@ -72,7 +72,7 @@ class Request(BaseRequest):
         #                reciever has acknowledged receiving.
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
-        Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
+        #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
     
     def __repr__(self):        
         orig_repr = super(Request, self).__repr__()
