@@ -17,7 +17,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 content = "This message was Isent"
 
-DUMMY_TAG = 1
+DUMMY_TAG = 11
 
 if rank == 0:
     # Send

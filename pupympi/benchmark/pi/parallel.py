@@ -31,7 +31,7 @@ max = max_cmdline / size
 t1 = time.time()
 
 # algorithm
-random.seed()
+random.seed(42)
 for i in xrange(max):
     x = random.uniform(0,1)
     y = random.uniform(0,1)

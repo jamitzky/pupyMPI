@@ -16,39 +16,79 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 import sys
-import threading, thread, inspect
+import threading, inspect
+from time import time
+from collections import deque
+from mpi import constants
 
-class Profiler:
+def trace_event(frame, event, arg):
+    global p_prevthread, p_lock
 
-    __shared_state = {} # Shared across all instances
-    # singleton check
-    def __init__(self, *args, **kwargs):
-        self.__dict__ = self.__shared_state 
+    with p_lock:
+        ct = threading.currentThread()
+        pt = p_prevthread
 
-        #self._LOG_FILENAME = constants.
+        try:
+            p_stack = ct.p_stack
+        except AttributeError:
+            ct.p_stack = deque()
+            p_stack = ct.p_stack
 
-        self.events = {}
-        self.eventlock = threading.Lock()
+        try:
+            ts = p_ttime[ct.name]
+        except KeyError:
+            p_ttime[ct.name] = {"t0": time(), "ttot": 0}
+            ts = p_ttime[ct.name]
 
-    def start(self):
-        print "starting built-in profiler"
-        sys.setprofile(self.trace_event)
-        threading.setprofile(self.trace_event)
+        # Thread context change
+        if pt and pt != ct:
+            diff = time() - p_ttime[pt.name]["t0"]
+            p_ttime[pt.name]["ttot"] += diff
+            p_ttime[ct.name]["t0"] = time()
 
-    def stop(self):
-        print "stopping built-in profiler"
-        sys.setprofile(None)
-        threading.setprofile(None)
-
-    def trace_event(self, frame, event, arg):
         if event == "call":
-            with self.eventlock:
-                print "[%d] :: call (%s) %s" % (thread.get_ident(), frame.f_code.co_filename, frame.f_code.co_name)
+            pass
+            #code = frame.f_code
+            #fun = (code.co_name, code.co_filename, code.co_firstlineno)
         if event == "c_call":
-            with self.eventlock:
-                print "[%d] :: C call (%s) %s.%s" % (thread.get_ident(), frame.f_code.co_filename, arg.__module__, arg.__name__)
-        return self.trace_event
+            pass
+        if event == "return":
+            pass
+        if event == "c_return":
+            pass
+        if event == "c_exception":
+            pass
 
-    def dump_stats(self):
-        print "dumping stats..."
+        p_prevthread = threading.currentThread()
+
+        return trace_event
+
+def start():
+    global p_stats, p_start_time, p_lock, p_ttime, p_prevthread
+    p_stats = {}
+    p_ttime = {}
+    p_start_time = time()
+    p_lock = threading.Lock()
+    p_prevthread = None
+    
+    print "Starting built-in profiler"
+    threading.setprofile(trace_event)
+    sys.setprofile(trace_event)
+
+def stop():
+    print "Stopping built-in profiler"
+    threading.setprofile(None)
+    sys.setprofile(None)
+
+def dump_stats(filename):
+    print "Dumping stats."
+    
+    f = open(filename, "w")
+    ttot = 0
+    for name in p_ttime:
+        ttot += p_ttime[name]["ttot"]
+        print >>f, "-- %-12s: %.2f sec" % (name, p_ttime[name]["ttot"])
+
+    print >>f, "Total time: %.2f sec" % (ttot)
+    f.close()
 
