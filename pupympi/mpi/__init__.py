@@ -32,6 +32,8 @@ from mpi.network.utils import pickle
 
 from mpi.request import Request
 
+import mpi.profiler
+
 try:
     import yappi
 except ImportError:
@@ -79,6 +81,9 @@ class MPI(Thread):
             mpi.finalize()
             
         """
+
+        self.name = "MPI" # Thread name
+
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
@@ -134,6 +139,7 @@ class MPI(Thread):
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
         parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
+        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
 
         # _ is args
         options, _ = parser.parse_args()
@@ -189,6 +195,12 @@ class MPI(Thread):
             except ImportError:
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
+
+        # Start built-in profiling facility
+        self._profiler_enabled = False
+        if options.enable_profiling:
+            profiler.start()
+            self._profiler_enabled = True
 
         self.network = Network(self, options)
         
@@ -279,7 +291,7 @@ class MPI(Thread):
     def run(self):
 
         if self._yappi_enabled:
-            yappi.start()
+            yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
@@ -355,6 +367,11 @@ class MPI(Thread):
         #Logger().info("MPI environment shutting down.")
         
         self.queues_flushed.set()
+
+        # Start built-in profiling facility
+        if self._profiler_enabled:
+            profiler.stop()
+            profiler.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
