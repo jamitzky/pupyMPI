@@ -24,7 +24,6 @@ from threading import Thread
         
 from mpi.communicator import Communicator
 from mpi.logger import Logger
-from mpi.profiler import Profiler
 from mpi.network import Network
 from mpi.group import Group 
 from mpi.exceptions import MPIException
@@ -32,6 +31,8 @@ from mpi import constants
 from mpi.network.utils import pickle
 
 from mpi.request import Request
+
+import mpi.profiler
 
 try:
     import yappi
@@ -80,6 +81,9 @@ class MPI(Thread):
             mpi.finalize()
             
         """
+
+        self.name = "MPI" # Thread name
+
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
@@ -189,8 +193,10 @@ class MPI(Thread):
                 self._yappi_enabled = False
 
         # Start built-in profiling facility
+        self._profiler_enabled = False
         if options.enable_profiling:
-            Profiler().start()
+            profiler.start()
+            self._profiler_enabled = True
 
         self.network = Network(self, options)
         
@@ -280,7 +286,7 @@ class MPI(Thread):
     def run(self):
 
         if self._yappi_enabled:
-            yappi.start()
+            yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
@@ -347,6 +353,11 @@ class MPI(Thread):
         #Logger().info("MPI environment shutting down.")
         
         self.queues_flushed.set()
+
+        # Start built-in profiling facility
+        if self._profiler_enabled:
+            profiler.stop()
+            profiler.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
