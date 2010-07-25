@@ -42,20 +42,21 @@ class CollectiveRequest(BaseRequest):
         #                  safely return from a test or wait call.
         self._m = {'status' : 'new' }
 
-        Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
+        #Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
         
         if start:
             self.data = self.two_way_tree_traversal()
 
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def traverse(direction, nodes_from, nodes_to, data_func, initial_data, iteration=1):
-            Logger().debug("""
-            Starting a traverse with:
-            \tNodes from: %s
-            \tNodes to: %s
-            \tInitial data: %s
-            \tIteration: %d
-            """ % (nodes_from, nodes_to, self.initial_data, iteration))
+            #Logger().debug("""
+            #Starting a traverse with:
+            #\tNodes from: %s
+            #\tNodes to: %s
+            #\tInitial data: %s
+            #\tIteration: %d
+            #""" % (nodes_from, nodes_to, self.initial_data, iteration))
+            
             # If The direction is up, so we find the result of all our children
             # and execute som function on these data. The result of the function
             # is passed on to our parent. The result is also returned from the
@@ -80,7 +81,7 @@ class CollectiveRequest(BaseRequest):
                 else:
                     data_list.append(data)
              
-            Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
+            #Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
 
             if iteration == 1:
                 # First iteration should do something with our data
@@ -165,12 +166,12 @@ class CollectiveRequest(BaseRequest):
         # Step 2: Find a broadcast tree with the proper root. The tree is 
         #         aware of were we are :)
         tree = self.communicator.get_broadcast_tree(root=self.root)
-        Logger().debug("collectiverequest.two_way_tree_traversal: Before the first way. Got bc_tree for root %d: %s" % (self.root, tree))
+        #Logger().debug("collectiverequest.two_way_tree_traversal: Before the first way. Got bc_tree for root %d: %s" % (self.root, tree))
 
         # Step 3: Traverse the tree in the first direction. 
         rt_first = start_traverse(start_direction, tree, self.initial_data)
         
-        Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
+        #Logger().debug("collectiverequest.two_way_tree_traversal: After the first way")
 
         # Step 4: Run the other direction. This should also just have been
         #         done in the same if as before, but I seperated the cases
@@ -180,7 +181,7 @@ class CollectiveRequest(BaseRequest):
         #         direction before we can start the second traversal?
         rt_second = start_traverse(end_direction, tree, rt_first, iteration=2)
 
-        Logger().debug("collectiverequest.two_way_tree_traversal: After the second way")
+        #Logger().debug("collectiverequest.two_way_tree_traversal: After the second way")
 
         if return_type == 'first':
             return rt_first
@@ -256,7 +257,7 @@ class CollectiveRequest(BaseRequest):
 
         # Make the inner functionality append all the data from all the processes
         # and return it. We'll just extract the data we need. 
-        Logger().info("Received data: %d: %s" % (len(self.data), self.data))
+        #Logger().debug("Received data: %d: %s" % (len(self.data), self.data))
         
         # The data is of type { <rank> : [ data0, data1, ..dataS] }. We extract
         # the N'th data in the inner list where N is our rank

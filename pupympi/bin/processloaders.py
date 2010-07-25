@@ -19,6 +19,7 @@ import os, subprocess, time
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
 from mpi import constants
+import sys
 
 def _islocal(host):
     return host == "localhost" or host == "127.0.0.1"
@@ -38,18 +39,22 @@ io_target_list = []
 def ssh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
-
-    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    
+    # We join the sys.path here to allow user modifications to PYTHONPATH to take effect remotelyy
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
     sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
-    logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
+    #logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
     
     if process_io in ['none', 'direct', 'remotefile']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
         target = None
     elif process_io == 'asyncdirect': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
-        io_target_list.append(target)
+        try:
+            target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w")
+            io_target_list.append(target)
+        except:            
+            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
 
@@ -62,7 +67,7 @@ def ssh(host, arguments, process_io, rank):
 def rsh(host, arguments, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
-    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../"
+    python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
     exec_str = "rsh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
     logger.debug("Starting remote process: %s with process_io type %s" % (exec_str, process_io))
 
@@ -71,8 +76,11 @@ def rsh(host, arguments, process_io, rank):
     elif process_io == 'pipe': # uses io forwarder and prints to console
         target = subprocess.PIPE
     elif process_io == 'filepipe': # writes to a file on the mpirun machine only
-        target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
-        io_target_list.append(target)
+        try:
+            target = open(constants.LOGDIR+"mpi.rank%s.log" % rank, "w") 
+            io_target_list.append(target)
+        except:            
+            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
 

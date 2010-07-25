@@ -41,6 +41,7 @@ class SocketPool(object):
     IMPLEMENTATION: This is a modified "Second change FIFO cache replacement
     policy" algorithm. It's modified by allowing some elements to live 
     forever in the cache.
+    And also an element given a second chance is not moved to the back of the "queue".
     
     ERRORS: It's possible to trigger an error if you fill up the cache with
     more persistent connections than the buffer can actually contain. An
@@ -50,7 +51,7 @@ class SocketPool(object):
     def __init__(self, max_size):
         self.sockets = []
         self.max_size = max_size
-        self.readonly = False
+        self.readonly = False #This will be set True during network initialization if a static socket pool is specified
         self.metainfo = {}
         
         self.sockets_lock = threading.Lock()
@@ -82,60 +83,92 @@ class SocketPool(object):
             ##client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
             #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
             
-            if len(self.sockets) > self.max_size: # Throw one out if there are too many
+            if len(self.sockets) >= self.max_size: # Throw one out if there are too many
+                Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
                 self._remove_element()
                 
             # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
             newly_created = True
+            
         #Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
         return client_socket, newly_created
     
-    def add_created_socket(self, socket_connection, global_rank):
+    def add_accepted_socket(self, socket_connection, global_rank):
+        """
+        Add a socket connection to the pool, where the connection is the returned
+        value from a socket.accept - that is we are at the recieving end of a
+        connection attempt.
+        """        
         if self.readonly:
             # DEBUG
-            Logger().info("Bad conn to rank %i with metainfo:%s and sockets:%s" % (global_rank, self.metainfo, self.sockets))
-            raise Exception("Can't add created socket. We're in readonly mode")        
+            #Logger().debug("Bad conn to rank %i with metainfo:%s and sockets:%s" % (global_rank, self.metainfo, self.sockets))
+            raise Exception("Can't add accepted socket. We're in readonly mode")        
 
-        Logger().debug("SocketPool.add_created_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
+        #Logger().debug("SocketPool.add_accepted_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
         known_socket = self._get_socket_for_rank(global_rank)
         
         if known_socket == socket_connection:
-            Logger().info("SocketPool.add_created_socket: We were very close to pushing a socket out and putting it in again. BAD")
+            Logger().error("SocketPool.add_accepted_socket: Trying to add a socket_connection that is already in the pool?!")
             return
         
         if known_socket:
-            Logger().info("There is already a socket in the pool for a created connection.. Possible loop stuff.. ")
+            # When two procs send to each other simultaneously the result can be
+            # adding a duplicate connection
+            #Logger().debug("Already a socket in the pool:%s for an accepted connection:%s to rank:%i" % (known_socket,socket_connection,global_rank))
+            pass
         
         
-        if len(self.sockets) > self.max_size: # Throw one out if there are too many
+        if len(self.sockets) >= self.max_size: # Throw one out if there are too many
+                Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
                 self._remove_element()
                 
         self._add(global_rank, socket_connection, False)
     
     def _remove_element(self):
         """
-        Finds the first element that already had it's second chance and
+        Finds the first element that already had its second chance and
         remove it from the list.
         
-        NOTE: We don't explicitly close the socket once removed. This has nothing
-        to do with correctness but we should clean up after ourselves. See issue#
+        NOTE:
+        We don't explicitly close the socket once removed. Or remove it from the
+        socket_to_request dict.
+        This has nothing to do with correctness but it is wasteful and we should
+        clean up after ourselves.
+        See also issue #13 Socket pool does not limit connections properly
         """
+        foundOne = False
         with self.sockets_lock:
-            for _ in range(2): # Run through twice
+            for client_socket in self.sockets:
+                (srank, referenced, force_persistent) = self.metainfo[client_socket]
+                if force_persistent: # We do not remove persistent connections
+                    Logger.debug("FOUND A PERSISTENT ONE!")
+                    continue
+                
+                if referenced: # Mark second chance
+                    self.metainfo[client_socket] = (srank, False, force_persistent)
+                else: # Has already had its second chance
+                    self.sockets.remove(client_socket) # remove from socket pool
+                    del self.metainfo[client_socket] # delete metainfo
+                    foundOne = True
+                    break
+            
+            # If a pass found nothing to remove we take the first non-persistent
+            if not foundOne:
                 for client_socket in self.sockets:
-                    (srank, sreference, force_persistent) = self.metainfo[client_socket]
-                    if force_persistent: # We do not remove persistent connections
+                    (srank, referenced, force_persistent) = self.metainfo[client_socket]
+                    if force_persistent: # skip persistent connections
                         continue
-                    
-                    if sreference: # Mark second chance
-                        self.metainfo[client_socket] = (srank, False, force_persistent)
-                    else: # Has already had its second chance
+                    else:
                         self.sockets.remove(client_socket) # remove from socket pool
                         del self.metainfo[client_socket] # delete metainfo
+                        foundOne = True
                         break
-
-        raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
+                    
+                # If we still didn't find one, they must all have been persistant
+                if not foundOne:
+                    # Alert the user, harshly
+                    raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
     
     def _get_socket_for_rank(self, rank):
         """
@@ -144,7 +177,7 @@ class SocketPool(object):
         """
         #Logger().debug("SocketPool._get_socket_for_rank: Trying to fetch socket for rank %d" % rank)
         for client_socket in self.sockets:
-            (srank, _, fp) = self.metainfo[client_socket]
+            (srank, referenced, fp) = self.metainfo[client_socket]
             if srank == rank:
                 self.metainfo[client_socket] = (srank, True, fp)
                 return client_socket
@@ -152,8 +185,9 @@ class SocketPool(object):
         return None
     
     def _add(self, rank, client_socket, force_persistent):
+        #Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
         with self.sockets_lock:
-            self.metainfo[client_socket] = (rank, True, force_persistent)
+            self.metainfo[client_socket] = (rank, False, force_persistent)
             self.sockets.append(client_socket)
                 
     def close_all_sockets(self):

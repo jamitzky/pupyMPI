@@ -75,10 +75,12 @@ def get_communicator_class(socket_poll_method=False):
 class Network(object):
     def __init__(self, mpi, options):
 
-        if options.disable_full_network_startup:
+        if options.disable_full_network_startup:            
             socket_pool_size = options.socket_pool_size
+            Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
             socket_pool_size = options.size
+            Logger().debug("Socket Pool STATIC size:%i" % socket_pool_size)
 
         self.socket_pool = SocketPool(socket_pool_size)
 
@@ -103,27 +105,33 @@ class Network(object):
             self.t_out.type = "out"
             self.t_in.type = "in"
         
+        # Create the main receieve socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
         self.hostname = hostname
         server_socket.listen(5)
-        self.main_receive_socket = server_socket
+        #self.main_receive_socket = server_socket
+        # Put main receieve socket on incoming list
+        self.t_in.add_in_socket(server_socket)
+        #self.t_in.add_in_socket(self.main_receive_socket)
+
+        # Set main receive socket for comparison in _handle_readlist
+        self.t_in.main_receive_socket = server_socket
         
-        self.t_in.add_in_socket(self.main_receive_socket)
-        
-        #Logger().debug("main socket is: %s" % server_socket)
+        #Logger().debug("--starting handshake, main socket is: %s" % server_socket)
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         
         self.full_network_startup = not options.disable_full_network_startup
-        
+
+        #Logger().debug("Network initialized")
         #global done
         #done = False
 
     def _handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
-        This method create the MPI_COMM_WORLD communicator, by receiving
+        This method creates the MPI_COMM_WORLD communicator, by receiving
         (hostname, port, rank) for all the processes started by mpirun.
         
         For mpirun to have this information we first send all the data
@@ -155,43 +163,44 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
+
     def start_full_network(self):
-        if self.full_network_startup:
-            #Logger().debug("Starting a full network startup")
+        
+        #Logger().debug("Starting a full network startup")
 
-            # We make a full network startup by receiving from all with lower ranks and 
-            # send to higher ranks
-            our_rank = self.mpi.MPI_COMM_WORLD.rank()
-            size = self.mpi.MPI_COMM_WORLD.size()
+        # We make a full network startup by receiving from all with lower ranks and 
+        # sending to higher ranks
+        our_rank = self.mpi.MPI_COMM_WORLD.rank()
+        size = self.mpi.MPI_COMM_WORLD.size()
 
-            receiver_ranks = [x for x in range(0, our_rank)]
-            sender_ranks = range(our_rank+1, size)
+        receiver_ranks = [x for x in range(0, our_rank)]
+        sender_ranks = range(our_rank+1, size)
 
-            #Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
+        #Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
 
-            recv_handles = []
-            # Start all the receive 
-            for r_rank in receiver_ranks:
-                handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
-                recv_handles.append(handle)
-            
-            #Logger().debug("Start_full_network: All recieves posted")
+        recv_handles = []
+        # Start all the receive 
+        for r_rank in receiver_ranks:
+            handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
+            recv_handles.append(handle)
+        
+        #Logger().debug("Start_full_network: All recieves posted")
 
-            # Send all
-            for s_rank in sender_ranks:
-                self.mpi.MPI_COMM_WORLD.send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
+        # Send all
+        for s_rank in sender_ranks:
+            self.mpi.MPI_COMM_WORLD.send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
 
-            #Logger().debug("Start_full_network: All sends done")
+        #Logger().debug("Start_full_network: All sends done")
 
-            # Finish the receives
-            for handle in recv_handles:
-                handle.wait()
-            
-            #DEBUG
-            #print "Socket pool sockets",self.socket_pool.sockets
-            #print "Socket pool meta",self.socket_pool.metainfo
-            # Full network start up means a static socket pool
-            self.socket_pool.readonly = True
+        # Finish the receives
+        for handle in recv_handles:
+            handle.wait()
+        
+        #DEBUG
+        #print "Socket pool sockets",self.socket_pool.sockets
+        #print "Socket pool meta",self.socket_pool.metainfo
+        # Full network start up means a static socket pool
+        self.socket_pool.readonly = True
         
         #Logger().debug("Network (fully) started")
 
@@ -202,17 +211,20 @@ class Network(object):
         the shutdown procedure. 
         """
         #Logger().debug("Network got finalize call")
-        Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
-        Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
+        #Logger().debug("socketpool size:%i - metainfo:%s" % (len(self.socket_pool.sockets), self.socket_pool.metainfo) )
+        #Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
+        #Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
         self.t_in.finalize()
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
         
+        #Logger().debug("Waiting for threads to die")        
         # Wait for network threads to die
         self.t_in.join()
         self.t_out.join()
         
+        Logger().debug("Closing socket pool in finalize call")        
         # Close socketpool
         self.socket_pool.close_all_sockets()
 
@@ -231,14 +243,19 @@ class BaseCommunicationHandler(threading.Thread):
         # a dict mapping a socket key to a list of requests on that socket
         self.socket_to_request = {}
         
+        self.outbound_requests = 0 # Number of send requests queued (only acessed with socket_to_request_lock)
         self.rank = rank
         self.socket_pool = socket_pool
         
         self.type = "unset" # Will be set to "in","out" or "combo" and allow easy way of detecting role
+        self.main_receive_socket = None # For threads handling incoming this is the main socket on which new connections can be accepted
         
-        self.shutdown_event = threading.Event()            
+        self.shutdown_event = threading.Event() # signal for shutdown        
+        #self.outbound_requests_event = threading.Event() # signal for something to send
         
-        # Locks for proper access to the internal socket->request structure
+        
+        
+        # Locks for proper access to the internal socket->request structure and counter
         self.socket_to_request_lock = threading.Lock()
 
         # DEBUG
@@ -266,6 +283,8 @@ class BaseCommunicationHandler(threading.Thread):
         
         ##Logger().warning("SHOW request %s" % request)
         
+        #Logger().debug("rank:%i calling get_socket for globrank:%i" % (self.rank, global_rank))
+        # TODO: This call should be extended to allow asking for a persistent connection
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
@@ -274,7 +293,8 @@ class BaseCommunicationHandler(threading.Thread):
 
         with self.socket_to_request_lock:
             try:
-                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
+                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list                
+                self.outbound_requests += 1
             except Exception, e: # This should not happen
                 Logger().error("Network-thread (%s) got error: %s of type: %s, socket_to_request was: %s" % (self.type, e, type(e), self.network.t_out.socket_to_request ) )
 
@@ -287,7 +307,8 @@ class BaseCommunicationHandler(threading.Thread):
             
         self.sockets_out.append(client_socket)
     
-    def close_all_sockets(self):        
+    def close_all_sockets(self):
+        Logger().debug("Closing all sockets")
         for s in self.sockets_in + self.sockets_out:            
             try:
                 #s.shutdown(0)   # Further receives are disallowed
@@ -298,27 +319,36 @@ class BaseCommunicationHandler(threading.Thread):
                 Logger().error("Got error when closing socket: %s" % e)
 
     def _handle_readlist(self, readlist):
-        #Logger().debug("Network-thread (%s) handling readlist for readlist: %s" % (self.type, readlist) )
+        
         for read_socket in readlist:
             add_to_pool = False
-            try:
-                # _ is sender_address
-                (conn, _) = read_socket.accept()
-                
-                self.network.t_in.add_in_socket(conn)
-                self.network.t_out.add_out_socket(conn)
-                add_to_pool = True
-                #Logger().debug("Accepted connection on the main socket")
-            except socket.error, e:
-                # We try to accept on all sockets, even ones that are already in use.
-                # This means that if accept fails it is normally just data coming in
-                #Logger().debug("accept() threw: %s for socket:%s" % (e,read_socket) )
+
+            if read_socket == self.main_receive_socket:
+                #Logger().warning("Yes it shows")
+                try:
+                    # _ is sender_address
+                    (conn, _) = read_socket.accept()
+                    
+                    self.network.t_in.add_in_socket(conn)
+                    self.network.t_out.add_out_socket(conn)
+                    add_to_pool = True
+                    #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
+                except socket.error, e:
+                    # We try to accept but if accept fails maybe it just data coming in?
+                    Logger().error("accept() threw: %s on the main recv socket:%s" % (e,read_socket) )
+                    #conn = read_socket
+                except Exception, e:
+                    Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
+            else:
                 conn = read_socket
-            except Exception, e:
-                Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
             
             try:
                 rank, msg_command, raw_data = get_raw_message(conn)
+                #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
+                #if add_to_pool:
+                #    Logger().warning("Read from accepted connection")
+                #else:
+                #    Logger().warning("Normal read")
             except MPIException, e:                    
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -333,24 +363,28 @@ class BaseCommunicationHandler(threading.Thread):
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                 continue
             
+            # Now that we know the rank of sender we can add the socket to the pool
             if add_to_pool:
-                self.network.socket_pool.add_created_socket(conn, rank)
+                self.network.socket_pool.add_accepted_socket(conn, rank)
             
-            Logger().info("Received message with command: %d" % msg_command)
+            #Logger().debug("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
                 try:
                     with self.network.mpi.raw_data_lock:
+                        #Logger().debug("Got lock")
                         self.network.mpi.raw_data_queue.append(raw_data)
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
+                        #Logger().debug("Releasing lock")
                 except AttributeError, e:
-                    Logger().error("Failed grabbing raw_data_lock!")
+                    #Logger().error("Failed grabbing raw_data_lock!")
+                    pass
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
                     
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
-         
+
     def _handle_writelist(self, writelist):
         for write_socket in writelist:
             removal = []
@@ -360,7 +394,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":                        
-                    Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
                         utils.robust_send(write_socket,request.data)
@@ -369,7 +403,7 @@ class BaseCommunicationHandler(threading.Thread):
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     except Exception, e:
-                        Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        #Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     
@@ -377,7 +411,7 @@ class BaseCommunicationHandler(threading.Thread):
                     
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
-                        Logger().debug("Ssend done, status set to unacked")
+                        #Logger().debug("Ssend done, status set to unacked")
                     else:                            
                         request.update("ready") # update status and signal anyone waiting on this request                            
                 else:
@@ -386,33 +420,93 @@ class BaseCommunicationHandler(threading.Thread):
                     #        (request.status, request.request_type, request.tag, request.participant))
                     
             # Remove the requests (messages) that was successfully sent from the list for that socket
-            if removal:  
-                with self.socket_to_request_lock:
+            if removal:
+                removed = len(removal)
+                with self.socket_to_request_lock:                
                     for (write_socket,matched_request) in removal:
                         self.socket_to_request[write_socket].remove(matched_request)
+                    
+                    self.outbound_requests -= removed
 
     def run(self):
-        # Main loop
-        while not self.shutdown_event.is_set():
-            # _ is errorlist
-            (in_list, out_list, _) = self.select()
-            self._handle_readlist(in_list)
-            self._handle_writelist(out_list)
+        # DEBUG
+        emptyreads = 0
+        emptywrites = 0
+        
+        # Stall until network thread type is set
+        # TODO: This hack should be refactored.
+        while not self.type in ("combo","in","out"):
+            time.sleep(0.001)
+        
+        #Logger().debug("Network running, self.type:%s" %(self.type))
+        if self.type == "combo":
+            Logger().debug("C-c-combo")
+            # Main loop        
+            while not self.shutdown_event.is_set():
+                # _ is errorlist
+                (in_list, out_list, _) = self.select_combo()
+                self._handle_readlist(in_list)
+                
+                # Only look at outbound if there are any
+                # (we don't take the socket_to_request_lock but worst case is we
+                # might miss postpone a send for one iteration or handle_writelist
+                # once too much, both are acceptable compared to locking)
+                if self.outbound_requests > 0:
+                    self._handle_writelist(out_list)
+                
+                
+                # NOTE:
+                # This microsleep is to avoid busy waiting which starves the other threads
+                # especially on a single node (localhost testing) this has significant effect
+                # but also on the cluster it halves the time required for the single module!
+                # And furthermore increases max transferrate by 25% to about 40MB/s!
+                # Also it seems to improve the speed of high computation-to-communication like
+                # in the Monte Carlo Pi application where 20% speed has been observed
+                time.sleep(0.00001)
+        elif self.type == "in":
+            #Logger().debug("- - in")
+            while not self.shutdown_event.is_set():
+                #Logger().debug("Select in - for base communication handler type:%s" %(self.type))   
+                (in_list, _, _) = self.select_in()
+                
+                #DEBUG
+                if not in_list:
+                    #Logger().warning("empty IN list")
+                    emptyreads += 1
+                    
+                self._handle_readlist(in_list)
+                time.sleep(0.00001)
+        
+        elif self.type == "out":
+            #Logger().debug("- - out")
+            while not self.shutdown_event.is_set():
+                if self.outbound_requests > 0:
+                    (_, out_list, _) = self.select_out()
+                    #DEBUG
+                    if not out_list:
+                        #Logger().warning("empty OUT list")
+                        emptywrites += 1
+                    self._handle_writelist(out_list)
+                    
+                time.sleep(0.00001)
+        
         
         # The shutdown events is called, so we're finishing the network. This means
-        # flushing all the send jobs we have and then close the sockets.
-        while self.socket_to_request:
-            # _ is errorlist
-            (in_list, out_list, _) = self.select()
-            self._handle_writelist(out_list)
-
-            removal = []
-            for wsocket in self.socket_to_request:
-                if not self.socket_to_request[wsocket]:
-                    removal.append(wsocket)
-            
-            for r in removal:
-                del self.socket_to_request[r]
+        # flushing all the send jobs we have and then closing the sockets.
+        if self.type in ("combo","out"):
+            while self.socket_to_request:
+                (_, out_list, _) = self.select_out()
+                self._handle_writelist(out_list)
+    
+                removal = []
+                for wsocket in self.socket_to_request:
+                    if not self.socket_to_request[wsocket]:
+                        removal.append(wsocket)
+                
+                for r in removal:
+                    del self.socket_to_request[r]
+        
+        #Logger().warning("Done for base communication handler - type:%s emptyreads:%i emptywrites:%i" %(self.type,emptyreads,emptywrites))        
 
 class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
@@ -428,19 +522,21 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerEpoll, self).add_in_socket(client_socket)
         self.in_fd_to_socket[client_socket.fileno()] = client_socket
-        self.epoll.register(client_socket, select.EPOLLIN)
+        self.epoll.register(client_socket, select.EPOLLIN) # Default mode is level triggered
+        #self.epoll.register(client_socket, select.EPOLLIN | select.EPOLLET) # Edge triggered
 
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerEpoll, self).add_out_socket(client_socket)
         self.out_fd_to_socket[client_socket.fileno()] = client_socket
         self.epoll.register(client_socket, select.EPOLLOUT)
 
-    def select(self):
+    def select_combo(self):
         in_list = []
         out_list = []
         error_list = []
         
         events = self.epoll.poll(1)
+        #events = self.epoll.poll()
         for fileno, event in events:    
             if event & select.EPOLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
@@ -449,11 +545,37 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
 
         return (in_list, out_list, error_list)
 
+    def select_in(self):
+        in_list = []
+        error_list = []
+        
+        #events = self.epoll.poll(1) # TODO: This busy wait should be worked around
+        events = self.epoll.poll(0.00001)
+        #events = self.epoll.poll()
+        for fileno, event in events:    
+            if event & select.EPOLLIN:
+                in_list.append(self.in_fd_to_socket.get(fileno))
+                
+        return (in_list, [], error_list)
+
+    def select_out(self):
+        out_list = []
+        error_list = []
+        
+        #events = self.epoll.poll(1)
+        events = self.epoll.poll()
+        for fileno, event in events:    
+            if event & select.EPOLLOUT:
+                out_list.append(self.out_fd_to_socket.get(fileno))
+
+        return ([], out_list, error_list)
+
+
 class CommunicationHandlerPoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerPoll, self).__init__(*args, **kwargs)
         
-        # Add a special epoll environment we can later use to poll
+        # Add a special poll environment we can later use to poll
         # the system. 
         self.poll = select.poll()
 
@@ -475,7 +597,7 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         out_list = []
         error_list = []
         
-        events = self.poll.poll(1)
+        events = self.poll.poll()
         for fileno, event in events:    
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
@@ -498,57 +620,80 @@ class CommunicationHandlerKqueue(BaseCommunicationHandler):
 
     def add_in_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
-        
-        # Create a kqueue event and add it to the kqueue environment.
+        self.in_ident_to_socket[client_socket.fileno()] = client_socket
         event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        
-        with self.kqueue_changelist_lock:
-            self.kqueue_changelist.append(event)
-        self.in_ident_to_socket[event.ident] = client_socket
-        #Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-        #Logger().debug("Called, add in socket %s", self.kqueue_changelist)
+        self.kqueue_changelist.append(event)
         
     def add_out_socket(self, client_socket):
         super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
-
-        # Create a kqueue event and add it to the kqueue environment.
+        self.out_ident_to_socket[client_socket.fileno()] = client_socket
         event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        with self.kqueue_changelist_lock:
-            self.kqueue_changelist.append(event)
-        print "Changelist", self.kqueue_changelist
+        self.kqueue_changelist.append(event)
         Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-        self.out_ident_to_socket[event.ident] = client_socket
 
     def select(self):
         in_list = []
         out_list = []
         error_list = []
-        #print self.kqueue_changelist
+        
         with self.kqueue_changelist_lock:
-            events = self.kqueue.control(self.kqueue_changelist, 10, 0)
+
+            events = []
+            for kevent in self.kqueue_changelist: 
+                new_events = self.kqueue.control([kevent], 10, 0)
+                events.extend(new_events)
+                
+            new_events = self.kqueue.control(None, 10, 0)
+            events.extend(new_events)
+            
             for event in events:
-                #Logger().debug("Found event with ident: %s" % event.ident)
                 if event.filter == select.KQ_FILTER_READ:
+                    Logger().warning("--------------> read: event ident %s and flag %s" % (event.ident, event.flags))
+
                     socket = self.in_ident_to_socket.get(event.ident, None)
                     if socket:
                         in_list.append(socket)
+                    else:
+                        Logger().warning("read: Throwing socket away for event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
+                        
                 elif event.filter == select.KQ_FILTER_WRITE:
                     socket = self.out_ident_to_socket.get(event.ident, None)
                     if socket:
                         out_list.append(socket)
-            
+                    else:
+                        Logger().warning("write: Throwing socket away for event ident %s and flag %s" % (event.ident, event.flags))
+                else:
+                    Logger.warning("==============> unknown event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
+                    if event.flags == select.KQ_EV_ERROR:
+                        Logger().warning("Error detected in kqueue control call. ")
+                        Logger().warning("We received an event with identifier (%s), filter (%s), flags (%s) fflags (%s) udata(%s)" % (event.ident, event.filter, event.flags, event.fflags, event.udata))
+                    
             # Reset the change list
             self.kqueue_changelist = []
-                
+            
         return (in_list, out_list, error_list)
         
 class CommunicationHandlerSelect(BaseCommunicationHandler):
     """
     This is a single thread doing both in and out or there are two threaded instances one for each
     """
-    def select(self):
+    def select_combo(self):
         try:
+            #return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out)
             return select.select( self.sockets_in, self.sockets_out, self.sockets_in + self.sockets_out, 1)
         except Exception, e:
             Logger().error("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
 
+    def select_in(self):
+        try:
+            #return select.select( self.sockets_in, [], self.sockets_in)
+            return select.select( self.sockets_in, [], self.sockets_in, 1)
+        except Exception, e:
+            Logger().error("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
+
+    def select_out(self):
+        try:
+            #return select.select( [], self.sockets_out, self.sockets_out)
+            return select.select( [], self.sockets_out, self.sockets_out, 1)
+        except Exception, e:
+            Logger().error("Network-thread (%s) Got exception: %s of type: %s" % (self.type, e, type(e)) )
