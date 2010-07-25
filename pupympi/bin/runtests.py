@@ -275,7 +275,6 @@ def main():
 
     # _ is args
     options, _ = parser.parse_args()
-    print options
 
     run_tests( get_testnames(options.skipto), options )
 
