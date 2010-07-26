@@ -589,12 +589,13 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         self.out_fd_to_socket[client_socket.fileno()] = client_socket
         self.poll.register(client_socket, select.POLLOUT)
 
-    def select(self):
+    def select_combo(self):
         in_list = []
         out_list = []
         error_list = []
         
-        events = self.poll.poll()
+        events = self.poll.poll(1)
+        #events = self.poll.poll()
         for fileno, event in events:    
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
@@ -602,6 +603,31 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
         return (in_list, out_list, error_list)
+
+    def select_in(self):
+        in_list = []
+        error_list = []
+        
+        #events = self.poll.poll(1) # TODO: This busy wait should be worked around
+        events = self.poll.poll(0.00001)
+        #events = self.poll.poll()
+        for fileno, event in events:    
+            if event & select.POLLIN:
+                in_list.append(self.in_fd_to_socket.get(fileno))
+                
+        return (in_list, [], error_list)
+
+    def select_out(self):
+        out_list = []
+        error_list = []
+        
+        #events = self.poll.poll(1)
+        events = self.poll.poll()
+        for fileno, event in events:    
+            if event & select.POLLOUT:
+                out_list.append(self.out_fd_to_socket.get(fileno))
+
+        return ([], out_list, error_list)
 
 class CommunicationHandlerKqueue(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
