@@ -12,7 +12,7 @@ world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 size = world.size()
 
-max_iterations = 100 # In benchmarks this is 100
+max_iterations = 10 # In benchmarks this is 100
 datasizes = [0,1,2,4,8,16,32,64,128,256,512,1024]
 
 
