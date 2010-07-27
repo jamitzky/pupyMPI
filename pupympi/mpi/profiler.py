@@ -54,14 +54,18 @@ def trace_event(frame, event, arg):
         if ct.name == "MainThread":
             if event == "call":
                 code = frame.f_code
-                print "[%s] CALL   %s.%s" % (time(), code.co_filename, code.co_name)
+                if code.co_filename.endswith("mpi/request.py") and (code.co_name.endswith("send") or code.co_name.endswith("recv")):
+                    print "[%s] CALL   %s.%s" % (time(), code.co_filename, code.co_name)
             if event == "c_call":
-                print "[%s] C_CALL %s" % (time(), arg)
+                pass
+                #print "[%s] C_CALL %s" % (time(), arg)
             if event == "return":
                 code = frame.f_code
-                print "[%s] RET    %s.%s" % (time(), code.co_filename, code.co_name)
+                if code.co_filename.endswith("mpi/request.py") and (code.co_name.endswith("send") or code.co_name.endswith("recv")):
+                    print "[%s] RET    %s.%s" % (time(), code.co_filename, code.co_name)
             if event == "c_return":
-                print "[%s] C_RET  %s" % (time(), arg)
+                pass
+                #print "[%s] C_RET  %s" % (time(), arg)
             if event == "c_exception":
                 pass
 
