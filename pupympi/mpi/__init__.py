@@ -444,6 +444,8 @@ class MPI(Thread):
         self.network.finalize()
         #Logger().debug("--- Network finally finalized --")        
 
+	self.join()
+
     @classmethod
     def initialized(cls):
         """

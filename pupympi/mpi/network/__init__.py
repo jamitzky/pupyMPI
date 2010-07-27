@@ -547,7 +547,7 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         error_list = []
         
         #events = self.epoll.poll(1) # TODO: This busy wait should be worked around
-        events = self.epoll.poll(0.00001)
+        events = self.epoll.poll(0.001)
         #events = self.epoll.poll()
         for fileno, event in events:    
             if event & select.EPOLLIN:

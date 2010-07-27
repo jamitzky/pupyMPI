@@ -35,6 +35,11 @@ def create_random_socket(min=10000, max=30000):
     used = []
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Enable TCP_NODELAY to improve performance of sending one-off packets by
+    # immediately acknowledging received packages instead of trying to
+    # piggyback the ACK on the next outgoing packet (Nagle's algorithm)
+    # XXX: If you remove this, remember to do so in socketpool as well.
+    sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
     #sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     
     hostname = socket.gethostname()
