@@ -65,8 +65,8 @@ while rRequests or sRequests:
         request.wait()
         sRequests.remove(request)
 
-    f.write("Rank %d: requests finished\n" % (rank))
-    f.flush()
+f.write("Rank %d: requests finished\n" % (rank))
+f.flush()
 
 
 
