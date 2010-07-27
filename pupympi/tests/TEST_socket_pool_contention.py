@@ -78,9 +78,12 @@ if mpi.network.socket_pool.readonly:
     f.write("Test skipped for rank %d since socket pool was static\n" % rank)
 else:
     pool_size = len(mpi.network.socket_pool.sockets)
-    # There should only be 5 connections as specified in meta-socket-pool-size
-    assert pool_size == 5, "whoops pool size was not 5 but %i"%pool_size    
-    f.write("Done for rank %d\n" % rank)
+    # There should only be 5 connections as specified in meta-socket-pool-size (or 4???)
+    if pool_size != 5:
+        f.write("whoops pool size was not 5 but %i pool:\n" % (pool_size,mpi.network.socket_pool.metainfo) )
+        assert False
+    else:
+        f.write("Done for rank %d\n" % rank)
 
 f.flush()
 f.close()
