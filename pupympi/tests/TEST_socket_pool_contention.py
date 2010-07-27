@@ -11,6 +11,9 @@ internal datastructures to check that the socket pool behaves as expected.
 
 To ensure that the established socket connection between to processes is reused
 we check the size of the socket pool directly.
+
+ISSUES: This test has been observed to fail 1 time, after introdicing the Asser
+self.join fix.
 """
 
 from mpi import MPI
