@@ -72,7 +72,11 @@ class SocketPool(object):
         if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            #client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
+	    # Enable TCP_NODELAY to improve performance of sending one-off packets by
+	    # immediately acknowledging received packages instead of trying to
+	    # piggyback the ACK on the next outgoing packet (Nagle's algorithm)
+	    # XXX: If you remove this, remember to do so in utils as well.
+            client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
             
             client_socket.connect( receiver )
             # DEBUG - TESTING SOCKET OPTIONS
