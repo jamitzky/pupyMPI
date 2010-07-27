@@ -21,6 +21,11 @@ from time import time
 from collections import deque
 from mpi import constants
 
+STATE_USER = 1
+STATE_MPI_COMM = 2
+STATE_MPI_COLLECTIVE = 3
+STATE_MPI_WAIT = 4
+
 def trace_event(frame, event, arg):
     global p_prevthread, p_lock
 
@@ -46,22 +51,23 @@ def trace_event(frame, event, arg):
             p_ttime[pt.name]["ttot"] += diff
             p_ttime[ct.name]["t0"] = time()
 
-        if event == "call":
-            pass
-            #code = frame.f_code
-            #fun = (code.co_name, code.co_filename, code.co_firstlineno)
-        if event == "c_call":
-            pass
-        if event == "return":
-            pass
-        if event == "c_return":
-            pass
-        if event == "c_exception":
-            pass
+        if ct.name == "MainThread":
+            if event == "call":
+                code = frame.f_code
+                print "[%s] CALL   %s.%s" % (time(), code.co_filename, code.co_name)
+            if event == "c_call":
+                print "[%s] C_CALL %s" % (time(), arg)
+            if event == "return":
+                code = frame.f_code
+                print "[%s] RET    %s.%s" % (time(), code.co_filename, code.co_name)
+            if event == "c_return":
+                print "[%s] C_RET  %s" % (time(), arg)
+            if event == "c_exception":
+                pass
 
         p_prevthread = threading.currentThread()
 
-        return trace_event
+        return None
 
 def start():
     global p_stats, p_start_time, p_lock, p_ttime, p_prevthread
