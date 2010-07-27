@@ -45,6 +45,9 @@ def parse_benchmark_data(folders):
     import glob
     from os import path
     
+    # Document me
+    minimum_runs = 1
+    
     valid_runs = {}
     for folder in folders:
         runs = glob.glob(folder + "collective[0-9]*")
@@ -61,7 +64,7 @@ def parse_benchmark_data(folders):
     runs = [] 
     for key in valid_runs:
         count = valid_runs[key]
-        if count > 1:
+        if count >= minimum_runs:
             runs.append(key)
             
     print runs
