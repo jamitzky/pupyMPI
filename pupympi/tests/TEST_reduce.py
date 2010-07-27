@@ -16,7 +16,6 @@ def fact(n):
 mpi = MPI()
 
 root = 4
-root = 0
 
 # We start n processes, and try to calculate n!
 rank = mpi.MPI_COMM_WORLD.rank()
@@ -37,13 +36,13 @@ dist_max = mpi.MPI_COMM_WORLD.reduce(rank, max, root=root)
 
 if root == rank:
     print "-"*80
-    print "Custom MPI operations"
+    print "Reducing with custom MPI operations"
     print "\tFactorial: %d" % dist_fact
     print "\tSum: %d" % dist_mpi_sum
     print "\tMin: %d" % dist_mpi_min
     print "\tMax: %d" % dist_mpi_max
     print "\tAvg: %d" % dist_mpi_avg
-    print "\nBuiltin python operations"
+    print "\nReducing with built-in Python operations"
     print "\tSum: %d" % dist_sum
     print "\tMin: %d" % dist_min
     print "\tMax: %d" % dist_max
