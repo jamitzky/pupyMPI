@@ -442,7 +442,10 @@ class MPI(Thread):
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
-        #Logger().debug("--- Network finally finalized --")        
+        #Logger().debug("--- Network finally finalized --")
+        
+        # Asser experimental
+        self.join()
 
     @classmethod
     def initialized(cls):
