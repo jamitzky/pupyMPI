@@ -447,8 +447,6 @@ class MPI(Thread):
         # Asser experimental
         self.join()
 
-	self.join()
-
     @classmethod
     def initialized(cls):
         """

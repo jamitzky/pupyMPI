@@ -69,7 +69,7 @@ def get_communicator_class(socket_poll_method=False):
         if not c_class:
             c_class = CommunicationHandlerSelect
     
-    Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
+    #Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
     return c_class
 
 class Network(object):
@@ -77,10 +77,10 @@ class Network(object):
 
         if options.disable_full_network_startup:            
             socket_pool_size = options.socket_pool_size
-            Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
+            #Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
             socket_pool_size = options.size
-            Logger().debug("Socket Pool STATIC size:%i" % socket_pool_size)
+            #Logger().debug("Socket Pool STATIC size:%i" % socket_pool_size)
 
         self.socket_pool = SocketPool(socket_pool_size)
 
@@ -221,7 +221,7 @@ class Network(object):
         self.t_in.join()
         self.t_out.join()
         
-        Logger().debug("Closing socket pool in finalize call")        
+        #Logger().debug("Closing socket pool in finalize call")        
         # Close socketpool
         self.socket_pool.close_all_sockets()
 
