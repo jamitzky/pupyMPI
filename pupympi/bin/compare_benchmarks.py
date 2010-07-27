@@ -56,6 +56,20 @@ class DataGather(object):
             
         self.data[run_type][procs][datasize].append( (time, throughput))
         
+    def get_types(self):
+        return self.data.keys()
+        
+    def get_data(self, run_type, procs=None, datasize=None):
+        data = self.data[run_type]
+        
+        if procs:
+            data = data[procs]
+            
+        if datasize:
+            data = data[datasize]
+            
+        return data
+        
     def __repr__(self):
         # Find some key information
         second_keys = []
@@ -135,12 +149,124 @@ def parse_benchmark_data(run_folders, gather):
                 run_type = row[6]
                 gather.add_data(run_type, procs, datasize, time_p_it, throughput)
             
-def sanitize_data(data):
-    return data
+def draw_scatter(gather):
+    """
+    This function will output a lot of gnuplot data
+    to be manualle executed. This gives you the option
+    to make last minute (or second) changes in captions
+    etc. Face it.. captions should be manually 
+    written
+    """
+    
+    def get_x_tics(data):
+        data = list(set(data))
+        data = map(int, data)
+        data.sort()
+        
+        mm = 1024
+        final_data = []
+        for s in data:
+            size = ""
+            if s < mm:
+                size = "%dB" % s 
+            elif s < mm*mm:
+                k = s / mm
+                size = "%dKB" % k
+            else:
+                k = s / (mm*mm)
+                size = "%dMB" % k
+                
+            final_data.append('"%s" %d' % (size, s))
+        return final_data
+    
+    def get_y_tics(max_value):
+        tics = ['"0us" 0']
+        current = 1
+        
+        while current < max_value:
+            # add the current time level to the tics
+            if current < 1000:
+                tics.append('"%2.fus" %d' % (current, current))
+            elif current < 1000000:
+                c = current / 1000.0
+                tics.append('"%2.fms" %d' % (c, current))
+            else:
+                c = current / 1000000.0
+                tics.append('"%2.fs" %d' % (c, current))
+            current *= 10
+        return tics
+    
+    # Right now se just test with a single run type. 
+    for run_type in gather.get_types():
+        data = gather.get_data(run_type)
+        data_sizes = data.values()[0].keys()
+        x_labels = get_x_tics(data_sizes)
+        max_time = 0
+        # Flush the data points to a file.
+        files = []
+        
+        for nc in data.keys():
+            filename = "%s_%d.dat" % (run_type, nc)
+            title = "%s for %d nodes" % (run_type, nc)
+            f = open(filename, "w")
+            files.append( (filename, title) )
+            for datasize in data[nc].keys():
+                values = data[nc][datasize]
+                
+                # Throw the throughput away
+                values = [v[0] for v in values]
+                
+                for value in values:
+                    if value > max_time:
+                        max_time = value
+                    print >> f, "%d %f" % (datasize, value)
+            f.close()
+        
+        y_labels = get_y_tics(max_time)
+        
+        # At some point we can make a smart filename here.
+        of = open("%s.gnu" % run_type, "w")
+        
+        # plot the data.
+        print >> of, "set terminal png nocrop enhanced size 800,600"
+        print >> of, 'set output "%s.png"' % run_type
+        print >> of, 'set title "%s plot"' % run_type
+        print >> of, 'set xlabel "Data size (MB)"'
+        print >> of, 'set ylabel "Wallclock in (sec)'
+        #print >> of, 'set xtics (%s)' % ",".join(map(str, x_tics))
+        print >> of, 'set xtics (%s)' % ", ".join(map(str, x_labels))
+        print >> of, 'set ytics (%s)' % ", ".join(map(str, y_labels))
+        print >> of, "set log x"
+        print >> of, "set log y"
+        #print >> of, 'set label 1 "set style line 1 lt rgb \"red\" lw 3" at -0.4, -0.25, 0 left norotate back textcolor rgb "red"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 2 "set style line 2 lt rgb \"orange\" lw 2" at -0.4, -0.35, 0 left norotate back textcolor rgb "orange"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 3 "set style line 3 lt rgb \"yellow\" lw 3" at -0.4, -0.45, 0 left norotate back textcolor rgb "yellow"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 4 "set style line 4 lt rgb \"green\" lw 2" at -0.4, -0.55, 0 left norotate back textcolor rgb "green"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 5 "set style line 5 lt rgb \"cyan\" lw 3" at -0.4, -0.65, 0 left norotate back textcolor rgb "cyan"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 6 "set style line 6 lt rgb \"blue\" lw 2" at -0.4, -0.75, 0 left norotate back textcolor rgb "blue"  nopoint offset character 0, 0, 0'
+        #print >> of, 'set label 7 "set style line 7 lt rgb \"violet\" lw 3" at -0.4, -0.85, 0 left norotate back textcolor rgb "violet"  nopoint offset character 0, 0, 0'
 
-def write_html_and_js(data):
-    pass
-
+        print >> of, 'set style line 1  linetype 1 linecolor rgb "red"  linewidth 1.000 pointtype 1 pointsize default'
+        print >> of, 'set style line 2  linetype 2 linecolor rgb "orange"  linewidth 1.000 pointtype 2 pointsize default'
+        print >> of, 'set style line 3  linetype 3 linecolor rgb "yellow"  linewidth 1.000 pointtype 3 pointsize default'
+        print >> of, 'set style line 4  linetype 4 linecolor rgb "green"  linewidth 1.000 pointtype 4 pointsize default'
+        print >> of, 'set style line 5  linetype 5 linecolor rgb "cyan"  linewidth 1.000 pointtype 5 pointsize default'
+        print >> of, 'set style line 6  linetype 6 linecolor rgb "blue"  linewidth 1.000 pointtype 6 pointsize default'
+        print >> of, 'set style line 7  linetype 7 linecolor rgb "violet"  linewidth 1.000 pointtype 7 pointsize default'
+        
+        i = 0
+        plot_str = 'plot '
+        plot_strs = []
+        for p in files:
+            filename, title = p
+            i += 1
+            plot_strs.append(' "%s" ls %d title "%s"' % (filename, i, title))
+            
+        plot_str += ", ".join(plot_strs)
+        print >> of, plot_str
+        
+        of.close()
+            
 if __name__ == "__main__":
     # Handle arguments etc. 
     folders = options_and_arguments()
@@ -154,14 +280,10 @@ if __name__ == "__main__":
     
     data = parse_benchmark_data(run_folders, gather)
     
-    print gather
-    
-    data = sanitize_data(data)
-
     # If we should choose to implement further output functions we should
     # add an options above and select an output function here.
     def timer_wrapper():    
-        write_html_and_js(data)
+        draw_scatter(gather)
     
     # Stop the timing and say goodbye.
     from timeit import Timer
