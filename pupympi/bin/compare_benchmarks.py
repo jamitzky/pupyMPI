@@ -18,12 +18,65 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
-import os, sys
+import os, sys, glob, csv
+
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
+
+class DataGather(object):
+    
+    def __init__(self):
+        self.row_counter = 0
+        self.data = {}
+    
+    def add_data(self, run_type, procs, datasize, time, throughput):
+        # clean the run_type name
+        if run_type.startswith("test_"):
+            run_type = run_type[5:]
+            
+        # Cast data to correct values
+        procs = int(procs)
+        datasize = int(datasize)
+        time = float(time)
+        throughput = float(throughput)
+        
+        # Adding data is not so nice. There is a bunch of testing if
+        # indexes is already there. Sorry.
+        if run_type not in self.data:
+            self.data[run_type] = {}
+            
+        if procs not in self.data[run_type]:
+            self.data[run_type][procs] = {}
+            
+        if datasize not in self.data[run_type][procs]:
+            self.data[run_type][procs][datasize] = []
+            
+        self.data[run_type][procs][datasize].append( (time, throughput))
+        
+    def __repr__(self):
+        # Find some key information
+        second_keys = []
+        for f in self.data.values():
+            second_keys.extend(f.keys())
+        second_keys = list(set(second_keys))
+        second_keys.sort()
+        
+        third_keys = []
+        for f in self.data.values():
+            for k in f.values():
+                third_keys.extend(k.keys())
+        third_keys = list(set(third_keys))
+        third_keys.sort()
+        
+        st = "<<<Gather object:\n"
+        st += "\t --> first level keys: %s\n" % ", ".join(map(str,self.data.keys()))
+        st += "\t\t --> second level keys: %s\n" % ", ".join(map(str, second_keys))
+        st += "\t\t\t --> third level keys: %s\n" % ", ".join(map(str, third_keys))
+        st += ">>>\n"
+        return st
 
 def options_and_arguments():
     from optparse import OptionParser
@@ -41,35 +94,47 @@ def options_and_arguments():
     
     return args
 
-def parse_benchmark_data(folders):
-    import glob
-    from os import path
-    
-    # Document me
-    minimum_runs = 1
-    
-    valid_runs = {}
+def find_runs(folders):
+    runs = []
     for folder in folders:
-        runs = glob.glob(folder + "collective[0-9]*")
+        runs.extend(glob.glob(folder + "collective[0-9]*"))
         runs.extend(glob.glob(folder + "single[0-9]*"))
         
-        for run in runs:
-            run = path.basename(run)
-            if run not in valid_runs:
-                valid_runs[run] = 0
-             
-            valid_runs[run] += 1   
-
-    # Return all the runs that have more than two hits.
-    runs = [] 
-    for key in valid_runs:
-        count = valid_runs[key]
-        if count >= minimum_runs:
-            runs.append(key)
-            
-    print runs
     return runs
 
+def parse_benchmark_data(run_folders, gather):
+    for f in run_folders:
+        files = glob.glob(f + "/*.csv")
+        for f in files:
+            reader = csv.reader(open(f))
+            for row in reader:
+                # Some basic sanitize
+                if len(row) < 2:
+                    continue
+                
+                try:
+                    # Remove comments
+                    fc = row[0].strip()
+                    if fc.startswith("#"):
+                        continue
+                    
+                    # Remove headers
+                    try:
+                        int(row[0])
+                    except:
+                        continue
+                    
+                except:
+                    pass
+                
+                # Unpack data
+                datasize = row[0]
+                time_p_it = row[3]
+                throughput = row[4]
+                procs = row[5]
+                run_type = row[6]
+                gather.add_data(run_type, procs, datasize, time_p_it, throughput)
+            
 def sanitize_data(data):
     return data
 
@@ -81,7 +146,15 @@ if __name__ == "__main__":
     folders = options_and_arguments()
     
     # Parse benchmark data for each folder into an internal structure. 
-    data = parse_benchmark_data(folders)
+    run_folders = find_runs(folders)
+    
+    # Initialize a gather object. This object will hold all data
+    # and make it possible to extract it later
+    gather = DataGather()
+    
+    data = parse_benchmark_data(run_folders, gather)
+    
+    print gather
     
     data = sanitize_data(data)
 
@@ -96,5 +169,3 @@ if __name__ == "__main__":
     t = t.timeit(number=1)
     
     print "Goodbye. We parsed %d benchmark folders in %.2f seconds" % (len(folders), t)
-    
-    
