@@ -594,7 +594,7 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         out_list = []
         error_list = []
         
-        events = self.poll.poll(1)
+        events = self.poll.poll(0.00001)
         #events = self.poll.poll()
         for fileno, event in events:    
             if event & select.POLLIN:
