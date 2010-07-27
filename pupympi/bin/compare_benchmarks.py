@@ -43,21 +43,29 @@ def options_and_arguments():
 
 def parse_benchmark_data(folders):
     import glob
+    from os import path
     
-    folder_contents = []
+    valid_runs = {}
     for folder in folders:
-        cluster_runs = glob.glob(folder + "*")
+        runs = glob.glob(folder + "collective[0-9]*")
+        runs.extend(glob.glob(folder + "single[0-9]*"))
         
-        # Only folders.
-        
-        folder_contents.update(cluster_runs)
-    
-    print folder_contents
+        for run in runs:
+            run = path.basename(run)
+            if run not in valid_runs:
+                valid_runs[run] = 0
+             
+            valid_runs[run] += 1   
 
-    
-    data = None
-    
-    return data
+    # Return all the runs that have more than two hits.
+    runs = [] 
+    for key in valid_runs:
+        count = valid_runs[key]
+        if count > 1:
+            runs.append(key)
+            
+    print runs
+    return runs
 
 def sanitize_data(data):
     return data
