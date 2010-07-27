@@ -115,14 +115,14 @@ class Network(object):
         # Set main receive socket for comparison in _handle_readlist
         self.t_in.main_receive_socket = server_socket
         
-        Logger().debug("--starting handshake, main socket is: %s" % server_socket)
+        #Logger().debug("--starting handshake, main socket is: %s" % server_socket)
         
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
         
         self.full_network_startup = not options.disable_full_network_startup
 
-        Logger().debug("Network initialized")
+        #Logger().debug("Network initialized")
         #global done
         #done = False
 
@@ -163,7 +163,7 @@ class Network(object):
 
     def start_full_network(self):
         
-        Logger().debug("Starting a full network startup")
+        #Logger().debug("Starting a full network startup")
 
         # We make a full network startup by receiving from all with lower ranks and 
         # sending to higher ranks
@@ -181,13 +181,13 @@ class Network(object):
             handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
             recv_handles.append(handle)
         
-        Logger().debug("Start_full_network: All recieves posted")
+        #Logger().debug("Start_full_network: All recieves posted")
 
         # Send all
         for s_rank in sender_ranks:
             self.mpi.MPI_COMM_WORLD.send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
 
-        Logger().debug("Start_full_network: All sends done")
+        #Logger().debug("Start_full_network: All sends done")
 
         # Finish the receives
         for handle in recv_handles:
@@ -199,7 +199,7 @@ class Network(object):
         # Full network start up means a static socket pool
         self.socket_pool.readonly = True
         
-        Logger().debug("Network (fully) started")
+        #Logger().debug("Network (fully) started")
 
     def finalize(self):
         """
@@ -207,7 +207,8 @@ class Network(object):
         CommunicationHandlerSelect.finalize for a deeper description of
         the shutdown procedure. 
         """
-        Logger().debug("Network got finalize call")
+        #Logger().debug("Network got finalize call")
+        #Logger().debug("socketpool size:%i - metainfo:%s" % (len(self.socket_pool.sockets), self.socket_pool.metainfo) )
         #Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
         #Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
         self.t_in.finalize()
@@ -215,7 +216,7 @@ class Network(object):
         if not self.options.single_communication_thread:
             self.t_out.finalize()
         
-        Logger().debug("Waiting for threads to die")        
+        #Logger().debug("Waiting for threads to die")        
         # Wait for network threads to die
         self.t_in.join()
         self.t_out.join()
@@ -460,7 +461,7 @@ class BaseCommunicationHandler(threading.Thread):
                 # in the Monte Carlo Pi application where 20% speed has been observed
                 time.sleep(0.00001)
         elif self.type == "in":
-            Logger().debug("- - in")
+            #Logger().debug("- - in")
             while not self.shutdown_event.is_set():
                 #Logger().debug("Select in - for base communication handler type:%s" %(self.type))   
                 (in_list, _, _) = self.select_in()
@@ -474,7 +475,7 @@ class BaseCommunicationHandler(threading.Thread):
                 time.sleep(0.00001)
         
         elif self.type == "out":
-            Logger().debug("- - out")
+            #Logger().debug("- - out")
             while not self.shutdown_event.is_set():
                 if self.outbound_requests > 0:
                     (_, out_list, _) = self.select_out()
@@ -588,12 +589,13 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         self.out_fd_to_socket[client_socket.fileno()] = client_socket
         self.poll.register(client_socket, select.POLLOUT)
 
-    def select(self):
+    def select_combo(self):
         in_list = []
         out_list = []
         error_list = []
         
-        events = self.poll.poll()
+        events = self.poll.poll(0.00001)
+        #events = self.poll.poll()
         for fileno, event in events:    
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
@@ -601,6 +603,31 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
         return (in_list, out_list, error_list)
+
+    def select_in(self):
+        in_list = []
+        error_list = []
+        
+        #events = self.poll.poll(1) # TODO: This busy wait should be worked around
+        events = self.poll.poll(0.00001)
+        #events = self.poll.poll()
+        for fileno, event in events:    
+            if event & select.POLLIN:
+                in_list.append(self.in_fd_to_socket.get(fileno))
+                
+        return (in_list, [], error_list)
+
+    def select_out(self):
+        out_list = []
+        error_list = []
+        
+        #events = self.poll.poll(1)
+        events = self.poll.poll()
+        for fileno, event in events:    
+            if event & select.POLLOUT:
+                out_list.append(self.out_fd_to_socket.get(fileno))
+
+        return ([], out_list, error_list)
 
 class CommunicationHandlerKqueue(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):

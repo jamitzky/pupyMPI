@@ -103,7 +103,7 @@ class RunTest(Thread):
     cmd = "bin/mpirun.py --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, primary_log, options, test_meta_data):
+    def __init__(self, test, number, primary_log, options, test_meta_data):
         Thread.__init__(self)
         self.test = test
         self.meta = test_meta_data
@@ -124,11 +124,14 @@ class RunTest(Thread):
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
             #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
         
+        # Adds testswitches if used
+        if options.socket_poll_method:
+            self.cmd += " --socket-poll-method=" + options.socket_poll_method
         # Adds user arguments to the test if there are meta descriptions for it. 
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
         
-        output( "Launching %s: " % self.cmd, newline=False)
+        output( "Launching(%i) %s: " % (number, self.cmd), newline=False)
         self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
         self.time_to_get_result_or_die = int(test_meta_data["max_runtime"]) if "max_runtime" in test_meta_data else TEST_MAX_RUNTIME
@@ -180,20 +183,23 @@ def _status_str(ret, expres):
         
 def format_output(threads):
     """prints the final output in purty colors, and logs to latex for report inclusion"""
+    testcounter = 1
     total_time = 0
     odd = False
-    output("TEST NAME\t\t\t\t\tEXECUTION TIME(s)\tKILLED\t\tTEST RETURNCODE") 
-    output( "-----------------------------------------------------------------------------------------------------------")
+    output("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED") 
+    output("--------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
-        output("%-45s\t\t%s\t\t%s\t\t%s" % (thread.test, \
-                                                    round(thread.executiontime, 1), \
-                                                    "KILLED" if thread.killed else "no", \
-                                                    _status_str(thread.returncode, thread.expectedresult)),
-                                                    color=OKOFFWHITE if odd else OKBLACK,
-                                                    block="Results table console")                                                    
+        output("%3i %-40s\t\t%4s\t%s\t%s" % (testcounter, \
+                                            thread.test, \
+                                            round(thread.executiontime, 1), \
+                                            "KILLED" if thread.killed else "no", \
+                                            _status_str(thread.returncode, thread.expectedresult)),
+                                            color=OKOFFWHITE if odd else OKBLACK,
+                                            block="Results table console")                                                    
         odd = True if odd == False else False
-        # output_latex(thread)                                                    
+        # output_latex(thread)
+        testcounter += 1
         
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
@@ -237,15 +243,17 @@ def run_tests(test_files, options):
     #     global latex_output
     #     latex_output = latex
     
+    testcounter = 1
     # We run tests sequentially since many of them are rather hefty and may
     # interfere with others. Also breakage can lead to side effects and so
     # non-breaking tests may appear to break when in fact the cause is another
     # test running at the same time
     for test in test_files:
-        t = RunTest(test, logfile_prefix, options, get_test_data(test))
+        t = RunTest(test, testcounter, logfile_prefix, options, get_test_data(test))
         threadlist.append(t)
         t.start()
         t.join()
+        testcounter += 1
 
     format_output(threadlist)
     combine_logs(logfile_prefix)
@@ -261,6 +269,7 @@ def main():
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
+    parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
 
     parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from. Negative values leave out tests from the end as with slicing.')
 

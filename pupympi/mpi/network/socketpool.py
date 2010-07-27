@@ -51,7 +51,7 @@ class SocketPool(object):
     def __init__(self, max_size):
         self.sockets = []
         self.max_size = max_size
-        self.readonly = False
+        self.readonly = False #This will be set True during network initialization if a static socket pool is specified
         self.metainfo = {}
         
         self.sockets_lock = threading.Lock()
@@ -119,7 +119,7 @@ class SocketPool(object):
             pass
         
         
-        if len(self.sockets) > self.max_size: # Throw one out if there are too many
+        if len(self.sockets) >= self.max_size: # Throw one out if there are too many
                 Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
                 self._remove_element()
                 
