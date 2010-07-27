@@ -87,7 +87,14 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     # Gauge how many tests are to be run (to provide progression status during long tests)
     global testsToRun, testsDone
     if fixed_test:
-        testsToRun = 1
+        testsToRun = 0
+        # Run through all modules to make sure that a test of specified name exists
+        for module in modules:
+            for function in dir(module):
+                if function.startswith("test_"):
+                    if function == "test_"+fixed_test:
+                        testsToRun += 1
+        fixed = fixed_test
     elif fixed_module:
         testsToRun = 0
         for module in modules:
@@ -96,7 +103,13 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
                 for function in dir(module):
                     if function.startswith("test_"):
                         testsToRun += 1
+        fixed = fixed_module
     testsDone = 0
+    
+    valid_tests = True
+    if testsToRun < 1:
+        print "%s is not a valid test or module!" % fixed
+        valid_tests = False
     
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
@@ -156,7 +169,6 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
-        ci.w_rank = mpi.MPI_COMM_WORLD.rank()
         
         ci.select_source = True 
         ci.select_tag = True         
@@ -223,7 +235,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     mpi.finalize()
     
     # Output to .csv file
-    if root:
+    if root and valid_tests:
         
         sizekeys = [0]+[(2**i) for i in range(23)]
         # Find out what the practical limit was
@@ -263,7 +275,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         # Test parameters
         header = "# =============================================================\n"
         header += "# pupyMark - pupyMPI benchmarking\n"        
-        header += "# \n"
+        header += "# \n"        
         header += "# %s limit:%s processes:%i\n" % (("test:"+fixed_test if fixed_test is not None else "module:"+fixed_module),nicelimit,ci.w_num_procs)
         header += "# \n"
         header += "# start: %s \n" % nicestart
