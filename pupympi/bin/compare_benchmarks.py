@@ -42,8 +42,24 @@ def options_and_arguments():
     return args
 
 def parse_benchmark_data(folders):
+    import glob
+    
+    folder_contents = []
+    for folder in folders:
+        cluster_runs = glob.glob(folder + "*")
+        
+        # Only folders.
+        
+        folder_contents.update(cluster_runs)
+    
+    print folder_contents
+
+    
     data = None
     
+    return data
+
+def sanitize_data(data):
     return data
 
 def write_html_and_js(data):
@@ -55,6 +71,8 @@ if __name__ == "__main__":
     
     # Parse benchmark data for each folder into an internal structure. 
     data = parse_benchmark_data(folders)
+    
+    data = sanitize_data(data)
 
     # If we should choose to implement further output functions we should
     # add an options above and select an output function here.
