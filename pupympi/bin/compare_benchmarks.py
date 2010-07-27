@@ -304,4 +304,9 @@ if __name__ == "__main__":
     t = Timer(timer_wrapper)
     t = t.timeit(number=1)
     
-    print "Goodbye. We parsed %d benchmark folders in %.2f seconds" % (len(folders), t)
+    print """
+    Goodbye. We parsed %d benchmark folders in %.2f seconds. 
+    
+    You can generate all the final files by changing into the %s folder 
+    and type "Make".
+    """ % (len(folders), t, output_folder_name)
