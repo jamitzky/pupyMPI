@@ -2,7 +2,7 @@
 """
 Test the strange variance for different datasizes when running collective benchmarks
 """
-import time, array
+import time, array, sys
 from mpi import MPI
 from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max, MPI_list_max
     
@@ -47,6 +47,14 @@ def test_Reduce(datasize, max_iterations):
     t2 = time.time()
     delta = t2 - t1
     return delta
+
+# If a particular size is specified as user argument, only that will be tested
+try:
+    specified_size = sys.argv[1]
+    if specified_size: # Eliminate others from datasizes
+        datasizes = [int(specified_size)] #NOTE: could check for integer type here
+except:
+    pass
 
 testdata = gen_testset(max(datasizes))
 for d in datasizes:
