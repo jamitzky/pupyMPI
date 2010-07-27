@@ -951,7 +951,9 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
-        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
+
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
+        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
         cr.start_allreduce(op)
         data = cr.wait()
         
