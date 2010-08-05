@@ -30,6 +30,12 @@ class BaseRequest(object):
         # information without locking (like test()). We implement the release() and
         # acquire function on this class directly so the variable stays private
         self._lock = threading.Lock()
+        """
+        NOTE: This lock is never used. We should consider possible race conditions
+        arising from concurrent status updates on a request object. If none are
+        plausible we should remove this lock and with it the release and acquire functions
+        below.
+        """        
         
         # Start an event for waiting on the request
         self._waitevent = threading.Event()
@@ -86,12 +92,10 @@ class Request(BaseRequest):
             raise Exception("Updating a request from %s to %s" % self.status, status)
         
         # We only update if there is data (ie. a recv operation)
-        # NOTE: Even if a send includes the data parameter it is only a superflous overwrite
         if data is not None:
             self.data = data
             
-        # If the status is ready we're enabling the wait operation
-        # to complete
+        # Enable the wait operation to complete if the status is ready or cancelled
         if status in ("ready", "cancelled"):
             self._waitevent.set()
 
