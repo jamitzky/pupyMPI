@@ -18,18 +18,21 @@ try:
   # NB. only avaliable for 32-bit architectures
   import psyco
   psyco.full()
-  print 'Psyco installed!'
+  #print 'Psyco installed!'
 except:
-  print 'No psyco installed - this will be slow!!!'
+  pass
+  #print 'No psyco installed - this will be slow!!!'
 
 #This solves the system of partial differential equations
 #Parameter is
 #  data - the problem instance matrix with temperatures
 
-def solve(data, rboffset):
-  global update_freq, mpi, epsilon, wholeproblem
+update_freq = 10
+useGraphics = 0
 
-  comm = mpi.MPI_COMM_WORLD
+def solve(comm, data, rboffset):
+  global update_freq, epsilon, wholeproblem
+
   rank = comm.rank()
   wsize = comm.size()
 
@@ -50,7 +53,7 @@ def solve(data, rboffset):
   if rank == wsize - 1: # Do not update last row
     h -= 1
 
-  print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
+  #print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
 
   # Send initial black points
   if 0 < rank:
@@ -176,9 +179,8 @@ def solve(data, rboffset):
     owndelta = delta
     delta = comm.allreduce(delta, sum)
 
-def setup(mpi, xsize, ysize, useGraphics):
+def setup(comm, xsize, ysize, useGraphics):
     global update_freq, epsilon, wholeproblem
-    comm = mpi.MPI_COMM_WORLD
     rank = comm.rank()
     wsize = comm.size()
 
@@ -200,8 +202,8 @@ def setup(mpi, xsize, ysize, useGraphics):
         problem[-1]=-273.15 #Bottom
 
 
-    print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
-    print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
+    #print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
+    #print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
 
     rboffset = (int(ymin % 2) == 1)
 
@@ -234,9 +236,8 @@ if __name__ == "__main__":
     comm = mpi.MPI_COMM_WORLD
     rank = comm.rank()
 
-    (problem, rboffset) = setup(mpi, xsize, ysize, useGraphics)
+    (problem, rboffset) = setup(comm, xsize, ysize, useGraphics)
 
-    update_freq=10
     if 0==rank and useGraphics:
       g=sorgraphics.GraphicsScreen(xsize,ysize)
 
@@ -246,7 +247,7 @@ if __name__ == "__main__":
     print "solving with rb offset %d" % (rboffset)
 
     #Start solving the heat equation
-    solve(problem, rboffset)
+    solve(comm, problem, rboffset)
 
     mpi.finalize()
 
