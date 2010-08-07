@@ -25,11 +25,13 @@ except:
 #This solves the system of partial differential equations
 #Parameter is
 #  data - the problem instance matrix with temperatures
+
 def solve(data, rboffset):
-  global update_freq, mpi, epsilon
+  global update_freq, mpi, epsilon, wholeproblem
 
   comm = mpi.MPI_COMM_WORLD
   rank = comm.rank()
+  wsize = comm.size()
 
   BLACK_ROW_TAG = 50
   RED_ROW_TAG = 51
@@ -174,68 +176,83 @@ def solve(data, rboffset):
     owndelta = delta
     delta = comm.allreduce(delta, sum)
 
-#Default problem size
-xsize=500
-ysize=500
-useGraphics=False
-i=0
+def setup(mpi, xsize, ysize, useGraphics):
+    global update_freq, epsilon, wholeproblem
+    comm = mpi.MPI_COMM_WORLD
+    rank = comm.rank()
+    wsize = comm.size()
 
-for opt in pl.sys.argv:
-    if opt == "--":
-        i = 1
-    elif i > 0 and not opt.startswith("-"):
-        if i == 1:
-            xsize = int(opt)
-        if i == 2:
-            ysize = int(opt)
-        if i == 3:
-            useGraphics = int(opt)
-        if i > 3:
-            print("Parameters <x-size> <y-size> <use graphics>")
-            pl.sys.exit(-1)
-        i+=1
+    ymin = floor(rank * ysize / wsize)
+    ymax = floor((rank + 1) * ysize / wsize)
+    epsilon=.1*(xsize-1)*(ysize-1)
 
-mpi = MPI()
-comm = mpi.MPI_COMM_WORLD
-rank = comm.rank()
-wsize = comm.size()
+    problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
 
-ymin = floor(rank * ysize / wsize)
-ymax = floor((rank + 1) * ysize / wsize)
-epsilon=.1*(xsize-1)*(ysize-1)
+    problem[:,:1]=-273.15 #Left
+    problem[:,-1:]=-273.15 #Right
 
-problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
+    if rank == 0:
+        if useGraphics:
+            wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
+        problem[0,1:-1]=40. #Top
 
-problem[:,:1]=-273.15 #Left
-problem[:,-1:]=-273.15 #Right
+    if rank == wsize - 1:
+        problem[-1]=-273.15 #Bottom
 
-if rank == 0:
-    if useGraphics:
-        wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
-    problem[0,1:-1]=40. #Top
 
-if rank == wsize - 1:
-    problem[-1]=-273.15 #Bottom
+    print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
+    print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
 
-print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
-print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
+    rboffset = (int(ymin % 2) == 1)
 
-update_freq=10
-if 0==rank and useGraphics:
-  g=sorgraphics.GraphicsScreen(xsize,ysize)
+    return (problem, rboffset)
 
-timer=timer.StopWatch()
-timer.Start()
 
-print "solving with rb offset %d" % (ymin % 2)
+if __name__ == "__main__":
+    #Default problem size
+    xsize=500
+    ysize=500
+    useGraphics=False
+    i=0
 
-#Start solving the heat equation
-solve(problem, int(ymin % 2)==1)
+    for opt in pl.sys.argv:
+        if opt == "--":
+            i = 1
+        elif i > 0 and not opt.startswith("-"):
+            if i == 1:
+                xsize = int(opt)
+            if i == 2:
+                ysize = int(opt)
+            if i == 3:
+                useGraphics = int(opt)
+            if i > 3:
+                print("Parameters <x-size> <y-size> <use graphics>")
+                pl.sys.exit(-1)
+            i+=1
 
-mpi.finalize()
+    mpi = MPI()
+    comm = mpi.MPI_COMM_WORLD
+    rank = comm.rank()
 
-timer.Stop()
-print "Solved the successive over-relaxation in %s" % (timer.timeString())
+    (problem, rboffset) = setup(mpi, xsize, ysize, useGraphics)
 
-if 0==rank and useGraphics:
-  timer.Sleep(5)
+    update_freq=10
+    if 0==rank and useGraphics:
+      g=sorgraphics.GraphicsScreen(xsize,ysize)
+
+    timer=timer.StopWatch()
+    timer.Start()
+
+    print "solving with rb offset %d" % (rboffset)
+
+    #Start solving the heat equation
+    solve(problem, rboffset)
+
+    mpi.finalize()
+
+    timer.Stop()
+    print "Solved the successive over-relaxation in %s" % (timer.timeString())
+
+    if 0==rank and useGraphics:
+      timer.Sleep(5)
+
