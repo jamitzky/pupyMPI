@@ -12,11 +12,11 @@ meta_enlist_all = False
 meta_result_configuration = "special"
 meta_schedule = {
     50: 10,
-    100: 10,
-    250: 10,
-    500: 5,
-    1000: 5,
-    2000: 2,
+    100: 8,
+    250: 5,
+    500: 2,
+    1000: 1,
+    2000: 1,
 }
 
 def test_SOR(size, max_iterations):
