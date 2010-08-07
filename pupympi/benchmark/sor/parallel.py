@@ -179,6 +179,13 @@ def solve(comm, data, rboffset):
     owndelta = delta
     delta = comm.allreduce(delta, sum)
 
+  # Receive "leftover" black points and discard
+  if rank != 0:
+      comm.recv(rank-1, BLACK_ROW_TAG)
+  if rank != wsize - 1:
+      comm.recv(rank+1, BLACK_ROW_TAG)
+
+
 def setup(comm, xsize, ysize, useGraphics):
     global update_freq, epsilon, wholeproblem
     rank = comm.rank()
