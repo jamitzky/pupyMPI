@@ -8,15 +8,17 @@ import comm_info as ci
 
 meta_has_meta = True
 meta_processes_required = 1
-meta_enlist_all = False
+meta_enlist_all = True
 meta_result_configuration = "special"
 meta_schedule = {
     50: 10,
-    100: 8,
-    250: 5,
-    500: 2,
-    1000: 1,
-    2000: 1,
+    100: 10,
+    250: 10,
+    500: 10,
+    1000: 10,
+    2000: 10,
+    4000: 10,
+    8000: 5,
 }
 
 def test_SOR(size, max_iterations):
@@ -30,6 +32,7 @@ def test_SOR(size, max_iterations):
     t1 = ci.clock_function()
 
     for n in range(0, max_iterations):
+	ci.synchronize_processes()
         sor.parallel.solve(ci.communicator, copy.deepcopy(problem), rboffset)
 
     t2 = ci.clock_function()
