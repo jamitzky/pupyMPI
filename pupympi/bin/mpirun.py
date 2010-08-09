@@ -72,6 +72,9 @@ def parse_options():
         
         if options.debug and options.quiet:
             parser.error("options --debug and -quiet are mutually exclusive")
+
+        if options.np is None:
+            parser.error("You need to specify the number of processes to start with -c or --np.")
             
         if args is None or len(args) == 0: 
             parser.error("You need to specify a positional argument: the user program to run.")
