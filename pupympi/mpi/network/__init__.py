@@ -90,13 +90,16 @@ class Network(object):
         self.options = options
         self.t_in = communicator_class(self, options.rank, self.socket_pool)
         self.t_in.daemon = True
+        self.t_in.name = "Comms Rx"
         self.t_in.start()
         
         if options.single_communication_thread:
             self.t_out = self.t_in
             self.t_out.type = "combo"
+            self.t_out.name = "Comms"
         else:
             self.t_out = communicator_class(self, options.rank, self.socket_pool)
+            self.t_out.name = "Comms Tx"
             self.t_out.daemon = True
             self.t_out.start()
             self.t_out.type = "out"
