@@ -1116,7 +1116,7 @@ class Communicator:
 
             mpi.finalize()
         """
-        # We short circuit this so make it faster
+        # We short circuit this to make it faster
         for request in request_list:
             if not request.test():
                 return False
@@ -1216,7 +1216,7 @@ class Communicator:
         
     def waitall(self, request_list):
         """
-        Waits for all the requets in the given list and returns a list
+        Waits for all the requests in the given list and returns a list
         with the returned data. 
 
         **Example**
@@ -1257,12 +1257,43 @@ class Communicator:
         .. note:: 
             See also the :func:`waitany` and :func:`waitsome` functions. 
         """
-        return_list = []
-
-        for request in request_list:
-            data = request.wait()
-            return_list.append(data)
+        
+        # The original King of Code (tm) version
+        
+        #return_d = {}
+        #requests = {}
+        #for i in range(len(request_list)):
+        #    requests[i] = request_list[i]
+        #    
+        #while requests:
+        #    idxs = requests.keys()
+        #    for idx in idxs:
+        #        if requests[idx].test():
+        #            return_d[idx] = requests[idx].wait()
+        #            del requests[idx]
+        #    
+        #    time.sleep(0.01)
+        #            
+        #return return_d.values()
+        
+        # New and improved Creamboy version
+        remaining = len(request_list)
+        return_list = ["UNFILLED" for x in range(remaining)]
+        
+        while remaining > 0:
+            i = 0
+            for request in request_list:
+                if return_list[i] == "UNFILLED" and request.test():
+                    return_list[i] = request.wait()
+                    remaining -= 1
+                    
+                i += 1
+            
+            time.sleep(0.01)
+                    
         return return_list
+
+#       Logger().warning("rank: %i return_list %s, badness:%s \n request list: %s" % (r,return_list,badness,request_list) )
         
     def waitany(self, request_list):
         """
