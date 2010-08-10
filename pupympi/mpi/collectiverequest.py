@@ -124,7 +124,7 @@ class CollectiveRequest(BaseRequest):
                     full_meta = getattr(data_func, "full_meta", False)
                     
                     if not full_meta:
-                        Logger().warning("not full_meta and data_list:%s" % data_list)
+                        #Logger().warning("not full_meta and data_list:%s" % data_list)
                         data_list =  [x['value'] for x in data_list]
                         #Logger().warning("...and then data_list:%s" % data_list)
 
