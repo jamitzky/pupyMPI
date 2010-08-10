@@ -32,10 +32,13 @@ from mpi.network.utils import pickle
 
 from mpi.request import Request
 
-import mpi.profiler
-
 try:
     import yappi
+except ImportError:
+    pass
+
+try:
+    import pupyprof
 except ImportError:
     pass
 
@@ -199,8 +202,15 @@ class MPI(Thread):
         # Start built-in profiling facility
         self._profiler_enabled = False
         if options.enable_profiling:
-            profiler.start()
-            self._profiler_enabled = True
+            if self._yappi_enabled:
+                logger.warn("Running yappi and pupyprof simultaneously is unpossible. Pupyprof has been disabled.");
+            else:
+                try:
+                    import pupyprof
+                    self._profiler_enabled = True
+                except ImportError:
+                    logger.warn("Pupyprof is not supported on this system. Tracefile will not be generated");
+                    self._profiler_enabled = False
 
         self.network = Network(self, options)
         
@@ -239,6 +249,9 @@ class MPI(Thread):
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
         
+        if self._profiler_enabled:
+            pupyprof.start()
+
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
@@ -370,8 +383,8 @@ class MPI(Thread):
 
         # Start built-in profiling facility
         if self._profiler_enabled:
-            profiler.stop()
-            profiler.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            pupyprof.stop()
+            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
