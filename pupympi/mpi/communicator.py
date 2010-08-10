@@ -162,30 +162,6 @@ class Communicator:
         newcomm.ceiling = new_comm_ceiling
         return newcomm
 
-    def _comm_create_coll(self, group):
-        """
-        Collective implementation of the comm_create call
-        """
-        new_id = -1
-
-        if self.rank() == 0:
-            # send request to rank 0 of mpi_comm_world (if already rank 0 of mcw, just send the message anyway)
-            self.MPI_COMM_WORLD.send(None, self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
-            new_id = self.MPI_COMM_WORLD.recv(self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
-
-        if new_id < 0:
-            raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
-        
-        # wait for answer on id
-        CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
-        
-        # Non-members have rank -1
-        if not group._owner_is_member():
-            return None
-            
-        newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
-        return newcomm
-
     def comm_free(self):
         """
         This operation marks the communicator object as closed. 
