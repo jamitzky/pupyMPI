@@ -17,7 +17,9 @@
 #
 from mpi.request import BaseRequest
 from mpi.logger import Logger
+from mpi import constants
 
+# this is used when we do not want to transform the data
 identity = lambda x : x
 
 class CollectiveRequest(BaseRequest):
@@ -26,38 +28,56 @@ class CollectiveRequest(BaseRequest):
     - "Everybody knows you don't go full_meta!" (aka. let's all find more descriptive names)
     - Collective calls in general do not have to have both up and down traversal of the tree,
       the previously perceived global blocking requirement has been deemed out by Brian(!)
-    - When passing lists around in the tre they should not be flattened before it is neccessary so we avoid excessive iterating
+    - When passing lists around in the tree they should not be flattened before it is neccessary so we avoid excessive iterating
     - We should test that the broadcast trees are indeed reused
     - When we reduce or gather we should not degrade to allreduce or alltoall and just throw away the redundant data
       instead we should make sure only the needed data is passed around the tree
     """
 
-    def __init__(self, tag, communicator, data=None, root=0, start=True):
+    def __init__(self, tag, communicator, data=None, root=0, mpi_op=None):
         super(CollectiveRequest, self).__init__()
 
         self.communicator = communicator
         self.tag = tag
         self.initial_data = data
-        self.root = root
-        self.start = start
+        self.root = root        
+        self.mpi_op = mpi_op
 
-        # Meta information we use to keep track of what is going on. There are some different
-        # status a request object can be in:
+        # We inherit the status field from BaseRequest, there are some different
+        # states a collective request object can be in:
         # 
         # 'new' ->         The object is newly created. If this is send the lower layer can start to 
         #                  do stuff with the data
-        #                  'cancel' is not valid for collective ops: all are blocking.(NBC in mpi2 also cannot be cancelled)
-        # 'inprogress' ->  Collective request is in progress but nothing new on the wire
         # 'ready'     ->   Means we have the data (in receive) or pickled the data (send) and can
         #                  safely return from a test or wait call.
-        self._m = {'status' : 'new' }
-
+        #
+        # Note that 'cancel' is not valid for collective ops: all are blocking.
+        # (NBC in mpi2 also cannot be cancelled)
         #Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
         
-        # TODO: Let's see if we can't eliminate this...
-        if start:
+        # Type specific start up
+        if self.tag == constants.TAG_BARRIER:
+            # The barrier does nothing really
             self.data = self.two_way_tree_traversal()
-
+        elif self.tag == constants.TAG_BCAST:
+            self.start_bcast()
+        elif self.tag == constants.TAG_ALLGATHER:
+            self.start_allgather()
+        elif self.tag == constants.TAG_ALLREDUCE:
+            self.start_allreduce(self.mpi_op)
+        elif self.tag == constants.TAG_ALLTOALL:
+            self.start_alltoall()
+        elif self.tag == constants.TAG_GATHER:
+            # For now gather is just an all_gather where everybody but root throws away the result
+            self.start_allgather()
+        elif self.tag == constants.TAG_REDUCE:
+            # For now reduce is just an all_reduce where everybody but root throws away the result
+            self.start_allreduce(self.mpi_op)
+        elif self.tag == constants.TAG_SCAN:
+            self.start_scan(self.mpi_op)
+        elif self.tag == constants.TAG_SCATTER:
+            self.data = self.two_way_tree_traversal()
+            
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
         def traverse(direction, nodes_from, nodes_to, data_func, initial_data, iteration=1):
             #Logger().debug("""
@@ -298,21 +318,9 @@ class CollectiveRequest(BaseRequest):
             final_data[item['rank']] = item['value'][rank]
         
         self.data = final_data
-
-    def cancel(self):
-        """
-        Cancel a request. This can be used to free memory, but the request must be redone
-        by all parties involved.
-        
-        http://www.mpi-forum.org/docs/mpi-11-html/node50.html
-        """
-        # We just set a status and return right away. What needs to happen can be done
-        # at a later point
-        self._metadata['status'] = 'cancelled'
-        Logger().debug("Cancelling a request with tag" % self.tag)
         
     def get_status(self):
-        return self._metadata['status']
+        return self.status
 
     def wait(self):
         """
