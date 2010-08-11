@@ -121,17 +121,16 @@ void _state_change(enum states new_state) {
 		state_depth++;
 
 		// Create stats item and insert at end of stat list
-		printf("[%.3f] create statitem %s\n", microtime(), state_names[new_state]);
 		si = _create_statitem(new_state);
 		sni = (_statnode *)ymalloc(sizeof(_statnode));
+		sni->it = si;
+		sni->next = NULL;
 
 		if(NULL == statshead) {
 			statstail = statshead = sni;
 		} else {
 			p = statstail;
 			p->next = sni;
-			sni->it = si;
-			sni->next = NULL;
 			statstail = sni;
 		}
 	}
@@ -377,13 +376,10 @@ get_stats(PyObject *self, PyObject *args)
     if (PyList_Append(li, PyString_FromString("Timestamp           State\n\n")) < 0)
         goto err;
 
-	printf("Boo. Statshead is %x\n", (uint32_t)statshead);
-
     fcnt = 0;
     p = statshead;
     while(p) {
 		snprintf(temp, 127, "%.3f %s", (p->it->tv.tv_sec + (p->it->tv.tv_usec / 1000000.0)), state_names[p->it->state]);
-		printf("%.3f %s\n", (p->it->tv.tv_sec + (p->it->tv.tv_usec / 1000000.0)), state_names[p->it->state]);
         buf = PyString_FromString(temp);
         if (!buf)
             goto err;
