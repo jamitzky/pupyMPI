@@ -21,6 +21,16 @@ from mpi.logger import Logger
 identity = lambda x : x
 
 class CollectiveRequest(BaseRequest):
+    """
+    ISSUES:
+    - "Everybody knows you don't go full_meta!" (aka. let's all find more descriptive names)
+    - Collective calls in general do not have to have both up and down traversal of the tree,
+      the previously perceived global blocking requirement has been deemed out by Brian(!)
+    - When passing lists around in the tre they should not be flattened before it is neccessary so we avoid excessive iterating
+    - We should test that the broadcast trees are indeed reused
+    - When we reduce or gather we should not degrade to allreduce or alltoall and just throw away the redundant data
+      instead we should make sure only the needed data is passed around the tree
+    """
 
     def __init__(self, tag, communicator, data=None, root=0, start=True):
         super(CollectiveRequest, self).__init__()
@@ -44,6 +54,7 @@ class CollectiveRequest(BaseRequest):
 
         #Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
         
+        # TODO: Let's see if we can't eliminate this...
         if start:
             self.data = self.two_way_tree_traversal()
 
@@ -57,12 +68,15 @@ class CollectiveRequest(BaseRequest):
             #\tIteration: %d
             #""" % (nodes_from, nodes_to, self.initial_data, iteration))
             
-            # If The direction is up, so we find the result of all our children
-            # and execute som function on these data. The result of the function
-            # is passed on to our parent. The result is also returned from the
-            # function, and if this is the last direction in the traversal the
-            # callee will get the data. 
-            data_list = []
+            
+            """            
+            If direction is up, we find the results of all our children and
+            execute some function on this data. The result of the function is
+            passed on to the parent node.
+            The result is also returned from the function, and if this is the
+            last direction in the traversal the caller will get the data.
+            """
+            data_list = [] # Holds accumulated results from child nodes
 
             # When receiving from N people, we're making them non-blocking so
             # we can receive data while we wait for the last one. It might make
@@ -72,14 +86,24 @@ class CollectiveRequest(BaseRequest):
             for rank in nodes_from:
                 handle = self.communicator.irecv(rank, self.tag)
                 request_list.append(handle)
+                
+            # TODO: Reimplement so that lists are not flattened
 
-            for handle in request_list:
-                data = handle.wait()
-                if data and isinstance(data, list):
+            tmp_list = self.communicator.waitall(request_list)
+            for data in tmp_list:
+                if isinstance(data, list):
                     for data_item in data:
                         data_list.append(data_item)
                 else:
                     data_list.append(data)
+
+            #for handle in request_list:
+            #    data = handle.wait()
+            #    if data and isinstance(data, list):
+            #        for data_item in data:
+            #            data_list.append(data_item)
+            #    else:
+            #        data_list.append(data)
              
             #Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
 
@@ -100,9 +124,14 @@ class CollectiveRequest(BaseRequest):
                     full_meta = getattr(data_func, "full_meta", False)
                     
                     if not full_meta:
+                        #Logger().warning("not full_meta and data_list:%s" % data_list)
                         data_list =  [x['value'] for x in data_list]
+                        #Logger().warning("...and then data_list:%s" % data_list)
+
                 
                     data_list = {'rank' : self.communicator.rank(), 'value' : data_func(data_list) }
+                    #Logger().warning("finally data_list:%s" % data_list)
+
                     
             elif iteration == 2:
                 # Second iteration should just pass the data through the pipeline
