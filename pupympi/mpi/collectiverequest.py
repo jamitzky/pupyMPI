@@ -80,7 +80,8 @@ class CollectiveRequest(BaseRequest):
             
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
-            self.start_allreduce(self.mpi_op)
+            #self.start_allreduce(self.mpi_op)
+            self.start_reduce_2(self.mpi_op)
             
         elif self.tag == constants.TAG_SCAN:
             self.start_scan(self.mpi_op)
@@ -274,7 +275,7 @@ class CollectiveRequest(BaseRequest):
         return data_list
 
     def traverse_up(self, nodes_from, nodes_to, initial_data=None, operation=None, descendants=[]):
-        data_list = [None for x in range(self.communicator.size())] # Holds accumulated results
+        data_list = [ None for x in range(self.communicator.size()) ] # Holds accumulated results
 
         # Generate requests
         request_list = []        
@@ -299,7 +300,7 @@ class CollectiveRequest(BaseRequest):
         
         # Add own data to message
         data_list[self.communicator.rank()] = initial_data # put into right place (globally rank ordered)
-                
+        
         # Pass on the data
         for rank in nodes_to:
             self.communicator.send(data_list, rank, self.tag)
@@ -365,6 +366,55 @@ class CollectiveRequest(BaseRequest):
         
         self.data = results
         
+    
+    def start_reduce_2(self, operation):
+        """
+        Reduce N sequences of M elements (normally at least one element per sequence)
+        with a chosen reduction operation to one sequence of M elements.
+        
+        If partial reduction is allowed we partially reduce along the way in the
+        tree. Otherwise all sequences are joined in order and the reduction applied
+        to the final sequence.
+        
+        When reducing sequences they must all be of same length since reduction
+        is done element-wise and the result is a sequence of the same length.
+        
+        Reducing an empty sequence - eg. "" or [] - will return the same type.
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        results = self.traverse_up(nodes_from, nodes_to, operation=operation, initial_data=self.initial_data, descendants=descendants)
+        
+        # If root reduce on the results - if not nevermind data is discarded later
+        if self.communicator.rank() == self.root:
+            reduced_results = self._reduce_elementwise(results,operation)
+            Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
+        else:
+            reduced_results = None
+        
+        self.data = reduced_results
+
+        #self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
+        #
+        #partial_data = getattr(operation, "partial_data", False)
+        #if not partial_data:
+        #    full_meta = getattr(operation, "full_meta", False)
+        #    
+        #    if not full_meta:
+        #        self.data = [x['value'] for x in self.data]
+        #
+        #    self.data = operation(self.data) 
+        #else:
+        #    if isinstance(self.data, list):
+        #        self.data = self.data.pop()['value']
+        #    else:
+        #        self.data = self.data['value']
+
         
     def start_bcast(self):
         """
@@ -448,6 +498,27 @@ class CollectiveRequest(BaseRequest):
         
         self.data = final_data
         
+        
+    def _reduce_elementwise(self,sequences,operation):
+        # TODO: Generalize so other iterables than lists work here
+        # TODO: Consider checking that all sequences are same length (max(results) = min(results))
+        reduced_results = []
+        no_seq = len(sequences) # How many sequences
+        seq_len = len(sequences[0]) # How long is a sequence
+        for i in range(seq_len):
+            try:
+                temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
+            except IndexError, e:
+                # If any sequence is shorter than the first one an IndexError will be raised
+                print "BAD"
+                raise e
+                # TODO: Raise proper error here
+            # Apply operation to temp list and store result
+            reduced_results.append(operation(temp_list))
+            
+        return reduced_results
+
+
     def get_status(self):
         return self.status
 

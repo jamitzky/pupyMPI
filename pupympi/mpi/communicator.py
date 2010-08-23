@@ -935,7 +935,7 @@ class Communicator:
 
         #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
         #cr.start_allreduce(op)
-        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, mpi_op=op)
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data,root=root, mpi_op=op)
         data = cr.wait()
         
         #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
