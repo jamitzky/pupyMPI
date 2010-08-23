@@ -415,7 +415,7 @@ get_stats(PyObject *self, PyObject *args)
     li = PyList_New(0);
     if (!li)
         goto err;
-    if (PyList_Append(li, PyString_FromString("Timestamp           State\n\n")) < 0)
+    if (PyList_Append(li, PyString_FromString("# Timestamp    State")) < 0)
         goto err;
 
     fcnt = 0;
