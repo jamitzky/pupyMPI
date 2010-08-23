@@ -371,6 +371,7 @@ class CollectiveRequest(BaseRequest):
         """
         Reduce N sequences of M elements (normally at least one element per sequence)
         with a chosen reduction operation to one sequence of M elements.
+        Alternatively reduce N elements to one element.
         
         If partial reduction is allowed we partially reduce along the way in the
         tree. Otherwise all sequences are joined in order and the reduction applied
@@ -380,6 +381,12 @@ class CollectiveRequest(BaseRequest):
         is done element-wise and the result is a sequence of the same length.
         
         Reducing an empty sequence - eg. "" or [] - will return the same type.
+        
+        ISSUES:
+         - Need to decide how to treat strings, as a single element or as an iterable
+           If we treat a stand-alone string as an iterable, the user can still achieve the single element version by putting the string in a list
+         - Need to decide if we will allow sets and other iterables
+         - Need validation on sequences being of equal length and type but maybe better to just catch all possible errors.
         """        
         # Get a tree with proper root
         tree = self.communicator.get_broadcast_tree(root=self.root)
@@ -392,29 +399,20 @@ class CollectiveRequest(BaseRequest):
         
         # If root reduce on the results - if not nevermind data is discarded later
         if self.communicator.rank() == self.root:
-            reduced_results = self._reduce_elementwise(results,operation)
+            # If it is a sequence of elements use elementwise reduction
+            # (do only list for now, later maybe more iterables)            
+            if isinstance(results[0],list):
+                reduced_results = self._reduce_elementwise(results,operation)
+            elif isinstance(results[0],str):
+                char_list = self._reduce_elementwise(results,operation)
+                reduced_results = ''.join(char_list) # join chars into string
+            else:
+                reduced_results = operation(results)
             Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
         else:
             reduced_results = None
         
         self.data = reduced_results
-
-        #self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
-        #
-        #partial_data = getattr(operation, "partial_data", False)
-        #if not partial_data:
-        #    full_meta = getattr(operation, "full_meta", False)
-        #    
-        #    if not full_meta:
-        #        self.data = [x['value'] for x in self.data]
-        #
-        #    self.data = operation(self.data) 
-        #else:
-        #    if isinstance(self.data, list):
-        #        self.data = self.data.pop()['value']
-        #    else:
-        #        self.data = self.data['value']
-
         
     def start_bcast(self):
         """
@@ -497,9 +495,14 @@ class CollectiveRequest(BaseRequest):
             final_data[item['rank']] = item['value'][rank]
         
         self.data = final_data
-        
-        
+
+    
     def _reduce_elementwise(self,sequences,operation):
+        """
+        Perform a element-wise reduction on elements of equal length sequences
+        
+        Sequences can be everything iterable
+        """                
         # TODO: Generalize so other iterables than lists work here
         # TODO: Consider checking that all sequences are same length (max(results) = min(results))
         reduced_results = []
