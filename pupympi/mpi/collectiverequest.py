@@ -59,118 +59,37 @@ class CollectiveRequest(BaseRequest):
         if self.tag == constants.TAG_BARRIER:
             # The barrier does nothing really
             self.data = self.two_way_tree_traversal()
+            
         elif self.tag == constants.TAG_BCAST:
-            self.start_bcast()
+            #self.start_bcast()
+            self.start_bcast_2()
+            
         elif self.tag == constants.TAG_ALLGATHER:
             self.start_allgather()
+            
         elif self.tag == constants.TAG_ALLREDUCE:
             self.start_allreduce(self.mpi_op)
+            
         elif self.tag == constants.TAG_ALLTOALL:
             self.start_alltoall()
+            
         elif self.tag == constants.TAG_GATHER:
             # For now gather is just an all_gather where everybody but root throws away the result
-            self.start_allgather()
+            #self.start_allgather()
+            self.start_gather_2()
+            
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
             self.start_allreduce(self.mpi_op)
+            
         elif self.tag == constants.TAG_SCAN:
             self.start_scan(self.mpi_op)
+            
         elif self.tag == constants.TAG_SCATTER:
-            self.data = self.two_way_tree_traversal()
-            
+            #self.data = self.two_way_tree_traversal()
+            self.start_scatter_2()
+
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
-        def traverse(direction, nodes_from, nodes_to, data_func, initial_data, iteration=1):
-            #Logger().debug("""
-            #Starting a traverse with:
-            #\tNodes from: %s
-            #\tNodes to: %s
-            #\tInitial data: %s
-            #\tIteration: %d
-            #""" % (nodes_from, nodes_to, self.initial_data, iteration))
-            
-            
-            """            
-            If direction is up, we find the results of all our children and
-            execute some function on this data. The result of the function is
-            passed on to the parent node.
-            The result is also returned from the function, and if this is the
-            last direction in the traversal the caller will get the data.
-            """
-            data_list = [] # Holds accumulated results from child nodes
-
-            # When receiving from N people, we're making them non-blocking so
-            # we can receive data while we wait for the last one. It might make
-            # sense to already start the receiving calls in the other direction?
-            request_list = []
-            
-            for rank in nodes_from:
-                handle = self.communicator.irecv(rank, self.tag)
-                request_list.append(handle)
-                
-            # TODO: Reimplement so that lists are not flattened
-
-            tmp_list = self.communicator.waitall(request_list)
-            for data in tmp_list:
-                if isinstance(data, list):
-                    for data_item in data:
-                        data_list.append(data_item)
-                else:
-                    data_list.append(data)
-
-            #for handle in request_list:
-            #    data = handle.wait()
-            #    if data and isinstance(data, list):
-            #        for data_item in data:
-            #            data_list.append(data_item)
-            #    else:
-            #        data_list.append(data)
-             
-            #Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
-
-            if iteration == 1:
-                # First iteration should do something with our data
-                # and pass the result further.
-                d = {'rank' : self.communicator.rank(), 'value' : initial_data }
-
-                if initial_data is not None:
-                    data_list.append(d)
-                
-                # We look at the operations settings to check if we should run the
-                # data_func or wait until all the operations has gathered.
-                partial_data = getattr(data_func, "partial_data", False)
-                if partial_data:
-                    # Look if we should give the data function all the information
-                    # like rank, or just the plain numbers.
-                    full_meta = getattr(data_func, "full_meta", False)
-                    
-                    if not full_meta:
-                        #Logger().warning("not full_meta and data_list:%s" % data_list)
-                        data_list =  [x['value'] for x in data_list]
-                        #Logger().warning("...and then data_list:%s" % data_list)
-
-                
-                    data_list = {'rank' : self.communicator.rank(), 'value' : data_func(data_list) }
-                    #Logger().warning("finally data_list:%s" % data_list)
-
-                    
-            elif iteration == 2:
-                # Second iteration should just pass the data through the pipeline
-                # we might develop something more clever here to enable filtering
-                # the data so we pass lesser data on the wire.
-                d = initial_data
-                if not data_list:
-                    data_list = d
-
-            else:
-                raise Exception("Collective request got invalid iteration: %s" % iteration)
-            
-            # Pack the data a special way so we can put it into the right stucture later
-            # on. 
-             
-            for rank in nodes_to:
-                self.communicator.send(data_list, rank, self.tag)
-
-            return data_list
 
         def start_traverse(direction, tree, data=None, iteration=1):
             if direction == "up":
@@ -199,7 +118,7 @@ class CollectiveRequest(BaseRequest):
                 # we were not the last nodes.
                 data = None
             
-            return traverse(direction, nodes_from, nodes_to, operation, data, iteration=iteration)
+            return self.traverse(direction, nodes_from, nodes_to, operation, data, iteration)
 
         # Creates reasonable defaults 
         if start_direction == "down":
@@ -237,6 +156,216 @@ class CollectiveRequest(BaseRequest):
         else:
             return rt_second
 
+            
+    def traverse(self,direction, nodes_from, nodes_to, data_func, initial_data, iteration=1):
+        #Logger().debug("""
+        #Starting a traverse with:
+        #\tNodes from: %s
+        #\tNodes to: %s
+        #\tInitial data: %s
+        #\tIteration: %d
+        #""" % (nodes_from, nodes_to, self.initial_data, iteration))
+        
+        """            
+        If direction is up, we find the results of all our children and
+        execute some function on this data. The result of the function is
+        passed on to the parent node.
+        The result is also returned from the function, and if this is the
+        last direction in the traversal the caller will get the data.
+        """
+        data_list = [] # Holds accumulated results from child nodes
+
+        # When receiving from N people, we're making them non-blocking so
+        # we can receive data while we wait for the last one. It might make
+        # sense to already start the receiving calls in the other direction?
+        request_list = []
+        
+        for rank in nodes_from:
+            handle = self.communicator.irecv(rank, self.tag)
+            request_list.append(handle)
+            
+        # TODO: Reimplement so that lists are not flattened
+
+        tmp_list = self.communicator.waitall(request_list)
+        for data in tmp_list:
+            if isinstance(data, list):
+                for data_item in data:
+                    data_list.append(data_item)
+            else:
+                data_list.append(data)
+
+        #for handle in request_list:
+        #    data = handle.wait()
+        #    if data and isinstance(data, list):
+        #        for data_item in data:
+        #            data_list.append(data_item)
+        #    else:
+        #        data_list.append(data)
+         
+        #Logger().debug("Received data for traverse (iteration: %d): %s" % (iteration, data_list))
+
+        if iteration == 1:
+            # First iteration should do something with our data
+            # and pass the result further.
+            d = {'rank' : self.communicator.rank(), 'value' : initial_data }
+
+            if initial_data is not None:
+                data_list.append(d)
+            
+            # We look at the operations settings to check if we should run the
+            # data_func or wait until all the operations has gathered.
+            partial_data = getattr(data_func, "partial_data", False)
+            if partial_data:
+                # Look if we should give the data function all the information
+                # like rank, or just the plain numbers.
+                full_meta = getattr(data_func, "full_meta", False)
+                
+                if not full_meta:
+                    #Logger().warning("not full_meta and data_list:%s" % data_list)
+                    data_list =  [x['value'] for x in data_list]
+                    #Logger().warning("...and then data_list:%s" % data_list)
+
+            
+                data_list = {'rank' : self.communicator.rank(), 'value' : data_func(data_list) }
+                #Logger().warning("finally data_list:%s" % data_list)
+
+                
+        elif iteration == 2:
+            # Second iteration should just pass the data through the pipeline
+            # we might develop something more clever here to enable filtering
+            # the data so we pass lesser data on the wire.
+            d = initial_data
+            if not data_list:
+                data_list = d
+
+        else:
+            raise Exception("Collective request got invalid iteration: %s" % iteration)
+        
+        # Pack the data a special way so we can put it into the right stucture later
+        # on. 
+         
+        for rank in nodes_to:
+            self.communicator.send(data_list, rank, self.tag)
+
+        return data_list
+    
+    def traverse_down(self, nodes_from, nodes_to, initial_data=None):
+        data_list = [] # Holds accumulated results from other nodes        
+
+        # Generate requests
+        request_list = []        
+        for rank in nodes_from:
+            handle = self.communicator.irecv(rank, self.tag)
+            request_list.append(handle)
+        
+        # Receive messages
+        tmp_list = self.communicator.waitall(request_list)
+        for data in tmp_list:
+            data_list.append(data)
+        
+        # If we didn't get anything we are root in the tree so use initial data
+        if not data_list:
+            data_list.append(initial_data)
+                
+        # Pass on the data
+        for rank in nodes_to:
+            self.communicator.send(data_list[0], rank, self.tag)
+        
+        return data_list
+
+    def traverse_up(self, nodes_from, nodes_to, initial_data=None, operation=None, descendants=[]):
+        data_list = [None for x in range(self.communicator.size())] # Holds accumulated results
+
+        # Generate requests
+        request_list = []        
+        for rank in nodes_from:
+            handle = self.communicator.irecv(rank, self.tag)
+            request_list.append(handle)
+        
+        # Receive messages from children
+        tmp_list = self.communicator.waitall(request_list)
+        i = 0 # index
+        # Store messages from children
+        for data in tmp_list:
+            rank = nodes_from[i] # index into nodes_from to get the rank corresponding to the message                        
+            data_list[rank] = data[rank] # put into right place (globally rank ordered)
+            
+            # Store descendant's messages
+            desc = descendants[i]
+            for d in desc:
+                data_list[d] = data[d] # put into right place (globally rank ordered)
+                
+            i += 1
+        
+        # Add own data to message
+        data_list[self.communicator.rank()] = initial_data # put into right place (globally rank ordered)
+                
+        # Pass on the data
+        for rank in nodes_to:
+            self.communicator.send(data_list, rank, self.tag)
+        
+        return data_list
+
+
+    def start_bcast_2(self):
+        """
+        Send a message down the tree
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
+        
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        
+        #Logger().debug("descendants:%s" % (tree.descendants))
+        # Done
+        self.data = results[0] # They should all be equal so just get the first one
+
+    def start_scatter_2(self):
+        """
+        Scatter a message in N parts to N processes
+        
+        TODO: We should filter such that only parts needed further down in the
+              tree are passed on, instead of the whole shebang as we do now.
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
+        
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("descendants:%s" % (tree.descendants))
+        
+        whole_set = results[0] # They should all be equal so just get the first one
+        chunk_size = len(whole_set) / self.communicator.size()
+        rank = self.communicator.rank()
+        self.data =  whole_set[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank
+        
+    def start_gather_2(self):
+        """
+        Gather a message in N parts from N processes
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        
+        self.data = results
+        
+        
     def start_bcast(self):
         """
         Creates a custom down function that will ensure only one item
@@ -324,9 +453,15 @@ class CollectiveRequest(BaseRequest):
 
     def wait(self):
         """
-        Returns data if there are anything. This method should be rewritten to
-        handle stuff like locking, proper waiting for some signal that the
-        request is finished. 
+        Returns data if there is anything.
+        
+        For now this method relies on the fact that a collective request is carried
+        out during the requests creation. When one gets an object to wait on, the
+        data will already have been sent around.
+        
+        This method should probably be rewritten to handle stuff like locking, and
+        proper waiting for some signal that the request is finished a la for normal
+        requests.
         """
         return getattr(self, "data", None)
         
