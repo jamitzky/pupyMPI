@@ -9,6 +9,9 @@
 #include "frameobject.h"
 #include "_ytiming.c"
 #include "_ymem.c"
+#include "_yhashtab.c"
+
+#define EVENTMAP_SIZE 10
 
 // Global variables
 static PyObject *PupyprofError;
@@ -17,6 +20,8 @@ static time_t profstarttime;
 static long long profstarttick;
 static long long profstoptick;
 int state_depth = 1;
+static _htab *eventmap;
+uintptr_t main_threadstate = NULL;
 
 // States
 enum states { STATE_RUNNING, STATE_MPI_COMM, STATE_MPI_COLLECTIVE, STATE_MPI_WAIT, STATE_FINALIZED, MAX_STATES } current_state;
@@ -169,8 +174,30 @@ err:
 }
 
 enum events _event_from_code(PyCodeObject *co, int entering) {
-	/* TODO: hashmap of co addr */
 	char *filename, *name;
+	_hitem *it;
+	enum events ev;
+
+	it = hfind(eventmap, (uintptr_t)co);
+	if(it) {
+		// If in a leaving context return the corresponding LEAVE event
+		if(!entering) {
+			switch((enum events) it->val) {
+				case EV_COLLECTIVE_ENTER:
+					return EV_COLLECTIVE_LEAVE;
+					break;
+				case EV_WAIT_ENTER:
+					return EV_WAIT_LEAVE;
+					break;
+				case EV_COMM_ENTER:
+					return EV_COMM_LEAVE;
+					break;
+				default:
+					break;
+			}
+		}
+		return (enum events) it->val;
+	}
 
 	filename = PyString_AS_STRING(co->co_filename);
 	name = PyString_AS_STRING(co->co_name);
@@ -182,34 +209,38 @@ enum events _event_from_code(PyCodeObject *co, int entering) {
 		   0 == strcmp(name, "reduce") || 0 == strcmp(name, "scan") || 0 == strcmp(name, "scatter")) {
 			// Return collective event enter or leave
 			if(entering)
-				return EV_COLLECTIVE_ENTER;
+				ev = EV_COLLECTIVE_ENTER;
 			else
-				return EV_COLLECTIVE_LEAVE;
+				ev = EV_COLLECTIVE_LEAVE;
+			goto out;
 		}
 		// Point-to-point communication
 		if(0 == strcmp(name, "send") || 0 == strcmp(name, "isend") || 0 == strcmp(name, "recv") || 0 == strcmp(name, "irecv")) {
-			if(entering)
-				return EV_COMM_ENTER;
-			else
-				return EV_COMM_LEAVE;
+			ev = entering ? EV_COMM_ENTER : EV_COMM_LEAVE;
+			goto out;
 		}
 		// Waiting
 		if(0 == strcmp(name, "waitsome") || 0 == strcmp(name, "waitany") || 0 == strcmp(name, "waitall")) {
 			if(entering)
-				return EV_WAIT_ENTER;
+				ev = EV_WAIT_ENTER;
 			else
-				return EV_WAIT_LEAVE;
+				ev = EV_WAIT_LEAVE;
+			goto out;
 		}
 	}
 	// Single request waiting
 	if(NULL != strstr(filename, "pupympi/mpi/request.py") && 0 == strcmp(name, "wait")) {
 		if(entering)
-			return EV_WAIT_ENTER;
+			ev = EV_WAIT_ENTER;
 		else
-			return EV_WAIT_LEAVE;
+			ev = EV_WAIT_LEAVE;
+		goto out;
 	}
 
-	return EV_UNKNOWN;
+	ev = EV_UNKNOWN;
+out:
+	hadd(eventmap, (uintptr_t)co, ev);
+	return ev;
 }
 
 static void
@@ -224,7 +255,7 @@ _call_enter(PyObject *self, PyFrameObject *frame, PyObject *arg, int ccall)
 	
 }
 
-	static void
+static void
 _call_leave(PyObject *self, PyFrameObject *frame, PyObject *arg)
 {
 	new_event = _event_from_code(frame->f_code, 0);
@@ -241,8 +272,16 @@ _prof_callback(PyObject *self, PyFrameObject *frame, int what,
 {
 	// We're only concerned about what the main thread is doing
 	// (hopefully nobody renamed it...)
-	if(0 != strcmp("_MainThread", _get_current_thread_class_name()))
+	if(!main_threadstate) {
+		if(0 == strcmp("_MainThread", _get_current_thread_class_name())) {
+			main_threadstate = (uintptr_t)frame->f_tstate;
+		} else {
+			return 0;
+		}
+	} 
+	if(main_threadstate != (uintptr_t)frame->f_tstate) {
 		return 0;
+	}
 	
 	switch (what) {
     case PyTrace_CALL:
@@ -301,6 +340,9 @@ static int
 _init_profiler(void)
 {
 	statshead = statstail = NULL;
+	eventmap = htcreate(EVENTMAP_SIZE);
+	if(!eventmap)
+		return 0;
     return 1;
 }
 
