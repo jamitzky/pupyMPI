@@ -51,7 +51,8 @@ class Communicator:
         # around. The standard tree is created with rank 0 as the root.
         # Look at the inner "get_broadcast_tree" to see how you can get
         # trees with different roots
-        self.get_broadcast_tree()
+        # TODO: Find out if this has to be done for every communicator?!
+        #self.get_broadcast_tree()
 
     def get_broadcast_tree(self, root=0):
         # Ensure we have the tree structure
@@ -69,8 +70,7 @@ class Communicator:
         if root not in self.bc_trees:
             #Logger().debug("Creating a new tree with root %d" % root)
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
-            self.bc_trees[root]
-        
+            
         return self.bc_trees[root] 
                 
     def __repr__(self):
@@ -739,8 +739,9 @@ class Communicator:
             is raised if the provided root is not a member of this communicator. 
         """
         # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
-        cr.start_bcast()
+        #cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
+        #cr.start_bcast()
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
     def allgather(self, data):
@@ -774,8 +775,9 @@ class Communicator:
             individual data to each other process. 
             
         """
-        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
-        cr.start_allgather()
+        #cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
+        #cr.start_allgather()
+        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data)
         return cr.wait()
 
     def allreduce(self, data, op):
@@ -812,8 +814,9 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("Operation should be a callable")
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
-        cr.start_allreduce(op)
+        #cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
+        #cr.start_allreduce(op)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
         return cr.wait()
         
     def alltoall(self, data):
@@ -849,8 +852,9 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
-        cr.start_alltoall()
+        #cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
+        #cr.start_alltoall()
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
         return cr.wait()
 
     def gather(self, data, root=0):
@@ -892,8 +896,9 @@ class Communicator:
         .. note:: 
             See also the :func:`allgather` and :func:`alltoall` functions. 
         """
-        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
-        cr.start_allgather()
+        #cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
+        #cr.start_allgather()
+        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, root=root)
         data = cr.wait()
         if self.rank() == root:
             return data
@@ -928,9 +933,9 @@ class Communicator:
             is raised if the provided root is not a member of this communicator. 
         """
 
-        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
-        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
-        cr.start_allreduce(op)
+        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
+        #cr.start_allreduce(op)
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, mpi_op=op)
         data = cr.wait()
         
         #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
@@ -967,8 +972,9 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
-        cr.start_scan(operation)
+        #cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
+        #cr.start_scan(operation)
+        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, mpi_op=operation)
         return cr.wait()
 
     def scatter(self, data=None, root=0):
@@ -1041,15 +1047,26 @@ class Communicator:
         if self.rank() != root:
             data = None
 
-        # Create a list with size N
-        if data:
-            if len(data) != self.size():
-                elements_per_rank = len(data) / self.size()
-                data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
-
         cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        data = cr.wait().pop()['value']
-        return data[self.rank()]
+        return cr.wait()
+
+
+        #if self.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        #    raise MPIException("Scatter used with invalid arguments.")
+        #
+        #if self.rank() != root:
+        #    data = None
+        #
+        ## Create a list with size N
+        #if data:
+        #    if len(data) != self.size():
+        #        elements_per_rank = len(data) / self.size()
+        #        data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
+        #
+        #cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        #data = cr.wait().pop()['value']
+        #return data[self.rank()]
+
         
     def testall(self, request_list):
         """
