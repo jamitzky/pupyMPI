@@ -821,8 +821,8 @@ class Communicator:
         
     def alltoall(self, data):
         """
-        This meethod extends the :func:`allgather` in the situation where you
-        need to send distinct data to each process. 
+        This meethod extends the :func:`scatter` in the situation where you
+        need all-to-all instead of one-to-all. 
         
         The input data should be list with the same number of elements as the
         size of the communicator. If you supply something else an Exception is
@@ -844,8 +844,7 @@ class Communicator:
             
             recv_data = mpi.alltoall(send_data)
             
-            # This will then look like the following (maybe not 
-            # in this order). We're still rank 2
+            # This will then look like the following. We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
 
         .. note::

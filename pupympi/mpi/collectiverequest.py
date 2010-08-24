@@ -64,31 +64,35 @@ class CollectiveRequest(BaseRequest):
             #self.start_bcast()
             self.start_bcast_2()
             
-        elif self.tag == constants.TAG_ALLGATHER:
-            self.start_allgather()
-            
-        elif self.tag == constants.TAG_ALLREDUCE:
-            self.start_allreduce(self.mpi_op)
-            
-        elif self.tag == constants.TAG_ALLTOALL:
-            self.start_alltoall()
-            
         elif self.tag == constants.TAG_GATHER:
             # For now gather is just an all_gather where everybody but root throws away the result
             #self.start_allgather()
             self.start_gather_2()
-            
+
+        elif self.tag == constants.TAG_SCATTER:
+            #self.data = self.two_way_tree_traversal()
+            self.start_scatter_2()
+
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
             #self.start_allreduce(self.mpi_op)
             self.start_reduce_2(self.mpi_op)
+
+        elif self.tag == constants.TAG_ALLGATHER:
+            self.start_allgather_2()
+            
+            
+        elif self.tag == constants.TAG_ALLTOALL:
+            #self.start_alltoall()
+            self.start_alltoall_2()
+                        
+        elif self.tag == constants.TAG_ALLREDUCE:
+            #self.start_allreduce(self.mpi_op)
+            self.start_allreduce_2(self.mpi_op)
             
         elif self.tag == constants.TAG_SCAN:
             self.start_scan(self.mpi_op)
             
-        elif self.tag == constants.TAG_SCATTER:
-            #self.data = self.two_way_tree_traversal()
-            self.start_scatter_2()
 
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
 
@@ -320,7 +324,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
         
-        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
@@ -332,7 +336,7 @@ class CollectiveRequest(BaseRequest):
         
         TODO: We should filter such that only parts needed further down in the
               tree are passed on, instead of the whole shebang as we do now.
-        """        
+        """
         # Get a tree with proper root
         tree = self.communicator.get_broadcast_tree(root=self.root)
         
@@ -351,7 +355,7 @@ class CollectiveRequest(BaseRequest):
         
     def start_gather_2(self):
         """
-        Gather a message in N parts from N processes
+        Gather a message in N parts from N processes        
         """        
         # Get a tree with proper root
         tree = self.communicator.get_broadcast_tree(root=self.root)
@@ -380,11 +384,13 @@ class CollectiveRequest(BaseRequest):
         When reducing sequences they must all be of same length since reduction
         is done element-wise and the result is a sequence of the same length.
         
+        When reducing a single string it will be treated as an iterable (list of
+        chars), if the user wishes to treat it as an immutable single entity the
+        string needs to be supplied in a singleton list.
+        
         Reducing an empty sequence - eg. "" or [] - will return the same type.
         
         ISSUES:
-         - Need to decide how to treat strings, as a single element or as an iterable
-           If we treat a stand-alone string as an iterable, the user can still achieve the single element version by putting the string in a list
          - Need to decide if we will allow sets and other iterables
          - Need validation on sequences being of equal length and type but maybe better to just catch all possible errors.
         """        
@@ -400,7 +406,7 @@ class CollectiveRequest(BaseRequest):
         # If root reduce on the results - if not nevermind data is discarded later
         if self.communicator.rank() == self.root:
             # If it is a sequence of elements use elementwise reduction
-            # (do only list for now, later maybe more iterables)            
+            # (only list and string for now...)
             if isinstance(results[0],list):
                 reduced_results = self._reduce_elementwise(results,operation)
             elif isinstance(results[0],str):
@@ -411,9 +417,137 @@ class CollectiveRequest(BaseRequest):
             Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
         else:
             reduced_results = None
+        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         self.data = reduced_results
         
+    def start_alltoall_2(self):
+        """
+        Disperse N messages in N parts to N processes. The i'th process supplies the i'th part to all others.
+        
+        Implement as gather N*sequence to rank 0 and then bcast the lot to everyone who filters appropriately
+        This way optimizations in bcast can be reused and hopefully likewise for gather or allgather
+        
+        TODO: Need to validate input (maybe already in the communicator) to raise error as advertised.
+        """
+        ### GATHERING
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree()
+        
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        gathered_results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        
+        ### REORDERING
+        if self.communicator.rank() == 0:
+            Logger().debug("Gathered results:%s, nodes_from:%s, nodes_to:%s" % (gathered_results,nodes_from, nodes_to))
+            
+            ordered_results = [ [] for _ in range(self.communicator.size()) ]
+            
+            for seq in gathered_results:
+                i = 0
+                for element in seq:
+                    (ordered_results[i]).append(element)                        
+                    i += 1
+        else:
+            ordered_results = []
+        
+        ### BROADCASTING
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=ordered_results)
+        
+        #if self.communicator.rank() == 0:
+        #    Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+
+        ### FILTERING
+        # TODO: The [0] indexing is because the results is packed in a redundant list - fix it        
+        self.data = results[0][self.communicator.rank()] # Get results for own rank
+        
+    """
+    Gathered results:
+    [['0:0', '0:1', '0:2', '0:3', '0:4', '0:5'],
+    ['1:0', '1:1', '1:2', '1:3', '1:4', '1:5'],
+    ['2:0', '2:1', '2:2', '2:3', '2:4', '2:5'],
+    ['3:0', '3:1', '3:2', '3:3', '3:4', '3:5'],
+    ['4:0', '4:1', '4:2', '4:3', '4:4', '4:5'],
+    ['5:0', '5:1', '5:2', '5:3', '5:4', '5:5']]
+    """
+    def start_allgather_2(self):
+        """
+        Gather a message in N parts from N processes        
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree()
+        
+        ### GATHER AT ROOT
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        gathered_results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        
+        ### BCAST FROM ROOT
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=gathered_results)
+        
+        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        
+        self.data = results[0] # They should all be equal so just get the first one
+
+    def start_allreduce_2(self, operation):
+        """
+        Reduce where reduced result is available at all nodes
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree()
+        
+        ### REDUCE
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        results = self.traverse_up(nodes_from, nodes_to, operation=operation, initial_data=self.initial_data, descendants=descendants)
+        
+        # If root reduce on the results - if not nevermind data is discarded later
+        if self.communicator.rank() == self.root:
+            # If it is a sequence of elements use elementwise reduction
+            # (only list and string for now...)
+            if isinstance(results[0],list):
+                reduced_results = self._reduce_elementwise(results,operation)
+            elif isinstance(results[0],str):
+                char_list = self._reduce_elementwise(results,operation)
+                reduced_results = ''.join(char_list) # join chars into string
+            else:
+                reduced_results = operation(results)
+        else:
+            reduced_results = None
+        
+        ### BCAST FROM ROOT
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=reduced_results)
+        
+        self.data = results[0] # They should all be equal so just get the first one
+
+
+    def start_scan_2(self, operation):
+        """        
+        TODO: Implement or decide to drop
+        """
+        raise Exception("Not implemented yet")
+
+
+
+        ### OLD STYLE ###
+
     def start_bcast(self):
         """
         Creates a custom down function that will ensure only one item
