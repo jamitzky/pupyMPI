@@ -1,6 +1,6 @@
 # meta-description: Reduce over lists
 # meta-expectedresult: 0
-# meta-minprocesses: 4
+# meta-minprocesses: 8
 """
 This test tries a global max over lists of integers
 """
