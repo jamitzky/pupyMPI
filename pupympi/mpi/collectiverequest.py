@@ -414,10 +414,10 @@ class CollectiveRequest(BaseRequest):
                 reduced_results = ''.join(char_list) # join chars into string
             else:
                 reduced_results = operation(results)
-            Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
+            #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
         else:
             reduced_results = None
-        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         self.data = reduced_results
         
