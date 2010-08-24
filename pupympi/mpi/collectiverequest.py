@@ -58,7 +58,8 @@ class CollectiveRequest(BaseRequest):
         # Type specific start up
         if self.tag == constants.TAG_BARRIER:
             # The barrier does nothing really
-            self.data = self.two_way_tree_traversal()
+            #self.data = self.two_way_tree_traversal()
+            self.start_barrier_2()
             
         elif self.tag == constants.TAG_BCAST:
             #self.start_bcast()
@@ -310,6 +311,27 @@ class CollectiveRequest(BaseRequest):
             self.communicator.send(data_list, rank, self.tag)
         
         return data_list
+
+    def start_barrier_2(self):
+        """
+        Wait until all processes has issued this call.
+        
+        TODO: Make the up traverse not care about message placement and transport
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending up the tree
+        nodes_from = tree.down
+        nodes_to = tree.up
+        descendants = tree.descendants
+        results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=None, descendants=descendants)
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down(nodes_from, nodes_to, initial_data=None)
+        
+        self.data = "GO!"
 
 
     def start_bcast_2(self):
