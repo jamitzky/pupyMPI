@@ -24,7 +24,7 @@ temp = ints[rank]
 ints[rank] = ints[max_number]
 ints[max_number] = temp
 
-result = world.reduce(ints, MPI_max, 0)
+result = world.allreduce(ints, MPI_max)
 
 # The expected result is a list of the where the lower half are max_number since
 # everyone swapped in a max_number at their rank position. The upper half are
