@@ -1281,7 +1281,7 @@ class Communicator:
                     
                 i += 1
             
-            time.sleep(0.001)
+            time.sleep(0.00001)
                     
         return return_list
 
