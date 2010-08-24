@@ -93,10 +93,5 @@ leg = fig.legend(tuple(ps), tuple(state_colors.keys()))
 for patch in leg.get_patches():
     patch.set_picker(5)
 
-def onpick(event):
-    print "Got onpick event %d at %d,%d" % (event.button, event.x, event.y)
-
-fig.canvas.mpl_connect('button_press_event', onpick)
-
 plt.show()
 
