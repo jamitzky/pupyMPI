@@ -6,6 +6,7 @@ from pylab import figure, show, plot, ylim, yticks
 from numpy import arange
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 if len(sys.argv) < 2:
     print "Usage: %s <file0> [file1] [file2] ..." % (sys.argv[0])
@@ -17,7 +18,7 @@ cs = []
 rank = 0
 state_colors = {
     'UNKNOWN'        : 'grey',
-    'RUNNING'        : 'green',
+    'RUNNING'        : 'white',
     'MPI_WAIT'       : 'red',
     'MPI_COMM'       : 'blue',
     'MPI_COLLECTIVE' : 'orange'
@@ -55,11 +56,17 @@ for arg in sys.argv[1:]:
 minx = min(min((xs[0])), min(xs[1]))
 
 for i in range(0,len(xs)):
+    xn = []
+    cn = []
     for j in range(0,len(xs[i])):
+        # Ignore the RUNNING states
+        if cs[i][j] == state_colors["RUNNING"]:
+            continue
         if j+1 < len(xs[i]):
-            xs[i][j] = ((xs[i][j] - minx), xs[i][j+1] - xs[i][j])
-        else:
-            xs[i][j] = ((xs[i][j] - minx), 0)
+            xn.append(((xs[i][j] - minx), xs[i][j+1] - xs[i][j]))
+            cn.append(cs[i][j])
+    xs[i] = xn
+    cs[i] = cn
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -74,4 +81,22 @@ ax.set_ylim(0, rank*5+5)
 ax.set_xlabel('Microseconds since start')
 ax.set_yticks([x*5+5 for x in range(0,rank)])
 ax.set_yticklabels(['P' + str(x) for x in range(0,rank)])
+
+ps = []
+for state in state_colors:
+    p = Rectangle((0, 0), 1, 1, fc=state_colors[state])
+    ps.append(p)
+    ax.add_patch(p)
+
+leg = fig.legend(tuple(ps), tuple(state_colors.keys()))
+
+for patch in leg.get_patches():
+    patch.set_picker(5)
+
+def onpick(event):
+    print "Got onpick event %d at %d,%d" % (event.button, event.x, event.y)
+
+fig.canvas.mpl_connect('button_press_event', onpick)
+
 plt.show()
+
