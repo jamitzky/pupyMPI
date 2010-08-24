@@ -6,6 +6,8 @@ This test tries the reduce operation with lists as the primary datatype.
 
 Every rank builds a list with rank elements. Reduce combined with min should
 find the smallest list. Combined with max we should find the biggest list.
+
+TODO: Rewrite this to fit the new reduce semantics
 """
 
 from mpi import MPI
