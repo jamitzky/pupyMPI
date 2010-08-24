@@ -44,7 +44,7 @@ for arg in sys.argv[1:]:
 
         state = state.rstrip("\n")
 
-        x.append(int(float(ts) * 1000000))
+        x.append(float(ts))
         y.append(int(rank))
         c.append(state_colors[state])
 
@@ -78,7 +78,7 @@ for x in xs:
     rank += 1
 
 ax.set_ylim(0, rank*5+5)
-ax.set_xlabel('Microseconds since start')
+ax.set_xlabel('Seconds since start')
 ax.set_yticks([x*5+5 for x in range(0,rank)])
 ax.set_yticklabels(['P' + str(x) for x in range(0,rank)])
 
