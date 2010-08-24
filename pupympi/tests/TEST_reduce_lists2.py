@@ -9,7 +9,7 @@ even though we prefer logging in tests.
 """
 
 from mpi import MPI
-from mpi.operations import MPI_list_max
+from mpi.operations import MPI_max
 
 import random
 
@@ -23,11 +23,11 @@ local_data = range(size)
 if rank % 2 == 0:
     local_data.reverse()
 
-result = world.reduce(local_data, MPI_list_max, root=0)
+result = world.reduce(local_data, MPI_max, root=0)
 
 random.seed(rank) # Not a very good seed for random, don't use in practice
 rolls = [random.randint(1,20) for i in range(6)]
-result = world.reduce(rolls, MPI_list_max, 0)
+result = world.reduce(rolls, MPI_max, 0)
 if rank == 0: # Root announces the results
     print "Highest rolls were: ",result
     
