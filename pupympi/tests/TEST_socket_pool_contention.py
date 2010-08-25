@@ -3,7 +3,7 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 10
 # meta-socket-pool-size: 5
-# meta-max_runtime: 25
+# meta-max_runtime: 45
 
 """
 NOTE: This test deviates from most other tests in that we have to peek into the
