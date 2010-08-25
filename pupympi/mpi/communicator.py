@@ -46,20 +46,12 @@ class Communicator:
                         }
 
 
-        # Setup a tree for this communicator. When this is done you can
-        # use the "up" and "down" attributes on the tree to send messages
-        # around. The standard tree is created with rank 0 as the root.
-        # Look at the inner "get_broadcast_tree" to see how you can get
-        # trees with different roots
-        # TODO: Find out if this has to be done for every communicator?!
-        #self.get_broadcast_tree()
-
     def get_broadcast_tree(self, root=0):
         # Ensure we have the tree structure
         if not getattr(self, "bc_trees", None):
             self.bc_trees = {}
 
-        # See if the root is actually present in this commnicator
+        # See if the tree root is actually present in this commnicator
         if not self.have_rank(root):
             raise MPINoSuchRankException("Invalid root. Not present in this communicator.")
 
@@ -747,10 +739,10 @@ class Communicator:
     def allgather(self, data):
         """
         The allgather function will gather all the data variables from the
-        participants and return it in a rank-order. All the involced processes
+        participants and return it in a rank-order. All the involved processes
         will receive the result.
         
-        As an example each process can send it's rank::
+        As an example each process can send its rank::
         
             from mpi import MPI
             mpi = MPI()
@@ -812,7 +804,7 @@ class Communicator:
             See also the :func:`reduce` and :func:`scan` functions.
         """
         if not getattr(op, "__call__", False):
-            raise MPIException("Operation should be a callable")
+            raise MPIException("The reduce operation supplied should be a callable")
 
         #cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
         #cr.start_allreduce(op)
@@ -931,6 +923,8 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
+        if not getattr(op, "__call__", False):
+            raise MPIException("The reduce operation supplied should be a callable")
 
         #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
         #cr.start_allreduce(op)
