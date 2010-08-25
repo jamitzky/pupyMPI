@@ -59,40 +59,40 @@ class CollectiveRequest(BaseRequest):
         if self.tag == constants.TAG_BARRIER:
             # The barrier does nothing really
             #self.data = self.two_way_tree_traversal()
-            self.start_barrier_2()
+            self.start_barrier()
             
         elif self.tag == constants.TAG_BCAST:
-            #self.start_bcast()
-            self.start_bcast_2()
+            #self.start_bcast_old()
+            self.start_bcast()
             
         elif self.tag == constants.TAG_GATHER:
             # For now gather is just an all_gather where everybody but root throws away the result
-            #self.start_allgather()
-            self.start_gather_2()
+            #self.start_allgather_old()
+            self.start_gather()
 
         elif self.tag == constants.TAG_SCATTER:
             #self.data = self.two_way_tree_traversal()
-            self.start_scatter_2()
+            self.start_scatter()
 
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
-            #self.start_allreduce(self.mpi_op)
-            self.start_reduce_2(self.mpi_op)
+            #self.start_allreduce_old(self.mpi_op)
+            self.start_reduce(self.mpi_op)
 
         elif self.tag == constants.TAG_ALLGATHER:
-            self.start_allgather_2()
+            self.start_allgather()
             
             
         elif self.tag == constants.TAG_ALLTOALL:
-            #self.start_alltoall()
-            self.start_alltoall_2()
+            #self.start_alltoall_old()
+            self.start_alltoall()
                         
         elif self.tag == constants.TAG_ALLREDUCE:
-            #self.start_allreduce(self.mpi_op)
-            self.start_allreduce_2(self.mpi_op)
+            #self.start_allreduce_old(self.mpi_op)
+            self.start_allreduce(self.mpi_op)
             
         elif self.tag == constants.TAG_SCAN:
-            self.start_scan(self.mpi_op)
+            self.start_scan_old(self.mpi_op)
             
 
     def two_way_tree_traversal(self, up_func=None, down_func=None, start_direction="down", return_type='first'):
@@ -312,7 +312,7 @@ class CollectiveRequest(BaseRequest):
         
         return data_list
 
-    def start_barrier_2(self):
+    def start_barrier(self):
         """
         Wait until all processes has issued this call.
         
@@ -334,7 +334,7 @@ class CollectiveRequest(BaseRequest):
         self.data = "GO!"
 
 
-    def start_bcast_2(self):
+    def start_bcast(self):
         """
         Send a message down the tree
         """        
@@ -352,7 +352,7 @@ class CollectiveRequest(BaseRequest):
         # Done
         self.data = results[0] # They should all be equal so just get the first one
 
-    def start_scatter_2(self):
+    def start_scatter(self):
         """
         Scatter a message in N parts to N processes
         
@@ -375,7 +375,7 @@ class CollectiveRequest(BaseRequest):
         rank = self.communicator.rank()
         self.data =  whole_set[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank
         
-    def start_gather_2(self):
+    def start_gather(self):
         """
         Gather a message in N parts from N processes        
         """        
@@ -393,7 +393,7 @@ class CollectiveRequest(BaseRequest):
         self.data = results
         
     
-    def start_reduce_2(self, operation):
+    def start_reduce(self, operation):
         """
         Reduce N sequences of M elements (normally at least one element per sequence)
         with a chosen reduction operation to one sequence of M elements.
@@ -443,7 +443,7 @@ class CollectiveRequest(BaseRequest):
         
         self.data = reduced_results
         
-    def start_alltoall_2(self):
+    def start_alltoall(self):
         """
         Disperse N messages in N parts to N processes. The i'th process supplies the i'th part to all others.
         
@@ -497,7 +497,7 @@ class CollectiveRequest(BaseRequest):
     ['4:0', '4:1', '4:2', '4:3', '4:4', '4:5'],
     ['5:0', '5:1', '5:2', '5:3', '5:4', '5:5']]
     """
-    def start_allgather_2(self):
+    def start_allgather(self):
         """
         Gather a message in N parts from N processes        
         """        
@@ -523,7 +523,7 @@ class CollectiveRequest(BaseRequest):
         
         self.data = results[0] # They should all be equal so just get the first one
 
-    def start_allreduce_2(self, operation):
+    def start_allreduce(self, operation):
         """
         Reduce where reduced result is available at all nodes
         """        
@@ -560,7 +560,7 @@ class CollectiveRequest(BaseRequest):
         self.data = results[0] # They should all be equal so just get the first one
 
 
-    def start_scan_2(self, operation):
+    def start_scan(self, operation):
         """        
         TODO: Implement or decide to drop
         """
@@ -570,7 +570,7 @@ class CollectiveRequest(BaseRequest):
 
         ### OLD STYLE ###
 
-    def start_bcast(self):
+    def start_bcast_old(self):
         """
         Creates a custom down function that will ensure only one item
         is sent through the tree. 
@@ -587,7 +587,7 @@ class CollectiveRequest(BaseRequest):
 
         self.data = data['value']
 
-    def start_allgather(self):
+    def start_allgather_old(self):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
         final_data = range(self.communicator.size())
         for item in data:
@@ -599,7 +599,7 @@ class CollectiveRequest(BaseRequest):
         
         self.data = final_data
 
-    def start_scan(self, operation):
+    def start_scan_old(self, operation):
         data = self.two_way_tree_traversal(start_direction="up", return_type="last")
         
         our_data = []
@@ -617,7 +617,7 @@ class CollectiveRequest(BaseRequest):
         # Apply the operation on the data.
         self.data = operation(our_data) 
 
-    def start_allreduce(self, operation):
+    def start_allreduce_old(self, operation):
         self.data = self.two_way_tree_traversal(up_func=operation, start_direction="up", return_type="last")
         
         partial_data = getattr(operation, "partial_data", False)
@@ -634,7 +634,7 @@ class CollectiveRequest(BaseRequest):
             else:
                 self.data = self.data['value']
         
-    def start_alltoall(self):
+    def start_alltoall_old(self):
         self.data = self.two_way_tree_traversal(start_direction="up", return_type="last")
 
         # Make the inner functionality append all the data from all the processes
