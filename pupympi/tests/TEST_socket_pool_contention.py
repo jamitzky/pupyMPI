@@ -76,17 +76,18 @@ if mpi.network.socket_pool.readonly:
     f.flush()
 else:
     f.write("Rank %d checking out the pool\n" % rank)
+    f.write("\t %s \n" % mpi.network.socket_pool.sockets)
     f.flush()
     pool_size = len(mpi.network.socket_pool.sockets)
     # There should only be 5 connections as specified in meta-socket-pool-size (or 4???)
     if pool_size != 5:
         f.write("whoops pool size was not 5 but %i pool:\n" % (pool_size,mpi.network.socket_pool.metainfo) )
         f.flush()
-        assert False
     else:
         f.write("Done for rank %d\n" % rank)
         f.flush()
-
+    
+    assert pool_size == 5
 
 f.close()
 
