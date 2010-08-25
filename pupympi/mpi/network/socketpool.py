@@ -86,14 +86,9 @@ class SocketPool(object):
             #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
             ##client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
             #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
-
-            with self.sockets_lock:
-                if len(self.sockets) >= self.max_size: # Throw one out if there are too many
-                    Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
-                    self._remove_element()
-                    
-                # Add the new socket to the list
-                self._add(rank, client_socket, force_persistent)
+            
+            # Add the new socket to the list
+            self._add(rank, client_socket, force_persistent)
                 
             newly_created = True
             
@@ -125,12 +120,7 @@ class SocketPool(object):
             #Logger().debug("Already a socket in the pool:%s for an accepted connection:%s to rank:%i" % (known_socket,socket_connection,global_rank))
             pass
         
-        with self.sockets_lock:
-            if len(self.sockets) >= self.max_size: # Throw one out if there are too many
-                    #Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
-                    self._remove_element()
-                    
-            self._add(global_rank, socket_connection, False)
+        self._add(global_rank, socket_connection, False)
     
     def _remove_element(self):
         """
@@ -145,37 +135,36 @@ class SocketPool(object):
         See also issue #13 Socket pool does not limit connections properly
         """
         foundOne = False
-        with self.sockets_lock:
+        for client_socket in self.sockets:
+            (srank, referenced, force_persistent) = self.metainfo[client_socket]
+            if force_persistent: # We do not remove persistent connections
+                Logger.debug("FOUND A PERSISTENT ONE!")
+                continue
+            
+            if referenced: # Mark second chance
+                self.metainfo[client_socket] = (srank, False, force_persistent)
+            else: # Has already had its second chance
+                self.sockets.remove(client_socket) # remove from socket pool
+                del self.metainfo[client_socket] # delete metainfo
+                foundOne = True
+                break
+        
+        # If a pass found nothing to remove we take the first non-persistent
+        if not foundOne:
             for client_socket in self.sockets:
                 (srank, referenced, force_persistent) = self.metainfo[client_socket]
-                if force_persistent: # We do not remove persistent connections
-                    Logger.debug("FOUND A PERSISTENT ONE!")
+                if force_persistent: # skip persistent connections
                     continue
-                
-                if referenced: # Mark second chance
-                    self.metainfo[client_socket] = (srank, False, force_persistent)
-                else: # Has already had its second chance
+                else:
                     self.sockets.remove(client_socket) # remove from socket pool
                     del self.metainfo[client_socket] # delete metainfo
                     foundOne = True
                     break
-            
-            # If a pass found nothing to remove we take the first non-persistent
+                
+            # If we still didn't find one, they must all have been persistant
             if not foundOne:
-                for client_socket in self.sockets:
-                    (srank, referenced, force_persistent) = self.metainfo[client_socket]
-                    if force_persistent: # skip persistent connections
-                        continue
-                    else:
-                        self.sockets.remove(client_socket) # remove from socket pool
-                        del self.metainfo[client_socket] # delete metainfo
-                        foundOne = True
-                        break
-                    
-                # If we still didn't find one, they must all have been persistant
-                if not foundOne:
-                    # Alert the user, harshly
-                    raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
+                # Alert the user, harshly
+                raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
     
     def _get_socket_for_rank(self, rank):
         """
@@ -198,8 +187,13 @@ class SocketPool(object):
         NOTE: Only call this function if you hold the sockets_lock
         """
         #Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
-        self.metainfo[client_socket] = (rank, False, force_persistent)
-        self.sockets.append(client_socket)
+        with self.sockets_lock:
+            if len(self.sockets) >= self.max_size: # Throw one out if there are too many
+                    #Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
+                    self._remove_element()
+            
+            self.metainfo[client_socket] = (rank, False, force_persistent)
+            self.sockets.append(client_socket)
                 
     def close_all_sockets(self):
         """
