@@ -259,38 +259,53 @@ class CollectiveRequest(BaseRequest):
         """
         Send stuff unchanged down the tree
         """
-        data_list = [] # Holds accumulated results from other nodes
-        
+        #data_list = [] # Holds accumulated results from other nodes
+        #
+        #### RECIEVE
+        #
+        ## Generate requests
+        #request_list = []        
+        #for rank in nodes_from:
+        #    handle = self.communicator.irecv(rank, self.tag)
+        #    request_list.append(handle)
+        #
+        ## Receive messages
+        #tmp_list = self.communicator.waitall(request_list)
+        #for data in tmp_list:
+        #    data_list.append(data)
+        #
+        ## If we didn't get anything we are root in the tree so use initial data
+        #if not data_list:
+        #    data_list.append(initial_data)
+
         ### RECIEVE
-        
-        # Generate requests
-        request_list = []        
-        for rank in nodes_from:
-            handle = self.communicator.irecv(rank, self.tag)
-            request_list.append(handle)
-        
-        # Receive messages
-        tmp_list = self.communicator.waitall(request_list)
-        for data in tmp_list:
-            data_list.append(data)
-        
-        # If we didn't get anything we are root in the tree so use initial data
-        if not data_list:
-            data_list.append(initial_data)
+        if nodes_from == []: # root gets from noone
+            data = initial_data            
+        elif len(nodes_from) == 1:
+            node_from = nodes_from[0]                
+            # Get data from above
+            data = self.communicator.recv(node_from, self.tag)
+        else:
+            raise MPIException("More than one parent in nodes_from.")
                 
-        ### SEND
+        Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
+        
+        ### PASS ON THE DATA
         
         # Generate requests
         request_list = []
         for rank in nodes_to:
-            handle = self.communicator.isend(data_list[0], rank, self.tag)
+            handle = self.communicator.isend(data, rank, self.tag)
             request_list.append(handle)
 
         # Wait until they are sent
         # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
         tmp_list = self.communicator.waitall(request_list)
+
+        #if self.communicator.rank() == self.root:
+        #    Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
         
-        return data_list
+        return data
 
     def traverse_down_filtered(self, nodes_from, nodes_to, initial_data=None, descendants=[]):
         """
@@ -310,7 +325,7 @@ class CollectiveRequest(BaseRequest):
         else:
             raise MPIException("More than one parent in nodes_from.")
             
-        ### SEND
+        ### PASS ON THE REQUIRED PARTS
         
         # Generate requests
         request_list = []
@@ -319,6 +334,7 @@ class CollectiveRequest(BaseRequest):
             filtered_data_list = [ None for x in range(self.communicator.size()) ]
             filtered_data_list[rank] = data_list[rank]
             
+            # Add data for descendants
             # NOTE: for a leaf node this would give index error but a leaf node has empty nodes_to and so this is safe
             for desc in descendants[i]:
                 filtered_data_list[desc] = data_list[desc]
@@ -326,12 +342,11 @@ class CollectiveRequest(BaseRequest):
             handle = self.communicator.isend(filtered_data_list, rank, self.tag)
             request_list.append(handle)
             
-            if self.communicator.rank() == self.root:
-                Logger().debug("filtered:%s, nodes_from:%s, nodes_to:%s, descendants[i]:%s" % (filtered_data_list,nodes_from, nodes_to, descendants[i]))
-
+            #if self.communicator.rank() == self.root:
+            #    Logger().debug("filtered:%s, nodes_from:%s, nodes_to:%s, descendants[i]:%s" % (filtered_data_list,nodes_from, nodes_to, descendants[i]))
+            
             i += 1
-
-
+            
         # Wait until they are sent
         # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
         tmp_list = self.communicator.waitall(request_list)
@@ -409,7 +424,7 @@ class CollectiveRequest(BaseRequest):
         
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
-        self.data = results[0] # They should all be equal so just get the first one
+        self.data = results
 
 
     def start_scatter_filtered(self):
