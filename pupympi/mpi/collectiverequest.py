@@ -72,7 +72,8 @@ class CollectiveRequest(BaseRequest):
 
         elif self.tag == constants.TAG_SCATTER:
             #self.data = self.two_way_tree_traversal()
-            self.start_scatter()
+            #self.start_scatter()
+            self.start_scatter_filtered()
 
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
@@ -291,6 +292,52 @@ class CollectiveRequest(BaseRequest):
         
         return data_list
 
+    def traverse_down_filtered(self, nodes_from, nodes_to, initial_data=None, descendants=[]):
+        """
+        Send data down the tree where filtering for appropriate descendants so
+        that every leaf does not receive the whole sequence but only the relevant
+        part
+        """
+        data_list = [ None for x in range(self.communicator.size()) ] # Holds accumulated results
+        
+        ### RECIEVE
+        if nodes_from == []: # root gets from noone
+            data_list = initial_data            
+        elif len(nodes_from) == 1:
+            node_from = nodes_from[0]                
+            # Get data from above
+            data_list = self.communicator.recv(node_from, self.tag)
+        else:
+            raise MPIException("More than one parent in nodes_from.")
+            
+        ### SEND
+        
+        # Generate requests
+        request_list = []
+        i = 0 # index into descendants matching nodes_to
+        for rank in nodes_to:
+            filtered_data_list = [ None for x in range(self.communicator.size()) ]
+            filtered_data_list[rank] = data_list[rank]
+            
+            # NOTE: for a leaf node this would give index error but a leaf node has empty nodes_to and so this is safe
+            for desc in descendants[i]:
+                filtered_data_list[desc] = data_list[desc]
+                
+            handle = self.communicator.isend(filtered_data_list, rank, self.tag)
+            request_list.append(handle)
+            
+            if self.communicator.rank() == self.root:
+                Logger().debug("filtered:%s, nodes_from:%s, nodes_to:%s, descendants[i]:%s" % (filtered_data_list,nodes_from, nodes_to, descendants[i]))
+
+            i += 1
+
+
+        # Wait until they are sent
+        # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
+        tmp_list = self.communicator.waitall(request_list)
+        
+        return data_list
+
     def traverse_up(self, nodes_from, nodes_to, initial_data=None, operation=None, descendants=[]):
         data_list = [ None for x in range(self.communicator.size()) ] # Holds accumulated results
 
@@ -363,6 +410,30 @@ class CollectiveRequest(BaseRequest):
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
         self.data = results[0] # They should all be equal so just get the first one
+
+
+    def start_scatter_filtered(self):
+        """
+        Scatter a message in N parts to N processes
+        
+        TODO: We should filter such that only parts needed further down in the
+              tree are passed on, instead of the whole shebang as we do now.
+        """
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        descendants = tree.descendants
+        results = self.traverse_down_filtered(nodes_from, nodes_to, initial_data=self.initial_data, descendants=descendants)
+        
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("descendants:%s" % (tree.descendants))
+        
+        chunk_size = len(results) / self.communicator.size()
+        rank = self.communicator.rank()
+        self.data =  results[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank (rest are Nones anyway)
 
     def start_scatter(self):
         """
