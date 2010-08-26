@@ -82,7 +82,6 @@ class CollectiveRequest(BaseRequest):
         elif self.tag == constants.TAG_ALLGATHER:
             self.start_allgather()
             
-            
         elif self.tag == constants.TAG_ALLTOALL:
             #self.start_alltoall_old()
             self.start_alltoall()
@@ -256,8 +255,13 @@ class CollectiveRequest(BaseRequest):
         return data_list
     
     def traverse_down(self, nodes_from, nodes_to, initial_data=None):
-        data_list = [] # Holds accumulated results from other nodes        
-
+        """
+        Send stuff unchanged down the tree
+        """
+        data_list = [] # Holds accumulated results from other nodes
+        
+        ### RECIEVE
+        
         # Generate requests
         request_list = []        
         for rank in nodes_from:
@@ -273,9 +277,17 @@ class CollectiveRequest(BaseRequest):
         if not data_list:
             data_list.append(initial_data)
                 
-        # Pass on the data
+        ### SEND
+        
+        # Generate requests
+        request_list = []
         for rank in nodes_to:
-            self.communicator.send(data_list[0], rank, self.tag)
+            handle = self.communicator.isend(data_list[0], rank, self.tag)
+            request_list.append(handle)
+
+        # Wait until they are sent
+        # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
+        tmp_list = self.communicator.waitall(request_list)
         
         return data_list
 
