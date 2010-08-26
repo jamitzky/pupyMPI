@@ -16,5 +16,15 @@ size = world.size()
 received = world.allgather(rank)
 
 assert received == range(size)
-    
+
+
+# ensure we can work with sequences
+gather_data = [rank for _ in range(10)]
+
+my_data = world.allgather(gather_data)
+expected_data = [ [r for _ in range(10)] for r in range(size) ]
+#print "rank:%s, my_data:%s, expected_data:%s" % (rank,my_data, expected_data)
+
+assert my_data == expected_data
+
 mpi.finalize()
