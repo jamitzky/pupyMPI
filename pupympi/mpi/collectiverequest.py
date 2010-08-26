@@ -63,7 +63,8 @@ class CollectiveRequest(BaseRequest):
             
         elif self.tag == constants.TAG_BCAST:
             #self.start_bcast_old()
-            self.start_bcast()
+            #self.start_bcast()
+            self.start_bcast_stupid()
             
         elif self.tag == constants.TAG_GATHER:
             # For now gather is just an all_gather where everybody but root throws away the result
@@ -253,7 +254,49 @@ class CollectiveRequest(BaseRequest):
             self.communicator.send(data_list, rank, self.tag)
 
         return data_list
+
+    def traverse_down_stupid(self, nodes_from, nodes_to, initial_data=None):
+        """
+        Send stuff unchanged down the tree
+        """
+        data_list = [] # Holds accumulated results from other nodes
+        
+        ### RECIEVE
+        
+        # Generate requests
+        request_list = []        
+        for rank in nodes_from:
+            handle = self.communicator.irecv(rank, self.tag)
+            request_list.append(handle)
+        
+        # Receive messages
+        tmp_list = self.communicator.waitall(request_list)
+        for data in tmp_list:
+            data_list.append(data)
+        
+        # If we didn't get anything we are root in the tree so use initial data
+        if not data_list:
+            data_list.append(initial_data)
+
+        
+        ### PASS ON THE DATA
+        
+        # Generate requests
+        request_list = []
+        for rank in nodes_to:
+            handle = self.communicator.isend(data_list[0], rank, self.tag)
+            request_list.append(handle)
+
+        # Wait until they are sent
+        # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
+        tmp_list = self.communicator.waitall(request_list)
+
+        #if self.communicator.rank() == self.root:
+        #    Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
+        
+        return data_list
     
+
     def traverse_down(self, nodes_from, nodes_to, initial_data=None):
         """
         Send stuff unchanged down the tree
@@ -405,6 +448,25 @@ class CollectiveRequest(BaseRequest):
         
         # We don't care about the results so use anything to signal completion        
         self.data = "GO!"
+
+
+    def start_bcast_stupid(self):
+        """
+        Send a message down the tree
+        """        
+        # Get a tree with proper root
+        tree = self.communicator.get_broadcast_tree(root=self.root)
+        
+        # Start sending down the tree
+        nodes_from = tree.up
+        nodes_to = tree.down
+        results = self.traverse_down_stupid(nodes_from, nodes_to, initial_data=self.initial_data)
+        
+        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        
+        #Logger().debug("descendants:%s" % (tree.descendants))
+        # Done
+        self.data = results[0] # They should all be equal so just get the first one
 
 
     def start_bcast(self):
