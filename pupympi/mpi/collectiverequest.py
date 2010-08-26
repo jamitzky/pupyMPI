@@ -301,25 +301,6 @@ class CollectiveRequest(BaseRequest):
         """
         Send stuff unchanged down the tree
         """
-        #data_list = [] # Holds accumulated results from other nodes
-        #
-        #### RECIEVE
-        #
-        ## Generate requests
-        #request_list = []        
-        #for rank in nodes_from:
-        #    handle = self.communicator.irecv(rank, self.tag)
-        #    request_list.append(handle)
-        #
-        ## Receive messages
-        #tmp_list = self.communicator.waitall(request_list)
-        #for data in tmp_list:
-        #    data_list.append(data)
-        #
-        ## If we didn't get anything we are root in the tree so use initial data
-        #if not data_list:
-        #    data_list.append(initial_data)
-
         ### RECIEVE
         if nodes_from == []: # root gets from noone
             data = initial_data            
@@ -330,7 +311,7 @@ class CollectiveRequest(BaseRequest):
         else:
             raise MPIException("More than one parent in nodes_from.")
                 
-        Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
+        #Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
         
         ### PASS ON THE DATA
         
@@ -466,7 +447,7 @@ class CollectiveRequest(BaseRequest):
         
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
-        self.data = results[0] # They should all be equal so just get the first one
+        self.data = results[0] # Wrapped in a list so get it out
 
 
     def start_bcast(self):
