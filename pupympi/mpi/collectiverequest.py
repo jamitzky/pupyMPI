@@ -72,8 +72,7 @@ class CollectiveRequest(BaseRequest):
 
         elif self.tag == constants.TAG_SCATTER:
             #self.data = self.two_way_tree_traversal()
-            #self.start_scatter()
-            self.start_scatter_filtered()
+            self.start_scatter()
 
         elif self.tag == constants.TAG_REDUCE:
             # For now reduce is just an all_reduce where everybody but root throws away the result
@@ -405,6 +404,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=None)
         
+        # We don't care about the results so use anything to signal completion        
         self.data = "GO!"
 
 
@@ -427,7 +427,7 @@ class CollectiveRequest(BaseRequest):
         self.data = results
 
 
-    def start_scatter_filtered(self):
+    def start_scatter(self):
         """
         Scatter a message in N parts to N processes
         
@@ -450,28 +450,28 @@ class CollectiveRequest(BaseRequest):
         rank = self.communicator.rank()
         self.data =  results[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank (rest are Nones anyway)
 
-    def start_scatter(self):
-        """
-        Scatter a message in N parts to N processes
-        
-        TODO: We should filter such that only parts needed further down in the
-              tree are passed on, instead of the whole shebang as we do now.
-        """
-        # Get a tree with proper root
-        tree = self.communicator.get_broadcast_tree(root=self.root)
-        
-        # Start sending down the tree
-        nodes_from = tree.up
-        nodes_to = tree.down
-        results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
-        
-        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
-        #Logger().debug("descendants:%s" % (tree.descendants))
-        
-        whole_set = results[0] # They should all be equal so just get the first one
-        chunk_size = len(whole_set) / self.communicator.size()
-        rank = self.communicator.rank()
-        self.data =  whole_set[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank
+    #def start_scatter(self):
+    #    """
+    #    Scatter a message in N parts to N processes
+    #    
+    #    TODO: We should filter such that only parts needed further down in the
+    #          tree are passed on, instead of the whole shebang as we do now.
+    #    """
+    #    # Get a tree with proper root
+    #    tree = self.communicator.get_broadcast_tree(root=self.root)
+    #    
+    #    # Start sending down the tree
+    #    nodes_from = tree.up
+    #    nodes_to = tree.down
+    #    results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
+    #    
+    #    #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+    #    #Logger().debug("descendants:%s" % (tree.descendants))
+    #    
+    #    whole_set = results[0] # They should all be equal so just get the first one
+    #    chunk_size = len(whole_set) / self.communicator.size()
+    #    rank = self.communicator.rank()
+    #    self.data =  whole_set[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank
         
     def start_gather(self):
         """
@@ -584,7 +584,7 @@ class CollectiveRequest(BaseRequest):
 
         ### FILTERING
         # TODO: The [0] indexing is because the results is packed in a redundant list - fix it        
-        self.data = results[0][self.communicator.rank()] # Get results for own rank
+        self.data = results[self.communicator.rank()] # Get results for own rank
         
     """
     Gathered results:
@@ -619,7 +619,7 @@ class CollectiveRequest(BaseRequest):
         
         Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
-        self.data = results[0] # They should all be equal so just get the first one
+        self.data = results
 
     def start_allreduce(self, operation):
         """
@@ -655,7 +655,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=reduced_results)
         
-        self.data = results[0] # They should all be equal so just get the first one
+        self.data = results # They should all be equal so just get the first one
 
 
     def start_scan(self, operation):
