@@ -443,7 +443,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down_stupid(nodes_from, nodes_to, initial_data=self.initial_data)
         
-        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
@@ -462,7 +462,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
         
-        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         #Logger().debug("descendants:%s" % (tree.descendants))
         # Done
@@ -494,7 +494,7 @@ class CollectiveRequest(BaseRequest):
         descendants = tree.descendants
         results = self.traverse_down_filtered(nodes_from, nodes_to, initial_data=initial_data, descendants=descendants)
         
-        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         #Logger().debug("descendants:%s" % (tree.descendants))
         
         self.data =  results[rank] # get the bit that should be scattered to this rank (rest are Nones anyway)
@@ -611,7 +611,7 @@ class CollectiveRequest(BaseRequest):
         
         ### REORDERING
         if self.communicator.rank() == 0:
-            Logger().debug("Gathered results:%s, nodes_from:%s, nodes_to:%s" % (gathered_results,nodes_from, nodes_to))
+            #Logger().debug("Gathered results:%s, nodes_from:%s, nodes_to:%s" % (gathered_results,nodes_from, nodes_to))
             
             ordered_results = [ [] for _ in range(self.communicator.size()) ]
             
@@ -666,7 +666,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=gathered_results)
         
-        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         self.data = results
 
@@ -741,7 +741,7 @@ class CollectiveRequest(BaseRequest):
             try:
                 final_data[item['rank']] = item['value']
             except TypeError:
-                Logger().error("item %s of data %s" % (item, data) )
+                #Logger().error("item %s of data %s" % (item, data) )
                 raise TypeError("item %s of data %s" % (item, data) )
         
         self.data = final_data
