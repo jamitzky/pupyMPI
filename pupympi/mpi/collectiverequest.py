@@ -42,32 +42,21 @@ class CollectiveRequest(BaseRequest):
         self.initial_data = data
         self.root = root        
         self.mpi_op = mpi_op
-
-        # We inherit the status field from BaseRequest, there are some different
-        # states a collective request object can be in:
-        # 
-        # 'new' ->         The object is newly created. If this is send the lower layer can start to 
-        #                  do stuff with the data
-        # 'ready'     ->   Means we have the data (in receive) or pickled the data (send) and can
-        #                  safely return from a test or wait call.
-        #
-        # Note that 'cancel' is not valid for collective ops: all are blocking.
-        # (NBC in mpi2 also cannot be cancelled)
-        #Logger().debug("CollectiveRequest object created for communicator %s" % self.communicator.name)
+        
+        # TODO: Start up calls are put here to make it easier to quickly switch between versions.
+        # Eventually we should probably skip this huge switch statement and let the callers
+        # in communicator.py do the starting too.
         
         # Type specific start up
         if self.tag == constants.TAG_BARRIER:
-            # The barrier does nothing really
             #self.data = self.two_way_tree_traversal()
             self.start_barrier()
             
         elif self.tag == constants.TAG_BCAST:
             #self.start_bcast_old()
-            #self.start_bcast()
-            self.start_bcast_stupid()
+            self.start_bcast()
             
         elif self.tag == constants.TAG_GATHER:
-            # For now gather is just an all_gather where everybody but root throws away the result
             #self.start_allgather_old()
             self.start_gather()
 
@@ -76,7 +65,6 @@ class CollectiveRequest(BaseRequest):
             self.start_scatter()
 
         elif self.tag == constants.TAG_REDUCE:
-            # For now reduce is just an all_reduce where everybody but root throws away the result
             #self.start_allreduce_old(self.mpi_op)
             self.start_reduce(self.mpi_op)
 
@@ -253,49 +241,7 @@ class CollectiveRequest(BaseRequest):
         for rank in nodes_to:
             self.communicator.send(data_list, rank, self.tag)
 
-        return data_list
-
-    def traverse_down_stupid(self, nodes_from, nodes_to, initial_data=None):
-        """
-        Send stuff unchanged down the tree
-        """
-        data_list = [] # Holds accumulated results from other nodes
-        
-        ### RECIEVE
-        
-        # Generate requests
-        request_list = []        
-        for rank in nodes_from:
-            handle = self.communicator.irecv(rank, self.tag)
-            request_list.append(handle)
-        
-        # Receive messages
-        tmp_list = self.communicator.waitall(request_list)
-        for data in tmp_list:
-            data_list.append(data)
-        
-        # If we didn't get anything we are root in the tree so use initial data
-        if not data_list:
-            data_list.append(initial_data)
-
-        
-        ### PASS ON THE DATA
-        
-        # Generate requests
-        request_list = []
-        for rank in nodes_to:
-            handle = self.communicator.isend(data_list[0], rank, self.tag)
-            request_list.append(handle)
-
-        # Wait until they are sent
-        # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
-        tmp_list = self.communicator.waitall(request_list)
-
-        #if self.communicator.rank() == self.root:
-        #    Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
-        
-        return data_list
-    
+        return data_list    
 
     def traverse_down(self, nodes_from, nodes_to, initial_data=None):
         """
@@ -376,6 +322,19 @@ class CollectiveRequest(BaseRequest):
         return data_list
 
     def traverse_up(self, nodes_from, nodes_to, initial_data=None, operation=None, descendants=[]):
+        """
+        Send data up the tree from leaves to root.
+        
+        Final ordering will be by rank.
+        
+        ISSUE: For nodes low in the tree there will only be few valid values
+               eg. for leaf nodes only 1 out of np-1 Nones sent up. Nones do not
+               take up much space but especially if we are sending ints or something
+               small it is rather wasteful.
+               The strict rank indexed data_list is unneccessary if we can guarantee
+               some numerical ordering of the descendant ranks along with the nodes
+               own rank.
+        """
         data_list = [ None for x in range(self.communicator.size()) ] # Holds accumulated results
 
         # Generate requests
@@ -407,6 +366,57 @@ class CollectiveRequest(BaseRequest):
             self.communicator.send(data_list, rank, self.tag)
         
         return data_list
+    
+    def traverse_up_filtered(self, nodes_from, nodes_to, initial_data, operation, descendants=[]):
+        """
+        Send data up the tree from leaves to root using partial reduction along
+        the way.
+
+        If the operation is not associative and commutative - ie. should only be
+        applied at root just use the normal traverse_up function and do it to the
+        final result instead.
+        
+        Since results are reduced to a single value or a single sequence there is
+        no concept of rank ordering.
+        
+        ISSUES: This function could me merged with regular traverse up or at least
+                the partial filtering could be decided here so start_reduce could look nicer
+        """
+
+        # Generate requests
+        request_list = []
+        
+        # If not leaf don't bother reducing
+        if nodes_from:
+            # TODO: Do lists and sequences here too
+            for rank in nodes_from:
+                handle = self.communicator.irecv(rank, self.tag)
+                request_list.append(handle)
+            
+            # Receive messages from children
+            unreduced_data = self.communicator.waitall(request_list)
+
+            unreduced_data.append(initial_data) # and reduce your own data too while we're at it
+            
+            # Handle sequences or single elements
+            if isinstance(unreduced_data[0],list):
+                reduced_data = self._reduce_elementwise(unreduced_data,operation)
+            elif isinstance(unreduced_data[0],str):
+                char_list = self._reduce_elementwise(unreduced_data,operation)
+                reduced_data = ''.join(char_list) # join chars into string
+            else:
+                reduced_data = operation(unreduced_data)
+
+            #reduced_data = operation(unreduced_data)
+        else:
+            reduced_data = initial_data
+
+        
+        # Pass on the data
+        for rank in nodes_to:
+            self.communicator.send(reduced_data, rank, self.tag)
+        
+        return reduced_data
 
     def start_barrier(self):
         """
@@ -498,29 +508,6 @@ class CollectiveRequest(BaseRequest):
         #Logger().debug("descendants:%s" % (tree.descendants))
         
         self.data =  results[rank] # get the bit that should be scattered to this rank (rest are Nones anyway)
-
-    #def start_scatter(self):
-    #    """
-    #    Scatter a message in N parts to N processes
-    #    
-    #    TODO: We should filter such that only parts needed further down in the
-    #          tree are passed on, instead of the whole shebang as we do now.
-    #    """
-    #    # Get a tree with proper root
-    #    tree = self.communicator.get_broadcast_tree(root=self.root)
-    #    
-    #    # Start sending down the tree
-    #    nodes_from = tree.up
-    #    nodes_to = tree.down
-    #    results = self.traverse_down(nodes_from, nodes_to, initial_data=self.initial_data)
-    #    
-    #    #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
-    #    #Logger().debug("descendants:%s" % (tree.descendants))
-    #    
-    #    whole_set = results[0] # They should all be equal so just get the first one
-    #    chunk_size = len(whole_set) / self.communicator.size()
-    #    rank = self.communicator.rank()
-    #    self.data =  whole_set[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank
         
     def start_gather(self):
         """
@@ -533,7 +520,7 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=None, descendants=descendants)
         
         #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
@@ -570,22 +557,26 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        results = self.traverse_up(nodes_from, nodes_to, operation=operation, initial_data=self.initial_data, descendants=descendants)
         
-        # If root reduce on the results - if not nevermind data is discarded later
-        if self.communicator.rank() == self.root:
-            # If it is a sequence of elements use elementwise reduction
-            # (only list and string for now...)
-            if isinstance(results[0],list):
-                reduced_results = self._reduce_elementwise(results,operation)
-            elif isinstance(results[0],str):
-                char_list = self._reduce_elementwise(results,operation)
-                reduced_results = ''.join(char_list) # join chars into string
-            else:
-                reduced_results = operation(results)
-            #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
+        if getattr(operation, "partial_data", False):
+            reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
         else:
-            reduced_results = None
+            results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=operation, descendants=descendants)        
+            # If root reduce on the results - if not nevermind data is discarded later
+            if self.communicator.rank() == self.root:
+                # If it is a sequence of elements use elementwise reduction
+                # (only list and string for now...)
+                if isinstance(results[0],list):
+                    reduced_results = self._reduce_elementwise(results,operation)
+                elif isinstance(results[0],str):
+                    char_list = self._reduce_elementwise(results,operation)
+                    reduced_results = ''.join(char_list) # join chars into string
+                else:
+                    reduced_results = operation(results)
+                #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
+            else:
+                reduced_results = None
+
         #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
         self.data = reduced_results
@@ -607,7 +598,7 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        gathered_results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        gathered_results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=None, descendants=descendants)
         
         ### REORDERING
         if self.communicator.rank() == 0:
@@ -656,7 +647,7 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        gathered_results = self.traverse_up(nodes_from, nodes_to, operation=None, initial_data=self.initial_data, descendants=descendants)
+        gathered_results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=None, descendants=descendants)
         
         #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
@@ -682,21 +673,24 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        results = self.traverse_up(nodes_from, nodes_to, operation=operation, initial_data=self.initial_data, descendants=descendants)
         
-        # If root reduce on the results - if not nevermind data is discarded later
-        if self.communicator.rank() == self.root:
-            # If it is a sequence of elements use elementwise reduction
-            # (only list and string for now...)
-            if isinstance(results[0],list):
-                reduced_results = self._reduce_elementwise(results,operation)
-            elif isinstance(results[0],str):
-                char_list = self._reduce_elementwise(results,operation)
-                reduced_results = ''.join(char_list) # join chars into string
-            else:
-                reduced_results = operation(results)
+        if getattr(operation, "partial_data", False):
+            reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
         else:
-            reduced_results = None
+            results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=operation, descendants=descendants)
+            # If root reduce on the results - if not nevermind data is discarded later
+            if self.communicator.rank() == self.root:
+                # If it is a sequence of elements use elementwise reduction
+                # (only list and string for now...)
+                if isinstance(results[0],list):
+                    reduced_results = self._reduce_elementwise(results,operation)
+                elif isinstance(results[0],str):
+                    char_list = self._reduce_elementwise(results,operation)
+                    reduced_results = ''.join(char_list) # join chars into string
+                else:
+                    reduced_results = operation(results)
+            else:
+                reduced_results = None
         
         ### BCAST FROM ROOT
         # Start sending down the tree
