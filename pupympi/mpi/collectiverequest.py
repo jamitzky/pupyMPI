@@ -312,11 +312,10 @@ class CollectiveRequest(BaseRequest):
         that every leaf does not receive the whole sequence but only the relevant
         part
         """
-        data_list = [ None for x in range(self.communicator.size()) ] # Holds accumulated results
         
         ### RECIEVE
         if nodes_from == []: # root gets from noone
-            data_list = initial_data            
+            data_list = initial_data        
         elif len(nodes_from) == 1:
             node_from = nodes_from[0]                
             # Get data from above
@@ -331,7 +330,7 @@ class CollectiveRequest(BaseRequest):
         i = 0 # index into descendants matching nodes_to
         for rank in nodes_to:
             filtered_data_list = [ None for x in range(self.communicator.size()) ]
-            filtered_data_list[rank] = data_list[rank]
+            filtered_data_list[rank] = data_list[rank]            
             
             # Add data for descendants
             # NOTE: for a leaf node this would give index error but a leaf node has empty nodes_to and so this is safe
@@ -434,6 +433,15 @@ class CollectiveRequest(BaseRequest):
         TODO: We should filter such that only parts needed further down in the
               tree are passed on, instead of the whole shebang as we do now.
         """
+        # Root first partitions data nicely before sending
+        rank = self.communicator.rank()
+        if rank == self.root:    
+            size = self.communicator.size()
+            chunk_size = len(self.initial_data) / size
+            initial_data = [  self.initial_data[r*chunk_size:(r+1)*chunk_size] for r in range(size) ]
+        else:
+            initial_data = self.initial_data
+            
         # Get a tree with proper root
         tree = self.communicator.get_broadcast_tree(root=self.root)
         
@@ -441,14 +449,12 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.up
         nodes_to = tree.down
         descendants = tree.descendants
-        results = self.traverse_down_filtered(nodes_from, nodes_to, initial_data=self.initial_data, descendants=descendants)
+        results = self.traverse_down_filtered(nodes_from, nodes_to, initial_data=initial_data, descendants=descendants)
         
-        #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
+        Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         #Logger().debug("descendants:%s" % (tree.descendants))
         
-        chunk_size = len(results) / self.communicator.size()
-        rank = self.communicator.rank()
-        self.data =  results[rank*chunk_size:(rank+1)*chunk_size] # get the bit that should be scattered to this rank (rest are Nones anyway)
+        self.data =  results[rank] # get the bit that should be scattered to this rank (rest are Nones anyway)
 
     #def start_scatter(self):
     #    """
