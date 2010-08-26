@@ -17,7 +17,6 @@ received = world.allgather(rank)
 
 assert received == range(size)
 
-
 # ensure we can work with sequences
 gather_data = [rank for _ in range(10)]
 
