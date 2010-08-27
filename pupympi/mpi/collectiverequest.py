@@ -255,7 +255,7 @@ class CollectiveRequest(BaseRequest):
             # Get data from above
             data = self.communicator.recv(node_from, self.tag)
         else:
-            raise MPIException("More than one parent in nodes_from.")
+            raise Exception("More than one parent in nodes_from.")
                 
         #Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
         
@@ -378,45 +378,61 @@ class CollectiveRequest(BaseRequest):
         
         Since results are reduced to a single value or a single sequence there is
         no concept of rank ordering.
-        
-        ISSUES: This function could me merged with regular traverse up or at least
-                the partial filtering could be decided here so start_reduce could look nicer
         """
-
-        # Generate requests
-        request_list = []
         
-        # If not leaf don't bother reducing
+        # If not leaf don't bother reducing or receiving
         if nodes_from:
-            # TODO: Do lists and sequences here too
+            partial_reduce =  getattr(operation, "partial_data", False) 
+            
+            # Generate requests
+            request_list = []
+            
             for rank in nodes_from:
                 handle = self.communicator.irecv(rank, self.tag)
                 request_list.append(handle)
             
             # Receive messages from children
-            unreduced_data = self.communicator.waitall(request_list)
-
-            unreduced_data.append(initial_data) # and reduce your own data too while we're at it
+            unreduced_data = []
+            tmp_list = self.communicator.waitall(request_list)
+            i = 0 # index into descendants
+            for message in tmp_list:
+                # If we got it from a leaf node or there is partial reducing the message is in element form and should be appended
+                if partial_reduce or not descendants[i]:
+                    unreduced_data.append(message) # message is an element
+                else:
+                    try:
+                        unreduced_data.extend(message) # message is already a list
+                    except Exception, e:
+                        Logger().debug("from: %s, unreduced_data:%s descendants:%s, message:%s, tmp_list:%s" % (nodes_from, unreduced_data, descendants, message, tmp_list) )
+                        raise e
+                i += 1
             
-            # Handle sequences or single elements
-            if isinstance(unreduced_data[0],list):
-                reduced_data = self._reduce_elementwise(unreduced_data,operation)
-            elif isinstance(unreduced_data[0],str):
-                char_list = self._reduce_elementwise(unreduced_data,operation)
-                reduced_data = ''.join(char_list) # join chars into string
+            unreduced_data.append(initial_data) # and reduce your own data too while we're at it
+
+            #Logger().debug("unreduced_data:%s partial:%s, descendants:%s" % (unreduced_data, getattr(operation, "partial_data", False), descendants) )
+            
+            # Reducing along the way? or have reached root?    
+            if partial_reduce or not nodes_to:
+                # Handle sequences or single elements
+                if isinstance(unreduced_data[0],list):
+                    data = self._reduce_elementwise(unreduced_data,operation)
+                elif isinstance(unreduced_data[0],str):
+                    char_list = self._reduce_elementwise(unreduced_data,operation)
+                    data = ''.join(char_list) # join chars into string
+                else:
+                    data = operation(unreduced_data)
             else:
-                reduced_data = operation(unreduced_data)
-
-            #reduced_data = operation(unreduced_data)
+                data = unreduced_data
         else:
-            reduced_data = initial_data
+            data = initial_data
 
-        
+
+        Logger().debug("sending up:%s" % (data) )
         # Pass on the data
         for rank in nodes_to:
-            self.communicator.send(reduced_data, rank, self.tag)
+            self.communicator.send(data, rank, self.tag)
         
-        return reduced_data
+        return data
 
     def start_barrier(self):
         """
@@ -557,25 +573,8 @@ class CollectiveRequest(BaseRequest):
         nodes_from = tree.down
         nodes_to = tree.up
         descendants = tree.descendants
-        
-        if getattr(operation, "partial_data", False):
-            reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
-        else:
-            results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=operation, descendants=descendants)        
-            # If root reduce on the results - if not nevermind data is discarded later
-            if self.communicator.rank() == self.root:
-                # If it is a sequence of elements use elementwise reduction
-                # (only list and string for now...)
-                if isinstance(results[0],list):
-                    reduced_results = self._reduce_elementwise(results,operation)
-                elif isinstance(results[0],str):
-                    char_list = self._reduce_elementwise(results,operation)
-                    reduced_results = ''.join(char_list) # join chars into string
-                else:
-                    reduced_results = operation(results)
-                #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (reduced_results,nodes_from, nodes_to))
-            else:
-                reduced_results = None
+                
+        reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
 
         #Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
         
@@ -674,23 +673,8 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.up
         descendants = tree.descendants
         
-        if getattr(operation, "partial_data", False):
-            reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
-        else:
-            results = self.traverse_up(nodes_from, nodes_to, initial_data=self.initial_data, operation=operation, descendants=descendants)
-            # If root reduce on the results - if not nevermind data is discarded later
-            if self.communicator.rank() == self.root:
-                # If it is a sequence of elements use elementwise reduction
-                # (only list and string for now...)
-                if isinstance(results[0],list):
-                    reduced_results = self._reduce_elementwise(results,operation)
-                elif isinstance(results[0],str):
-                    char_list = self._reduce_elementwise(results,operation)
-                    reduced_results = ''.join(char_list) # join chars into string
-                else:
-                    reduced_results = operation(results)
-            else:
-                reduced_results = None
+
+        reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
         
         ### BCAST FROM ROOT
         # Start sending down the tree
