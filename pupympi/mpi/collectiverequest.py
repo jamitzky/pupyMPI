@@ -25,13 +25,7 @@ identity = lambda x : x
 class CollectiveRequest(BaseRequest):
     """
     ISSUES:
-    - "Everybody knows you don't go full_meta!" (aka. let's all find more descriptive names)
-    - Collective calls in general do not have to have both up and down traversal of the tree,
-      the previously perceived global blocking requirement has been deemed out by Brian(!)
-    - When passing lists around in the tree they should not be flattened before it is neccessary so we avoid excessive iterating
     - We should test that the broadcast trees are indeed reused
-    - When we reduce or gather we should not degrade to allreduce or alltoall and just throw away the redundant data
-      instead we should make sure only the needed data is passed around the tree
     """
 
     def __init__(self, tag, communicator, data=None, root=0, mpi_op=None):
