@@ -382,7 +382,7 @@ class CollectiveRequest(BaseRequest):
         
         # If not leaf don't bother reducing or receiving
         if nodes_from:
-            partial_reduce =  getattr(operation, "partial_data", False) 
+            partial_reduce =  getattr(operation, "partial_data", False) # does operation claim to support partial reduction?
             
             # Generate requests
             request_list = []
@@ -396,15 +396,11 @@ class CollectiveRequest(BaseRequest):
             tmp_list = self.communicator.waitall(request_list)
             i = 0 # index into descendants
             for message in tmp_list:
-                # If we got it from a leaf node or there is partial reducing the message is in element form and should be appended
+                # If we got it from a leaf node, or there is partial reducing, the message is in element form and should be appended
                 if partial_reduce or not descendants[i]:
                     unreduced_data.append(message) # message is an element
                 else:
-                    try:
-                        unreduced_data.extend(message) # message is already a list
-                    except Exception, e:
-                        Logger().debug("from: %s, unreduced_data:%s descendants:%s, message:%s, tmp_list:%s" % (nodes_from, unreduced_data, descendants, message, tmp_list) )
-                        raise e
+                    unreduced_data.extend(message) # message is already a list
                 i += 1
             
             unreduced_data.append(initial_data) # and reduce your own data too while we're at it

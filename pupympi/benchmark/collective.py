@@ -161,7 +161,7 @@ def test_Reduce(size, max_iterations):
         """docstring for Reduce"""
         current_root = 0
         for _ in xrange(max_iterations):
-            # For the reduce operator we use pupyMPI's built-in max over lists
+            # For the reduce operator we use pupyMPI's built-in max
             ci.communicator.reduce(data, MPI_max, current_root)            
             # Switch root
             current_root = (current_root +1) % ci.num_procs
@@ -180,8 +180,8 @@ def test_Reduce(size, max_iterations):
 def test_Allreduce(size, max_iterations):
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
-            # For the allreduce operator we use Python built-in max
-            ci.communicator.allreduce(data, max)            
+            # For the reduce operator we use pupyMPI's built-in max
+            ci.communicator.allreduce(data, MIP_max)            
 
     # end of test
     
