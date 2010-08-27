@@ -181,7 +181,7 @@ def test_Allreduce(size, max_iterations):
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            ci.communicator.allreduce(data, MIP_max)            
+            ci.communicator.allreduce(data, MPI_max)            
 
     # end of test
     
