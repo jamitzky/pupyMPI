@@ -1,0 +1,18 @@
+These benchmark runs were done with version 0.8 of pupyMPI
+(up to commit 1352: 2528598a5109)
+======================================
+
+Changes from 0.6 are the use of epoll and poll
+Changes from 0.7.0 is handling writelist only when outgoing requests exist
+
+Changes from 0.7.1 are split handling of in and out sockets in select/poll functions and for in thread and out thread
+
+Changes from 0.7.2 only trying accept on a read socket if it is the main receive socket
+
+Changes from 0.7.3 are the use of tcp nodelay on sockets to ensure no batching which boosts our collective operations. Also some cruft has been cleaned for reduce and bcast operations
+
+Changes from 0.7.4 are
+- Collective operations rewritten to only do one traversal of the broadcast tree when one-to-all or all-to-one
+- Slight semantics change due to stricter following of MPI definitions regarding element-wise reduction and single element reduction
+- Out of order waiting for communication with child nodes in the tree (or was this actually 0.7.4???)
+
