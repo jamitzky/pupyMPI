@@ -89,6 +89,13 @@ def MPI_avg(input_list):
 # An example of a "vector" reducing operation    
 def MPI_list_max(input_lists):
     """
+    NOTE: This operation has been deprecated since we now changed reduce to
+          conform to the MPI standard. An ordinary MPI_max will now do what
+          MPI_list_max did before.
+          All uses of MPI_list_max has been changed, all we need is to move
+          this fantastic description and example to an appropriate place in the
+          documentation.
+    
     Return an element-wise max on the elements in the lists. The elements must
     be comparable with Python's built-in max function and all ranks must provide
     equal length lists.

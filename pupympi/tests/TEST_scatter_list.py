@@ -21,4 +21,4 @@ my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 
 mpi.finalize()
 
-assert my_data == [rank,rank]
+assert my_data == [[rank,rank]]

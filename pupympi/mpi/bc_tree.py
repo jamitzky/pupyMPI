@@ -21,16 +21,19 @@ tree.
 
 """
 import copy
+from mpi.logger import Logger # TODO: remove this when done debugging
 
 class BroadCastTree(object):
     
     def __init__(self, nodes, rank, root):
+        # TODO: initialization could be done more gracefully, no need to remove and extend when a swap could do the trick
+        
         # Make sure the root is the first element in the list
-        # se use to generate the tree. 
+        # we use to generate the tree. 
         nodes.sort()
         nodes.remove(root)
         new_nodes = [root]
-        new_nodes.extend(nodes)
+        new_nodes.extend(nodes)        
         self.nodes = nodes
         self.rank = rank
         self.tree = self.generate_tree(copy.deepcopy(new_nodes))
@@ -39,16 +42,70 @@ class BroadCastTree(object):
         self.up = self.find_up()
         self.down = self.find_down()
         
+        #self.descendants = self.find_descendants(rank,self.tree)
+        #self.descendants = self.find_descendants(2,self.tree)
+        #self.descendants.sort()
+        # Descendants of each cild node are stored in a seperate list
+        self.descendants = [ self.find_descendants(r, self.tree) for r in self.down ]
+        
+        #Logger().debug("Tree for rank:%s with root:%s and children:%s and descendants:%s" % (rank,root,self.down,self.descendants))
+        
+        #if rank in (3,42):
+        #    Logger().debug("Tree structure:%s" % self.tree)
+
+        
     def __repr__(self):
         repr = super(BroadCastTree, self).__repr__()
         return repr[0:-1] + "root(%d), rank(%d) up(%s), down(%s)>" % (self.root, self.rank, self.up, self.down)
         
+
+    def find_descendants(self, target=None, subtree=None):
+        """
+        Find all the descendants of a node.
+        If no node is specified all descendants of calling rank are returned.
+        """
+        if target is None:
+            target = self.rank
+        
+        if subtree is None:
+            return []
+            
+        #Logger().debug("Node:%s" % (subtree))
+        
+        result = []
+        child_nodes = subtree['children']
+        if target == subtree['rank']:
+            for child in child_nodes:
+                result.append(child['rank']) # Add immediate child
+                result.extend(self.find_descendants(child['rank'], child)) # Add descendants of child
+        else:            
+            for child in child_nodes:
+                result.extend(self.find_descendants(target, child))
+        
+        return result
+        
+        #{
+        #'iteration': 0,
+        #'children':
+        #    [
+        #    {'iteration': 1,
+        #    'children': [{'iteration': 2, 'children': [], 'rank': 2}, {'iteration': 3, 'children': [], 'rank': 5}],
+        #    'rank': 0},
+        #    {'iteration': 2,
+        #     'children': [],
+        #     'rank': 1},
+        #    {'iteration': 3,
+        #    'children': [],
+        #    'rank': 4}
+        #    ],
+        #'rank': 3
+        #}
+        
     def find_up(self):
         """
-        Iterate from the root and down to find the parent
-        of a node. As this is a tree we're limited to one
-        but implement it as a list anyway to make the 
-        broadcast algorithm more generic. 
+        Iterate from the root and down to find the parent of a node.
+        As this is a tree we're limited to one parent but we return a list anyway
+        to make the broadcast algorithm more generic.
 
         How it works:
 
@@ -79,15 +136,16 @@ class BroadCastTree(object):
             
         return [x['rank'] for x in find(self.tree, None)]
 
-    def find_down(self):
+    def find_down(self, target=None):
+        if target is None:
+            target = self.rank
         """
-        Find all the children of a node. Pretty
-        basic so dosen't need as much docs as 
-        the find_up method. 
+        Find all the children of a node.
+        If no node is specified all children of calling rank are returned.
         """
         def find(node):
             result = []
-            if self.rank == node['rank']:
+            if target == node['rank']:
                 return node['children']
             else:
                 for child in node['children']:

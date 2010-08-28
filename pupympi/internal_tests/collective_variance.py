@@ -4,7 +4,7 @@ Test the strange variance for different datasizes when running collective benchm
 """
 import time, array, sys
 from mpi import MPI
-from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max, MPI_list_max
+from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max
     
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -33,7 +33,7 @@ def test_Reduce(datasize, max_iterations):
         current_root = 0
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max over lists
-            world.reduce(data, MPI_list_max, current_root)            
+            world.reduce(data, MPI_max, current_root)            
             # Switch root
             current_root = (current_root +1) % size
     # end of test
