@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
+from math import log
+
 from mpi.request import BaseRequest
 from mpi.logger import Logger
 from mpi import constants
@@ -63,7 +65,8 @@ class CollectiveRequest(BaseRequest):
             self.start_reduce(self.mpi_op)
 
         elif self.tag == constants.TAG_ALLGATHER:
-            self.start_allgather()
+            #self.start_allgather()
+            self.start_allgather_dissemination()
             
         elif self.tag == constants.TAG_ALLTOALL:
             #self.start_alltoall_old()
@@ -624,6 +627,77 @@ class CollectiveRequest(BaseRequest):
     ['4:0', '4:1', '4:2', '4:3', '4:4', '4:5'],
     ['5:0', '5:1', '5:2', '5:3', '5:4', '5:5']]
     """
+    def start_allgather_dissemination(self):
+        """
+        Gather a message in N parts from N processes using the dissemination
+        allgather algorithm
+        """
+        ### SETUP
+        size = self.communicator.size()
+        rank = self.communicator.rank()
+        # Calc normal iterations needed
+        iteration = int(log(size,2))
+        
+        # Allocate result list
+        data_list = [None if r != rank else self.initial_data for r in range(size)]
+        
+        ### NORMAL ITERATIONS
+        i = 0
+        while i < iteration:
+            # Calculate rank for receive and send
+            send_to = (2**i+rank) % size
+            recv_from = (rank - (2**i)) % size
+            
+            # Exchange data
+            r_handle = self.communicator.irecv(recv_from, self.tag)
+            s_handle = self.communicator.isend(data_list, send_to, self.tag)
+            res = self.communicator.waitall([r_handle,s_handle])
+            
+            # TODO: For now we send unconditionally during normal iterations and
+            #       thus have to check validity (not None) during updating. This
+            #       could be optimized.
+            # Update own state
+            received = res[0]
+            for e in range(size):
+                if received[e] is not None:
+                    data_list[e] = received[e]
+            
+            i += 1
+        
+        ### ODD ITERATIONS        
+        # How much is missing
+        gap_size = size - 2**iteration
+        if gap_size:
+            # Calculate rank for receive and send (own rank offset by half of next power of two)
+            send_to = (rank + 2**iteration) % size
+            recv_from = (rank - 2**iteration) % size
+            
+            # Get missing gap
+            gap_start = send_to+1
+            gap = data_list[gap_start:gap_start+gap_size]
+            # Check if the gap wraps around
+            gap_wrap = gap_size - len(gap)
+            if gap_wrap:
+                gap = gap+data_list[0:gap_wrap]
+                
+            # Exchange gaps
+            r_handle = self.communicator.irecv(recv_from, self.tag)
+            s_handle = self.communicator.isend(gap, send_to, self.tag)
+            res = self.communicator.waitall([r_handle,s_handle])
+            
+            # Fill out gap
+            my_gap_start = rank+1
+            received = res[0]
+            j = 0
+            for gdx in range(my_gap_start,my_gap_start+gap_size):
+                idx = gdx % size
+                gap_item = received[j]
+                data_list[idx] = gap_item
+                j += 1
+        
+        
+        self.data = data_list
+
     def start_allgather(self):
         """
         Gather a message in N parts from N processes        
