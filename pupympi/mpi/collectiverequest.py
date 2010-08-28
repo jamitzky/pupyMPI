@@ -70,7 +70,8 @@ class CollectiveRequest(BaseRequest):
             
         elif self.tag == constants.TAG_ALLTOALL:
             #self.start_alltoall_old()
-            self.start_alltoall()
+            #self.start_alltoall()
+            self.start_alltoall_notree()
                         
         elif self.tag == constants.TAG_ALLREDUCE:
             #self.start_allreduce_old(self.mpi_op)
@@ -500,7 +501,7 @@ class CollectiveRequest(BaseRequest):
         if rank == self.root:    
             size = self.communicator.size()
             chunk_size = len(self.initial_data) / size
-            initial_data = [  self.initial_data[r*chunk_size:(r+1)*chunk_size] for r in range(size) ]
+            initial_data = [ self.initial_data[r*chunk_size:(r+1)*chunk_size] for r in range(size) ]
         else:
             initial_data = self.initial_data
             
@@ -618,15 +619,28 @@ class CollectiveRequest(BaseRequest):
         # TODO: The [0] indexing is because the results is packed in a redundant list - fix it        
         self.data = results[self.communicator.rank()] # Get results for own rank
         
-    """
-    Gathered results:
-    [['0:0', '0:1', '0:2', '0:3', '0:4', '0:5'],
-    ['1:0', '1:1', '1:2', '1:3', '1:4', '1:5'],
-    ['2:0', '2:1', '2:2', '2:3', '2:4', '2:5'],
-    ['3:0', '3:1', '3:2', '3:3', '3:4', '3:5'],
-    ['4:0', '4:1', '4:2', '4:3', '4:4', '4:5'],
-    ['5:0', '5:1', '5:2', '5:3', '5:4', '5:5']]
-    """
+    def start_alltoall_notree(self):
+        """
+        Disperse N messages in N parts to N processes. The i'th process supplies the i'th part to all others.
+        
+        The alltoall is implemented as naive N sends and recvs for each process
+        """
+        ### SETUP
+        size = self.communicator.size()
+        rank = self.communicator.rank()        
+        
+        ### CONSTRUCT SENDS AND RECEIVE REQUESTS
+        r_requests = []
+        s_requests = []
+        for r in range(size):
+            r_requests.append(self.communicator.irecv(r, self.tag))
+            s_requests.append(self.communicator.isend(self.initial_data[r], r, self.tag))
+            
+        results = self.communicator.waitall(r_requests+s_requests)
+        
+        ### CONSTRUCT RECEIVES        
+        self.data = results[0:size] # Get results for own rank
+
     def start_allgather_dissemination(self):
         """
         Gather a message in N parts from N processes using the dissemination
