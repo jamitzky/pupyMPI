@@ -16,6 +16,7 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 from mpi.logger import Logger
+import os
 
 def parse_hostfile(hostfile):
     """
@@ -26,8 +27,17 @@ def parse_hostfile(hostfile):
     logger = Logger()
 
     defaults = {"cpu":1,"max_cpu":1024,"port":14000}
+    cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.join(os.path.abspath(__file__)))))
+    hostfiles = [hostfile, os.path.join(cwd, "hostfile"), os.path.join(cwd, "bin", "hostfile")]
     malformed = False # Flag bad hostfile
     hosts = []
+
+    # Try the given hostfile and fall back on the other ones defined in
+    # hostfiles above
+    for f in hostfiles:
+        if os.path.isfile(f):
+            hostfile = f
+            break
     
     try:
         fh = open(hostfile, "r")

@@ -18,18 +18,23 @@ try:
   # NB. only avaliable for 32-bit architectures
   import psyco
   psyco.full()
-  print 'Psyco installed!'
+  #print 'Psyco installed!'
 except:
-  print 'No psyco installed - this will be slow!!!'
+  pass
+  #print 'No psyco installed - this will be slow!!!'
 
 #This solves the system of partial differential equations
 #Parameter is
 #  data - the problem instance matrix with temperatures
-def solve(data, rboffset):
-  global update_freq, mpi, epsilon
 
-  comm = mpi.MPI_COMM_WORLD
+update_freq = 10
+useGraphics = 0
+
+def solve(comm, data, rboffset):
+  global update_freq, epsilon, wholeproblem
+
   rank = comm.rank()
+  wsize = comm.size()
 
   BLACK_ROW_TAG = 50
   RED_ROW_TAG = 51
@@ -48,7 +53,7 @@ def solve(data, rboffset):
   if rank == wsize - 1: # Do not update last row
     h -= 1
 
-  print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
+  #print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
 
   # Send initial black points
   if 0 < rank:
@@ -174,68 +179,88 @@ def solve(data, rboffset):
     owndelta = delta
     delta = comm.allreduce(delta, sum)
 
-#Default problem size
-xsize=500
-ysize=500
-useGraphics=False
-i=0
+  # Receive "leftover" black points and discard
+  if rank != 0:
+      comm.recv(rank-1, BLACK_ROW_TAG)
+  if rank != wsize - 1:
+      comm.recv(rank+1, BLACK_ROW_TAG)
 
-for opt in pl.sys.argv:
-    if opt == "--":
-        i = 1
-    elif i > 0 and not opt.startswith("-"):
-        if i == 1:
-            xsize = int(opt)
-        if i == 2:
-            ysize = int(opt)
-        if i == 3:
-            useGraphics = int(opt)
-        if i > 3:
-            print("Parameters <x-size> <y-size> <use graphics>")
-            pl.sys.exit(-1)
-        i+=1
 
-mpi = MPI()
-comm = mpi.MPI_COMM_WORLD
-rank = comm.rank()
-wsize = comm.size()
+def setup(comm, xsize, ysize, useGraphics):
+    global update_freq, epsilon, wholeproblem
+    rank = comm.rank()
+    wsize = comm.size()
 
-ymin = floor(rank * ysize / wsize)
-ymax = floor((rank + 1) * ysize / wsize)
-epsilon=.1*(xsize-1)*(ysize-1)
+    ymin = floor(rank * ysize / wsize)
+    ymax = floor((rank + 1) * ysize / wsize)
+    epsilon=.1*(xsize-1)*(ysize-1)
 
-problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
+    problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
 
-problem[:,:1]=-273.15 #Left
-problem[:,-1:]=-273.15 #Right
+    problem[:,:1]=-273.15 #Left
+    problem[:,-1:]=-273.15 #Right
 
-if rank == 0:
-    if useGraphics:
-        wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
-    problem[0,1:-1]=40. #Top
+    if rank == 0:
+        if useGraphics:
+            wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
+        problem[0,1:-1]=40. #Top
 
-if rank == wsize - 1:
-    problem[-1]=-273.15 #Bottom
+    if rank == wsize - 1:
+        problem[-1]=-273.15 #Bottom
 
-print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
-print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
 
-update_freq=10
-if 0==rank and useGraphics:
-  g=sorgraphics.GraphicsScreen(xsize,ysize)
+    #print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
+    #print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
 
-timer=timer.StopWatch()
-timer.Start()
+    rboffset = (int(ymin % 2) == 1)
 
-print "solving with rb offset %d" % (ymin % 2)
+    return (problem, rboffset)
 
-#Start solving the heat equation
-solve(problem, int(ymin % 2)==1)
 
-mpi.finalize()
+if __name__ == "__main__":
+    #Default problem size
+    xsize=500
+    ysize=500
+    useGraphics=False
+    i=0
 
-timer.Stop()
-print "Solved the successive over-relaxation in %s" % (timer.timeString())
+    for opt in pl.sys.argv:
+        if opt == "--":
+            i = 1
+        elif i > 0 and not opt.startswith("-"):
+            if i == 1:
+                xsize = int(opt)
+            if i == 2:
+                ysize = int(opt)
+            if i == 3:
+                useGraphics = int(opt)
+            if i > 3:
+                print("Parameters <x-size> <y-size> <use graphics>")
+                pl.sys.exit(-1)
+            i+=1
 
-if 0==rank and useGraphics:
-  timer.Sleep(5)
+    mpi = MPI()
+    comm = mpi.MPI_COMM_WORLD
+    rank = comm.rank()
+
+    (problem, rboffset) = setup(comm, xsize, ysize, useGraphics)
+
+    if 0==rank and useGraphics:
+      g=sorgraphics.GraphicsScreen(xsize,ysize)
+
+    timer=timer.StopWatch()
+    timer.Start()
+
+    print "solving with rb offset %d" % (rboffset)
+
+    #Start solving the heat equation
+    solve(comm, problem, rboffset)
+
+    mpi.finalize()
+
+    timer.Stop()
+    print "Solved the successive over-relaxation in %s" % (timer.timeString())
+
+    if 0==rank and useGraphics:
+      timer.Sleep(5)
+

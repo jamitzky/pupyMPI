@@ -20,7 +20,7 @@ recv_data = world.alltoall(send_data)
 expected_data = [ '%d --> %d' % (x, rank) for x in range(size)]
 
 try:
-    assert sorted(recv_data) == sorted(expected_data)
+    assert recv_data == expected_data
 except AssertionError, e:
     #print "Got AssertionError. "
     #print "\tExcepted: %s" % expected_data

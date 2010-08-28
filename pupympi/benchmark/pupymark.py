@@ -34,7 +34,7 @@ from mpi import MPI
 from mpi import constants
 
 import comm_info as ci
-import single, collective, parallel, special
+import single, collective, parallel, special, nonsynthetic
 
 
 help_message = '''
@@ -78,7 +78,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     """
     starttime = time.time()
     
-    modules = [single, parallel, collective, special]
+    modules = [single, parallel, collective, special, nonsynthetic]
     resultlist = {}
 
     mpi = MPI()

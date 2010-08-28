@@ -1,39 +1,37 @@
-# meta-description: Test allreduce with list as main type and a custom reduce op
+# meta-description: Test allreduce with list
 # meta-expectedresult: 0
-# meta-minprocesses: 10
+# meta-minprocesses: 8
 """
-This test tries the allreduce operation with lists as the primary datatype,
-as the internal prepresentation of data in collective operations are list
-and we need to make sure that use of lists will not change anything.
+This test tries a global max over lists of integers
 """
 
 from mpi import MPI
+from mpi.operations import MPI_max
 
-def first10(input_list):
-    """
-    This is an operation on lists, so every element in the
-    list is a list. We merge the lists and return the 10 
-    first first. 
-    """
-    main_list = []
-    for single_list in input_list:
-        main_list.extend(single_list)
-
-    return sorted(main_list)[:10]
-
-first10.partial_data = True
+import random
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 
+size = world.size()
 rank = world.rank()
+root = 2
+max_number = size*2
 
-local_data = [ rank for x in range(3) ]
+ints = range(max_number+1)
+#swap the max with what is at index rank so all lists are not identical
+temp = ints[rank]
+ints[rank] = ints[max_number]
+ints[max_number] = temp
 
-first_elements = world.allreduce(local_data, first10)
+result = world.allreduce(ints, MPI_max)
 
+# The expected result is a list of the where the lower half are max_number since
+# everyone swapped in a max_number at their rank position. The upper half are
+# integers from max rank + 1 up to max_number and then the last integer should be
+# max rank since that is the highest rank swapped in there.
+expected_result = [(max_number) for _ in range(size)] + range(size,max_number) + [size-1]
+
+assert expected_result == result
+    
 mpi.finalize()
-
-expected_results = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3]
-
-assert expected_results == first_elements 

@@ -46,19 +46,12 @@ class Communicator:
                         }
 
 
-        # Setup a tree for this communicator. When this is done you can
-        # use the "up" and "down" attributes on the tree to send messages
-        # around. The standard tree is created with rank 0 as the root.
-        # Look at the inner "get_broadcast_tree" to see how you can get
-        # trees with different roots
-        self.get_broadcast_tree()
-
     def get_broadcast_tree(self, root=0):
         # Ensure we have the tree structure
         if not getattr(self, "bc_trees", None):
             self.bc_trees = {}
 
-        # See if the root is actually present in this commnicator
+        # See if the tree root is actually present in this commnicator
         if not self.have_rank(root):
             raise MPINoSuchRankException("Invalid root. Not present in this communicator.")
 
@@ -69,8 +62,7 @@ class Communicator:
         if root not in self.bc_trees:
             #Logger().debug("Creating a new tree with root %d" % root)
             self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
-            self.bc_trees[root]
-        
+            
         return self.bc_trees[root] 
                 
     def __repr__(self):
@@ -160,30 +152,6 @@ class Communicator:
         self.ceiling = new_comm_id
         newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
         newcomm.ceiling = new_comm_ceiling
-        return newcomm
-
-    def _comm_create_coll(self, group):
-        """
-        Collective implementation of the comm_create call
-        """
-        new_id = -1
-
-        if self.rank() == 0:
-            # send request to rank 0 of mpi_comm_world (if already rank 0 of mcw, just send the message anyway)
-            self.MPI_COMM_WORLD.send(None, self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
-            new_id = self.MPI_COMM_WORLD.recv(self.MPI_COMM_WORLD.group().members[0], constants.TAG_COMM_CREATE)
-
-        if new_id < 0:
-            raise MPICommunicatorNoNewIdAvailable("New valid communicator id was not distributed to whole group")
-        
-        # wait for answer on id
-        CollectiveRequest(constants.TAG_COMM_CREATE, self, new_id)
-        
-        # Non-members have rank -1
-        if not group._owner_is_member():
-            return None
-            
-        newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_id, name = "new_comm %s" % new_id, comm_root = self.MPI_COMM_WORLD)
         return newcomm
 
     def comm_free(self):
@@ -763,17 +731,18 @@ class Communicator:
             is raised if the provided root is not a member of this communicator. 
         """
         # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
-        cr.start_bcast()
+        #cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
+        #cr.start_bcast()
+        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
     def allgather(self, data):
         """
         The allgather function will gather all the data variables from the
-        participants and return it in a rank-order. All the involced processes
+        participants and return it in a rank-order. All the involved processes
         will receive the result.
         
-        As an example each process can send it's rank::
+        As an example each process can send its rank::
         
             from mpi import MPI
             mpi = MPI()
@@ -798,8 +767,9 @@ class Communicator:
             individual data to each other process. 
             
         """
-        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
-        cr.start_allgather()
+        #cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
+        #cr.start_allgather()
+        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data)
         return cr.wait()
 
     def allreduce(self, data, op):
@@ -834,16 +804,17 @@ class Communicator:
             See also the :func:`reduce` and :func:`scan` functions.
         """
         if not getattr(op, "__call__", False):
-            raise MPIException("Operation should be a callable")
+            raise MPIException("The reduce operation supplied should be a callable")
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
-        cr.start_allreduce(op)
+        #cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
+        #cr.start_allreduce(op)
+        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
         return cr.wait()
         
     def alltoall(self, data):
         """
-        This meethod extends the :func:`allgather` in the situation where you
-        need to send distinct data to each process. 
+        This meethod extends the :func:`scatter` in the situation where you
+        need all-to-all instead of one-to-all. 
         
         The input data should be list with the same number of elements as the
         size of the communicator. If you supply something else an Exception is
@@ -865,16 +836,16 @@ class Communicator:
             
             recv_data = mpi.alltoall(send_data)
             
-            # This will then look like the following (maybe not 
-            # in this order). We're still rank 2
+            # This will then look like the following. We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
 
         .. note::
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
-        cr.start_alltoall()
+        #cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
+        #cr.start_alltoall()
+        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
         return cr.wait()
 
     def gather(self, data, root=0):
@@ -916,8 +887,9 @@ class Communicator:
         .. note:: 
             See also the :func:`allgather` and :func:`alltoall` functions. 
         """
-        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
-        cr.start_allgather()
+        #cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
+        #cr.start_allgather()
+        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, root=root)
         data = cr.wait()
         if self.rank() == root:
             return data
@@ -951,10 +923,12 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator. 
         """
+        if not getattr(op, "__call__", False):
+            raise MPIException("The reduce operation supplied should be a callable")
 
-        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
-        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data)
-        cr.start_allreduce(op)
+        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
+        #cr.start_allreduce(op)
+        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data,root=root, mpi_op=op)
         data = cr.wait()
         
         #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
@@ -991,8 +965,9 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
-        cr.start_scan(operation)
+        #cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
+        #cr.start_scan(operation)
+        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, mpi_op=operation)
         return cr.wait()
 
     def scatter(self, data=None, root=0):
@@ -1065,15 +1040,26 @@ class Communicator:
         if self.rank() != root:
             data = None
 
-        # Create a list with size N
-        if data:
-            if len(data) != self.size():
-                elements_per_rank = len(data) / self.size()
-                data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
-
         cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        data = cr.wait().pop()['value']
-        return data[self.rank()]
+        return cr.wait()
+
+
+        #if self.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        #    raise MPIException("Scatter used with invalid arguments.")
+        #
+        #if self.rank() != root:
+        #    data = None
+        #
+        ## Create a list with size N
+        #if data:
+        #    if len(data) != self.size():
+        #        elements_per_rank = len(data) / self.size()
+        #        data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
+        #
+        #cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
+        #data = cr.wait().pop()['value']
+        #return data[self.rank()]
+
         
     def testall(self, request_list):
         """
@@ -1116,7 +1102,7 @@ class Communicator:
 
             mpi.finalize()
         """
-        # We short circuit this so make it faster
+        # We short circuit this to make it faster
         for request in request_list:
             if not request.test():
                 return False
@@ -1216,7 +1202,7 @@ class Communicator:
         
     def waitall(self, request_list):
         """
-        Waits for all the requets in the given list and returns a list
+        Waits for all the requests in the given list and returns a list
         with the returned data. 
 
         **Example**
@@ -1257,12 +1243,43 @@ class Communicator:
         .. note:: 
             See also the :func:`waitany` and :func:`waitsome` functions. 
         """
-        return_list = []
-
-        for request in request_list:
-            data = request.wait()
-            return_list.append(data)
+        
+        # The original King of Code (tm) version
+        
+        #return_d = {}
+        #requests = {}
+        #for i in range(len(request_list)):
+        #    requests[i] = request_list[i]
+        #    
+        #while requests:
+        #    idxs = requests.keys()
+        #    for idx in idxs:
+        #        if requests[idx].test():
+        #            return_d[idx] = requests[idx].wait()
+        #            del requests[idx]
+        #    
+        #    time.sleep(0.01)
+        #            
+        #return return_d.values()
+        
+        # New and improved Creamboy version
+        remaining = len(request_list)
+        return_list = ["UNFILLED" for x in range(remaining)]
+        
+        while remaining > 0:
+            i = 0
+            for request in request_list:
+                if return_list[i] == "UNFILLED" and request.test():
+                    return_list[i] = request.wait()
+                    remaining -= 1
+                    
+                i += 1
+            
+            time.sleep(0.00001)
+                    
         return return_list
+
+#       Logger().warning("rank: %i return_list %s, badness:%s \n request list: %s" % (r,return_list,badness,request_list) )
         
     def waitany(self, request_list):
         """
