@@ -42,11 +42,12 @@ assert recv_data == expected_data
 send_data = ''.join( [ str(r/2) for r in range(size*2) ] )
 recv_data = world.alltoall(send_data)
 expected_data = str(rank)*size*2
-try:
-    assert recv_data == expected_data
-except AssertionError, e:
-    print "\tExcepted: %s" % expected_data
-    print "\tReceived data: %s" % recv_data
-    raise e
+assert recv_data == expected_data
+
+### LISTS OF LISTS
+send_data = [ [str(rank),str(rank)] for _ in range(size*2) for _ in range(size)]
+recv_data = world.alltoall(send_data)
+expected_data = [ [str(r/2),str(r/2)] for r in range(size*2) for _ in range(size)]
+assert recv_data == expected_data
 
 mpi.finalize()
