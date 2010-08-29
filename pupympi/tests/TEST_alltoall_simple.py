@@ -16,7 +16,8 @@ size = world.size()
 chunk_size = 4
 
 iterations = 100000000
-iterations = 100
+iterations = 1000
+#iterations = 10
 
 data = [str(i)*chunk_size for i in range(size)]
 
@@ -24,7 +25,9 @@ data = [str(i)*chunk_size for i in range(size)]
 
 recv_data = world.alltoall(data)
 
-for _ in xrange(iterations):
+for i in xrange(iterations):
+    if rank == 0:
+        print "doing iteration %i of %i" % (i+1, iterations)
     recv_data = world.alltoall(data)
 
 #if rank == 0:
