@@ -276,6 +276,22 @@ class Communicator:
     # other stuff, related to requests that may get done:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
+    
+    def _direct_send(self, message, receivers=[], tag=constants.MPI_TAG_ANY):
+        """
+        A helper function for sending a message without passing the
+        message through the queues. It's possible to send the same 
+        message to several recipients without having the data pickled
+        multiple times. 
+        
+        FIXME: The multiple-recipients way without picklign a lot of
+               data could maybe be done with the regular send as well?
+        """
+        if not getattr(receivers, "__iter__", False):
+            receivers = [receivers]
+            
+        return self.mpi.network._direct_send(self, message=message, receivers=receivers, tag=tag)
+    
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
