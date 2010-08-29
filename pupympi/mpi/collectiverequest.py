@@ -231,7 +231,7 @@ class CollectiveRequest(BaseRequest):
                 data_list = d
 
         else:
-            raise Exception("Collective request got invalid iteration: %s" % iteration)
+            raise MPIException("Collective request got invalid iteration: %s" % iteration)
         
         # Pack the data a special way so we can put it into the right stucture later
         # on. 
@@ -253,7 +253,7 @@ class CollectiveRequest(BaseRequest):
             # Get data from above
             data = self.communicator.recv(node_from, self.tag)
         else:
-            raise Exception("More than one parent in nodes_from.")
+            raise MPIException("More than one parent in nodes_from.")
                 
         #Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
         
@@ -612,11 +612,7 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=ordered_results)
         
-        #if self.communicator.rank() == 0:
-        #    Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
-
         ### FILTERING
-        # TODO: The [0] indexing is because the results is packed in a redundant list - fix it        
         self.data = results[self.communicator.rank()] # Get results for own rank
         
     def start_alltoall_notree(self):
@@ -636,11 +632,10 @@ class CollectiveRequest(BaseRequest):
             data_size = len(self.initial_data)
         except TypeError, e:
             # integers, bools and other stuff throws error for len()
-            raise Exception("For alltoal you have to provide a sequence type ie. list, string, tuple etc.")
+            raise MPIException("For alltoal you have to provide a sequence type ie. list, string, tuple etc.")
         
         if  data_size % size != 0:
-        #if  data_size < size:
-            raise Exception("Data size for alltoall (length was %i) should be at least equal to the number of processes involved in the operation (np was %i)." % (data_size,size))
+            raise MPIException("Data size for alltoall (length was %i) should be at least equal to the number of processes involved in the operation (np was %i)." % (data_size,size))
         else:
             chunk_size = data_size / size
             
@@ -658,13 +653,10 @@ class CollectiveRequest(BaseRequest):
         # Check if string (we need to join)
         if isinstance(self.initial_data,str):
             self.data = ''.join(results)
-            Logger().debug("self.data:%s " % (self.data) )
         # Check if tuple (we need to tuplify)
         elif isinstance(self.initial_data,tuple):
             self.data = tuple([ item for sublist in results for item in sublist ])
         else:
-            # Alex Martelli is smarter than me - I do not understand why this works
-            # http://stackoverflow.com/questions/952914/making-a-flat-list-out-of-list-of-lists-in-python
             self.data = [ item for sublist in results for item in sublist ] # Get results for own rank
 
     def start_allgather_dissemination(self):
@@ -793,7 +785,7 @@ class CollectiveRequest(BaseRequest):
         """        
         TODO: Implement or decide to drop
         """
-        raise Exception("Not implemented yet")
+        raise MPIException("Sorry, start_scan is not implemented yet.")
 
 
 
@@ -898,9 +890,7 @@ class CollectiveRequest(BaseRequest):
                 temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
             except IndexError, e:
                 # If any sequence is shorter than the first one an IndexError will be raised
-                print "BAD"
-                raise e
-                # TODO: Raise proper error here
+                raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
             # Apply operation to temp list and store result
             reduced_results.append(operation(temp_list))
             
