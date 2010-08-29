@@ -1267,7 +1267,8 @@ class Communicator:
         incomplete = [True for _ in range(remaining)]
         return_list = [None for _ in range(remaining)]
         
-        while remaining > 0:
+        badness = 0
+        while remaining > 0:            
             for idx, request in enumerate(request_list):
                 if incomplete[idx] and request.test():
                     return_list[idx] = request.wait()
@@ -1275,6 +1276,9 @@ class Communicator:
                     remaining -= 1
             
             time.sleep(0.00001)
+            badness += 1
+            if badness > 10000 and badness % 10000 == 0:
+                Logger().warning("Uhhhh the badness:%i, remaining:%i, \n request_list" % (badness,remaining,request_list) )
                     
         return return_list
 
