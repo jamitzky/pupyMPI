@@ -244,9 +244,9 @@ class MPI(Thread):
         with self.received_data_lock:
             #Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
 
-            for data in self.received_data:
-                (communicator_id, sender, tag, acknowledge, message) = data
-                
+            for element in self.received_data:
+                (sender, tag, acknowledge, communicator_id, message) = element
+
                 # Any communication must take place within the same communicator
                 if request.communicator.id == communicator_id:
                     
@@ -255,7 +255,7 @@ class MPI(Thread):
                         
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
                         if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
-                            remove.append(data)
+                            remove.append(element)
                             request.update(status="ready", data=message)
                             match = True
                             # Outgoing synchronized communication requires acknowledgement
@@ -310,9 +310,10 @@ class MPI(Thread):
                 with self.raw_data_lock:
                     with self.received_data_lock:
                         #Logger().debug("got both locks")
-                        for raw_data in self.raw_data_queue:
+                        for element in self.raw_data_queue:
+                            (rank, tag, ack, comm_id, raw_data) = element
                             data = pickle.loads(raw_data)
-                            self.received_data.append(data)
+                            self.received_data.append( (rank, tag, ack, comm_id, data) )
                             #Logger().debug("Adding data: %s" % data)
                         
                         self.pending_requests_has_work.set()
