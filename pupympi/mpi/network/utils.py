@@ -70,7 +70,7 @@ def get_raw_message(client_socket):
     rest is N bytes of pickled data. So we start by receiving a long and
     when using that value to unpack the remaining part.
     """
-    def receive_fixed(length, header=False):
+    def receive_fixed(length):
         """
         Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         """
@@ -89,25 +89,25 @@ def get_raw_message(client_socket):
             
             # Other side closed
             if len(data) == 0:
-                raise MPIException("Connection broke or something received empty (still missing length:%i - header:%s)" %(length,header))
+                raise MPIException("Connection broke or something received empty (still missing length:%i)" % length)
                 
-
             length -= len(data)
             message += data
                 
         return message
     
-    header_size = struct.calcsize("lll")
-    header = receive_fixed(header_size,False)
-    message_size, rank, cmd = struct.unpack("lll", header)
+    header_size = struct.calcsize("llllll")
+    header = receive_fixed(header_size)
+    lpd, rank, cmd, tag, ack, comm_id = struct.unpack("llllll", header)
     
-    return rank, cmd, receive_fixed(message_size,True)
-    
-def prepare_message(data, rank, cmd=0):
+    return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
+
+from mpi import constants
+def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0):
     pickled_data = pickle.dumps(data)
     lpd = len(pickled_data)
 
-    header = struct.pack("lll",lpd , rank, cmd)
+    header = struct.pack("llllll",lpd , rank, cmd, tag, ack, comm_id)
     #Logger().debug("Prepared message with command: %d, DATA:%s,len:%i, h+p:%i" % (cmd,data,lpd,len(header+pickled_data)) )
     return header+pickled_data
 
