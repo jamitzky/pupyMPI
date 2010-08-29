@@ -264,7 +264,7 @@ class Usage(Exception):
 
 def main():
     usage = 'usage: %prog [options]'
-    parser = OptionParser(usage=usage, version="Pupympi version 0.7")
+    parser = OptionParser(usage=usage, version="Pupympi version 0.8")
     parser.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to 1.')
     parser.add_option('-c', '--np', dest='np', default=2, type='int', help='The number of processes to start.')
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
