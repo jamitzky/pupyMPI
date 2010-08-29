@@ -41,9 +41,6 @@ def get_communicator_class(socket_poll_method=False):
     if socket_poll_method == "epoll":
         c_class = CommunicationHandlerEpoll
     
-    elif socket_poll_method == "kqueue":
-        c_class = CommunicationHandlerKqueue
-
     elif socket_poll_method == "poll":
         c_class = CommunicationHandlerPoll
 
@@ -58,10 +55,6 @@ def get_communicator_class(socket_poll_method=False):
         if epoll:
             c_class = CommunicationHandlerEpoll
     
-        kqueue = getattr(select, "kqueue", None)
-        if kqueue and not c_class:
-            c_class = CommunicationHandlerKqueue
-
         poll = getattr(select, "poll", None)
         if poll and not c_class:
             c_class = CommunicationHandlerPoll
@@ -144,14 +137,12 @@ class Network(object):
         s_conn.connect(recipient)
         
         # Pack the data with our special format
-        data = (-1, -1, constants.TAG_INITIALIZING, data)
-        utils.robust_send(s_conn, prepare_message(data, internal_rank))        
+        utils.robust_send(s_conn, prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING))        
         
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
-        _, _, raw_data = get_raw_message(s_conn)
-        data = pickle.loads(raw_data)
-        (_, _, _, all_procs) = data
+        _, _, _, _, _, all_procs = get_raw_message(s_conn)
+        all_procs = pickle.loads(all_procs)
 
         s_conn.close()
 
@@ -274,9 +265,9 @@ class BaseCommunicationHandler(threading.Thread):
         port = self.network.all_procs[global_rank]['port']
         
         # Create the proper data structure and pickle the data
-        data = (request.communicator.id, request.communicator.rank(), request.tag, request.acknowledge, request.data)
         #print "We found cmd: %d" % request.cmd
-        request.data = prepare_message(data, request.communicator.rank(), cmd=request.cmd)
+        request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd, 
+                                       tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id)
         
         ##Logger().warning("SHOW request %s" % request)
         
@@ -340,7 +331,7 @@ class BaseCommunicationHandler(threading.Thread):
                 conn = read_socket
             
             try:
-                rank, msg_command, raw_data = get_raw_message(conn)
+                rank, msg_command, tag, ack, comm_id, raw_data = get_raw_message(conn)
                 #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
                 #if add_to_pool:
                 #    Logger().warning("Read from accepted connection")
@@ -369,7 +360,7 @@ class BaseCommunicationHandler(threading.Thread):
                 try:
                     with self.network.mpi.raw_data_lock:
                         #Logger().debug("Got lock")
-                        self.network.mpi.raw_data_queue.append(raw_data)
+                        self.network.mpi.raw_data_queue.append( (rank, tag, ack, comm_id, raw_data))
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
                         #Logger().debug("Releasing lock")
@@ -628,73 +619,6 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
         return ([], out_list, error_list)
-
-class CommunicationHandlerKqueue(BaseCommunicationHandler):
-    def __init__(self, *args, **kwargs):
-        super(CommunicationHandlerKqueue, self).__init__(*args, **kwargs)
-        
-        # Add a special kqueue environment we can later use to poll
-        # the system. 
-        self.kqueue_changelist_lock = threading.Lock()
-        self.kqueue_changelist = []            # I think this needs to go away.
-        self.kqueue = select.kqueue()
-        self.in_ident_to_socket = {}
-        self.out_ident_to_socket = {}
-
-    def add_in_socket(self, client_socket):
-        super(CommunicationHandlerKqueue, self).add_in_socket(client_socket)
-        self.in_ident_to_socket[client_socket.fileno()] = client_socket
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_READ, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        self.kqueue_changelist.append(event)
-        
-    def add_out_socket(self, client_socket):
-        super(CommunicationHandlerKqueue, self).add_out_socket(client_socket)
-        self.out_ident_to_socket[client_socket.fileno()] = client_socket
-        event = select.kevent(client_socket, filter=select.KQ_FILTER_WRITE, flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-        self.kqueue_changelist.append(event)
-        Logger().debug("Adding <ident,socket> pair to internal structure <%s,%s>" % (event.ident, client_socket))
-
-    def select(self):
-        in_list = []
-        out_list = []
-        error_list = []
-        
-        with self.kqueue_changelist_lock:
-
-            events = []
-            for kevent in self.kqueue_changelist: 
-                new_events = self.kqueue.control([kevent], 10, 0)
-                events.extend(new_events)
-                
-            new_events = self.kqueue.control(None, 10, 0)
-            events.extend(new_events)
-            
-            for event in events:
-                if event.filter == select.KQ_FILTER_READ:
-                    Logger().warning("--------------> read: event ident %s and flag %s" % (event.ident, event.flags))
-
-                    socket = self.in_ident_to_socket.get(event.ident, None)
-                    if socket:
-                        in_list.append(socket)
-                    else:
-                        Logger().warning("read: Throwing socket away for event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
-                        
-                elif event.filter == select.KQ_FILTER_WRITE:
-                    socket = self.out_ident_to_socket.get(event.ident, None)
-                    if socket:
-                        out_list.append(socket)
-                    else:
-                        Logger().warning("write: Throwing socket away for event ident %s and flag %s" % (event.ident, event.flags))
-                else:
-                    Logger.warning("==============> unknown event ident %s, filter %s and flag %s" % (event.ident, event.filter, event.flags))
-                    if event.flags == select.KQ_EV_ERROR:
-                        Logger().warning("Error detected in kqueue control call. ")
-                        Logger().warning("We received an event with identifier (%s), filter (%s), flags (%s) fflags (%s) udata(%s)" % (event.ident, event.filter, event.flags, event.fflags, event.udata))
-                    
-            # Reset the change list
-            self.kqueue_changelist = []
-            
-        return (in_list, out_list, error_list)
         
 class CommunicationHandlerSelect(BaseCommunicationHandler):
     """

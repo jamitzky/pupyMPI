@@ -101,12 +101,13 @@ def options_and_arguments():
     data for comparison. You should provide at least 2 folders."""   
     
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
-    _, args = parser.parse_args()
+    parser.add_option("--build-folder", default="result", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
+    options, args = parser.parse_args()
     
     if len(args) <= 1:
         parser.error("You should provide at least two folders with benchmarks data for comparison.")
     
-    return args
+    return args, options
 
 def find_runs(folders):
     runs = []
@@ -149,7 +150,7 @@ def parse_benchmark_data(run_folders, gather):
                 run_type = row[6]
                 gather.add_data(run_type, procs, datasize, time_p_it, throughput)
             
-def draw_scatter(gather):
+def draw_scatter(gather, folder):
     """
     This function will output a lot of gnuplot data
     to be manualle executed. This gives you the option
@@ -208,7 +209,7 @@ def draw_scatter(gather):
         for nc in data.keys():
             filename = "%s_%d.dat" % (run_type, nc)
             title = "%s for %d nodes" % (run_type, nc)
-            f = open(filename, "w")
+            f = open(folder + "/" + filename, "w")
             files.append( (filename, title) )
             for datasize in data[nc].keys():
                 values = data[nc][datasize]
@@ -225,7 +226,7 @@ def draw_scatter(gather):
         y_labels = get_y_tics(max_time)
         
         # At some point we can make a smart filename here.
-        of = open("%s.gnu" % run_type, "w")
+        of = open("%s/%s.gnu" % (folder, run_type), "w")
         
         # plot the data.
         print >> of, "set terminal png nocrop enhanced size 800,600"
@@ -233,18 +234,10 @@ def draw_scatter(gather):
         print >> of, 'set title "%s plot"' % run_type
         print >> of, 'set xlabel "Data size (MB)"'
         print >> of, 'set ylabel "Wallclock in (sec)'
-        #print >> of, 'set xtics (%s)' % ",".join(map(str, x_tics))
         print >> of, 'set xtics (%s)' % ", ".join(map(str, x_labels))
         print >> of, 'set ytics (%s)' % ", ".join(map(str, y_labels))
         print >> of, "set log x"
         print >> of, "set log y"
-        #print >> of, 'set label 1 "set style line 1 lt rgb \"red\" lw 3" at -0.4, -0.25, 0 left norotate back textcolor rgb "red"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 2 "set style line 2 lt rgb \"orange\" lw 2" at -0.4, -0.35, 0 left norotate back textcolor rgb "orange"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 3 "set style line 3 lt rgb \"yellow\" lw 3" at -0.4, -0.45, 0 left norotate back textcolor rgb "yellow"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 4 "set style line 4 lt rgb \"green\" lw 2" at -0.4, -0.55, 0 left norotate back textcolor rgb "green"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 5 "set style line 5 lt rgb \"cyan\" lw 3" at -0.4, -0.65, 0 left norotate back textcolor rgb "cyan"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 6 "set style line 6 lt rgb \"blue\" lw 2" at -0.4, -0.75, 0 left norotate back textcolor rgb "blue"  nopoint offset character 0, 0, 0'
-        #print >> of, 'set label 7 "set style line 7 lt rgb \"violet\" lw 3" at -0.4, -0.85, 0 left norotate back textcolor rgb "violet"  nopoint offset character 0, 0, 0'
 
         print >> of, 'set style line 1  linetype 1 linecolor rgb "red"  linewidth 1.000 pointtype 1 pointsize default'
         print >> of, 'set style line 2  linetype 2 linecolor rgb "orange"  linewidth 1.000 pointtype 2 pointsize default'
@@ -267,9 +260,18 @@ def draw_scatter(gather):
         
         of.close()
             
+def write_gnuplot_makefile(folder_name):
+    fh = open(folder_name+"/Makefile", "w")
+    
+    print >> fh, "all:"
+    print >> fh, "\tgnuplot *.gnu\n"
+    print >> fh, "clean:"
+    print >> fh, "\trm *.png"
+    fh.close()            
+
 if __name__ == "__main__":
     # Handle arguments etc. 
-    folders = options_and_arguments()
+    folders, options = options_and_arguments()
     
     # Parse benchmark data for each folder into an internal structure. 
     run_folders = find_runs(folders)
@@ -280,14 +282,31 @@ if __name__ == "__main__":
     
     data = parse_benchmark_data(run_folders, gather)
     
+    # Ensure we have the output folder
+    output_folder_name = options.build_folder
+    import os
+    try:
+        os.mkdir(output_folder_name)
+    except OSError:
+        pass
+    
+    # Were we should actually look if we're using gnuplot
+    # and only write the makefile if so.
+    write_gnuplot_makefile(output_folder_name)
+    
     # If we should choose to implement further output functions we should
     # add an options above and select an output function here.
     def timer_wrapper():    
-        draw_scatter(gather)
+        draw_scatter(gather, output_folder_name)
     
     # Stop the timing and say goodbye.
     from timeit import Timer
     t = Timer(timer_wrapper)
     t = t.timeit(number=1)
     
-    print "Goodbye. We parsed %d benchmark folders in %.2f seconds" % (len(folders), t)
+    print """
+    Goodbye. We parsed %d benchmark folders in %.2f seconds. 
+    
+    You can generate all the final files by changing into the %s folder 
+    and type "Make".
+    """ % (len(folders), t, output_folder_name)
