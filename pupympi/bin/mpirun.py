@@ -269,18 +269,15 @@ if __name__ == "__main__":
         sender_conns.append( sender_conn )
         
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, command, data = get_raw_message(sender_conn)
-        data = pickle.loads(data)
-        (communicator, sender, tag, message) = data
+        
+        rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
+        message = pickle.loads(data)
         
         all_procs.append( message ) # add (rank,host,port) for process to the listing
     #logger.debug("Received information for all %d processes" % options.np)
     
     # Send all the data to all the connections, closing each connection afterwards
-    COMM_ID = -1
-    COMM_RANK = -1
-    data = (COMM_ID, COMM_RANK, constants.TAG_INITIALIZING, all_procs)
-    message = prepare_message(data, -1)
+    message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
     for conn in sender_conns:
         utils.robust_send(conn, message)
 
