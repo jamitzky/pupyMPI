@@ -338,7 +338,7 @@ class Communicator:
         # so the user will be able to wait() for it.
         request.update("ready")
             
-        queue_item = (self.id, self.rank(), request.tag, False, request.data)
+        queue_item = (self.rank(), request.tag, False, self.id, request.data)
         with self.mpi.received_data_lock:
             self.mpi.received_data.append(queue_item)            
             self.mpi.pending_requests_has_work.set()
@@ -1264,22 +1264,20 @@ class Communicator:
         
         # New and improved Creamboy version
         remaining = len(request_list)
-        return_list = ["UNFILLED" for x in range(remaining)]
+        incomplete = [True for _ in range(remaining)]
+        return_list = [None for _ in range(remaining)]
         
         while remaining > 0:
-            i = 0
-            for request in request_list:
-                if return_list[i] == "UNFILLED" and request.test():
-                    return_list[i] = request.wait()
+            for idx, request in enumerate(request_list):
+                if incomplete[idx] and request.test():
+                    return_list[idx] = request.wait()
+                    incomplete[idx] = False
                     remaining -= 1
-                    
-                i += 1
             
             time.sleep(0.00001)
                     
         return return_list
 
-#       Logger().warning("rank: %i return_list %s, badness:%s \n request list: %s" % (r,return_list,badness,request_list) )
         
     def waitany(self, request_list):
         """

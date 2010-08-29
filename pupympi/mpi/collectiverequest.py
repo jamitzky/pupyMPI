@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
+from math import log
+
 from mpi.request import BaseRequest
 from mpi.logger import Logger
 from mpi import constants
@@ -25,13 +27,7 @@ identity = lambda x : x
 class CollectiveRequest(BaseRequest):
     """
     ISSUES:
-    - "Everybody knows you don't go full_meta!" (aka. let's all find more descriptive names)
-    - Collective calls in general do not have to have both up and down traversal of the tree,
-      the previously perceived global blocking requirement has been deemed out by Brian(!)
-    - When passing lists around in the tree they should not be flattened before it is neccessary so we avoid excessive iterating
     - We should test that the broadcast trees are indeed reused
-    - When we reduce or gather we should not degrade to allreduce or alltoall and just throw away the redundant data
-      instead we should make sure only the needed data is passed around the tree
     """
 
     def __init__(self, tag, communicator, data=None, root=0, mpi_op=None):
@@ -69,11 +65,13 @@ class CollectiveRequest(BaseRequest):
             self.start_reduce(self.mpi_op)
 
         elif self.tag == constants.TAG_ALLGATHER:
-            self.start_allgather()
+            #self.start_allgather()
+            self.start_allgather_dissemination()
             
         elif self.tag == constants.TAG_ALLTOALL:
             #self.start_alltoall_old()
-            self.start_alltoall()
+            #self.start_alltoall()
+            self.start_alltoall_notree()
                         
         elif self.tag == constants.TAG_ALLREDUCE:
             #self.start_allreduce_old(self.mpi_op)
@@ -233,7 +231,7 @@ class CollectiveRequest(BaseRequest):
                 data_list = d
 
         else:
-            raise Exception("Collective request got invalid iteration: %s" % iteration)
+            raise MPIException("Collective request got invalid iteration: %s" % iteration)
         
         # Pack the data a special way so we can put it into the right stucture later
         # on. 
@@ -255,7 +253,7 @@ class CollectiveRequest(BaseRequest):
             # Get data from above
             data = self.communicator.recv(node_from, self.tag)
         else:
-            raise Exception("More than one parent in nodes_from.")
+            raise MPIException("More than one parent in nodes_from.")
                 
         #Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
         
@@ -503,7 +501,7 @@ class CollectiveRequest(BaseRequest):
         if rank == self.root:    
             size = self.communicator.size()
             chunk_size = len(self.initial_data) / size
-            initial_data = [  self.initial_data[r*chunk_size:(r+1)*chunk_size] for r in range(size) ]
+            initial_data = [ self.initial_data[r*chunk_size:(r+1)*chunk_size] for r in range(size) ]
         else:
             initial_data = self.initial_data
             
@@ -614,22 +612,124 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.down
         results = self.traverse_down(nodes_from, nodes_to, initial_data=ordered_results)
         
-        #if self.communicator.rank() == 0:
-        #    Logger().debug("results:%s, nodes_from:%s, nodes_to:%s" % (results,nodes_from, nodes_to))
-
         ### FILTERING
-        # TODO: The [0] indexing is because the results is packed in a redundant list - fix it        
         self.data = results[self.communicator.rank()] # Get results for own rank
         
-    """
-    Gathered results:
-    [['0:0', '0:1', '0:2', '0:3', '0:4', '0:5'],
-    ['1:0', '1:1', '1:2', '1:3', '1:4', '1:5'],
-    ['2:0', '2:1', '2:2', '2:3', '2:4', '2:5'],
-    ['3:0', '3:1', '3:2', '3:3', '3:4', '3:5'],
-    ['4:0', '4:1', '4:2', '4:3', '4:4', '4:5'],
-    ['5:0', '5:1', '5:2', '5:3', '5:4', '5:5']]
-    """
+    def start_alltoall_notree(self):
+        """
+        Disperse N messages in N parts to N processes. The i'th process supplies the i'th part to all others.
+        
+        The sequence length must be a multiple of N so that splitting in distributing
+        is trivial.
+        The alltoall is implemented as naive N sends and recvs for each process
+        """
+        ### SETUP
+        size = self.communicator.size()
+        rank = self.communicator.rank()
+        
+        # Check if proper sequence
+        try:
+            data_size = len(self.initial_data)
+        except TypeError, e:
+            # integers, bools and other stuff throws error for len()
+            raise MPIException("For alltoal you have to provide a sequence type ie. list, string, tuple etc.")
+        
+        if  data_size % size != 0:
+            raise MPIException("Data size for alltoall (length was %i) should be at least equal to the number of processes involved in the operation (np was %i)." % (data_size,size))
+        else:
+            chunk_size = data_size / size
+            
+        ### CONSTRUCT SENDS AND RECEIVE REQUESTS
+        r_requests = []
+        s_requests = []
+        for r in range(size):
+            r_requests.append(self.communicator.irecv(r, self.tag))
+            s_requests.append(self.communicator.isend(self.initial_data[r*chunk_size:(r+1)*chunk_size], r, self.tag))
+        
+        ### RECEIVE AND STORE    
+        res = self.communicator.waitall(r_requests+s_requests)        
+        results = res[0:-size] # Only recv results - discard return values from sends
+        
+        # Check if string (we need to join)
+        if isinstance(self.initial_data,str):
+            self.data = ''.join(results)
+        # Check if tuple (we need to tuplify)
+        elif isinstance(self.initial_data,tuple):
+            self.data = tuple([ item for sublist in results for item in sublist ])
+        else:
+            self.data = [ item for sublist in results for item in sublist ] # Get results for own rank
+
+    def start_allgather_dissemination(self):
+        """
+        Gather a message in N parts from N processes using the dissemination
+        allgather algorithm
+        """
+        ### SETUP
+        size = self.communicator.size()
+        rank = self.communicator.rank()
+        # Calc normal iterations needed
+        iteration = int(log(size,2))
+        
+        # Allocate result list
+        data_list = [None if r != rank else self.initial_data for r in range(size)]
+        
+        ### NORMAL ITERATIONS
+        i = 0
+        while i < iteration:
+            # Calculate rank for receive and send
+            send_to = (2**i+rank) % size
+            recv_from = (rank - (2**i)) % size
+            
+            # Exchange data
+            r_handle = self.communicator.irecv(recv_from, self.tag)
+            s_handle = self.communicator.isend(data_list, send_to, self.tag)
+            res = self.communicator.waitall([r_handle,s_handle])
+            
+            # TODO: For now we send unconditionally during normal iterations and
+            #       thus have to check validity (not None) during updating. This
+            #       could be optimized.
+            # Update own state
+            received = res[0]
+            for e in range(size):
+                if received[e] is not None:
+                    data_list[e] = received[e]
+            
+            i += 1
+        
+        ### ODD ITERATIONS        
+        # How much is missing
+        gap_size = size - 2**iteration
+        if gap_size:
+            # Calculate rank for receive and send (own rank offset by half of next power of two)
+            send_to = (rank + 2**iteration) % size
+            recv_from = (rank - 2**iteration) % size
+            
+            # Get missing gap
+            gap_start = send_to+1
+            gap = data_list[gap_start:gap_start+gap_size]
+            # Check if the gap wraps around
+            gap_wrap = gap_size - len(gap)
+            if gap_wrap:
+                gap = gap+data_list[0:gap_wrap]
+                
+            # Exchange gaps
+            r_handle = self.communicator.irecv(recv_from, self.tag)
+            s_handle = self.communicator.isend(gap, send_to, self.tag)
+            res = self.communicator.waitall([r_handle,s_handle])
+            
+            # Fill out gap
+            my_gap_start = rank+1
+            received = res[0]
+            j = 0
+            for gdx in range(my_gap_start,my_gap_start+gap_size):
+                idx = gdx % size
+                gap_item = received[j]
+                data_list[idx] = gap_item
+                j += 1
+        
+        
+        self.data = data_list
+
     def start_allgather(self):
         """
         Gather a message in N parts from N processes        
@@ -685,7 +785,7 @@ class CollectiveRequest(BaseRequest):
         """        
         TODO: Implement or decide to drop
         """
-        raise Exception("Not implemented yet")
+        raise MPIException("Sorry, start_scan is not implemented yet.")
 
 
 
@@ -790,9 +890,7 @@ class CollectiveRequest(BaseRequest):
                 temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
             except IndexError, e:
                 # If any sequence is shorter than the first one an IndexError will be raised
-                print "BAD"
-                raise e
-                # TODO: Raise proper error here
+                raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
             # Apply operation to temp list and store result
             reduced_results.append(operation(temp_list))
             

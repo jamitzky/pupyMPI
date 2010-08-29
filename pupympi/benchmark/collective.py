@@ -232,3 +232,4 @@ def test_Barrier(size, max_iterations):
     t2 = ci.clock_function()
     time = t2 - t1
     return time
+
