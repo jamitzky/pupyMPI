@@ -98,17 +98,16 @@ def prp_receiver(address,port):
     s.bind((address, port))
     s.listen(1)
     print "string server setup"    
-    conn, addr = s.accept()
+    conn, _ = s.accept()
     print "string server connected"
 
     more = True
-    data = ""
 
     while more:
         try:
-            rank, msg_command, raw_data = get_raw_message(conn)
+            rank, msg_command, _, _, _, raw_data = get_raw_message(conn)
         except Exception, e:
-            print "some error..."
+            print "some error...", str(e)
         
         print "Rank:%s,cmd:%s,raw_data:%s" % (rank,msg_command,raw_data)
         more = False

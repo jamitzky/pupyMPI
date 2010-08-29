@@ -338,7 +338,7 @@ class Communicator:
         # so the user will be able to wait() for it.
         request.update("ready")
             
-        queue_item = (self.id, self.rank(), request.tag, False, request.data)
+        queue_item = (self.rank(), request.tag, False, self.id, request.data)
         with self.mpi.received_data_lock:
             self.mpi.received_data.append(queue_item)            
             self.mpi.pending_requests_has_work.set()
