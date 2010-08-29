@@ -623,23 +623,49 @@ class CollectiveRequest(BaseRequest):
         """
         Disperse N messages in N parts to N processes. The i'th process supplies the i'th part to all others.
         
+        The sequence length must be a multiple of N so that splitting in distributing
+        is trivial.
         The alltoall is implemented as naive N sends and recvs for each process
         """
         ### SETUP
         size = self.communicator.size()
-        rank = self.communicator.rank()        
+        rank = self.communicator.rank()
         
+        # Check if proper sequence
+        try:
+            data_size = len(self.initial_data)
+        except TypeError, e:
+            # integers, bools and other stuff throws error for len()
+            raise Exception("For alltoal you have to provide a sequence type ie. list, string, tuple etc.")
+        
+        if  data_size % size != 0:
+        #if  data_size < size:
+            raise Exception("Data size for alltoall (length was %i) should be at least equal to the number of processes involved in the operation (np was %i)." % (data_size,size))
+        else:
+            chunk_size = data_size / size
+            
         ### CONSTRUCT SENDS AND RECEIVE REQUESTS
         r_requests = []
         s_requests = []
         for r in range(size):
             r_requests.append(self.communicator.irecv(r, self.tag))
-            s_requests.append(self.communicator.isend(self.initial_data[r], r, self.tag))
-            
-        results = self.communicator.waitall(r_requests+s_requests)
+            s_requests.append(self.communicator.isend(self.initial_data[r*chunk_size:(r+1)*chunk_size], r, self.tag))
         
-        ### CONSTRUCT RECEIVES        
-        self.data = results[0:size] # Get results for own rank
+        ### RECEIVE AND STORE    
+        res = self.communicator.waitall(r_requests+s_requests)        
+        results = res[0:-size] # Only recv results - discard return values from sends
+        
+        # Check if string (we need to join)
+        if isinstance(self.initial_data,str):
+            self.data = ''.join(results)
+            Logger().debug("self.data:%s " % (self.data) )
+        # Check if tuple (we need to tuplify)
+        elif isinstance(self.initial_data,tuple):
+            self.data = tuple([ item for sublist in results for item in sublist ])
+        else:
+            # Alex Martelli is smarter than me - I do not understand why this works
+            # http://stackoverflow.com/questions/952914/making-a-flat-list-out-of-list-of-lists-in-python
+            self.data = [ item for sublist in results for item in sublist ] # Get results for own rank
 
     def start_allgather_dissemination(self):
         """
