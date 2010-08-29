@@ -342,6 +342,8 @@ class Communicator:
         with self.mpi.received_data_lock:
             self.mpi.received_data.append(queue_item)            
             self.mpi.pending_requests_has_work.set()
+            self.mpi.has_work_event.set()
+        
 
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
@@ -1267,7 +1269,6 @@ class Communicator:
         incomplete = [True for _ in range(remaining)]
         return_list = [None for _ in range(remaining)]
         
-        badness = 0
         while remaining > 0:            
             for idx, request in enumerate(request_list):
                 if incomplete[idx] and request.test():
@@ -1276,9 +1277,6 @@ class Communicator:
                     remaining -= 1
             
             time.sleep(0.00001)
-            badness += 1
-            if badness > 10000 and badness % 10000 == 0:
-                Logger().warning("Uhhhh the badness:%i, remaining:%i, \n request_list:%s" % (badness,remaining,request_list) )
                     
         return return_list
 
