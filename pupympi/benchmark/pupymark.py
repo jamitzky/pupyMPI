@@ -119,8 +119,8 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
 
         ci.log("%s processes participating - %s waiting in barrier" %( ci.num_procs, ci.w_num_procs - ci.num_procs ))
         ci.log("%s - %s (test %i of %i)" % (module.__name__, test.__name__, testsDone, testsToRun)) 
-        ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" % ("#bytes", "#Repetitions", "total[sec]", "t[usec]/itr", "Mbytes/sec"))        
-        ci.log("--------------------------------------------------------------------------")
+        ci.log("%10s %13s %13s %13s %13s %13s %13s" % ("#bytes", "#Repetitions", "total[sec]", "t_avg[usec]", "t_min[usec]", "t_max[usec]", "Mbytes/sec"))        
+        ci.log("----------------------------------------------------------------------------------------------")
         
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
@@ -133,25 +133,33 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
                     continue
                 
             total = test(size, module.meta_schedule[size])
+
             if total is None:
                 # Tests returning None are not meant to be run
                 # (eg. Barrier for different datasizes does not make sense)
                 continue
             if total < 0: # Tests returning negative signals an error
-                ci.log("%-10s\t%-10s\t(benchmark aborted - datapoint invalid)" % (size, module.meta_schedule[size]))
-                results.append((size, module.meta_schedule[size], 0, 0, 0, ci.num_procs))
+                ci.log("%10d %13d\t(benchmark aborted - datapoint invalid)" % (size, module.meta_schedule[size]))
+                results.append((size, module.meta_schedule[size], 0, 0, 0, 0, 0, ci.num_procs))
             else:
+                totals = ci.communicator.allgather(total)
+                t_min = min(totals) * 10**6 / module.meta_schedule[size]
+                t_max = max(totals) * 10**6 / module.meta_schedule[size]
+                t_avg = float(sum(totals)) / len(totals) * 10**6 / module.meta_schedule[size]
+
                 per_it = total / module.meta_schedule[size]
                 # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
                 mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
-                ci.log("%-10s\t%-10s\t%-10s\t%-10s\t%-10s" %  (\
+                ci.log("%10d %13d %13.2f %13.2f %13.2f %13.2f %13.5f" %  (\
                 size, \
                 module.meta_schedule[size], \
-                round(total, 2), \
-                round(per_it * 1000000, 2), \
-                round(mbytessec, 5)))
+                total, \
+                t_avg, \
+                t_min, \
+                t_max,
+                mbytessec))
                     
-                results.append((size, module.meta_schedule[size], total, per_it * 1000000, mbytessec, ci.num_procs))
+                results.append((size, module.meta_schedule[size], total, t_avg, t_min, t_max, mbytessec, ci.num_procs))
                 
         
         # Show accumulated results for fast estimation/comparison
@@ -161,8 +169,8 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             alltotal += r[2]
             iterationtime += r[3]
             
-        ci.log("--------------------------------------------------------------------------")
-        ci.log("(Accumulated)\t   total[sec]:\t%-10s\t%-10s \n" % ( round(alltotal, 2), round(iterationtime * 1000000, 2)))
+        ci.log("----------------------------------------------------------------------------------------------")
+        ci.log("(Accumulated) total[sec]: %12.2f %13.2f \n" % ( alltotal, iterationtime))
         return results
         
     def _set_up_environment(mpi, module):
@@ -228,7 +236,11 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
                         continue
                         
                     f = getattr(module, function)
-                    result = run_benchmark(module, f)
+
+                    if hasattr(module, "run_benchmark"):
+                        result = module.run_benchmark(f)
+                    else:
+                        result = run_benchmark(module, f)
                     resultlist[function] = result
             mpi.MPI_COMM_WORLD.barrier() # join the barrier holding non-participants
 
@@ -290,7 +302,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         f.write(header+"\n")
         
         # Column headers for easier reading
-        row = "datasize,repetitions,total time,time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
+        row = "datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
         f.write(row+"\n")
 
         for testname in resultlist:
@@ -299,7 +311,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
             for res in testresults:
                 # Data point
                 try:
-                    row = "%i,%i,%f,%f,%f,%i" % (res)
+                    row = "%i,%i,%f,%f,%f,%f,%f,%i" % (res)
                 except:
                     print "Res is",res
                 # and we add testname and date for easy pivoting
