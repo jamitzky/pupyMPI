@@ -15,6 +15,7 @@ rank = world.rank()
 size = world.size()
 
 WAIT_FAST_ENOUGH = 0.05
+WAIT_FAST_ENOUGH *= 2
 
 handles = []
 
