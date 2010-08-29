@@ -1278,7 +1278,7 @@ class Communicator:
             time.sleep(0.00001)
             badness += 1
             if badness > 10000 and badness % 10000 == 0:
-                Logger().warning("Uhhhh the badness:%i, remaining:%i, \n request_list" % (badness,remaining,request_list) )
+                Logger().warning("Uhhhh the badness:%i, remaining:%i, \n request_list:%s" % (badness,remaining,request_list) )
                     
         return return_list
 
