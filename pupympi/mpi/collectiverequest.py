@@ -236,8 +236,7 @@ class CollectiveRequest(BaseRequest):
         # Pack the data a special way so we can put it into the right stucture later
         # on. 
          
-        for rank in nodes_to:
-            self.communicator.send(data_list, rank, self.tag)
+        self.communicator._direct_send(data_list, nodes_to, self.tag)
 
         return data_list    
 
@@ -260,10 +259,7 @@ class CollectiveRequest(BaseRequest):
         ### PASS ON THE DATA
         
         # Generate requests
-        request_list = []
-        for rank in nodes_to:
-            handle = self.communicator.isend(data, rank, self.tag)
-            request_list.append(handle)
+        request_list = self.communicator._direct_send(data, nodes_to, self.tag) 
 
         # Wait until they are sent
         # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
@@ -360,8 +356,7 @@ class CollectiveRequest(BaseRequest):
         data_list[self.communicator.rank()] = initial_data # put into right place (globally rank ordered)
         
         # Pass on the data
-        for rank in nodes_to:
-            self.communicator.send(data_list, rank, self.tag)
+        self.communicator._direct_send(data_list, nodes_to, self.tag)
         
         return data_list
     
@@ -423,8 +418,7 @@ class CollectiveRequest(BaseRequest):
 
         Logger().debug("sending up:%s" % (data) )
         # Pass on the data
-        for rank in nodes_to:
-            self.communicator.send(data, rank, self.tag)
+        self.communicator._direct_send(data, nodes_to, self.tag)
         
         return data
 
@@ -769,7 +763,6 @@ class CollectiveRequest(BaseRequest):
         nodes_to = tree.up
         descendants = tree.descendants
         
-
         reduced_results = self.traverse_up_filtered(nodes_from, nodes_to, self.initial_data, operation, descendants=descendants)
         
         ### BCAST FROM ROOT
