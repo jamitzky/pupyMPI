@@ -18,7 +18,7 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
-import os, sys, glob, csv
+import os, sys, glob, csv, re
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
@@ -26,73 +26,7 @@ sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
 
-class DataGather(object):
-    
-    def __init__(self):
-        self.row_counter = 0
-        self.data = {}
-    
-    def add_data(self, run_type, procs, datasize, time, throughput):
-        # clean the run_type name
-        if run_type.startswith("test_"):
-            run_type = run_type[5:]
-            
-        # Cast data to correct values
-        procs = int(procs)
-        datasize = int(datasize)
-        time = float(time)
-        throughput = float(throughput)
-        
-        # Adding data is not so nice. There is a bunch of testing if
-        # indexes is already there. Sorry.
-        if run_type not in self.data:
-            self.data[run_type] = {}
-            
-        if procs not in self.data[run_type]:
-            self.data[run_type][procs] = {}
-            
-        if datasize not in self.data[run_type][procs]:
-            self.data[run_type][procs][datasize] = []
-            
-        self.data[run_type][procs][datasize].append( (time, throughput))
-        
-    def get_types(self):
-        return self.data.keys()
-        
-    def get_data(self, run_type, procs=None, datasize=None):
-        data = self.data[run_type]
-        
-        if procs:
-            data = data[procs]
-            
-        if datasize:
-            data = data[datasize]
-            
-        return data
-        
-    def __repr__(self):
-        # Find some key information
-        second_keys = []
-        for f in self.data.values():
-            second_keys.extend(f.keys())
-        second_keys = list(set(second_keys))
-        second_keys.sort()
-        
-        third_keys = []
-        for f in self.data.values():
-            for k in f.values():
-                third_keys.extend(k.keys())
-        third_keys = list(set(third_keys))
-        third_keys.sort()
-        
-        st = "<<<Gather object:\n"
-        st += "\t --> first level keys: %s\n" % ", ".join(map(str,self.data.keys()))
-        st += "\t\t --> second level keys: %s\n" % ", ".join(map(str, second_keys))
-        st += "\t\t\t --> third level keys: %s\n" % ", ".join(map(str, third_keys))
-        st += ">>>\n"
-        return st
-
-def options_and_arguments():
+def options_and_arguments(): # {{{1
     from optparse import OptionParser
     
     usage = """usage: %prog [options] folder1 folder2 ... folderN
@@ -108,25 +42,43 @@ def options_and_arguments():
         parser.error("You should provide at least two folders with benchmarks data for comparison.")
     
     return args, options
+# }}}1
 
-def find_runs(folders):
-    runs = []
-    for folder in folders:
-        runs.extend(glob.glob(folder + "collective[0-9]*"))
-        runs.extend(glob.glob(folder + "single[0-9]*"))
+class SingleDataGather(object):
+    def __init__(self, folder_prefixes):
+        self._find_csv_files(folder_prefixes)
+        self._parse()
+
+    def _find_csv_files(self, folder_prefixes):
+        """
+        This is the initial phase of the parsing. Using the folder prefixes we
+        find all the potential single benchmark datafiles and put them in an
+        internal structure for later parsing. 
+        """
+        self.csv_files = []
+        for fp in folder_prefixes:
+            self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
+
+    def _parse(self):
+        """
+        Goes through the possile csv files and parse the contents into an
+        internal format. 
+
+        XXX: We could make a very simple argument here to dump the internal
+        format to a pickles file so we can re-read it at a later point
+        """
+        data = {}
         
-    return runs
+        # Regular match to find the tags
+        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\d+)-benchmark_output.*\.sing\.(?P<procs>\d+).*")
 
-def parse_benchmark_data(run_folders, gather):
-    for f in run_folders:
-        files = glob.glob(f + "/*.csv")
-        for f in files:
-            reader = csv.reader(open(f))
+        for filename in self.csv_files:
+            reader = csv.reader(open(filename))
             for row in reader:
                 # Some basic sanitize
                 if len(row) < 2:
                     continue
-                
+
                 try:
                     # Remove comments
                     fc = row[0].strip()
@@ -146,11 +98,33 @@ def parse_benchmark_data(run_folders, gather):
                 datasize = row[0]
                 time_p_it = row[3]
                 throughput = row[4]
+                run_type = row[6].replace("test_","")
+
+                # The number of procs seems inconsistant. 
                 procs = row[5]
-                run_type = row[6]
-                gather.add_data(run_type, procs, datasize, time_p_it, throughput)
-            
-def draw_scatter(gather, folder):
+
+                # Find the tags from the filename
+                match = tag_procs_re.match(filename)
+
+                # We override the <<procs>> here. Maybe we should not
+                tag, procs = match.groups()
+
+                # Add the data to the internal structure
+                if run_type not in data:
+                    data[run_type] = {}
+
+                if procs not in data[run_type]:
+                    data[run_type][procs] = {}
+
+                if tag not in data[run_type][procs]:
+                    data[run_type][procs][tag] = []
+
+                # Actual add the data point to the list
+                data[run_type][procs][tag].append( (datasize, time_p_it) )
+
+        self.data = data
+
+def draw_scatter(gather, folder): # {{{1
     """
     This function will output a lot of gnuplot data
     to be manualle executed. This gives you the option
@@ -159,7 +133,7 @@ def draw_scatter(gather, folder):
     written
     """
     
-    def get_x_tics(data):
+    def get_x_tics(data): # {{{2
         data = list(set(data))
         data = map(int, data)
         data.sort()
@@ -179,8 +153,8 @@ def draw_scatter(gather, folder):
                 
             final_data.append('"%s" %d' % (size, s))
         return final_data
-    
-    def get_y_tics(max_value):
+    # }}}2 
+    def get_y_tics(max_value): # {{{2
         tics = ['"0us" 0']
         current = 1
         
@@ -196,7 +170,7 @@ def draw_scatter(gather, folder):
                 tics.append('"%2.fs" %d' % (c, current))
             current *= 10
         return tics
-    
+    # }}}2 
     # Right now se just test with a single run type. 
     for run_type in gather.get_types():
         data = gather.get_data(run_type)
@@ -259,8 +233,8 @@ def draw_scatter(gather, folder):
         print >> of, plot_str
         
         of.close()
-            
-def write_gnuplot_makefile(folder_name):
+# }}}1
+def write_gnuplot_makefile(folder_name): # {{{1
     fh = open(folder_name+"/Makefile", "w")
     
     print >> fh, "all:"
@@ -268,45 +242,45 @@ def write_gnuplot_makefile(folder_name):
     print >> fh, "clean:"
     print >> fh, "\trm *.png"
     fh.close()            
-
+# }}}1
 if __name__ == "__main__":
     # Handle arguments etc. 
     folders, options = options_and_arguments()
     
     # Parse benchmark data for each folder into an internal structure. 
-    run_folders = find_runs(folders)
-    
+    #run_folders = find_runs(folders, benchmark_type="single")
+
     # Initialize a gather object. This object will hold all data
     # and make it possible to extract it later
-    gather = DataGather()
-    
-    data = parse_benchmark_data(run_folders, gather)
-    
-    # Ensure we have the output folder
-    output_folder_name = options.build_folder
-    import os
-    try:
-        os.mkdir(output_folder_name)
-    except OSError:
-        pass
-    
-    # Were we should actually look if we're using gnuplot
-    # and only write the makefile if so.
-    write_gnuplot_makefile(output_folder_name)
-    
-    # If we should choose to implement further output functions we should
-    # add an options above and select an output function here.
-    def timer_wrapper():    
-        draw_scatter(gather, output_folder_name)
-    
-    # Stop the timing and say goodbye.
-    from timeit import Timer
-    t = Timer(timer_wrapper)
-    t = t.timeit(number=1)
-    
-    print """
-    Goodbye. We parsed %d benchmark folders in %.2f seconds. 
-    
-    You can generate all the final files by changing into the %s folder 
-    and type "Make".
-    """ % (len(folders), t, output_folder_name)
+    gather = SingleDataGather(folders)
+
+   #data = parse_benchmark_data(run_folders, gather)
+
+   ## Ensure we have the output folder
+   #output_folder_name = options.build_folder
+   #import os
+   #try:
+   #    os.mkdir(output_folder_name)
+   #except OSError:
+   #    pass
+
+   ## Were we should actually look if we're using gnuplot
+   ## and only write the makefile if so.
+   #write_gnuplot_makefile(output_folder_name)
+   #
+   ## If we should choose to implement further output functions we should
+   ## add an options above and select an output function here.
+   #def timer_wrapper():    
+   #    draw_scatter(gather, output_folder_name)
+   #
+   ## Stop the timing and say goodbye.
+   #from timeit import Timer
+   #t = Timer(timer_wrapper)
+   #t = t.timeit(number=1)
+   #
+   #print """
+   #Goodbye. We parsed %d benchmark folders in %.2f seconds. 
+   #
+   #You can generate all the final files by changing into the %s folder 
+   #and type "Make".
+   #""" % (len(folders), t, output_folder_name)
