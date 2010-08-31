@@ -219,9 +219,16 @@ class ScatterPlot(GNUPlot):
         self.test_type = test_type
         self.data = []
         self.output_folder = output_folder
+        self.buffer_factor = 1.25
 
     def add_data(self, procs, tag, plots):
         self.data.append( (procs, tag, plots) )
+
+    def get_buffered_x_max(self):
+        return max(1, round(self.x_max*self.buffer_factor))
+
+    def get_buffered_y_max(self):
+        return max(1, round(self.y_max*self.buffer_factor))
 
     def find_max_and_min(self): # {{{2
         x_data = []
@@ -274,6 +281,10 @@ class ScatterPlot(GNUPlot):
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
         print >> gnu_fp, "set log x"
         print >> gnu_fp, "set log y"
+
+        # Setting x-range and y-range. 
+        print >> gnu_fp, "set xrange [1:%d]" % self.get_buffered_x_max()
+        print >> gnu_fp, "set yrange [1:%d]" % self.get_buffered_y_max()
 
         # Different line types. 
         print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
@@ -366,7 +377,7 @@ Comparison tags %s
     Timing                 :      %.2f seconds
     Executed Makefile      :      %s
     
-""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed)
+""" % (".".join(tags), tags, output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed)
 
 if not options.makefile_executed:
     print """
