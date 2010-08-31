@@ -284,6 +284,7 @@ def write_gnuplot_makefile(folder_name): # {{{1
     fh.close()            
 # }}}1
 if __name__ == "__main__":
+    start_time = time.time()
     # Handle arguments etc. 
     folders, options = options_and_arguments()
 
@@ -300,6 +301,8 @@ if __name__ == "__main__":
 
     tags = ", ".join(gather.get_tags())
 
+    total_time = start_time - time.time()
+
     
     # Print some informative text to the end user.
     print """
@@ -311,8 +314,9 @@ Comparison tags %s
     Output written to      :      %s
     Parsed csv files       :      %d
     Makefile written       :      %s
+    Timing                 :      %.2f
     
-""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile)
+""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time)
 
 
 
