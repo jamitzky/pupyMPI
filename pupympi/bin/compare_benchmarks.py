@@ -25,7 +25,6 @@ mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above i
 sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
-
 def options_and_arguments(): # {{{1
     from optparse import OptionParser
     
@@ -472,6 +471,7 @@ def write_gnuplot_makefile(folder_name): # {{{1
     print >> fh, "\trm *.png"
     fh.close()            
 # }}}1
+# MAIN EXECUTING CODE {{{1
 if __name__ == "__main__":
     start_time = time.time()
     # Handle arguments etc. 
@@ -520,3 +520,9 @@ No graphs generated yet. To generate it run the following:
     > cd %s
     > Make
 """ % output_folder
+# }}}1
+
+# TODO
+#  1) Need to draw for throughput as well as time.
+#  2) Support for collective operations
+#  3) Migrate old data structure to new one. 
