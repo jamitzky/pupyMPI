@@ -328,6 +328,14 @@ Comparison tags %s
     
 """ % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed)
 
+if not options.makefile_executed:
+    print """
+No graphs generated yet. To generate it run the following:
+
+    > cd %s
+    > Make
+""" % output_folder
+
 
 
 
