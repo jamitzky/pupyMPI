@@ -35,7 +35,8 @@ def options_and_arguments(): # {{{1
     data for comparison. You should provide at least 2 folders."""   
     
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
-    parser.add_option("--build-folder", default="result", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
+    parser.add_option("--build-folder", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
+    parser.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True)
     options, args = parser.parse_args()
     
     if len(args) <= 1:
@@ -44,12 +45,22 @@ def options_and_arguments(): # {{{1
     return args, options
 # }}}1
 
-class SingleDataGather(object):
-    def __init__(self, folder_prefixes):
+class SingleDataGather(object): # {{{1
+    def __init__(self, folder_prefixes): # {{{2
+        self.tags = set([])
+        self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
         self._parse()
-
-    def _find_csv_files(self, folder_prefixes):
+    # }}}2
+    def _add_tag(self, tag): # {{{2
+        self.tags.add(tag)
+    # }}}2
+    def get_tags(self): # {{{2
+        tags = list(self.tags)
+        tags.sort()
+        return tags
+# }}}2
+    def _find_csv_files(self, folder_prefixes): # {{{2
         """
         This is the initial phase of the parsing. Using the folder prefixes we
         find all the potential single benchmark datafiles and put them in an
@@ -58,8 +69,8 @@ class SingleDataGather(object):
         self.csv_files = []
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
-
-    def _parse(self):
+    # }}}2
+    def _parse(self): # {{{2
         """
         Goes through the possile csv files and parse the contents into an
         internal format. 
@@ -74,6 +85,7 @@ class SingleDataGather(object):
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
+            self.parsed_csv_files += 1
             for row in reader:
                 # Some basic sanitize
                 if len(row) < 2:
@@ -108,6 +120,7 @@ class SingleDataGather(object):
 
                 # We override the <<procs>> here. Maybe we should not
                 tag, procs = match.groups()
+                self._add_tag(tag) 
 
                 # Add the data to the internal structure
                 if run_type not in data:
@@ -123,6 +136,33 @@ class SingleDataGather(object):
                 data[run_type][procs][tag].append( (datasize, time_p_it) )
 
         self.data = data
+    # }}}2
+# }}}1
+class Plotter(object): # {{{1
+    def __init__(self, data_obj, output_folder=None):
+        self.data = data_obj
+        if output_folder:
+            self.output_folder = output_folder
+        else:
+            self.output_folder = self._create_output_folder()
+
+    def _create_output_folder(self):
+        base_name = "plot_output"
+        counter = 0
+
+        while True:
+            output_folder_name = base_name
+            if counter > 0:
+                output_folder_name += "%d" % counter
+
+            try:
+                os.mkdir(output_folder_name)
+                return output_folder_name
+            except OSError:
+                counter += 1
+# }}}1
+class SinglePlotter(Plotter):
+    pass
 
 def draw_scatter(gather, folder): # {{{1
     """
@@ -246,15 +286,39 @@ def write_gnuplot_makefile(folder_name): # {{{1
 if __name__ == "__main__":
     # Handle arguments etc. 
     folders, options = options_and_arguments()
-    
-    # Parse benchmark data for each folder into an internal structure. 
-    #run_folders = find_runs(folders, benchmark_type="single")
 
     # Initialize a gather object. This object will hold all data
-    # and make it possible to extract it later
+    # and make it possible to extract it later. 
     gather = SingleDataGather(folders)
 
-   #data = parse_benchmark_data(run_folders, gather)
+    single_plotter = SinglePlotter(gather, output_folder=options.build_folder)
+    output_folder = single_plotter.output_folder
+
+    # Check if we should place a makefile in the final folder. 
+    if options.makefile:
+        write_gnuplot_makefile(output_folder)
+
+    tags = ", ".join(gather.get_tags())
+
+    
+    # Print some informative text to the end user.
+    print """
+================================================================================ 
+Comparison tags %s
+================================================================================ 
+
+    Compared tags          :      %s
+    Output written to      :      %s
+    Parsed csv files       :      %d
+    Makefile written       :      %s
+    
+""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile)
+
+
+
+
+    
+
 
    ## Ensure we have the output folder
    #output_folder_name = options.build_folder
