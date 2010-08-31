@@ -18,7 +18,7 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
-import os, sys, glob, csv, re
+import os, sys, glob, csv, re, time
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
     tags = ", ".join(gather.get_tags())
 
-    total_time = start_time - time.time()
+    total_time = time.time() - start_time
 
     
     # Print some informative text to the end user.
@@ -314,7 +314,7 @@ Comparison tags %s
     Output written to      :      %s
     Parsed csv files       :      %d
     Makefile written       :      %s
-    Timing                 :      %.2f
+    Timing                 :      %.2f seconds
     
 """ % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time)
 
