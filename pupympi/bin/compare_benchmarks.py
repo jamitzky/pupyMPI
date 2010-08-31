@@ -74,7 +74,7 @@ class SingleDataGather(object): # {{{1
         self._parse()
         self.aggregate(agg_methods)
     # }}}2
-    def aggregate(self, methods):
+    def aggregate(self, methods): # {{{2
         """
         This method runs through the data and aggregates data for equal 
         x values. 
@@ -103,7 +103,7 @@ class SingleDataGather(object): # {{{1
                                 data[test][procs][tag][fname] = []
                             data[test][procs][tag][fname].append((x, func(d[x])))
         self.agg_data = data
-        
+    # }}}2
     def _add_tag(self, tag): # {{{2
         self.tags.add(tag)
     # }}}2
@@ -114,6 +114,9 @@ class SingleDataGather(object): # {{{1
     # }}}2
     def get_tests(self): # {{{2
         return self.data.keys()
+    # }}}2
+    def get_agg_tests(self): # {{{2
+        return self.agg_data.keys()
     # }}}2
     def _find_csv_files(self, folder_prefixes): # {{{2
         """
@@ -195,9 +198,12 @@ class SingleDataGather(object): # {{{1
     def get_data(self, test_name): # {{{2
         return self.data[test_name]
     # }}}2
+    def get_agg_data(self, test_name): # {{{2
+        return self.agg_data[test_name]
+    # }}}2
 # }}}1
 class Plotter(object): # {{{1
-    def __init__(self, data_obj, output_folder=None): # {{{2
+    def __init__(self, data_obj, output_folder=None, **kwargs): # {{{2
         self.data = data_obj
         if output_folder:
             self.output_folder = output_folder
@@ -259,6 +265,83 @@ class GNUPlot(object): # {{{1
             current *= 10
         return tics
     # }}}2 
+    def find_max_and_min(self): # {{{2
+        x_data = []
+        y_data = [] 
+
+        for element in self.data:
+            _, _, plots = element
+            x_data.extend([p[0] for p in plots])
+            y_data.extend([p[1] for p in plots])
+
+        self.x_min = min(x_data)
+        self.x_max = max(x_data)
+        self.y_min = min(y_data)
+        self.y_max = max(y_data)
+
+        self.x_data = list( set( x_data))
+        self.x_data.sort()
+    # }}}2
+# }}}1
+class LinePlot(GNUPlot): # {{{1
+    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
+        self.test_name = test_name
+        self.test_type = test_type
+        self.title_help = title_help
+        self.data = []
+        self.output_folder = output_folder
+    # }}}2
+    def add_data(self, procs, tag, plots): # {{{2
+        self.data.append( (procs, tag, plots) )
+    # }}}2
+    def plot(self): # {{{2
+        self.find_max_and_min()
+        # Basic data for all the files.
+        filename = "line_%s_%s" % (self.title_help, self.test_name)
+
+        # Flush all the data files. 
+        dat_files = []
+        for element in self.data:
+            procs, tag, plots = element
+            dat_filename_file = "%s_%s_%s.dat" % (filename, procs, tag)
+            dat_filename_path = self.output_folder + "/" + dat_filename_file
+            dat_files.append( (procs, tag, dat_filename_file ) )
+            dat_fp = open(dat_filename_path, "w")
+
+            plots.sort(key=lambda x: x[0])
+
+            for e in plots:
+                print >> dat_fp, "%d %f" % e
+
+            dat_fp.close()
+
+        # Write the .gnu file
+        title = "Plot for %s" % self.test_name
+        gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
+
+        print >> gnu_fp, "set terminal png nocrop enhanced size 800,600"
+        print >> gnu_fp, 'set output "%s.png"' % filename
+        print >> gnu_fp, 'set title "%s"' % title
+        print >> gnu_fp, 'set xlabel "Data size"'
+        print >> gnu_fp, 'set ylabel "Wallclock in'
+        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
+        print >> gnu_fp, "set log x"
+        print >> gnu_fp, "set log y"
+
+        plot_str = 'plot '
+        plot_strs = []
+        for p in dat_files:
+            (procs, tag, dat_filename) = p
+            title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
+            plot_strs.append(' "%s" with linespoints title "%s"' % (dat_filename, title))
+            
+        plot_str += ", ".join(plot_strs)
+        print >> gnu_fp, plot_str
+
+        gnu_fp.close()
+    # }}}2
 # }}}1
 class ScatterPlot(GNUPlot): # {{{1
     def __init__(self, test_name=None, test_type="single", output_folder=None): # {{{2
@@ -276,23 +359,6 @@ class ScatterPlot(GNUPlot): # {{{1
     # }}}2
     def get_buffered_y_max(self): # {{{2
         return max(1, round(self.y_max*self.buffer_factor))
-    # }}}2
-    def find_max_and_min(self): # {{{2
-        x_data = []
-        y_data = [] 
-
-        for element in self.data:
-            _, _, plots = element
-            x_data.extend([p[0] for p in plots])
-            y_data.extend([p[1] for p in plots])
-
-        self.x_min = min(x_data)
-        self.x_max = max(x_data)
-        self.y_min = min(y_data)
-        self.y_max = max(y_data)
-
-        self.x_data = list( set( x_data))
-        self.x_data.sort()
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
@@ -358,12 +424,35 @@ class ScatterPlot(GNUPlot): # {{{1
     # }}}2
 # }}}1
 class SinglePlotter(Plotter): # {{{1
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs): # {{{2
         super(SinglePlotter, self).__init__(*args, **kwargs)
-
+        self.agg_methods = kwargs['agg_methods']
         self.scatter_plot()
+        self.line_plot()
+    # }}}2
+    def line_plot(self): # {{{2
+        """
+        Use the aggregated data for a number of line plots
+        """
+        for test in self.data.get_agg_tests():
+            for agg_e in self.agg_methods:
+                agg_name, agg_func = agg_e
 
-    def scatter_plot(self):
+                lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
+                data = self.data.get_agg_data(test)
+                for procs in data:
+                    for tag in data[procs]:
+                        lp.add_data(procs, tag, data[procs][tag][agg_name])
+                lp.plot()
+    # }}}2
+    def scatter_plot(self): # {{{2
+        """
+        Use all the parsed data on a scatter plot. Each (tag, procs) pair will have a different
+        color and labe, so it's possible to see the development.
+
+        HINT: If you want data for only 32 procs on the chart, simply copy the genereated .gnu
+        files and remove what you don't want plotted. 
+        """
         for test in self.data.get_tests():
             sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
             data = self.data.get_data(test)
@@ -372,6 +461,7 @@ class SinglePlotter(Plotter): # {{{1
                     sp.add_data(procs, tag, data[procs][tag])
             
             sp.plot()
+    # }}}2
 # }}}1
 def write_gnuplot_makefile(folder_name): # {{{1
     fh = open(folder_name+"/Makefile", "w")
@@ -391,7 +481,7 @@ if __name__ == "__main__":
     # and make it possible to extract it later. 
     gather = SingleDataGather(folders, options.agg_methods)
 
-    single_plotter = SinglePlotter(gather, output_folder=options.build_folder)
+    single_plotter = SinglePlotter(gather, output_folder=options.build_folder, agg_methods=options.agg_methods)
     output_folder = single_plotter.output_folder
 
     # Check if we should place a makefile in the final folder. 
