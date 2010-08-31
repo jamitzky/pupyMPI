@@ -267,8 +267,8 @@ class ScatterPlot(GNUPlot):
         print >> gnu_fp, "set terminal png nocrop enhanced size 800,600"
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
-        print >> gnu_fp, 'set xlabel "Data size (MB)"'
-        print >> gnu_fp, 'set ylabel "Wallclock in (sec)'
+        print >> gnu_fp, 'set xlabel "Data size"'
+        print >> gnu_fp, 'set ylabel "Wallclock in'
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
         print >> gnu_fp, "set log x"
@@ -289,7 +289,7 @@ class ScatterPlot(GNUPlot):
         for p in dat_files:
             i += 1
             (procs, tag, dat_filename) = p
-            title = "%s procs (%s)" % (procs, tag)
+            title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
             plot_strs.append(' "%s" ls %d title "%s"' % (dat_filename, i, title))
             
         plot_str += ", ".join(plot_strs)
