@@ -335,38 +335,3 @@ No graphs generated yet. To generate it run the following:
     > cd %s
     > Make
 """ % output_folder
-
-
-
-
-    
-
-
-   ## Ensure we have the output folder
-   #output_folder_name = options.build_folder
-   #import os
-   #try:
-   #    os.mkdir(output_folder_name)
-   #except OSError:
-   #    pass
-
-   ## Were we should actually look if we're using gnuplot
-   ## and only write the makefile if so.
-   #write_gnuplot_makefile(output_folder_name)
-   #
-   ## If we should choose to implement further output functions we should
-   ## add an options above and select an output function here.
-   #def timer_wrapper():    
-   #    draw_scatter(gather, output_folder_name)
-   #
-   ## Stop the timing and say goodbye.
-   #from timeit import Timer
-   #t = Timer(timer_wrapper)
-   #t = t.timeit(number=1)
-   #
-   #print """
-   #Goodbye. We parsed %d benchmark folders in %.2f seconds. 
-   #
-   #You can generate all the final files by changing into the %s folder 
-   #and type "Make".
-   #""" % (len(folders), t, output_folder_name)
