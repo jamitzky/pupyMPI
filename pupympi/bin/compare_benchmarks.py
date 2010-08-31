@@ -64,7 +64,10 @@ class SingleDataGather(object): # {{{1
         tags = list(self.tags)
         tags.sort()
         return tags
-# }}}2
+    # }}}2
+    def get_tests(self): # {{{2
+        return self.data.keys()
+    # }}}2
     def _find_csv_files(self, folder_prefixes): # {{{2
         """
         This is the initial phase of the parsing. Using the folder prefixes we
@@ -138,20 +141,22 @@ class SingleDataGather(object): # {{{1
                     data[run_type][procs][tag] = []
 
                 # Actual add the data point to the list
-                data[run_type][procs][tag].append( (datasize, time_p_it) )
+                data[run_type][procs][tag].append( (int(datasize), float(time_p_it)) )
 
         self.data = data
     # }}}2
+    def get_data(self, test_name):
+        return self.data[test_name]
 # }}}1
 class Plotter(object): # {{{1
-    def __init__(self, data_obj, output_folder=None):
+    def __init__(self, data_obj, output_folder=None): # {{{2
         self.data = data_obj
         if output_folder:
             self.output_folder = output_folder
         else:
             self.output_folder = self._create_output_folder()
-
-    def _create_output_folder(self):
+     # }}}2
+    def _create_output_folder(self): # {{{2
         base_name = "plot_output"
         counter = 0
 
@@ -165,20 +170,11 @@ class Plotter(object): # {{{1
                 return output_folder_name
             except OSError:
                 counter += 1
-# }}}1
-class SinglePlotter(Plotter):
-    pass
+    # }}}2
 
-def draw_scatter(gather, folder): # {{{1
-    """
-    This function will output a lot of gnuplot data
-    to be manualle executed. This gives you the option
-    to make last minute (or second) changes in captions
-    etc. Face it.. captions should be manually 
-    written
-    """
-    
-    def get_x_tics(data): # {{{2
+# }}}1
+class GNUPlot(object):
+    def gnuplot_datasize_tics(self, data): # {{{2
         data = list(set(data))
         data = map(int, data)
         data.sort()
@@ -199,7 +195,7 @@ def draw_scatter(gather, folder): # {{{1
             final_data.append('"%s" %d' % (size, s))
         return final_data
     # }}}2 
-    def get_y_tics(max_value): # {{{2
+    def gnuplot_time_tics(self, max_value): # {{{2
         tics = ['"0us" 0']
         current = 1
         
@@ -216,66 +212,109 @@ def draw_scatter(gather, folder): # {{{1
             current *= 10
         return tics
     # }}}2 
-    # Right now se just test with a single run type. 
-    for run_type in gather.get_types():
-        data = gather.get_data(run_type)
-        data_sizes = data.values()[0].keys()
-        x_labels = get_x_tics(data_sizes)
-        max_time = 0
-        # Flush the data points to a file.
-        files = []
-        
-        for nc in data.keys():
-            filename = "%s_%d.dat" % (run_type, nc)
-            title = "%s for %d nodes" % (run_type, nc)
-            f = open(folder + "/" + filename, "w")
-            files.append( (filename, title) )
-            for datasize in data[nc].keys():
-                values = data[nc][datasize]
-                
-                # Throw the throughput away
-                values = [v[0] for v in values]
-                
-                for value in values:
-                    if value > max_time:
-                        max_time = value
-                    print >> f, "%d %f" % (datasize, value)
-            f.close()
-        
-        y_labels = get_y_tics(max_time)
-        
-        # At some point we can make a smart filename here.
-        of = open("%s/%s.gnu" % (folder, run_type), "w")
-        
-        # plot the data.
-        print >> of, "set terminal png nocrop enhanced size 800,600"
-        print >> of, 'set output "%s.png"' % run_type
-        print >> of, 'set title "%s plot"' % run_type
-        print >> of, 'set xlabel "Data size (MB)"'
-        print >> of, 'set ylabel "Wallclock in (sec)'
-        print >> of, 'set xtics (%s)' % ", ".join(map(str, x_labels))
-        print >> of, 'set ytics (%s)' % ", ".join(map(str, y_labels))
-        print >> of, "set log x"
-        print >> of, "set log y"
 
-        print >> of, 'set style line 1  linetype 1 linecolor rgb "red"  linewidth 1.000 pointtype 1 pointsize default'
-        print >> of, 'set style line 2  linetype 2 linecolor rgb "orange"  linewidth 1.000 pointtype 2 pointsize default'
-        print >> of, 'set style line 3  linetype 3 linecolor rgb "yellow"  linewidth 1.000 pointtype 3 pointsize default'
-        print >> of, 'set style line 4  linetype 4 linecolor rgb "green"  linewidth 1.000 pointtype 4 pointsize default'
-        print >> of, 'set style line 5  linetype 5 linecolor rgb "cyan"  linewidth 1.000 pointtype 5 pointsize default'
-        print >> of, 'set style line 6  linetype 6 linecolor rgb "blue"  linewidth 1.000 pointtype 6 pointsize default'
-        print >> of, 'set style line 7  linetype 7 linecolor rgb "violet"  linewidth 1.000 pointtype 7 pointsize default'
+class ScatterPlot(GNUPlot):
+    def __init__(self, test_name=None, test_type="single", output_folder=None):
+        self.test_name = test_name
+        self.test_type = test_type
+        self.data = []
+        self.output_folder = output_folder
+
+    def add_data(self, procs, tag, plots):
+        self.data.append( (procs, tag, plots) )
+
+    def find_max_and_min(self): # {{{2
+        x_data = []
+        y_data = [] 
+
+        for element in self.data:
+            _, _, plots = element
+            x_data.extend([p[0] for p in plots])
+            y_data.extend([p[1] for p in plots])
+
+        self.x_min = min(x_data)
+        self.x_max = max(x_data)
+        self.y_min = min(y_data)
+        self.y_max = max(y_data)
+
+        self.x_data = list( set( x_data))
+        self.x_data.sort()
+    # }}}2
+    def plot(self):
+        self.find_max_and_min()
         
+        # Basic data for all the files.
+        filename = "scatter_%s" % self.test_name
+
+        # Flush all the data files. 
+        dat_files = []
+        for element in self.data:
+            procs, tag, plots = element
+            dat_filename_file = "%s_%s_%s.dat" % (filename, procs, tag)
+            dat_filename_path = self.output_folder + "/" + dat_filename_file
+            dat_files.append( (procs, tag, dat_filename_file ) )
+            dat_fp = open(dat_filename_path, "w")
+
+            for e in plots:
+                print >> dat_fp, "%d %f" % e
+
+            dat_fp.close()
+
+        # Write the .gnu file
+        title = "Scatter plot for %s" % self.test_name
+        gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
+
+        print >> gnu_fp, "set terminal png nocrop enhanced size 800,600"
+        print >> gnu_fp, 'set output "%s.png"' % filename
+        print >> gnu_fp, 'set title "%s"' % title
+        print >> gnu_fp, 'set xlabel "Data size (MB)"'
+        print >> gnu_fp, 'set ylabel "Wallclock in (sec)'
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
+        print >> gnu_fp, "set log x"
+        print >> gnu_fp, "set log y"
+
+        # Different line types. 
+        print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
+        print >> gnu_fp, 'set style line 2 linetype 2 linecolor rgb "orange" linewidth 1.000 pointtype 2 pointsize default'
+        print >> gnu_fp, 'set style line 3 linetype 3 linecolor rgb "yellow" linewidth 1.000 pointtype 3 pointsize default'
+        print >> gnu_fp, 'set style line 4 linetype 4 linecolor rgb "green" linewidth 1.000 pointtype 4 pointsize default'
+        print >> gnu_fp, 'set style line 5 linetype 5 linecolor rgb "cyan" linewidth 1.000 pointtype 5 pointsize default'
+        print >> gnu_fp, 'set style line 6 linetype 6 linecolor rgb "blue" linewidth 1.000 pointtype 6 pointsize default'
+        print >> gnu_fp, 'set style line 7 linetype 7 linecolor rgb "violet" linewidth 1.000 pointtype 7 pointsize default'
+
         i = 0
         plot_str = 'plot '
         plot_strs = []
-        for p in files:
-            filename, title = p
+        for p in dat_files:
             i += 1
-            plot_strs.append(' "%s" ls %d title "%s"' % (filename, i, title))
+            (procs, tag, dat_filename) = p
+            title = "%s procs (%s)" % (procs, tag)
+            plot_strs.append(' "%s" ls %d title "%s"' % (dat_filename, i, title))
             
         plot_str += ", ".join(plot_strs)
-        print >> of, plot_str
+        print >> gnu_fp, plot_str
+
+        gnu_fp.close()
+
+
+class SinglePlotter(Plotter): # {{{1
+    def __init__(self, *args, **kwargs):
+        super(SinglePlotter, self).__init__(*args, **kwargs)
+
+        self.scatter_plot()
+
+    def scatter_plot(self):
+        for test in self.data.get_tests():
+            sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
+            data = self.data.get_data(test)
+            for procs in data:
+                for tag in data[procs]:
+                    sp.add_data(procs, tag, data[procs][tag])
+            
+            sp.plot()
+# }}}1
+def draw_scatter(gather, folder): # {{{1
         
         of.close()
 # }}}1
