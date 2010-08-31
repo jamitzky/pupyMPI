@@ -18,7 +18,7 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
-import os, sys, glob, csv, re, time, subprocess
+import os, sys, glob, csv, re, time, subprocess, copy
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
@@ -38,6 +38,7 @@ def options_and_arguments(): # {{{1
     parser.add_option("--build-folder", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
     parser.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True)
     parser.add_option("--run-makefile", dest="makefile_executed", action="store_true", default=False)
+    parser.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
     options, args = parser.parse_args()
     
     if len(args) <= 1:
@@ -46,17 +47,63 @@ def options_and_arguments(): # {{{1
     # Test if we try to avoid the makefile but run make anyway.
     if (not options.makefile) and options.makefile_executed:
         parser.error("options --execlude-makefile and --run-makefile are mutually exclusive")
-    
+
+    methods = options.agg_method.split(",")
+    func_methods = []
+    for method in methods:
+        # Clean the aggregation method to a function
+        if method == "sum":
+            fmethod = sum
+        elif method == "min":
+            fmethod = min 
+        elif method == "max":
+            fmethod = max 
+        elif method == "avg":
+            fmethod = lambda x: sum(x)/float(len(x))
+
+        func_methods.append((method, fmethod))
+    options.agg_methods = func_methods
+
     return args, options
 # }}}1
-
 class SingleDataGather(object): # {{{1
-    def __init__(self, folder_prefixes): # {{{2
+    def __init__(self, folder_prefixes, agg_methods): # {{{2
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
         self._parse()
+        self.aggregate(agg_methods)
     # }}}2
+    def aggregate(self, methods):
+        """
+        This method runs through the data and aggregates data for equal 
+        x values. 
+        
+        These data is then used to construct a number of line graphs. 
+        """
+        data = copy.deepcopy(self.data)
+
+        for test in data:
+            for procs in data[test]:
+                for tag in data[test][procs]:
+                    d = {}
+                    for e in data[test][procs][tag]:
+                        x, y = e
+                        if x not in d:
+                            d[x] = []
+                        d[x].append(y)
+                    data[test][procs][tag] = {}
+                    # The dict d now contains a number of elements for each x value. We can how
+                    # run through that dict constructing a tuple with (x, agg_f(y_values)) and
+                    # use that. 
+                    for x in d:
+                        for ft in methods:
+                            (fname, func) = ft
+                            if fname not in data[test][procs][tag]:
+                                data[test][procs][tag][fname] = []
+                            data[test][procs][tag][fname].append((x, func(d[x])))
+        self.agg_data = data
+        
     def _add_tag(self, tag): # {{{2
         self.tags.add(tag)
     # }}}2
@@ -145,8 +192,9 @@ class SingleDataGather(object): # {{{1
 
         self.data = data
     # }}}2
-    def get_data(self, test_name):
+    def get_data(self, test_name): # {{{2
         return self.data[test_name]
+    # }}}2
 # }}}1
 class Plotter(object): # {{{1
     def __init__(self, data_obj, output_folder=None): # {{{2
@@ -171,9 +219,8 @@ class Plotter(object): # {{{1
             except OSError:
                 counter += 1
     # }}}2
-
 # }}}1
-class GNUPlot(object):
+class GNUPlot(object): # {{{1
     def gnuplot_datasize_tics(self, data): # {{{2
         data = list(set(data))
         data = map(int, data)
@@ -212,24 +259,24 @@ class GNUPlot(object):
             current *= 10
         return tics
     # }}}2 
-
-class ScatterPlot(GNUPlot):
-    def __init__(self, test_name=None, test_type="single", output_folder=None):
+# }}}1
+class ScatterPlot(GNUPlot): # {{{1
+    def __init__(self, test_name=None, test_type="single", output_folder=None): # {{{2
         self.test_name = test_name
         self.test_type = test_type
         self.data = []
         self.output_folder = output_folder
         self.buffer_factor = 1.25
-
-    def add_data(self, procs, tag, plots):
+    # }}}2
+    def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
-
-    def get_buffered_x_max(self):
+    # }}}2
+    def get_buffered_x_max(self): # {{{2
         return max(1, round(self.x_max*self.buffer_factor))
-
-    def get_buffered_y_max(self):
+    # }}}2
+    def get_buffered_y_max(self): # {{{2
         return max(1, round(self.y_max*self.buffer_factor))
-
+    # }}}2
     def find_max_and_min(self): # {{{2
         x_data = []
         y_data = [] 
@@ -247,7 +294,7 @@ class ScatterPlot(GNUPlot):
         self.x_data = list( set( x_data))
         self.x_data.sort()
     # }}}2
-    def plot(self):
+    def plot(self): # {{{2
         self.find_max_and_min()
         
         # Basic data for all the files.
@@ -308,8 +355,8 @@ class ScatterPlot(GNUPlot):
         print >> gnu_fp, plot_str
 
         gnu_fp.close()
-
-
+    # }}}2
+# }}}1
 class SinglePlotter(Plotter): # {{{1
     def __init__(self, *args, **kwargs):
         super(SinglePlotter, self).__init__(*args, **kwargs)
@@ -325,10 +372,6 @@ class SinglePlotter(Plotter): # {{{1
                     sp.add_data(procs, tag, data[procs][tag])
             
             sp.plot()
-# }}}1
-def draw_scatter(gather, folder): # {{{1
-        
-        of.close()
 # }}}1
 def write_gnuplot_makefile(folder_name): # {{{1
     fh = open(folder_name+"/Makefile", "w")
@@ -346,7 +389,7 @@ if __name__ == "__main__":
 
     # Initialize a gather object. This object will hold all data
     # and make it possible to extract it later. 
-    gather = SingleDataGather(folders)
+    gather = SingleDataGather(folders, options.agg_methods)
 
     single_plotter = SinglePlotter(gather, output_folder=options.build_folder)
     output_folder = single_plotter.output_folder
@@ -363,7 +406,7 @@ if __name__ == "__main__":
 
     total_time = time.time() - start_time
 
-    
+   
     # Print some informative text to the end user.
     print """
 ================================================================================ 
@@ -376,8 +419,9 @@ Comparison tags %s
     Makefile written       :      %s
     Timing                 :      %.2f seconds
     Executed Makefile      :      %s
+    Aggregation methods    :      %d (%s)
     
-""" % (".".join(tags), tags, output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed)
+""" % (".".join(tags), ".".join(tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
 
 if not options.makefile_executed:
     print """
