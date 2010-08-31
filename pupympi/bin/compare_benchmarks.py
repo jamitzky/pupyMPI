@@ -18,7 +18,7 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
-import os, sys, glob, csv, re, time
+import os, sys, glob, csv, re, time, subprocess
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
@@ -37,10 +37,15 @@ def options_and_arguments(): # {{{1
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
     parser.add_option("--build-folder", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
     parser.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True)
+    parser.add_option("--run-makefile", dest="makefile_executed", action="store_true", default=False)
     options, args = parser.parse_args()
     
     if len(args) <= 1:
         parser.error("You should provide at least two folders with benchmarks data for comparison.")
+
+    # Test if we try to avoid the makefile but run make anyway.
+    if (not options.makefile) and options.makefile_executed:
+        parser.error("options --execlude-makefile and --run-makefile are mutually exclusive")
     
     return args, options
 # }}}1
@@ -299,6 +304,10 @@ if __name__ == "__main__":
     if options.makefile:
         write_gnuplot_makefile(output_folder)
 
+    if options.makefile_executed:
+        os.chdir(output_folder)
+        subprocess.Popen(["make"])
+
     tags = ", ".join(gather.get_tags())
 
     total_time = time.time() - start_time
@@ -315,8 +324,9 @@ Comparison tags %s
     Parsed csv files       :      %d
     Makefile written       :      %s
     Timing                 :      %.2f seconds
+    Executed Makefile      :      %s
     
-""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time)
+""" % (tags, tags, output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed)
 
 
 
