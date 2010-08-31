@@ -269,6 +269,7 @@ class ScatterPlot(GNUPlot):
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "Wallclock in'
+        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
         print >> gnu_fp, "set log x"
