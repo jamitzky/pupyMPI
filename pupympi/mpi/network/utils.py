@@ -103,8 +103,12 @@ def get_raw_message(client_socket):
     return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
 
 from mpi import constants
-def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0):
-    pickled_data = pickle.dumps(data)
+def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_pickled=False):
+    if is_pickled:
+        pickled_data = data
+    else:
+        pickled_data = pickle.dumps(data)
+        
     lpd = len(pickled_data)
 
     header = struct.pack("llllll",lpd , rank, cmd, tag, ack, comm_id)
