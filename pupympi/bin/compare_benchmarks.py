@@ -65,16 +65,10 @@ def options_and_arguments(): # {{{1
     func_methods = []
     for method in methods:
         # Clean the aggregation method to a function
-        if method == "sum":
-            fmethod = sum
-        elif method == "min":
-            fmethod = min 
-        elif method == "max":
-            fmethod = max 
-        elif method == "avg":
-            fmethod = lambda x: sum(x)/float(len(x))
-
+        lookup = { "sum" : sum, "min" : min, "max" : max, "avg" : lambda x: sum(x)/float(len(x)) }
+        fmethod = lookup[method]
         func_methods.append((method, fmethod))
+
     options.agg_methods = func_methods
 
     return args, options
@@ -125,11 +119,24 @@ class DataGather(object): # {{{1
         tags.sort()
         return tags
     # }}}2
-    def get_tests(self): # {{{2
-        return self.data.keys()
+    def _filter(self, org_keys, exclude):
+        keys = []
+        for key in org_keys:
+            comp_key = key.lower() 
+            found = False
+            for ex in exclude:
+                if comp_key.find(ex) > -1:
+                    found = True
+                    break
+            if not found:
+                keys.append(key)
+        return keys
+
+    def get_tests(self, exclude=["barrier"]): # {{{2
+        return self._filter(self.data.keys(), exclude)
     # }}}2
-    def get_agg_tests(self): # {{{2
-        return self.agg_data.keys()
+    def get_agg_tests(self, exclude="barrier"): # {{{2
+        return self._filter(self.agg_data.keys(), exclude)
     # }}}2
     def _find_csv_files(self, folder_prefixes): # {{{2
         """
