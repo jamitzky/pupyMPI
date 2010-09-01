@@ -26,20 +26,29 @@ sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
 def options_and_arguments(): # {{{1
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     
     usage = """usage: %prog [options] folder1 folder2 ... folderN
     
     <<folder1>> to <<folderN>> should be folders containing benchmark 
-    data for comparison. You should provide at least 2 folders."""   
+    data for comparison."""   
     
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
-    parser.add_option("--build-folder", dest="build_folder", help="Name the folder all the result files should be places. This will include a Makefile, a number of data files, gnuplot files etc. If no argument is given the script will try to create a <result> folder in the current directory")
-    parser.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True)
-    parser.add_option("--run-makefile", dest="makefile_executed", action="store_true", default=False)
-    parser.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
+    parser.add_option("--build-folder", dest="build_folder", help="The folder containing the GNUPlot files. If not given a folder called 'plot_output' will be created. If that folder already exists 'plot_output1', 'plot_output2'... will be created. ")
+    parser.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Silent mode. No final message etc")
+    parser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=True, help="Verbose mode. The default choice. Disable with -q")
+
+    timing_group = OptionGroup(parser, "Timing options", "Options for data handling, cleaning and aggregation. See description for each option below")
+    timing_group.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
+    timing_group.add_option("--time-method", dest="time_method", choices=['avg','min','max'], default="avg", help="Which measurement method should be used for the plots. Use min (or max) to select the fastest (or slowest) node in a given operation or average to get the avg between the nodes. Defaults to %default")
+    parser.add_option_group(timing_group )
+
+    makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
+    makefile_group.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True, help="Don't create a Makefile")
+    makefile_group.add_option("--run-makefile", dest="makefile_executed", action="store_true", default=False, help="Execute the Makefile (which will generate the images)")
+    parser.add_option_group(makefile_group)
     options, args = parser.parse_args()
-    
+
     if len(args) <= 1:
         parser.error("You should provide at least two folders with benchmarks data for comparison.")
 
@@ -65,7 +74,7 @@ def options_and_arguments(): # {{{1
 
     return args, options
 # }}}1
-class SingleDataGather(object): # {{{1
+class DataGather(object): # {{{1
     def __init__(self, folder_prefixes, agg_methods): # {{{2
         self.tags = set([])
         self.parsed_csv_files = 0
@@ -166,11 +175,25 @@ class SingleDataGather(object): # {{{1
                 # Unpack data
                 datasize = row[0]
                 time_p_it = row[3]
-                throughput = row[4]
-                run_type = row[6].replace("test_","")
+                if len(row) == 10:
+                    # new format
+                    time_min = row[4]
+                    time_max = row[5]
+                    throughput = row[6]
+                    run_type = row[8].replace("test_","")
 
-                # The number of procs seems inconsistant. 
-                procs = row[5]
+                    # The number of procs seems inconsistant. 
+                    procs = row[7]
+                else:
+                    # old format. Wasting memory due to lack of coding stills by CB
+                    time_min = time_p_it
+                    time_mxax = time_p_it
+
+                    throughput = row[4]
+                    run_type = row[6].replace("test_","")
+
+                    # The number of procs seems inconsistant. 
+                    procs = row[5]
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
@@ -479,7 +502,7 @@ if __name__ == "__main__":
 
     # Initialize a gather object. This object will hold all data
     # and make it possible to extract it later. 
-    gather = SingleDataGather(folders, options.agg_methods)
+    gather = DataGather(folders, options.agg_methods)
 
     single_plotter = SinglePlotter(gather, output_folder=options.build_folder, agg_methods=options.agg_methods)
     output_folder = single_plotter.output_folder
@@ -498,28 +521,30 @@ if __name__ == "__main__":
 
    
     # Print some informative text to the end user.
-    print """
-================================================================================ 
-Comparison tags %s
-================================================================================ 
+    if options.verbose:
+        print """
+    ================================================================================ 
+    Comparison tags %s
+    ================================================================================ 
 
-    Compared tags          :      %s
-    Output written to      :      %s
-    Parsed csv files       :      %d
-    Makefile written       :      %s
-    Timing                 :      %.2f seconds
-    Executed Makefile      :      %s
-    Aggregation methods    :      %d (%s)
-    
-""" % (".".join(tags), ".".join(tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
+        Compared tags          :      %s
+        Output written to      :      %s
+        Parsed csv files       :      %d
+        Makefile written       :      %s
+        Timing                 :      %.2f seconds
+        Executed Makefile      :      %s
+        Aggregation methods    :      %d (%s)
+        
+    """ % (".".join(tags), ".".join(tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
 
-if not options.makefile_executed:
-    print """
-No graphs generated yet. To generate it run the following:
+    if options.verbose:
+        if not options.makefile_executed:
+            print """
+        No graphs generated yet. To generate it run the following:
 
-    > cd %s
-    > Make
-""" % output_folder
+            > cd %s
+            > Make
+        """ % output_folder
 # }}}1
 
 # TODO
