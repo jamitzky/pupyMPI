@@ -191,6 +191,18 @@ class Network(object):
         self.socket_pool.readonly = True
         
         #Logger().debug("Network (fully) started")
+        
+    def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
+        from mpi.request import Request
+        rl = []
+        message = pickle.dumps(message)
+        for recp in receivers:
+            request = Request("send", communicator, recp, tag, data=message)
+            request.is_pickled = True
+            self.t_out.add_out_request(request)
+            rl.append(request)
+            
+        return rl
 
     def finalize(self):
         """
@@ -267,7 +279,7 @@ class BaseCommunicationHandler(threading.Thread):
         # Create the proper data structure and pickle the data
         #print "We found cmd: %d" % request.cmd
         request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd, 
-                                       tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id)
+                                       tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
         
         ##Logger().warning("SHOW request %s" % request)
         
