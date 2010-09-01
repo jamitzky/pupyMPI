@@ -75,11 +75,11 @@ def options_and_arguments(): # {{{1
     return args, options
 # }}}1
 class DataGather(object): # {{{1
-    def __init__(self, folder_prefixes, agg_methods): # {{{2
+    def __init__(self, folder_prefixes, agg_methods, time_method="avg"): # {{{2
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
-        self._parse()
+        self._parse(time_method=time_method)
         self.aggregate(agg_methods)
     # }}}2
     def aggregate(self, methods): # {{{2
@@ -136,7 +136,7 @@ class DataGather(object): # {{{1
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
     # }}}2
-    def _parse(self): # {{{2
+    def _parse(self, time_method="avg"): # {{{2
         """
         Goes through the possile csv files and parse the contents into an
         internal format. 
@@ -212,8 +212,15 @@ class DataGather(object): # {{{1
                 if tag not in data[run_type][procs]:
                     data[run_type][procs][tag] = []
 
+                # Select which timing data to use
+                item = time_p_it
+                if time_method == "min":
+                    item = time_min
+                elif time_method == "max":
+                    item = time_max
+
                 # Actual add the data point to the list
-                data[run_type][procs][tag].append( (int(datasize), float(time_p_it)) )
+                data[run_type][procs][tag].append( (int(datasize), float(item)) )
 
         self.data = data
     # }}}2
