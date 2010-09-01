@@ -40,7 +40,7 @@ def options_and_arguments(): # {{{1
 
     timing_group = OptionGroup(parser, "Timing options", "Options for data handling, cleaning and aggregation. See description for each option below")
     timing_group.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
-    timing_group.add_option("--time-method", dest="time_method", choices=['avg','min','max'], default="avg", help="Which measurement method should be used for the plots. Use min (or max) to select the fastest (or slowest) node in a given operation or average to get the avg between the nodes. Defaults to %default")
+    timing_group.add_option("--value-method", dest="value_method", choices=['throughput','avg','min','max'], default="avg", help="Which measurement method should be used for the plots. Use min (or max) to select the fastest (or slowest) node in a given operation or average to get the avg between the nodes. Use 'throughput' to plot thoughput. Defaults to %default")
     parser.add_option_group(timing_group)
 
     plot_group = OptionGroup(parser, "Plotting options", "Handling different sizes, axis scale etc. Changing settings here will change all the generated pictures. Changing a single picture can be done in a single .gnu file in the result folder")
@@ -80,11 +80,11 @@ def options_and_arguments(): # {{{1
     return args, options
 # }}}1
 class DataGather(object): # {{{1
-    def __init__(self, folder_prefixes, agg_methods, time_method="avg"): # {{{2
+    def __init__(self, folder_prefixes, agg_methods, value_method="avg"): # {{{2
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
-        self._parse(time_method=time_method)
+        self._parse(value_method=value_method)
         self.aggregate(agg_methods)
     # }}}2
     def aggregate(self, methods): # {{{2
@@ -141,7 +141,7 @@ class DataGather(object): # {{{1
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
     # }}}2
-    def _parse(self, time_method="avg"): # {{{2
+    def _parse(self, value_method="avg"): # {{{2
         """
         Goes through the possile csv files and parse the contents into an
         internal format. 
@@ -219,10 +219,12 @@ class DataGather(object): # {{{1
 
                 # Select which timing data to use
                 item = time_p_it
-                if time_method == "min":
+                if value_method == "min":
                     item = time_min
-                elif time_method == "max":
+                elif value_method == "max":
                     item = time_max
+                elif value_method == "throughput":
+                    item = throughput
 
                 # Actual add the data point to the list
                 data[run_type][procs][tag].append( (int(datasize), float(item)) )
@@ -262,7 +264,36 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
-    def gnuplot_datasize_tics(self, data): # {{{2
+    def gnuplot_traffic_tics(self, max_value): # {{{2
+        import math
+
+        # This data stuff is calculated a bit manual
+        data = [0, 1]
+
+        # Second row
+        if max_value > 1:
+            data.append(1024)
+
+        if max_value > 1024:
+            data.append(10*1024)
+        
+        if max_value > 10*1024:
+            data.append(100*1024)
+
+        if max_value > 100*1024:
+            data.append(500*1024)
+
+        if max_value > 500*1024:
+            data.append(1024**2)
+
+        current = 1024**2
+        while current <= max_value:
+            current += 1024**2
+            data.append(current)
+
+        return self.gnuplot_datasize_tics(data, suffix="/s")
+    # }}}2
+    def gnuplot_datasize_tics(self, data, suffix=""): # {{{2
         data = list(set(data))
         data = map(int, data)
         data.sort()
@@ -280,7 +311,7 @@ class GNUPlot(object): # {{{1
                 k = s / (mm*mm)
                 size = "%dMB" % k
                 
-            final_data.append('"%s" %d' % (size, s))
+            final_data.append('"%s%s" %d' % (size, suffix, s))
         return final_data
     # }}}2 
     def gnuplot_time_tics(self, max_value): # {{{2
@@ -323,6 +354,14 @@ class GNUPlot(object): # {{{1
     def set_width(self, width): # {{{2
         self.plot_width = width
     # }}}2
+    def set_y_type(self, y_type): # {{{2
+        self.y_type = y_type
+
+        if self.y_type == "time":
+            self.y_label = "Wallclock"
+        else:
+            self.y_label = "Throughput"
+    # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
     def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
@@ -360,14 +399,19 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
+        if self.y_type == "time":
+            y_tics = self.gnuplot_time_tics(self.y_max)
+        else:
+            y_tics = self.gnuplot_traffic_tics(self.y_max)
+
         print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
-        print >> gnu_fp, 'set ylabel "Wallclock'
+        print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
         print >> gnu_fp, "set log x"
         print >> gnu_fp, "set log y"
 
@@ -467,6 +511,10 @@ class ScatterPlot(GNUPlot): # {{{1
 class SinglePlotter(Plotter): # {{{1
     def __init__(self, *args, **kwargs): # {{{2
         super(SinglePlotter, self).__init__(*args, **kwargs)
+        y_type = "time"
+        if self.settings.value_method == "throughput":
+            y_type = "traffic"
+        self.y_type = y_type
         self.agg_methods = self.settings.agg_methods
         self.scatter_plot()
         self.line_plot()
@@ -475,6 +523,7 @@ class SinglePlotter(Plotter): # {{{1
         """
         Use the aggregated data for a number of line plots
         """
+
         for test in self.data.get_agg_tests():
             for agg_e in self.agg_methods:
                 agg_name, agg_func = agg_e
@@ -482,6 +531,7 @@ class SinglePlotter(Plotter): # {{{1
                 lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
                 lp.set_height(self.settings.plot_height)
                 lp.set_width(self.settings.plot_width)
+                lp.set_y_type(self.y_type)
                 data = self.data.get_agg_data(test)
                 for procs in data:
                     for tag in data[procs]:
@@ -500,6 +550,7 @@ class SinglePlotter(Plotter): # {{{1
             sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
             sp.set_height(self.settings.plot_height)
             sp.set_width(self.settings.plot_width)
+            sp.set_y_type(self.y_type)
             data = self.data.get_data(test)
             for procs in data:
                 for tag in data[procs]:
