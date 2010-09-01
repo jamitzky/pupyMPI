@@ -46,6 +46,8 @@ def options_and_arguments(): # {{{1
     plot_group = OptionGroup(parser, "Plotting options", "Handling different sizes, axis scale etc. Changing settings here will change all the generated pictures. Changing a single picture can be done in a single .gnu file in the result folder")
     plot_group.add_option("--plot-height", type="int", default=600, dest="plot_height", help="The height of the generated images. Defaults to %default")
     plot_group.add_option("--plot-width", type="int", default=800, dest="plot_width", help="The width of the generated images. Defaults to %default")
+    plot_group.add_option("--plot-x-axis-type", dest="x_axis_type", default="log", choices=['log','lin'], help="How the x axis should be scaled. Options: log or lin. Defaults to %default")
+    plot_group.add_option("--plot-y-axis-type", dest="y_axis_type", default="log", choices=['log','lin'], help="How the y axis should be scaled. Options: log or lin. Defaults to %default")
     parser.add_option_group(plot_group)
 
     makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
@@ -135,7 +137,7 @@ class DataGather(object): # {{{1
     def get_tests(self, exclude=["barrier"]): # {{{2
         return self._filter(self.data.keys(), exclude)
     # }}}2
-    def get_agg_tests(self, exclude="barrier"): # {{{2
+    def get_agg_tests(self, exclude=["barrier"]): # {{{2
         return self._filter(self.agg_data.keys(), exclude)
     # }}}2
     def _find_csv_files(self, folder_prefixes): # {{{2
@@ -367,6 +369,10 @@ class GNUPlot(object): # {{{1
     def set_width(self, width): # {{{2
         self.plot_width = width
     # }}}2
+    def set_axis_type(self, x_axis_type, y_axis_type):
+        self.y_axis_type = y_axis_type
+        self.x_axis_type = x_axis_type
+
     def set_y_type(self, y_type): # {{{2
         self.y_type = y_type
 
@@ -375,6 +381,7 @@ class GNUPlot(object): # {{{1
         else:
             self.y_label = "Throughput"
     # }}}2
+
 # }}}1
 class LinePlot(GNUPlot): # {{{1
     def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
@@ -425,8 +432,14 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
-        print >> gnu_fp, "set log x"
-        print >> gnu_fp, "set log y"
+
+        print "Test with", self.y_axis_type
+
+        if self.y_axis_type == "log":
+            print >> gnu_fp, "set log y"
+
+        if self.x_axis_type == "log":
+            print >> gnu_fp, "set log x"
 
         plot_str = 'plot '
         plot_strs = []
@@ -495,8 +508,11 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
-        print >> gnu_fp, "set log x"
-        print >> gnu_fp, "set log y"
+        if self.y_axis_type == "log":
+            print >> gnu_fp, "set log y"
+
+        if self.x_axis_type == "log":
+            print >> gnu_fp, "set log x"
 
         # Setting x-range and y-range. 
         print >> gnu_fp, "set xrange [1:%d]" % self.get_buffered_x_max()
@@ -550,6 +566,7 @@ class SinglePlotter(Plotter): # {{{1
                 lp.set_height(self.settings.plot_height)
                 lp.set_width(self.settings.plot_width)
                 lp.set_y_type(self.y_type)
+                lp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
                 data = self.data.get_agg_data(test)
                 for procs in data:
                     for tag in data[procs]:
@@ -569,6 +586,7 @@ class SinglePlotter(Plotter): # {{{1
             sp.set_height(self.settings.plot_height)
             sp.set_width(self.settings.plot_width)
             sp.set_y_type(self.y_type)
+            sp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
             data = self.data.get_data(test)
             for procs in data:
                 for tag in data[procs]:
