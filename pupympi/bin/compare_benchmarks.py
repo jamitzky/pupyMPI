@@ -140,6 +140,7 @@ class DataGather(object): # {{{1
         self.csv_files = []
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
+            self.csv_files.extend(glob.glob(fp+ "pupymark.coll.[0-9]*procs*"))
     # }}}2
     def _parse(self, value_method="avg"): # {{{2
         """
@@ -152,7 +153,7 @@ class DataGather(object): # {{{1
         data = {}
         
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\d+)-benchmark_output.*\.sing\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\d+)-benchmark_output.*\.(sing|coll)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -204,7 +205,7 @@ class DataGather(object): # {{{1
                 match = tag_procs_re.match(filename)
 
                 # We override the <<procs>> here. Maybe we should not
-                tag, procs = match.groups()
+                tag, _,procs = match.groups()
                 self._add_tag(tag) 
 
                 # Add the data to the internal structure
@@ -465,6 +466,11 @@ class ScatterPlot(GNUPlot): # {{{1
 
             dat_fp.close()
 
+        if self.y_type == "time":
+            y_tics = self.gnuplot_time_tics(self.y_max)
+        else:
+            y_tics = self.gnuplot_traffic_tics(self.y_max)
+
         # Write the .gnu file
         title = "Scatter plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
@@ -473,10 +479,10 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
-        print >> gnu_fp, 'set ylabel "Wallclock'
+        print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.gnuplot_time_tics(self.y_max))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
         print >> gnu_fp, "set log x"
         print >> gnu_fp, "set log y"
 
