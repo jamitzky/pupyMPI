@@ -34,14 +34,19 @@ def options_and_arguments(): # {{{1
     data for comparison."""   
     
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
-    parser.add_option("--build-folder", dest="build_folder", help="The folder containing the GNUPlot files. If not given a folder called 'plot_output' will be created. If that folder already exists 'plot_output1', 'plot_output2'... will be created. ")
+    parser.add_option("--build-folder", dest="output_folder", help="The folder containing the GNUPlot files. If not given a folder called 'plot_output' will be created. If that folder already exists 'plot_output1', 'plot_output2'... will be created. ")
     parser.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Silent mode. No final message etc")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=True, help="Verbose mode. The default choice. Disable with -q")
 
     timing_group = OptionGroup(parser, "Timing options", "Options for data handling, cleaning and aggregation. See description for each option below")
     timing_group.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
     timing_group.add_option("--time-method", dest="time_method", choices=['avg','min','max'], default="avg", help="Which measurement method should be used for the plots. Use min (or max) to select the fastest (or slowest) node in a given operation or average to get the avg between the nodes. Defaults to %default")
-    parser.add_option_group(timing_group )
+    parser.add_option_group(timing_group)
+
+    plot_group = OptionGroup(parser, "Plotting options", "Handling different sizes, axis scale etc. Changing settings here will change all the generated pictures. Changing a single picture can be done in a single .gnu file in the result folder")
+    plot_group.add_option("--plot-height", type="int", default=600, dest="plot_height", help="The height of the generated images. Defaults to %default")
+    plot_group.add_option("--plot-width", type="int", default=800, dest="plot_width", help="The width of the generated images. Defaults to %default")
+    parser.add_option_group(plot_group)
 
     makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
     makefile_group.add_option("--exclude-makefile", dest="makefile", action="store_false", default=True, help="Don't create a Makefile")
@@ -232,10 +237,11 @@ class DataGather(object): # {{{1
     # }}}2
 # }}}1
 class Plotter(object): # {{{1
-    def __init__(self, data_obj, output_folder=None, **kwargs): # {{{2
+    def __init__(self, data_obj, settings, **kwargs): # {{{2
         self.data = data_obj
-        if output_folder:
-            self.output_folder = output_folder
+        self.settings = settings
+        if settings.output_folder:
+            self.output_folder = settings.output_folder
         else:
             self.output_folder = self._create_output_folder()
      # }}}2
@@ -311,6 +317,12 @@ class GNUPlot(object): # {{{1
         self.x_data = list( set( x_data))
         self.x_data.sort()
     # }}}2
+    def set_height(self, height): # {{{2
+        self.plot_height = height
+    # }}}2
+    def set_width(self, width): # {{{2
+        self.plot_width = width
+    # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
     def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
@@ -348,7 +360,7 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size 800,600"
+        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -413,7 +425,7 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Scatter plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size 800,600"
+        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -455,7 +467,7 @@ class ScatterPlot(GNUPlot): # {{{1
 class SinglePlotter(Plotter): # {{{1
     def __init__(self, *args, **kwargs): # {{{2
         super(SinglePlotter, self).__init__(*args, **kwargs)
-        self.agg_methods = kwargs['agg_methods']
+        self.agg_methods = self.settings.agg_methods
         self.scatter_plot()
         self.line_plot()
     # }}}2
@@ -468,6 +480,8 @@ class SinglePlotter(Plotter): # {{{1
                 agg_name, agg_func = agg_e
 
                 lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
+                lp.set_height(self.settings.plot_height)
+                lp.set_width(self.settings.plot_width)
                 data = self.data.get_agg_data(test)
                 for procs in data:
                     for tag in data[procs]:
@@ -484,6 +498,8 @@ class SinglePlotter(Plotter): # {{{1
         """
         for test in self.data.get_tests():
             sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
+            sp.set_height(self.settings.plot_height)
+            sp.set_width(self.settings.plot_width)
             data = self.data.get_data(test)
             for procs in data:
                 for tag in data[procs]:
@@ -511,7 +527,7 @@ if __name__ == "__main__":
     # and make it possible to extract it later. 
     gather = DataGather(folders, options.agg_methods)
 
-    single_plotter = SinglePlotter(gather, output_folder=options.build_folder, agg_methods=options.agg_methods)
+    single_plotter = SinglePlotter(gather, options)
     output_folder = single_plotter.output_folder
 
     # Check if we should place a makefile in the final folder. 
