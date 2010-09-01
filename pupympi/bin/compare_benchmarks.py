@@ -472,7 +472,7 @@ class ScatterPlot(GNUPlot): # {{{1
             y_tics = self.gnuplot_traffic_tics(self.y_max)
 
         # Write the .gnu file
-        title = "Scatter plot for %s" % self.test_name
+        title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
         print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
