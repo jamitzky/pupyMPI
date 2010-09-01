@@ -35,7 +35,11 @@ class BaseRequest(object):
         arising from concurrent status updates on a request object. If none are
         plausible we should remove this lock and with it the release and acquire functions
         below.
-        """        
+        """
+        
+        # Flag to keep track if the data is pickled. Some methods
+        # will pickle directly.
+        self.is_pickled = False        
         
         # Start an event for waiting on the request
         self._waitevent = threading.Event()
