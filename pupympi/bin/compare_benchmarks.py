@@ -190,23 +190,28 @@ class DataGather(object): # {{{1
                 time_p_it = row[3]
                 if len(row) == 10:
                     # new format
-                    time_min = row[4]
-                    time_max = row[5]
-                    throughput = row[6]
+                    time_min = float(row[4])
+                    time_max = float(row[5])
+                    throughput = float(row[6])
                     run_type = row[8].replace("test_","")
 
                     # The number of procs seems inconsistant. 
                     procs = row[7]
-                else:
+                elif len(row) == 8:
                     # old format. Wasting memory due to lack of coding stills by CB
-                    time_min = time_p_it
-                    time_mxax = time_p_it
+                    time_min = float(time_p_it)
+                    time_max = float(time_p_it)
 
-                    throughput = row[4]
+                    throughput = float(row[4])
                     run_type = row[6].replace("test_","")
 
                     # The number of procs seems inconsistant. 
                     procs = row[5]
+                else:
+                    print "WARNING: Found a row with a strange number of rows:", len(row)
+
+                # It appers that throughput is in MB/s. The internal use is in B/sec, so we convert it
+                throughput = throughput * 1024**2
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
