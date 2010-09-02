@@ -82,8 +82,8 @@ class DataGather(object): # {{{1
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
         self._parse(value_method=value_method)
-        self.aggregate(agg_methods)
         self.calculate_speedup(speedup_baseline_tag)
+        self.aggregate(agg_methods)
     # }}}2
     def calculate_speedup(self, baseline_tag=None): # {{{2
         """
@@ -136,7 +136,7 @@ class DataGather(object): # {{{1
                         try:
                             scale = b / t
                         except ZeroDivisionError:
-                            scale = None
+                            scale = 0 # WHY?
 
                         l.append( (baseline[i][0], scale))
 
@@ -150,28 +150,28 @@ class DataGather(object): # {{{1
         
         These data is then used to construct a number of line graphs. 
         """
-        data = copy.deepcopy(self.data)
-
-        for test in data:
-            for procs in data[test]:
-                for tag in data[test][procs]:
-                    d = {}
-                    for e in data[test][procs][tag]:
-                        x, y = e
-                        if x not in d:
-                            d[x] = []
-                        d[x].append(y)
-                    data[test][procs][tag] = {}
-                    # The dict d now contains a number of elements for each x value. We can how
-                    # run through that dict constructing a tuple with (x, agg_f(y_values)) and
-                    # use that. 
-                    for x in d:
-                        for ft in methods:
-                            (fname, func) = ft
-                            if fname not in data[test][procs][tag]:
-                                data[test][procs][tag][fname] = []
-                            data[test][procs][tag][fname].append((x, func(d[x])))
-        self.agg_data = data
+        for item in ("data", "scale_data"): 
+            data = copy.deepcopy(getattr(self, item))
+            for test in data:
+                for procs in data[test]:
+                    for tag in data[test][procs]:
+                        d = {}
+                        for e in data[test][procs][tag]:
+                            x, y = e
+                            if x not in d:
+                                d[x] = []
+                            d[x].append(y)
+                        data[test][procs][tag] = {}
+                        # The dict d now contains a number of elements for each x value. We can how
+                        # run through that dict constructing a tuple with (x, agg_f(y_values)) and
+                        # use that. 
+                        for x in d:
+                            for ft in methods:
+                                (fname, func) = ft
+                                if fname not in data[test][procs][tag]:
+                                    data[test][procs][tag][fname] = []
+                                data[test][procs][tag][fname].append((x, func(d[x])))
+            setattr(self, "agg_"+item, data)
     # }}}2
     def _add_tag(self, tag): # {{{2
         self.tags.add(tag)
