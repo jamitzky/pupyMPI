@@ -175,28 +175,37 @@ class DataGather(object): # {{{1
         These data is then used to construct a number of line graphs. 
         """
         for item in ("data", "scale_data"): 
-            data = copy.deepcopy(getattr(self, item))
+            data = getattr(self, item)
+            agg_data = {}
             for test in data:
+                if test not in agg_data:
+                    agg_data[test] = {}
+
                 for procs in data[test]:
+                    if procs not in agg_data[test]:
+                        agg_data[test][procs] = {}
+
                     for tag in data[test][procs]:
+                        if tag not in agg_data[test][procs]:
+                            agg_data[test][procs][tag] = {}
+
                         d = {}
                         for e in data[test][procs][tag]:
                             x, y = e
                             if x not in d:
                                 d[x] = []
                             d[x].append(y)
-                        data[test][procs][tag] = {}
                         # The dict d now contains a number of elements for each x value. We can how
                         # run through that dict constructing a tuple with (x, agg_f(y_values)) and
                         # use that. 
                         for x in d:
                             for ft in methods:
                                 (fname, func) = ft
-                                if fname not in data[test][procs][tag]:
-                                    data[test][procs][tag][fname] = []
+                                if fname not in agg_data[test][procs][tag]:
+                                    agg_data[test][procs][tag][fname] = []
                                     values = filter(lambda x: x is not None, d[x])
-                                data[test][procs][tag][fname].append((x, func(values)))
-            setattr(self, "agg_"+item, data)
+                                agg_data[test][procs][tag][fname].append((x, func(values)))
+            setattr(self, "agg_"+item, agg_data)
     # }}}2
     def _add_tag(self, tag): # {{{2
         self.tags.add(tag)
@@ -331,12 +340,6 @@ class DataGather(object): # {{{1
 
         self.data = data
     # }}}2
-    def get_data(self, test_name): # {{{2
-        return self.data[test_name]
-    # }}}2
-    def get_agg_data(self, test_name): # {{{2
-        return self.agg_data[test_name]
-    # }}}2
 # }}}1
 class Plotter(object): # {{{1
     def __init__(self, data_obj, settings, **kwargs): # {{{2
@@ -454,10 +457,13 @@ class GNUPlot(object): # {{{1
     def set_width(self, width): # {{{2
         self.plot_width = width
     # }}}2
-    def set_axis_type(self, x_axis_type, y_axis_type):
+    def set_prefix(self, prefix): # {{{2
+        self.prefix = prefix
+    # }}}2
+    def set_axis_type(self, x_axis_type, y_axis_type): # {{{2
         self.y_axis_type = y_axis_type
         self.x_axis_type = x_axis_type
-
+    # }}}2
     def set_y_type(self, y_type): # {{{2
         self.y_type = y_type
 
@@ -466,7 +472,6 @@ class GNUPlot(object): # {{{1
         else:
             self.y_label = "Throughput"
     # }}}2
-
 # }}}1
 class LinePlot(GNUPlot): # {{{1
     def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
@@ -482,7 +487,7 @@ class LinePlot(GNUPlot): # {{{1
     def plot(self): # {{{2
         self.find_max_and_min()
         # Basic data for all the files.
-        filename = "line_%s_%s" % (self.title_help, self.test_name)
+        filename = "%s_line_%s_%s" % (self.prefix, self.title_help, self.test_name)
 
         # Flush all the data files. 
         dat_files = []
@@ -496,7 +501,8 @@ class LinePlot(GNUPlot): # {{{1
             plots.sort(key=lambda x: x[0])
 
             for e in plots:
-                print >> dat_fp, "%d %f" % e
+                if e[1] is not None:
+                    print >> dat_fp, "%d %f" % e
 
             dat_fp.close()
 
@@ -558,7 +564,7 @@ class ScatterPlot(GNUPlot): # {{{1
         self.find_max_and_min()
         
         # Basic data for all the files.
-        filename = "scatter_%s" % self.test_name
+        filename = "%s_scatter_%s" % (self.prefix, self.test_name)
 
         # Flush all the data files. 
         dat_files = []
@@ -570,7 +576,8 @@ class ScatterPlot(GNUPlot): # {{{1
             dat_fp = open(dat_filename_path, "w")
 
             for e in plots:
-                print >> dat_fp, "%d %f" % e
+                if e[1] is not None:
+                    print >> dat_fp, "%d %f" % e
 
             dat_fp.close()
 
@@ -640,21 +647,23 @@ class SinglePlotter(Plotter): # {{{1
         """
         Use the aggregated data for a number of line plots
         """
+        # Run through the normal data and the scale data
+        for run_type in [ ("normal", "data"), ("scale", "scale_data") ]:
+            for test in self.data.get_agg_tests():
+                for agg_e in self.agg_methods:
+                    agg_name, agg_func = agg_e
 
-        for test in self.data.get_agg_tests():
-            for agg_e in self.agg_methods:
-                agg_name, agg_func = agg_e
-
-                lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
-                lp.set_height(self.settings.plot_height)
-                lp.set_width(self.settings.plot_width)
-                lp.set_y_type(self.y_type)
-                lp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
-                data = self.data.get_agg_data(test)
-                for procs in data:
-                    for tag in data[procs]:
-                        lp.add_data(procs, tag, data[procs][tag][agg_name])
-                lp.plot()
+                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
+                    lp.set_prefix( run_type[0] )
+                    lp.set_height(self.settings.plot_height)
+                    lp.set_width(self.settings.plot_width)
+                    lp.set_y_type(self.y_type)
+                    lp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
+                    data = getattr(self.data, "agg_"+run_type[1])[test]
+                    for procs in data:
+                        for tag in data[procs]:
+                            lp.add_data(procs, tag, data[procs][tag][agg_name])
+                    lp.plot()
     # }}}2
     def scatter_plot(self): # {{{2
         """
@@ -664,18 +673,20 @@ class SinglePlotter(Plotter): # {{{1
         HINT: If you want data for only 32 procs on the chart, simply copy the genereated .gnu
         files and remove what you don't want plotted. 
         """
-        for test in self.data.get_tests():
-            sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
-            sp.set_height(self.settings.plot_height)
-            sp.set_width(self.settings.plot_width)
-            sp.set_y_type(self.y_type)
-            sp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
-            data = self.data.get_data(test)
-            for procs in data:
-                for tag in data[procs]:
-                    sp.add_data(procs, tag, data[procs][tag])
-            
-            sp.plot()
+        for run_type in [ ("normal", "data"), ("scale", "scale_data") ]:
+            for test in self.data.get_tests():
+                sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
+                sp.set_prefix( run_type[0] )
+                sp.set_height(self.settings.plot_height)
+                sp.set_width(self.settings.plot_width)
+                sp.set_y_type(self.y_type)
+                sp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
+                data = getattr(self.data, run_type[1])[test]
+                for procs in data:
+                    for tag in data[procs]:
+                        sp.add_data(procs, tag, data[procs][tag])
+                
+                sp.plot()
     # }}}2
 # }}}1
 def write_gnuplot_makefile(folder_name): # {{{1
