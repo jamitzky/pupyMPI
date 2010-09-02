@@ -708,14 +708,12 @@ if __name__ == "__main__":
         os.chdir(output_folder)
         subprocess.Popen(["make"])
 
-    tags = ", ".join(gather.get_tags())
-
     total_time = time.time() - start_time
 
     # Formatting the tags proper
     formatted_tags = []
-    for tag in tags.split(","):
-        formatted_tags.append( ".".join(tag.strip()) )
+    for tag in gather.get_tags():
+        formatted_tags.append( ".".join(tag) )
 
     # Print some informative text to the end user.
     if options.verbose:
