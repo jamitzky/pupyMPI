@@ -203,7 +203,7 @@ class DataGather(object): # {{{1
                                 (fname, func) = ft
                                 if fname not in agg_data[test][procs][tag]:
                                     agg_data[test][procs][tag][fname] = []
-                                    values = filter(lambda x: x is not None, d[x])
+                                values = filter(lambda x: x is not None, d[x])
                                 agg_data[test][procs][tag][fname].append((x, func(values)))
             setattr(self, "agg_"+item, agg_data)
     # }}}2
