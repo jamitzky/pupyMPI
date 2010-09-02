@@ -656,8 +656,3 @@ if __name__ == "__main__":
             > Make
         """ % output_folder
 # }}}1
-
-# TODO
-#  1) Need to draw for throughput as well as time.
-#  2) Support for collective operations
-#  3) Migrate old data structure to new one. 
