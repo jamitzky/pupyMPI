@@ -68,7 +68,31 @@ def options_and_arguments(): # {{{1
     func_methods = []
     for method in methods:
         # Clean the aggregation method to a function
-        lookup = { "sum" : sum, "min" : min, "max" : max, "avg" : lambda x: sum(x)/float(len(x)) }
+        def avg(l):
+            if len(l) == 0:
+                return None
+            else:
+                return sum(l)/float(len(l))
+
+        def _sum(l):
+            if len(l) == 0:
+                return None
+            else:
+                return sum(l)
+
+        def _min(l):
+            if len(l) == 0:
+                return None
+            else:
+                return min(l)
+
+        def _max(l):
+            if len(l) == 0:
+                return None
+            else:
+                return max(l)
+
+        lookup = { "sum" : _sum, "min" : _min, "max" : _max, "avg" : avg }
         fmethod = lookup[method]
         func_methods.append((method, fmethod))
 
@@ -136,7 +160,7 @@ class DataGather(object): # {{{1
                         try:
                             scale = b / t
                         except ZeroDivisionError:
-                            scale = 0 # WHY?
+                            scale = None
 
                         l.append( (baseline[i][0], scale))
 
@@ -170,7 +194,8 @@ class DataGather(object): # {{{1
                                 (fname, func) = ft
                                 if fname not in data[test][procs][tag]:
                                     data[test][procs][tag][fname] = []
-                                data[test][procs][tag][fname].append((x, func(d[x])))
+                                    values = filter(lambda x: x is not None, d[x])
+                                data[test][procs][tag][fname].append((x, func(values)))
             setattr(self, "agg_"+item, data)
     # }}}2
     def _add_tag(self, tag): # {{{2
