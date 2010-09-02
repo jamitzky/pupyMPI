@@ -41,6 +41,7 @@ def options_and_arguments(): # {{{1
     timing_group = OptionGroup(parser, "Timing options", "Options for data handling, cleaning and aggregation. See description for each option below")
     timing_group.add_option("--aggregation-method", dest="agg_method", default="avg", help="Which aggregation method used to summarize the data items for equal x values. Defaults to 'avg', but other choices are 'sum', 'min' and 'max'. You can use a comma list like 'sum,avg'")
     timing_group.add_option("--value-method", dest="value_method", choices=['throughput','avg','min','max'], default="avg", help="Which measurement method should be used for the plots. Use min (or max) to select the fastest (or slowest) node in a given operation or average to get the avg between the nodes. Use 'throughput' to plot thoughput. Defaults to %default")
+    timing_group.add_option("--speedup-baseline-tag", dest="speedup_baseline_tag", help="What tag to use as a baseline in the speedup. If not supplied or the given tag is invalid we use the lowest tag. Giving a invalid tag will issue a warning.")
     parser.add_option_group(timing_group)
 
     plot_group = OptionGroup(parser, "Plotting options", "Handling different sizes, axis scale etc. Changing settings here will change all the generated pictures. Changing a single picture can be done in a single .gnu file in the result folder")
@@ -76,12 +77,71 @@ def options_and_arguments(): # {{{1
     return args, options
 # }}}1
 class DataGather(object): # {{{1
-    def __init__(self, folder_prefixes, agg_methods, value_method="avg"): # {{{2
+    def __init__(self, folder_prefixes, agg_methods, value_method="avg", speedup_baseline_tag=None): # {{{2
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
         self._parse(value_method=value_method)
         self.aggregate(agg_methods)
+        self.calculate_speedup(speedup_baseline_tag)
+    # }}}2
+    def calculate_speedup(self, baseline_tag=None): # {{{2
+        """
+        Find the lowest tag and use that as a baseline if you don't give one
+        through the command line options. 
+
+        This only calculates the internal speedup, so the plotting afterwards
+        can be both a scatterplot and lineplot. 
+        """
+        # If we have a tag, we validate that it actually exists. 
+        if baseline_tag and baseline_tag not in self.tags:
+            print "Warning. The supplied tag '%s' for speedup is not parsed" % baseline_tag
+            baseline_tag = None
+
+        if not baseline_tag:
+            baseline_tag = min(self.tags)
+
+        # The speed up is calculated by having populating a new data set in the same
+        # structure as the original data. For each data list we sort the baseline
+        # list and the other list. For <<baseline>> list and <<compare>> list we find
+        # scale_i (scaling factor for item i) by dividing baseline_i with compare_i. We
+        # also do this for the baseline itself (will just give a plain and nice 1).
+        scale_data = {}
+        for test_name in self.data:
+            if test_name not in scale_data:
+                scale_data[test_name] = {}
+
+            for procs in self.data[test_name]:
+                if procs not in scale_data[test_name]:
+                    scale_data[test_name][procs] = {}
+
+                for tag in self.data[test_name][procs]:
+                    baseline = self.data[test_name][procs][baseline_tag]
+                    tocompare = self.data[test_name][procs][tag]
+
+                    # We sort the lists so we don't get strange items comapred
+                    baseline.sort()
+                    tocompare.sort()
+
+                    # Create the new item
+                    l = []
+                    for i in range(len(baseline)):
+                        t = tocompare[i][1]
+                        b = baseline[i][1]
+
+                        if tocompare[i][0] != baseline[i][0]:
+                            print "Warning. We compare unequal data sizes"
+
+                        # FIXME: We might want to insert some crap value like 0 or 1
+                        try:
+                            scale = b / t
+                        except ZeroDivisionError:
+                            scale = None
+
+                        l.append( (baseline[i][0], scale))
+
+                    scale_data[test_name][procs][tag] = l
+        self.scale_data = scale_data
     # }}}2
     def aggregate(self, methods): # {{{2
         """
@@ -121,7 +181,7 @@ class DataGather(object): # {{{1
         tags.sort()
         return tags
     # }}}2
-    def _filter(self, org_keys, exclude):
+    def _filter(self, org_keys, exclude): # {{{2
         keys = []
         for key in org_keys:
             comp_key = key.lower() 
@@ -133,7 +193,7 @@ class DataGather(object): # {{{1
             if not found:
                 keys.append(key)
         return keys
-
+    # }}}2
     def get_tests(self, exclude=["barrier"]): # {{{2
         return self._filter(self.data.keys(), exclude)
     # }}}2
@@ -433,8 +493,6 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
 
-        print "Test with", self.y_axis_type
-
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
 
@@ -612,7 +670,7 @@ if __name__ == "__main__":
 
     # Initialize a gather object. This object will hold all data
     # and make it possible to extract it later. 
-    gather = DataGather(folders, options.agg_methods)
+    gather = DataGather(folders, options.agg_methods, options.value_method, options.speedup_baseline_tag)
 
     single_plotter = SinglePlotter(gather, options)
     output_folder = single_plotter.output_folder
