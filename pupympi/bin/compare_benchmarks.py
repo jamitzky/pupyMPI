@@ -712,7 +712,11 @@ if __name__ == "__main__":
 
     total_time = time.time() - start_time
 
-   
+    # Formatting the tags proper
+    formatted_tags = []
+    for tag in tags.split(","):
+        formatted_tags.append( ".".join(tag.strip()) )
+
     # Print some informative text to the end user.
     if options.verbose:
         print """
@@ -728,7 +732,7 @@ if __name__ == "__main__":
         Executed Makefile      :      %s
         Aggregation methods    :      %d (%s)
         
-    """ % (".".join(tags), ".".join(tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
+    """ % (", ".join(formatted_tags), ", ".join(formatted_tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
 
     if options.verbose:
         if not options.makefile_executed:
