@@ -605,8 +605,8 @@ class ScatterPlot(GNUPlot): # {{{1
             print >> gnu_fp, "set log x"
 
         # Setting x-range and y-range. 
-        print >> gnu_fp, "set xrange [1:%d]" % self.get_buffered_x_max()
-        print >> gnu_fp, "set yrange [1:%d]" % self.get_buffered_y_max()
+        print >> gnu_fp, "set xrange [1:%d]" % max(2,self.get_buffered_x_max())
+        print >> gnu_fp, "set yrange [1:%d]" % max(2, self.get_buffered_y_max())
 
         # Different line types. 
         print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
