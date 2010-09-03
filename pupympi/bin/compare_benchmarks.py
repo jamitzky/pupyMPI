@@ -468,13 +468,8 @@ class GNUPlot(object): # {{{1
     # }}}2
     def set_y_type(self, y_type): # {{{2
         self.y_type = y_type
-
-        if self.y_type == "time":
-            self.y_label = "Wallclock"
-        elif self.y_type == "scale":
-            self.y_label = "Speedup"
-        else:
-            self.y_label = "Throughput"
+        lookup = { 'time' : "Wallclock", 'scale' : "Speedup", 'throughput' : "Throughput" }
+        self.y_label = lookup[y_type]
     # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
