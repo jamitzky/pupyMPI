@@ -18,6 +18,7 @@
 #
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
+# imports {{{1
 import os, sys, glob, csv, re, time, subprocess, copy
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
@@ -25,6 +26,7 @@ mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above i
 sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
+# }}}1
 def options_and_arguments(): # {{{1
     from optparse import OptionParser, OptionGroup
     
@@ -469,6 +471,8 @@ class GNUPlot(object): # {{{1
 
         if self.y_type == "time":
             self.y_label = "Wallclock"
+        elif self.y_type == "scale":
+            self.y_label = "Speedup"
         else:
             self.y_label = "Throughput"
     # }}}2
@@ -657,7 +661,12 @@ class SinglePlotter(Plotter): # {{{1
                     lp.set_prefix( run_type[0] )
                     lp.set_height(self.settings.plot_height)
                     lp.set_width(self.settings.plot_width)
-                    lp.set_y_type(self.y_type)
+            
+                    if run_type[0] == "scale":
+                        lp.set_y_type("scale")
+                    else:
+                        lp.set_y_type(self.y_type)
+
                     lp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
                     data = getattr(self.data, "agg_"+run_type[1])[test]
                     for procs in data:
@@ -679,7 +688,12 @@ class SinglePlotter(Plotter): # {{{1
                 sp.set_prefix( run_type[0] )
                 sp.set_height(self.settings.plot_height)
                 sp.set_width(self.settings.plot_width)
-                sp.set_y_type(self.y_type)
+
+                if run_type[0] == "scale":
+                    sp.set_y_type("scale")
+                else:
+                    sp.set_y_type(self.y_type)
+
                 sp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
                 data = getattr(self.data, run_type[1])[test]
                 for procs in data:
