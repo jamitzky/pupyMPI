@@ -19,7 +19,7 @@
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
 # imports {{{1
-import os, sys, glob, csv, re, time, subprocess, copy
+import os, sys, glob, csv, re, time, subprocess, copy, math
 
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
@@ -369,72 +369,66 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
-    def gnuplot_traffic_tics(self, max_value): # {{{2
-        import math
+    def format_size(self, bytecount):
+        n = math.log(size, 2)
+        border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
+        for bl in border_list:
+            if n < bl[0]:
+                return "%.2f %s" % (float(size) / 2**(bl[0]-10), bl[1])
+        return "%.2f B" % size
 
-        # This data stuff is calculated a bit manual
-        data = [0, 1]
-
-        # Second row
-        if max_value > 1:
-            data.append(1024)
-
-        if max_value > 1024:
-            data.append(10*1024)
+    def format_traffic(self, bytecount):
+        return format_size(bytecount)+"/s"
         
-        if max_value > 10*1024:
-            data.append(100*1024)
+    def format_scale(self, scale):
+        return "%.2f" % scale
 
-        if max_value > 100*1024:
-            data.append(500*1024)
+    def format_time(self, usecs):
+        pass
 
-        if max_value > 500*1024:
-            data.append(1024**2)
+    def format_labels(self, axis_max=2, axis_size=600, pixels_per_label=10, format_type="size"):
+        """
+        Find the labels on an axis (x or y) by calculating the maximum distance
+        between labels and another things. We know the size of the plot, so we
+        can calculate how many labels fit. 
 
-        current = 1024**2
-        while current <= max_value:
-            current += 1024**2
-            data.append(current)
+        The steps for finding the proper GNUPlot labels:
 
-        return self.gnuplot_datasize_tics(data, suffix="/s")
-    # }}}2
-    def gnuplot_datasize_tics(self, data, suffix=""): # {{{2
-        data = list(set(data))
-        data = map(int, data)
-        data.sort()
-        
-        mm = 1024
-        final_data = []
-        for s in data:
-            size = ""
-            if s < mm:
-                size = "%dB" % s 
-            elif s < mm*mm:
-                k = s / mm
-                size = "%dKB" % k
-            else:
-                k = s / (mm*mm)
-                size = "%dMB" % k
-                
-            final_data.append('"%s%s" %d' % (size, suffix, s))
-        return final_data
-    # }}}2 
-    def gnuplot_time_tics(self, max_value): # {{{2
-        tics = ['"0us" 0']
-        current = 1
-        
-        while current < max_value:
-            # add the current time level to the tics
-            if current < 1000:
-                tics.append('"%2.fus" %d' % (current, current))
-            elif current < 1000000:
-                c = current / 1000.0
-                tics.append('"%2.fms" %d' % (c, current))
-            else:
-                c = current / 1000000.0
-                tics.append('"%2.fs" %d' % (c, current))
-            current *= 10
-        return tics
+           1) Create a general list with potential labels for latering
+              filtering.
+           2) Calculate the number of labels that will fit into the plot.
+           3) Fit the number of labels to the potential labels.
+           4) Go through the list and format each element. We'll call a simple
+              formatting function on each element. The function depends on
+              the axis type.
+        """
+        # 1) 
+        initial_range = range(1, axis_max, 10)
+
+        # 2) Calculate the number of labels. We subtract 40 pixels from the given
+        #    size because gnuplot needs some splace to captions / labels etc.
+        axis_size -= 40.0
+        labels = axix_size / pixels_per_label
+
+        # Adjust the labels by finding the <<skip>> factor to filter the
+        # potential list. If - for example - we have 1000 potential labels but
+        # room for 20 we should include the 1000/20'th label.
+        skip_factor = math.ceil(len(axis_max) / labels)
+
+        raw_labels = adjusted_range[::skip_factor] # OK. This is smart
+
+        # 4) Format the data. 
+        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale }[format_type]
+        formatted_labels = [ (x, formatter(x)) for x in raw_labels]
+
+        return formatted_labels
+
+       #if self.y_type == "time":
+       #    y_tics = self.gnuplot_time_tics(self.y_max)
+       #else:
+       #    y_tics = self.gnuplot_traffic_tics(self.y_max)
+
+       #print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
     # }}}2 
     def find_max_and_min(self): # {{{2
         x_data = []
@@ -509,11 +503,6 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        if self.y_type == "time":
-            y_tics = self.gnuplot_time_tics(self.y_max)
-        else:
-            y_tics = self.gnuplot_traffic_tics(self.y_max)
-
         print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
@@ -521,7 +510,8 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
+
+        self._print_and_format(gnu_fp, axis_max=self.y_max)
 
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
@@ -580,11 +570,6 @@ class ScatterPlot(GNUPlot): # {{{1
 
             dat_fp.close()
 
-        if self.y_type == "time":
-            y_tics = self.gnuplot_time_tics(self.y_max)
-        else:
-            y_tics = self.gnuplot_traffic_tics(self.y_max)
-
         # Write the .gnu file
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
@@ -596,7 +581,9 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
+
+        self._print_and_format(gnu_fp, axis_max=self.y_max)
+
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
 
