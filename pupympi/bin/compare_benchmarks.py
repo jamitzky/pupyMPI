@@ -52,6 +52,7 @@ def options_and_arguments(): # {{{1
     plot_group.add_option("--plot-x-axis-type", dest="x_axis_type", default="log", choices=['log','lin'], help="How the x axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-y-axis-type", dest="y_axis_type", default="log", choices=['log','lin'], help="How the y axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-extra", dest="plot_extra", help="Link to a file that contains extra gnuplot commands. These will be inserted before the plot call")
+    plot_group.add_option("--show-errors", dest="show_errors", action="store_true", default=False, help="Show error bars on the line plot. Only works in for the 'avg' aggregation method")
     parser.add_option_group(plot_group)
 
     makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
@@ -102,6 +103,19 @@ def options_and_arguments(): # {{{1
     options.agg_methods = func_methods
 
     return args, options
+# }}}1
+def std_var(dataset): # {{{1
+    import math
+    if not dataset:
+        return None
+
+    n = len(dataset)
+    avg = float(sum(dataset))/n
+    s = 0.0
+    for data in dataset:
+        diff = data - avg
+        s += diff**2
+    return math.sqrt((1/(float(n)-1))*s)
 # }}}1
 class DataGather(object): # {{{1
     def __init__(self, folder_prefixes, agg_methods, value_method="avg", speedup_baseline_tag=None): # {{{2
@@ -207,7 +221,7 @@ class DataGather(object): # {{{1
                                 if fname not in agg_data[test][procs][tag]:
                                     agg_data[test][procs][tag][fname] = []
                                 values = filter(lambda x: x is not None, d[x])
-                                agg_data[test][procs][tag][fname].append((x, func(values)))
+                                agg_data[test][procs][tag][fname].append((x, func(values), std_var(values)))
             setattr(self, "agg_"+item, agg_data)
     # }}}2
     def _add_tag(self, tag): # {{{2
@@ -535,7 +549,7 @@ class GNUPlot(object): # {{{1
     # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
-    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None, extra=None): # {{{2
+    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None, extra=None, show_errors=False): # {{{2
         self.buffer_factor = 1.25
         self.test_name = test_name
         self.test_type = test_type
@@ -543,6 +557,7 @@ class LinePlot(GNUPlot): # {{{1
         self.data = []
         self.output_folder = output_folder
         self.extra = extra
+        self.show_errors = show_errors
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
@@ -565,7 +580,10 @@ class LinePlot(GNUPlot): # {{{1
 
             for e in plots:
                 if e[1] is not None:
-                    print >> dat_fp, "%d %f" % e
+                    if self.show_errors:
+                        print >> dat_fp, "%d %f %f" % (e[0], e[1], e[2])
+                    else:
+                        print >> dat_fp, "%d %f" % (e[0], e[1])
 
             dat_fp.close()
 
@@ -605,8 +623,13 @@ class LinePlot(GNUPlot): # {{{1
         plot_strs = []
         for p in dat_files:
             (procs, tag, dat_filename) = p
+            errorbar = ""
+            if self.show_errors:
+                title = "std. var. error for %s procs (Tag: %s)" % (procs, ".".join(tag))
+                plot_strs.append(' "%s" with yerrorbars title "%s" %s' % (dat_filename, title, errorbar))
+
             title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
-            plot_strs.append(' "%s" with linespoints title "%s"' % (dat_filename, title))
+            plot_strs.append(' "%s" with linespoints title "%s" %s' % (dat_filename, title, errorbar))
             
         plot_str += ", ".join(plot_strs)
         print >> gnu_fp, plot_str
@@ -714,7 +737,9 @@ class SinglePlotter(Plotter): # {{{1
                 for agg_e in self.agg_methods:
                     agg_name, agg_func = agg_e
 
-                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra)
+                    show_errors = self.settings.show_errors and agg_name == "avg"
+
+                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra, show_errors=show_errors)
                     lp.set_prefix( run_type[0] )
                     lp.set_height(self.settings.plot_height)
                     lp.set_width(self.settings.plot_width)
