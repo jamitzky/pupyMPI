@@ -104,7 +104,7 @@ def options_and_arguments(): # {{{1
 
     return args, options
 # }}}1
-def std_var(dataset): # {{{1
+def std_dev(dataset): # {{{1
     import math
     if not dataset:
         return None
@@ -221,7 +221,7 @@ class DataGather(object): # {{{1
                                 if fname not in agg_data[test][procs][tag]:
                                     agg_data[test][procs][tag][fname] = []
                                 values = filter(lambda x: x is not None, d[x])
-                                agg_data[test][procs][tag][fname].append((x, func(values), std_var(values)))
+                                agg_data[test][procs][tag][fname].append((x, func(values), std_dev(values)))
             setattr(self, "agg_"+item, agg_data)
     # }}}2
     def _add_tag(self, tag): # {{{2
