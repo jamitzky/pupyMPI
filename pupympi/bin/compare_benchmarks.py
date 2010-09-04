@@ -51,6 +51,7 @@ def options_and_arguments(): # {{{1
     plot_group.add_option("--plot-width", type="int", default=800, dest="plot_width", help="The width of the generated images. Defaults to %default")
     plot_group.add_option("--plot-x-axis-type", dest="x_axis_type", default="log", choices=['log','lin'], help="How the x axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-y-axis-type", dest="y_axis_type", default="log", choices=['log','lin'], help="How the y axis should be scaled. Options: log or lin. Defaults to %default")
+    plot_group.add_option("--plot-extra", dest="plot_extra", help="Link to a file that contains extra gnuplot commands. These will be inserted before the plot call")
     parser.add_option_group(plot_group)
 
     makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
@@ -369,6 +370,12 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
+    def write_extra(self, gnu_fp, filename): # {{{2
+        if filename:
+            fp = open(filename, "r")
+            for line in fp:
+                print >> gnu_fp, line.strip().strip()
+    # }}}2
     def get_buffered_x_max(self, format_type="time"): # {{{2
         m = max(1, round(self.x_max*self.buffer_factor))
         if format_type == "scale":
@@ -528,13 +535,14 @@ class GNUPlot(object): # {{{1
     # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
-    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
+    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None, extra=None): # {{{2
         self.buffer_factor = 1.25
         self.test_name = test_name
         self.test_type = test_type
         self.title_help = title_help
         self.data = []
         self.output_folder = output_folder
+        self.extra = extra
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
@@ -573,6 +581,7 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set xtic nomirror rotate by -45'
         print >> gnu_fp, 'set key top left'
         print >> gnu_fp, 'set tics out'
+        self.write_extra(gnu_fp, self.extra)
 
 
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
@@ -606,12 +615,13 @@ class LinePlot(GNUPlot): # {{{1
     # }}}2
 # }}}1
 class ScatterPlot(GNUPlot): # {{{1
-    def __init__(self, test_name=None, test_type="single", output_folder=None): # {{{2
+    def __init__(self, test_name=None, test_type="single", output_folder=None, extra=None): # {{{2
         self.test_name = test_name
         self.test_type = test_type
         self.data = []
         self.output_folder = output_folder
         self.buffer_factor = 1.25
+        self.extra = extra
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
@@ -649,6 +659,7 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set xtic nomirror rotate by -45'
         print >> gnu_fp, 'set key top left'
         print >> gnu_fp, 'set tics out'
+        self.write_extra(gnu_fp, self.extra)
 
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
@@ -666,15 +677,6 @@ class ScatterPlot(GNUPlot): # {{{1
         # Setting x-range and y-range. 
         print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
         print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
-
-        # Different line types. 
-        print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
-        print >> gnu_fp, 'set style line 2 linetype 2 linecolor rgb "orange" linewidth 1.000 pointtype 2 pointsize default'
-        print >> gnu_fp, 'set style line 3 linetype 3 linecolor rgb "yellow" linewidth 1.000 pointtype 3 pointsize default'
-        print >> gnu_fp, 'set style line 4 linetype 4 linecolor rgb "green" linewidth 1.000 pointtype 4 pointsize default'
-        print >> gnu_fp, 'set style line 5 linetype 5 linecolor rgb "cyan" linewidth 1.000 pointtype 5 pointsize default'
-        print >> gnu_fp, 'set style line 6 linetype 6 linecolor rgb "blue" linewidth 1.000 pointtype 6 pointsize default'
-        print >> gnu_fp, 'set style line 7 linetype 7 linecolor rgb "violet" linewidth 1.000 pointtype 7 pointsize default'
 
         i = 0
         plot_str = 'plot '
@@ -712,7 +714,7 @@ class SinglePlotter(Plotter): # {{{1
                 for agg_e in self.agg_methods:
                     agg_name, agg_func = agg_e
 
-                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
+                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra)
                     lp.set_prefix( run_type[0] )
                     lp.set_height(self.settings.plot_height)
                     lp.set_width(self.settings.plot_width)
@@ -739,7 +741,7 @@ class SinglePlotter(Plotter): # {{{1
         """
         for run_type in [ ("normal", "data"), ("scale", "scale_data") ]:
             for test in self.data.get_tests():
-                sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
+                sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra)
                 sp.set_prefix( run_type[0] )
                 sp.set_height(self.settings.plot_height)
                 sp.set_width(self.settings.plot_width)
