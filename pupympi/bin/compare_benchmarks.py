@@ -369,18 +369,31 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
-    def format_size(self, bytecount): # {{{2
+    def get_buffered_x_max(self, format_type="time"): # {{{2
+        m = max(1, round(self.x_max*self.buffer_factor))
+        if format_type == "scale":
+            m = max(m, 2)
+        return m
+    # }}}2
+    def get_buffered_y_max(self, format_type="time"): # {{{2
+        m = max(1, round(self.y_max*self.buffer_factor))
+        if format_type == "scale":
+            m = max(m, 2)
+        return m
+    # }}}2
+    def format_size(self, bytecount, decimals=0): # {{{2
         if bytecount == 0:
             return "0 B"
         n = math.log(bytecount, 2)
         border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
+        fmt_str = "%%.%df%%s" % decimals
         for bl in border_list:
             if n < bl[0]:
-                return "%.0f%s" % (float(bytecount) / 2**(bl[0]-10), bl[1])
-        return "%.0f B" % bytecount
+                return fmt_str % (float(bytecount) / 2**(bl[0]-10), bl[1])
+        return fmt_str % (bytecount, "B")
     # }}}2
     def format_traffic(self, bytecount): # {{{2
-        return format_size(bytecount)+"/s"
+        return self.format_size(bytecount, decimals=1)+"/s"
     # }}}2 
     def format_scale(self, scale): # {{{2
         return "%.0f" % scale
@@ -394,7 +407,54 @@ class GNUPlot(object): # {{{1
                     usecs = usecs / border_list[i-1][0]
                 return "%.0f%s" % (usecs, bl[1])
     # }}}2
-    def format_tics(self, axis_data=None, axis_max=2, axis_size=600, pixels_per_label=10, format_type="size"): # {{{2
+    def get_initial_range(self, axis_max, format_type, scale_type):
+        """
+        This method returns a candidate axis range. The format type
+        is used to find proper values. This is not pretty at all, but
+        it works
+        """
+        lowest_value = 0
+        if scale_type == "log":
+            lowest_value = 1
+
+        if format_type == "scale":
+            return range(lowest_value, max( int(math.ceil(axis_max)), lowest_value+2))
+        elif format_type == "time":
+            result = []
+            value = lowest_value
+            if scale_type == "log":
+                while value < axis_max:
+                    result.append( value )
+                    value *= 10
+            else:
+                labels = 20
+                skip = int(math.ceil( axis_max / labels))
+                skip = skip - skip % 10 + 10
+                while value < axis_max:
+                    result.append(value)
+                    value += skip
+            return result
+        elif format_type == "traffic":
+            result = []
+            value = lowest_value
+            if scale_type == "log":
+                while value < axis_max:
+                    result.append( value )
+                    value *= 2
+            else:
+                labels = 20
+                skip = int(math.ceil( axis_max / labels))
+                skip_base = math.ceil(math.log(skip, 2))
+                skip = 2**skip_base
+                while value < axis_max:
+                    result.append(value)
+                    value += skip
+            return result
+        else:
+            print "Unhandled formatting type", format_type
+            return range(lowest_value, int(math.ceil(axis_max)), 100)
+
+    def format_tics(self, axis_data=None, axis_max=10, axis_size=600, pixels_per_label=20, format_type="size", scale_type="log"): # {{{2
         """
         Find the labels on an axis (x or y) by calculating the maximum distance
         between labels and another things. We know the size of the plot, so we
@@ -411,26 +471,23 @@ class GNUPlot(object): # {{{1
               the axis type.
         """
         if not axis_data:
-            # 1) 
-            initial_range = range(1, int(math.ceil(axis_max)), 10)
-
-            # 2) Calculate the number of labels. We subtract 40 pixels from the given
-            #    size because gnuplot needs some splace to captions / labels etc.
-            axis_size -= 40.0
-            labels = axis_size / pixels_per_label
-
-            # Adjust the labels by finding the <<skip>> factor to filter the
-            # potential list. If - for example - we have 1000 potential labels but
-            # room for 20 we should include the 1000/20'th label.
-            skip_factor = int(math.ceil(axis_max / labels))
-
-            raw_labels = initial_range[::skip_factor] # OK. This is smart
+            # Find the lowest element. This is 0 unless we have a log scale, 
+            # in case we use 1 (otherwise we'll get a math domain error)
+            raw_labels = self.get_initial_range(axis_max, format_type, scale_type)
         else:
             raw_labels = axis_data
 
         # 4) Format the data. 
-        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'throughput' : self.format_traffic }[format_type]
-        formatted_labels = [ "'%s' %d" % (formatter(x),x) for x in raw_labels]
+        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'traffic' : self.format_traffic }[format_type]
+        used_strs = []
+        formatted_labels = []
+        for label in raw_labels:
+            fmt = formatter(label)
+            if fmt in used_strs:
+                continue
+
+            used_strs.append(fmt)
+            formatted_labels.append("'%s' %d" % (formatter(label), label))
 
         return formatted_labels
     # }}}2 
@@ -466,12 +523,13 @@ class GNUPlot(object): # {{{1
     # }}}2
     def set_y_type(self, y_type): # {{{2
         self.y_type = y_type
-        lookup = { 'time' : "Wallclock", 'scale' : "Speedup", 'throughput' : "Throughput" }
+        lookup = { 'time' : "Wallclock", 'scale' : "Speedup", 'traffic' : "Throughput" }
         self.y_label = lookup[y_type]
     # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
     def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
+        self.buffer_factor = 1.25
         self.test_name = test_name
         self.test_type = test_type
         self.title_help = title_help
@@ -514,15 +572,25 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45'
         print >> gnu_fp, 'set key top left'
+        print >> gnu_fp, 'set tics out'
+
 
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 
+        y_min = 0
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
+            y_min = 1
 
+        x_min = 0
         if self.x_axis_type == "log":
             print >> gnu_fp, "set log x"
+            x_min = 1
+
+        # Setting x-range and y-range. 
+        print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
+        print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
         plot_str = 'plot '
         plot_strs = []
@@ -547,12 +615,6 @@ class ScatterPlot(GNUPlot): # {{{1
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
-    # }}}2
-    def get_buffered_x_max(self): # {{{2
-        return max(1, round(self.x_max*self.buffer_factor))
-    # }}}2
-    def get_buffered_y_max(self): # {{{2
-        return max(1, round(self.y_max*self.buffer_factor))
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
@@ -586,19 +648,24 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
         print >> gnu_fp, 'set xtic nomirror rotate by -45'
         print >> gnu_fp, 'set key top left'
+        print >> gnu_fp, 'set tics out'
 
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
-        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 
+        y_min = 0
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
+            y_min = 1
 
+        x_min = 0
         if self.x_axis_type == "log":
             print >> gnu_fp, "set log x"
+            x_min = 1
 
         # Setting x-range and y-range. 
-        print >> gnu_fp, "set xrange [1:%d]" % max(2,self.get_buffered_x_max())
-        print >> gnu_fp, "set yrange [1:%d]" % max(2, self.get_buffered_y_max())
+        print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
+        print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
         # Different line types. 
         print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
