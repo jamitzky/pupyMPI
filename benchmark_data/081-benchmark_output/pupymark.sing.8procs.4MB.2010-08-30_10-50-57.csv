@@ -13,7 +13,7 @@
 # =============================================================
 
 
-datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun
+0datasize,1repetitions,2total time,3avg time/repetition,4min time/repetition,5max time/repetition,6Mbytes/second,nodes,name of test,timestamp of testrun
 0,1000,0.777626,777.491093,777.356148,777.626038,0.000000,2,test_PingPong,2010-08-30_10-50-57
 1,1000,0.812649,812.552571,812.456131,812.649012,0.001174,2,test_PingPong,2010-08-30_10-50-57
 2,1000,0.801530,801.423430,801.316977,801.529884,0.002380,2,test_PingPong,2010-08-30_10-50-57
