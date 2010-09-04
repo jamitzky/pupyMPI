@@ -369,24 +369,32 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
-    def format_size(self, bytecount):
-        n = math.log(size, 2)
+    def format_size(self, bytecount): # {{{2
+        if bytecount == 0:
+            return "0 B"
+        n = math.log(bytecount, 2)
         border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
         for bl in border_list:
             if n < bl[0]:
-                return "%.2f %s" % (float(size) / 2**(bl[0]-10), bl[1])
-        return "%.2f B" % size
-
-    def format_traffic(self, bytecount):
+                return "%.0f%s" % (float(bytecount) / 2**(bl[0]-10), bl[1])
+        return "%.0f B" % bytecount
+    # }}}2
+    def format_traffic(self, bytecount): # {{{2
         return format_size(bytecount)+"/s"
-        
-    def format_scale(self, scale):
-        return "%.2f" % scale
-
-    def format_time(self, usecs):
-        pass
-
-    def format_labels(self, axis_max=2, axis_size=600, pixels_per_label=10, format_type="size"):
+    # }}}2 
+    def format_scale(self, scale): # {{{2
+        return "%.0f" % scale
+    # }}}2
+    def format_time(self, usecs): # {{{2
+        border_list = [ (1000, 'us'), (1000000, 'ms'), (1000000000, 's'),]
+        for i in range(len(border_list)):
+            bl = border_list[i]
+            if usecs < bl[0]:
+                if i > 0:
+                    usecs = usecs / border_list[i-1][0]
+                return "%.0f%s" % (usecs, bl[1])
+    # }}}2
+    def format_tics(self, axis_data=None, axis_max=2, axis_size=600, pixels_per_label=10, format_type="size"): # {{{2
         """
         Find the labels on an axis (x or y) by calculating the maximum distance
         between labels and another things. We know the size of the plot, so we
@@ -402,33 +410,29 @@ class GNUPlot(object): # {{{1
               formatting function on each element. The function depends on
               the axis type.
         """
-        # 1) 
-        initial_range = range(1, axis_max, 10)
+        if not axis_data:
+            # 1) 
+            initial_range = range(1, int(math.ceil(axis_max)), 10)
 
-        # 2) Calculate the number of labels. We subtract 40 pixels from the given
-        #    size because gnuplot needs some splace to captions / labels etc.
-        axis_size -= 40.0
-        labels = axix_size / pixels_per_label
+            # 2) Calculate the number of labels. We subtract 40 pixels from the given
+            #    size because gnuplot needs some splace to captions / labels etc.
+            axis_size -= 40.0
+            labels = axis_size / pixels_per_label
 
-        # Adjust the labels by finding the <<skip>> factor to filter the
-        # potential list. If - for example - we have 1000 potential labels but
-        # room for 20 we should include the 1000/20'th label.
-        skip_factor = math.ceil(len(axis_max) / labels)
+            # Adjust the labels by finding the <<skip>> factor to filter the
+            # potential list. If - for example - we have 1000 potential labels but
+            # room for 20 we should include the 1000/20'th label.
+            skip_factor = int(math.ceil(axis_max / labels))
 
-        raw_labels = adjusted_range[::skip_factor] # OK. This is smart
+            raw_labels = initial_range[::skip_factor] # OK. This is smart
+        else:
+            raw_labels = axis_data
 
         # 4) Format the data. 
-        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale }[format_type]
-        formatted_labels = [ (x, formatter(x)) for x in raw_labels]
+        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'throughput' : self.format_traffic }[format_type]
+        formatted_labels = [ "'%s' %d" % (formatter(x),x) for x in raw_labels]
 
         return formatted_labels
-
-       #if self.y_type == "time":
-       #    y_tics = self.gnuplot_time_tics(self.y_max)
-       #else:
-       #    y_tics = self.gnuplot_traffic_tics(self.y_max)
-
-       #print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
     # }}}2 
     def find_max_and_min(self): # {{{2
         x_data = []
@@ -503,15 +507,16 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
-        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
-        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set xtic nomirror rotate by -45'
+        print >> gnu_fp, 'set key top left'
 
-        self._print_and_format(gnu_fp, axis_max=self.y_max)
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type))
 
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
@@ -574,15 +579,16 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
-        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
-        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set xtic nomirror rotate by -45'
+        print >> gnu_fp, 'set key top left'
 
-        self._print_and_format(gnu_fp, axis_max=self.y_max)
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type))
 
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
