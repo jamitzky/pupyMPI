@@ -18,10 +18,11 @@ cs = []
 rank = 0
 state_colors = {
     'UNKNOWN'        : 'grey',
-    'RUNNING'        : 'white',
+    'RUNNING'        : 'green',
     'MPI_WAIT'       : 'red',
     'MPI_COMM'       : 'blue',
-    'MPI_COLLECTIVE' : 'orange'
+    'MPI_COLLECTIVE' : 'orange',
+    'FINALIZED'      : 'magenta',
 }
 
 for arg in sys.argv[1:]:
