@@ -61,9 +61,6 @@ def options_and_arguments(): # {{{1
     parser.add_option_group(makefile_group)
     options, args = parser.parse_args()
 
-    if len(args) <= 1:
-        parser.error("You should provide at least two folders with benchmarks data for comparison.")
-
     # Test if we try to avoid the makefile but run make anyway.
     if (not options.makefile) and options.makefile_executed:
         parser.error("options --execlude-makefile and --run-makefile are mutually exclusive")
@@ -147,6 +144,7 @@ class DataGather(object): # {{{1
         # list and the other list. For <<baseline>> list and <<compare>> list we find
         # scale_i (scaling factor for item i) by dividing baseline_i with compare_i. We
         # also do this for the baseline itself (will just give a plain and nice 1).
+    
         scale_data = {}
         for test_name in self.data:
             if test_name not in scale_data:
@@ -160,9 +158,74 @@ class DataGather(object): # {{{1
                     baseline = self.data[test_name][procs][baseline_tag]
                     tocompare = self.data[test_name][procs][tag]
 
-                    # We sort the lists so we don't get strange items comapred
-                    baseline.sort()
-                    tocompare.sort()
+                    # internal compare method {{{3
+                    # We sort the lists so we don't get strange items comapred. We need a
+                    # custom compare function as we need to sort the tuple by the first
+                    # item, THEN by the second. 
+                    def compare(t1, t2): # 
+                        if t1[0] < t2[0]:
+                            return -1
+                        elif t1[0] > t2[0]:
+                            return 1
+                        else:
+                            if t1[1] < t2[1]:
+                                return -1
+                            elif t1[1] > t2[1]:
+                                return 1
+                            else:
+                                return 0
+                    # }}}3
+                    # internal align method {{{3
+                    # Internal method for alligning data sets for diffent tags. We do 
+                    # not know if they contain the same amount of datasets for each data-
+                    # size (x-asis), so we need to filter so each x value will have
+                    # the same amount of x data. The function defined below does that.
+                    def align_data(list1, list2):
+                        def struct(datalist):
+                            s = {}
+                            for element in datalist:
+                                (x, y) = element
+                                if x not in s:
+                                    s[x] = []
+                                s[x].append(element)
+                            return s 
+
+                        struct1 = struct(list1)
+                        struct2 = struct(list2)
+
+                        # Find all the keys
+                        keys = struct1.keys()
+                        keys.extend(struct2.keys())
+
+                        # New elements
+                        new_list1 = []
+                        new_list2 = []
+
+                        # Create a new dict where each element
+                        # is the lowest amount of keys in the counts
+                        lengths = {}
+                        for key in keys:
+                            c1 = struct1.get(key, [])
+                            c2 = struct2.get(key, [])
+
+                            # Find the number of elements the two
+                            # list have in common.
+                            count = min(len(c1), len(c2))
+
+                            # Take the first <<count>> of each list
+                            # and append them to the final lists
+                            new_list1.extend( c1[:count] )
+                            new_list2.extend( c2[:count] )
+                        return new_list1, new_list2
+                    # }}}3
+                            
+                    baseline = sorted(baseline, compare)
+                    tocompare = sorted(tocompare, compare)
+
+                    baseline, tocompare = align_data(baseline, tocompare)
+
+                    if len(baseline) != len(tocompare):
+                        print "WARNING: The length of <<baseline> and <<tocompare>> differs. We have an internal function to clean this"
 
                     # Create the new item
                     l = []
@@ -171,7 +234,7 @@ class DataGather(object): # {{{1
                         b = baseline[i][1]
 
                         if tocompare[i][0] != baseline[i][0]:
-                            print "Warning. We compare unequal data sizes"
+                            print "Warning. We compare unequal data sizes", tocompare[i][0], baseline[i][0]
 
                         # FIXME: We might want to insert some crap value like 0 or 1
                         try:
@@ -434,12 +497,17 @@ class GNUPlot(object): # {{{1
         is used to find proper values. This is not pretty at all, but
         it works
         """
+        labels = 20
         lowest_value = 0
         if scale_type == "log":
             lowest_value = 1
 
         if format_type == "scale":
-            return range(lowest_value, max( int(math.ceil(axis_max)), lowest_value+2))
+            skip = int(math.ceil( axis_max / labels))
+            r = range(lowest_value, max( int(math.ceil(axis_max)), lowest_value+2), skip)
+            if axis_max not in r:
+                r.append(axis_max)
+            return r
         elif format_type == "time":
             result = []
             value = lowest_value
@@ -448,7 +516,6 @@ class GNUPlot(object): # {{{1
                     result.append( value )
                     value *= 10
             else:
-                labels = 20
                 skip = int(math.ceil( axis_max / labels))
                 skip = skip - skip % 10 + 10
                 while value < axis_max:
