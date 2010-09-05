@@ -13,11 +13,14 @@ if __name__ == "__main__":
     # Find the folders in the proper format
     folders = glob.glob(from_folder + "single_*")
     folders.extend (glob.glob(from_folder + "collective_*"))
+    folders.extend (glob.glob(from_folder + "single*"))
+    folders.extend (glob.glob(from_folder + "collective*"))
 
-    folder_re = re.compile(".*(collective|single)_(\d+)")
+    folder_re = re.compile(".*(collective|single)_?(\d+)")
     date_re = re.compile(".*(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.csv")
 
     for folder in folders:
+        print "\tFinding folder", folder
         match = folder_re.match(folder)
         run_type, procs = match.groups()
 
@@ -25,6 +28,7 @@ if __name__ == "__main__":
         csv_files = glob.glob(folder + "/*.csv")
 
         for csv_file in csv_files:
+            print "\t\tFinding file", csv_file
             # locate the date from the file
             date_match = date_re.match(csv_file)
             if date_match:
