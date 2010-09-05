@@ -204,20 +204,26 @@ class DataGather(object): # {{{1
                     if tag not in scale_data[test_name][procs]:
                         scale_data[test_name][procs][tag] = {'avg' : []}
 
-                    baseline = self.data[test_name][procs][baseline_tag]
-                    tocompare = self.data[test_name][procs][tag]
+                    try:
+                        baseline = self.data[test_name][procs][baseline_tag]
+                        tocompare = self.data[test_name][procs][tag]
+                    except KeyError:
+                        continue
 
                     baseline, tocompare = self.align_data(baseline, tocompare, return_structs=True)
 
                     # Get all the keys from the two
                     keys = baseline.keys()
                     keys.extend (tocompare.keys())
-
+                    keys = list(set(keys))
 
                     for key in keys:
                         # avg baseline
-                        baseline_avg = avg( [x[1] for x in baseline[key] ])
-                        tocompare_avg = avg( [x[1] for x in tocompare[key] ])
+                        try:
+                            baseline_avg = avg( [x[1] for x in baseline[key] ])
+                            tocompare_avg = avg( [x[1] for x in tocompare[key] ])
+                        except KeyError:
+                            continue
 
                         try:
                             if lower_is_better:
@@ -264,8 +270,11 @@ class DataGather(object): # {{{1
                     scale_data[test_name][procs] = {}
 
                 for tag in data[test_name][procs]:
-                    baseline = data[test_name][procs][baseline_tag]
-                    tocompare = data[test_name][procs][tag]
+                    try:
+                        baseline = data[test_name][procs][baseline_tag]
+                        tocompare = data[test_name][procs][tag]
+                    except KeyError:
+                        continue
 
                     # internal compare method {{{3
                     # We sort the lists so we don't get strange items comapred. We need a
@@ -453,7 +462,8 @@ class DataGather(object): # {{{1
                     procs = row[5]
                 elif len(row) == 7:
                     throughput = float(row[4])
-                    run_type = row[6].replace("test_","")
+                    run_type = row[5].replace("test_","")
+
                 else:
                     print "WARNING: Found a row with a strange number of rows:", len(row)
                     print "\t", ",".join(row)
@@ -710,22 +720,24 @@ class LinePlot(GNUPlot): # {{{1
         # Flush all the data files. 
         dat_files = []
         for element in self.data:
+            # only create files for non-empty plots
             procs, tag, plots = element
-            dat_filename_file = "%s_%s_%s.dat" % (filename, procs, tag)
-            dat_filename_path = self.output_folder + "/" + dat_filename_file
-            dat_files.append( (procs, tag, dat_filename_file ) )
-            dat_fp = open(dat_filename_path, "w")
+            if len(plots) > 0:
+                dat_filename_file = "%s_%s_%s.dat" % (filename, procs, tag)
+                dat_filename_path = self.output_folder + "/" + dat_filename_file
+                dat_files.append( (procs, tag, dat_filename_file ) )
+                dat_fp = open(dat_filename_path, "w")
 
-            plots.sort(key=lambda x: x[0])
+                plots.sort(key=lambda x: x[0])
 
-            for e in plots:
-                if e[1] is not None:
-                    if self.show_errors:
-                        print >> dat_fp, "%d %f %f" % (e[0], e[1], e[2])
-                    else:
-                        print >> dat_fp, "%d %f" % (e[0], e[1])
+                for e in plots:
+                    if e[1] is not None:
+                        if self.show_errors:
+                            print >> dat_fp, "%d %f %f" % (e[0], e[1], e[2])
+                        else:
+                            print >> dat_fp, "%d %f" % (e[0], e[1])
 
-            dat_fp.close()
+                dat_fp.close()
 
         # Write the .gnu file
         title = "Plot for %s" % self.test_name
