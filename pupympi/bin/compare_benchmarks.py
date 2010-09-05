@@ -103,7 +103,7 @@ def options_and_arguments(): # {{{1
 # }}}1
 def std_dev(dataset): # {{{1
     import math
-    if not dataset:
+    if not dataset or len(dataset) == 1:
         return None
 
     n = len(dataset)
@@ -430,6 +430,8 @@ class DataGather(object): # {{{1
                 # Unpack data
                 datasize = row[0]
                 time_p_it = row[3]
+                throughput = 0
+                run_type = ""
                 if len(row) == 10:
                     # new format
                     time_min = float(row[4])
@@ -449,8 +451,12 @@ class DataGather(object): # {{{1
 
                     # The number of procs seems inconsistant. 
                     procs = row[5]
+                elif len(row) == 7:
+                    throughput = float(row[4])
+                    run_type = row[6].replace("test_","")
                 else:
                     print "WARNING: Found a row with a strange number of rows:", len(row)
+                    print "\t", ",".join(row)
 
                 # It appers that throughput is in MB/s. The internal use is in B/sec, so we convert it
                 throughput = throughput * 1024**2
