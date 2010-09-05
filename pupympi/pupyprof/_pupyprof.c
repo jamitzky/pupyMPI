@@ -24,8 +24,13 @@ static _htab *eventmap;
 uintptr_t main_threadstate = NULL;
 
 // States
-enum states { STATE_RUNNING, STATE_MPI_COMM, STATE_MPI_COLLECTIVE, STATE_MPI_WAIT, STATE_FINALIZED, MAX_STATES } current_state;
-enum events { EV_COLLECTIVE_ENTER, EV_COLLECTIVE_LEAVE, EV_COMM_ENTER, EV_COMM_LEAVE, EV_WAIT_ENTER, EV_WAIT_LEAVE, EV_FINALIZE, EV_UNKNOWN, MAX_EVENTS } new_event;
+enum states { STATE_RUNNING, STATE_MPI_COMM, STATE_MPI_COLLECTIVE, 
+			  STATE_MPI_WAIT, STATE_FINALIZED, MAX_STATES 
+			} current_state;
+enum events { EV_COLLECTIVE_ENTER, EV_COLLECTIVE_LEAVE, EV_COMM_ENTER, 
+			  EV_COMM_LEAVE, EV_WAIT_ENTER, EV_WAIT_LEAVE, EV_FINALIZE, 
+			  EV_UNKNOWN, MAX_EVENTS 
+			} new_event;
 
 // stat related definitions
 typedef struct {
@@ -43,9 +48,10 @@ typedef struct _stat_node_t _statnode; // linked list used for appending stats
 static _statnode *statshead;
 static _statnode *statstail;
 
-// State names for printing out
+// State names for printing 
 char *state_names[] = {"RUNNING", "MPI_COMM", "MPI_COLLECTIVE", "MPI_WAIT", "FINALIZED"};
-char *event_names[] = {"COLLECTIVE_ENTER", "COLLECTIVE_LEAVE", "COMM_ENTER", "COMM_LEAVE", "WAIT_ENTER", "WAIT_LEAVE", "FINALIZE", "UNKNOWN"};
+char *event_names[] = {"COLLECTIVE_ENTER", "COLLECTIVE_LEAVE", "COMM_ENTER", "COMM_LEAVE", 
+					   "WAIT_ENTER", "WAIT_LEAVE", "FINALIZE", "UNKNOWN"};
 
 // State transition table and change functions {{{
 void _state_change(enum states);
@@ -99,26 +105,24 @@ _create_statitem(enum states state)
 {
     _statitem *si;
 
+	// Allocate memory for this statitem
     si = (_statitem *)ymalloc(sizeof(_statitem));
     if (!si)
         return NULL;
 
+	// Fill in the given state and current time
 	gettimeofday(&si->tv, NULL);
 	si->state = state;
 
 	return si;
 }
 
-double microtime(void) {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec + tv.tv_usec / 1000000.0);
-}
-
 void _state_change(enum states new_state) {
 	_statitem *si;
 	_statnode *p, *sni;
 
+	// State depth ensures we only count the outermost state changes, ie. those
+	// the user initiates
 	state_depth--;
 	
 	if(0 == state_depth) {
@@ -132,8 +136,10 @@ void _state_change(enum states new_state) {
 		sni->next = NULL;
 
 		if(NULL == statshead) {
+			// Empty stats list, just make it the new element
 			statstail = statshead = sni;
 		} else {
+			// Append to tail of stats list
 			p = statstail;
 			p->next = sni;
 			statstail = sni;
@@ -173,11 +179,19 @@ err:
     return NULL; //continue enumeration on err.
 }
 
+/*
+ * Translate Python code objects into events by looking at the file names and method names.
+ *
+ * entering indicates whether the interpreter is entering (calling) or leaving
+ * (returning from) a method.
+ */
 enum events _event_from_code(PyCodeObject *co, int entering) {
 	char *filename, *name;
 	_hitem *it;
 	enum events ev;
 
+	// Employ a hash map to make code object lookups faster, as the address of
+	// the code object does not change.
 	it = hfind(eventmap, (uintptr_t)co);
 	if(it) {
 		// If in a leaving context return the corresponding LEAVE event
@@ -202,6 +216,7 @@ enum events _event_from_code(PyCodeObject *co, int entering) {
 	filename = PyString_AS_STRING(co->co_filename);
 	name = PyString_AS_STRING(co->co_name);
 
+	// Simple strstr lookups - this is horribly slow, hence the hash map above
 	if(NULL != strstr(filename, "pupympi/mpi/communicator.py")) {
 		// Collective operations
 		if(0 == strcmp(name, "allgather") || 0 == strcmp(name, "allreduce") || 0 == strcmp(name, "alltoall") || 
@@ -236,6 +251,11 @@ enum events _event_from_code(PyCodeObject *co, int entering) {
 			ev = EV_WAIT_LEAVE;
 		goto out;
 	}
+	// Finalize
+	if(NULL != strstr(filename, "pupympi/mpi/__init__.py") && 0 == strcmp(name, "finalize")) {
+		ev = EV_FINALIZE;
+		goto out;
+	}
 
 	ev = EV_UNKNOWN;
 out:
@@ -246,11 +266,10 @@ out:
 static void
 _call_enter(PyObject *self, PyFrameObject *frame, PyObject *arg, int ccall)
 {
+	// A method was entered. Look up the code object, get the corresponding
+	// event and run the state change function.
 	new_event = _event_from_code(frame->f_code, 1);
 
-	//if(EV_UNKNOWN != new_event)
-		// printf("[%s] call_enter %s:%s -> event %s\n", _get_current_thread_class_name(), PyString_AS_STRING(frame->f_code->co_filename), PyString_AS_STRING(frame->f_code->co_name), event_names[new_event]);
-	// Call the state change procedure
 	state_table[current_state][new_event]();
 	
 }
@@ -258,10 +277,9 @@ _call_enter(PyObject *self, PyFrameObject *frame, PyObject *arg, int ccall)
 static void
 _call_leave(PyObject *self, PyFrameObject *frame, PyObject *arg)
 {
+	// A method was left. Look up the code object, get the corresponding event
+	// and run the state change function.
 	new_event = _event_from_code(frame->f_code, 0);
-	
-	//if(EV_UNKNOWN != new_event)
-		//printf("[%s] call_leave %s:%s -> event %s\n", _get_current_thread_class_name(), PyString_AS_STRING(frame->f_code->co_filename), PyString_AS_STRING(frame->f_code->co_name), event_names[new_event]);
 	
 	state_table[current_state][new_event]();
 }
@@ -272,6 +290,9 @@ _prof_callback(PyObject *self, PyFrameObject *frame, int what,
 {
 	// We're only concerned about what the main thread is doing
 	// (hopefully nobody renamed it...)
+	// As with the code object to event translations, caching the address of
+	// the main thread is much faster than running string comparisons all the
+	// time.
 	if(!main_threadstate) {
 		if(0 == strcmp("_MainThread", _get_current_thread_class_name())) {
 			main_threadstate = (uintptr_t)frame->f_tstate;
@@ -285,11 +306,9 @@ _prof_callback(PyObject *self, PyFrameObject *frame, int what,
 	
 	switch (what) {
     case PyTrace_CALL:
-		//printf("[%s] call_enter %s:%s (f_code:%x co_filename:%x co_name:%x)\n", _get_current_thread_class_name(), PyString_AS_STRING(frame->f_code->co_filename), PyString_AS_STRING(frame->f_code->co_name), (unsigned int)frame->f_code, (unsigned int)frame->f_code->co_filename, (unsigned int)frame->f_code->co_name);
         _call_enter(self, frame, arg, 0);
         break;
     case PyTrace_RETURN: // either normally or with an exception
-		//printf("[%s] call_leave %s:%s\n", _get_current_thread_class_name(), PyString_AS_STRING(frame->f_code->co_filename), PyString_AS_STRING(frame->f_code->co_name));
         _call_leave(self, frame, arg);
         break;
 
@@ -440,6 +459,22 @@ err:
     return NULL;
 }
 
+void
+clear_stats(PyObject *self, PyObject *args)
+{
+	_statnode *p;
+
+	p = statshead;
+
+	statshead = statstail = NULL;
+
+	while(NULL != p) {
+		p = p->next;
+		yfree(p->it);
+		yfree(p);
+	}
+}
+
 static PyObject*
 stop(PyObject *self, PyObject *args)
 {
@@ -461,6 +496,7 @@ static PyMethodDef pupyprof_methods[] = {
     {"start", start, METH_VARARGS, NULL},
     {"stop", stop, METH_VARARGS, NULL},
     {"get_stats", get_stats, METH_VARARGS, NULL},
+    {"clear_stats", clear_stats, METH_VARARGS, NULL},
     {"profile_event", profile_event, METH_VARARGS, NULL}, // for internal usage. do not call this.
     {NULL, NULL}      /* sentinel */
 };
