@@ -27,6 +27,11 @@ sys.path.append(mpipath) # Set PYTHONPATH
 
 from mpi import constants
 # }}}1
+def avg(l):
+    if len(l) == 0:
+        return None
+    else:
+        return sum(l)/float(len(l))
 def options_and_arguments(): # {{{1
     from optparse import OptionParser, OptionGroup
     
@@ -68,12 +73,7 @@ def options_and_arguments(): # {{{1
     methods = options.agg_method.split(",")
     func_methods = []
     for method in methods:
-        # Clean the aggregation method to a function
-        def avg(l):
-            if len(l) == 0:
-                return None
-            else:
-                return sum(l)/float(len(l))
+        # Clean the aggregation method to a function {{{2
 
         def _sum(l):
             if len(l) == 0:
@@ -92,7 +92,7 @@ def options_and_arguments(): # {{{1
                 return None
             else:
                 return max(l)
-
+        # }}}2
         lookup = { "sum" : _sum, "min" : _min, "max" : _max, "avg" : avg }
         fmethod = lookup[method]
         func_methods.append((method, fmethod))
@@ -116,14 +116,60 @@ def std_dev(dataset): # {{{1
 # }}}1
 class DataGather(object): # {{{1
     def __init__(self, folder_prefixes, agg_methods, value_method="avg", speedup_baseline_tag=None): # {{{2
+        lower_is_better = True
+        if value_method == "throughput":
+            lower_is_better = False
+        
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
         self._parse(value_method=value_method)
-        self.calculate_speedup(speedup_baseline_tag)
         self.aggregate(agg_methods)
+        self.calculate_point_speedup(speedup_baseline_tag)
+        self.calculate_aggregate_speedup(speedup_baseline_tag, lower_is_better=lower_is_better)
     # }}}2
-    def calculate_speedup(self, baseline_tag=None): # {{{2
+    def align_data(self, list1, list2, return_structs=False): # {{{2
+        def struct(datalist):
+            s = {}
+            for element in datalist:
+                (x, y) = element
+                if x not in s:
+                    s[x] = []
+                s[x].append(element)
+            return s 
+
+        struct1 = struct(list1)
+        struct2 = struct(list2)
+
+        if return_structs:
+            return struct1, struct2
+
+        # Find all the keys
+        keys = struct1.keys()
+        keys.extend(struct2.keys())
+
+        # New elements
+        new_list1 = []
+        new_list2 = []
+
+        # Create a new dict where each element
+        # is the lowest amount of keys in the counts
+        lengths = {}
+        for key in keys:
+            c1 = struct1.get(key, [])
+            c2 = struct2.get(key, [])
+
+            # Find the number of elements the two
+            # list have in common.
+            count = min(len(c1), len(c2))
+
+            # Take the first <<count>> of each list
+            # and append them to the final lists
+            new_list1.extend( c1[:count] )
+            new_list2.extend( c2[:count] )
+        return new_list1, new_list2
+    # }}}2
+    def calculate_aggregate_speedup(self, baseline_tag=None, lower_is_better=True): # {{{2
         """
         Find the lowest tag and use that as a baseline if you don't give one
         through the command line options. 
@@ -155,8 +201,71 @@ class DataGather(object): # {{{1
                     scale_data[test_name][procs] = {}
 
                 for tag in self.data[test_name][procs]:
+                    if tag not in scale_data[test_name][procs]:
+                        scale_data[test_name][procs][tag] = {'avg' : []}
+
                     baseline = self.data[test_name][procs][baseline_tag]
                     tocompare = self.data[test_name][procs][tag]
+
+                    baseline, tocompare = self.align_data(baseline, tocompare, return_structs=True)
+
+                    # Get all the keys from the two
+                    keys = baseline.keys()
+                    keys.extend (tocompare.keys())
+
+
+                    for key in keys:
+                        # avg baseline
+                        baseline_avg = avg( [x[1] for x in baseline[key] ])
+                        tocompare_avg = avg( [x[1] for x in tocompare[key] ])
+
+                        try:
+                            if lower_is_better:
+                                speedup = float(baseline_avg) / float(tocompare_avg) 
+                            else:
+                                speedup = float(tocompare_avg) / float(baseline_avg)
+                        except:
+                            speedup = None
+    
+                        scale_data[test_name][procs][tag]['avg'].append( (key,speedup))
+
+        self.agg_scale_data = scale_data
+    # }}}2
+    def calculate_point_speedup(self, baseline_tag=None): # {{{2
+        """
+        Find the lowest tag and use that as a baseline if you don't give one
+        through the command line options. 
+
+        This only calculates the internal speedup, so the plotting afterwards
+        can be both a scatterplot and lineplot. 
+        """
+        # If we have a tag, we validate that it actually exists. 
+        if baseline_tag and baseline_tag not in self.tags:
+            print "Warning. The supplied tag '%s' for speedup is not parsed" % baseline_tag
+            baseline_tag = None
+
+        if not baseline_tag:
+            baseline_tag = min(self.tags)
+
+        # The speed up is calculated by having populating a new data set in the same
+        # structure as the original data. For each data list we sort the baseline
+        # list and the other list. For <<baseline>> list and <<compare>> list we find
+        # scale_i (scaling factor for item i) by dividing baseline_i with compare_i. We
+        # also do this for the baseline itself (will just give a plain and nice 1).
+    
+        scale_data = {}
+        data = copy.deepcopy(self.data)
+        for test_name in data:
+            if test_name not in scale_data:
+                scale_data[test_name] = {}
+
+            for procs in data[test_name]:
+                if procs not in scale_data[test_name]:
+                    scale_data[test_name][procs] = {}
+
+                for tag in data[test_name][procs]:
+                    baseline = data[test_name][procs][baseline_tag]
+                    tocompare = data[test_name][procs][tag]
 
                     # internal compare method {{{3
                     # We sort the lists so we don't get strange items comapred. We need a
@@ -175,54 +284,11 @@ class DataGather(object): # {{{1
                             else:
                                 return 0
                     # }}}3
-                    # internal align method {{{3
-                    # Internal method for alligning data sets for diffent tags. We do 
-                    # not know if they contain the same amount of datasets for each data-
-                    # size (x-asis), so we need to filter so each x value will have
-                    # the same amount of x data. The function defined below does that.
-                    def align_data(list1, list2):
-                        def struct(datalist):
-                            s = {}
-                            for element in datalist:
-                                (x, y) = element
-                                if x not in s:
-                                    s[x] = []
-                                s[x].append(element)
-                            return s 
-
-                        struct1 = struct(list1)
-                        struct2 = struct(list2)
-
-                        # Find all the keys
-                        keys = struct1.keys()
-                        keys.extend(struct2.keys())
-
-                        # New elements
-                        new_list1 = []
-                        new_list2 = []
-
-                        # Create a new dict where each element
-                        # is the lowest amount of keys in the counts
-                        lengths = {}
-                        for key in keys:
-                            c1 = struct1.get(key, [])
-                            c2 = struct2.get(key, [])
-
-                            # Find the number of elements the two
-                            # list have in common.
-                            count = min(len(c1), len(c2))
-
-                            # Take the first <<count>> of each list
-                            # and append them to the final lists
-                            new_list1.extend( c1[:count] )
-                            new_list2.extend( c2[:count] )
-                        return new_list1, new_list2
-                    # }}}3
                             
                     baseline = sorted(baseline, compare)
                     tocompare = sorted(tocompare, compare)
 
-                    baseline, tocompare = align_data(baseline, tocompare)
+                    baseline, tocompare = self.align_data(baseline, tocompare)
 
                     if len(baseline) != len(tocompare):
                         print "WARNING: The length of <<baseline> and <<tocompare>> differs. We have an internal function to clean this"
@@ -254,7 +320,7 @@ class DataGather(object): # {{{1
         
         These data is then used to construct a number of line graphs. 
         """
-        for item in ("data", "scale_data"): 
+        for item in ("data", ): 
             data = getattr(self, item)
             agg_data = {}
             for test in data:
@@ -394,6 +460,7 @@ class DataGather(object): # {{{1
 
                 # We override the <<procs>> here. Maybe we should not
                 tag, _,procs = match.groups()
+
                 self._add_tag(tag) 
 
                 # Add the data to the internal structure
