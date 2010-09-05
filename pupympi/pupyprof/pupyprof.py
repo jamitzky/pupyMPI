@@ -10,7 +10,7 @@ import sys
 import threading
 import _pupyprof
 
-__all__ = ['start', 'stop', 'write_trace', 'dump_stats', 'get_stats', 'print_stats', 'clear_stats']
+__all__ = ['start', 'stop', 'dump_stats', 'get_stats', 'print_stats', 'clear_stats']
 
 
 '''
@@ -45,6 +45,10 @@ def dump_stats(filename):
 
 def get_stats():
     return _pupyprof.get_stats()
+
+def print_stats():
+    for item in get_stats():
+        print "%s" % (item)
 
 def clear_stats():
 	_pupyprof.clear_stats()
