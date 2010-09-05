@@ -1,0 +1,25 @@
+Changes to version 0.7.4:
+
+* Cruft cleaning for reduce and bcast in CollectiveRequest (fhantho)
+* Added TCP_NODELAY to all sockets (asser)
+
+Changes to version 0.7.3:
+
+* Only attempt an accept() call on the main server socket instead of all sockets.
+
+Changes to version 0.7.2:
+
+* Split handling of in and out sockets in select/poll functions and for in thread and out thread
+
+Changes to version 0.7.1:
+
+* Handle writelist only when outgoing requests exist
+
+Changes to version 0.7.0:
+
+* Implemented use of poll and epoll (Linux only)
+* Added initial support for Kqueue (*BSD only)
+
+Changes to version 0.6:
+
+* Initial pupyMPI release
