@@ -51,6 +51,8 @@ def options_and_arguments(): # {{{1
     plot_group.add_option("--plot-width", type="int", default=800, dest="plot_width", help="The width of the generated images. Defaults to %default")
     plot_group.add_option("--plot-x-axis-type", dest="x_axis_type", default="log", choices=['log','lin'], help="How the x axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-y-axis-type", dest="y_axis_type", default="log", choices=['log','lin'], help="How the y axis should be scaled. Options: log or lin. Defaults to %default")
+    plot_group.add_option("--plot-extra", dest="plot_extra", help="Link to a file that contains extra gnuplot commands. These will be inserted before the plot call")
+    plot_group.add_option("--show-errors", dest="show_errors", action="store_true", default=False, help="Show error bars on the line plot. Only works in for the 'avg' aggregation method")
     parser.add_option_group(plot_group)
 
     makefile_group = OptionGroup(parser, "Makefile options", "Options to disable the generation of a Makefile and an option to execute it if generated")
@@ -101,6 +103,19 @@ def options_and_arguments(): # {{{1
     options.agg_methods = func_methods
 
     return args, options
+# }}}1
+def std_dev(dataset): # {{{1
+    import math
+    if not dataset:
+        return None
+
+    n = len(dataset)
+    avg = float(sum(dataset))/n
+    s = 0.0
+    for data in dataset:
+        diff = data - avg
+        s += diff**2
+    return math.sqrt((1/(float(n)-1))*s)
 # }}}1
 class DataGather(object): # {{{1
     def __init__(self, folder_prefixes, agg_methods, value_method="avg", speedup_baseline_tag=None): # {{{2
@@ -206,7 +221,7 @@ class DataGather(object): # {{{1
                                 if fname not in agg_data[test][procs][tag]:
                                     agg_data[test][procs][tag][fname] = []
                                 values = filter(lambda x: x is not None, d[x])
-                                agg_data[test][procs][tag][fname].append((x, func(values)))
+                                agg_data[test][procs][tag][fname].append((x, func(values), std_dev(values)))
             setattr(self, "agg_"+item, agg_data)
     # }}}2
     def _add_tag(self, tag): # {{{2
@@ -369,24 +384,98 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
-    def format_size(self, bytecount):
-        n = math.log(size, 2)
+    def write_extra(self, gnu_fp, filename): # {{{2
+        if filename:
+            fp = open(filename, "r")
+            for line in fp:
+                print >> gnu_fp, line.strip().strip()
+    # }}}2
+    def get_buffered_x_max(self, format_type="time"): # {{{2
+        m = max(1, round(self.x_max*self.buffer_factor))
+        if format_type == "scale":
+            m = max(m, 2)
+        return m
+    # }}}2
+    def get_buffered_y_max(self, format_type="time"): # {{{2
+        m = max(1, round(self.y_max*self.buffer_factor))
+        if format_type == "scale":
+            m = max(m, 2)
+        return m
+    # }}}2
+    def format_size(self, bytecount, decimals=0): # {{{2
+        if bytecount == 0:
+            return "0 B"
+        n = math.log(bytecount, 2)
         border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
+        fmt_str = "%%.%df%%s" % decimals
         for bl in border_list:
             if n < bl[0]:
-                return "%.2f %s" % (float(size) / 2**(bl[0]-10), bl[1])
-        return "%.2f B" % size
+                return fmt_str % (float(bytecount) / 2**(bl[0]-10), bl[1])
+        return fmt_str % (bytecount, "B")
+    # }}}2
+    def format_traffic(self, bytecount): # {{{2
+        return self.format_size(bytecount, decimals=1)+"/s"
+    # }}}2 
+    def format_scale(self, scale): # {{{2
+        return "%.0f" % scale
+    # }}}2
+    def format_time(self, usecs): # {{{2
+        border_list = [ (1000, 'us'), (1000000, 'ms'), (1000000000, 's'),]
+        for i in range(len(border_list)):
+            bl = border_list[i]
+            if usecs < bl[0]:
+                if i > 0:
+                    usecs = usecs / border_list[i-1][0]
+                return "%.0f%s" % (usecs, bl[1])
+    # }}}2
+    def get_initial_range(self, axis_max, format_type, scale_type):
+        """
+        This method returns a candidate axis range. The format type
+        is used to find proper values. This is not pretty at all, but
+        it works
+        """
+        lowest_value = 0
+        if scale_type == "log":
+            lowest_value = 1
 
-    def format_traffic(self, bytecount):
-        return format_size(bytecount)+"/s"
-        
-    def format_scale(self, scale):
-        return "%.2f" % scale
+        if format_type == "scale":
+            return range(lowest_value, max( int(math.ceil(axis_max)), lowest_value+2))
+        elif format_type == "time":
+            result = []
+            value = lowest_value
+            if scale_type == "log":
+                while value < axis_max:
+                    result.append( value )
+                    value *= 10
+            else:
+                labels = 20
+                skip = int(math.ceil( axis_max / labels))
+                skip = skip - skip % 10 + 10
+                while value < axis_max:
+                    result.append(value)
+                    value += skip
+            return result
+        elif format_type == "traffic":
+            result = []
+            value = lowest_value
+            if scale_type == "log":
+                while value < axis_max:
+                    result.append( value )
+                    value *= 2
+            else:
+                labels = 20
+                skip = int(math.ceil( axis_max / labels))
+                skip_base = math.ceil(math.log(skip, 2))
+                skip = 2**skip_base
+                while value < axis_max:
+                    result.append(value)
+                    value += skip
+            return result
+        else:
+            print "Unhandled formatting type", format_type
+            return range(lowest_value, int(math.ceil(axis_max)), 100)
 
-    def format_time(self, usecs):
-        pass
-
-    def format_labels(self, axis_max=2, axis_size=600, pixels_per_label=10, format_type="size"):
+    def format_tics(self, axis_data=None, axis_max=10, axis_size=600, pixels_per_label=20, format_type="size", scale_type="log"): # {{{2
         """
         Find the labels on an axis (x or y) by calculating the maximum distance
         between labels and another things. We know the size of the plot, so we
@@ -402,33 +491,26 @@ class GNUPlot(object): # {{{1
               formatting function on each element. The function depends on
               the axis type.
         """
-        # 1) 
-        initial_range = range(1, axis_max, 10)
-
-        # 2) Calculate the number of labels. We subtract 40 pixels from the given
-        #    size because gnuplot needs some splace to captions / labels etc.
-        axis_size -= 40.0
-        labels = axix_size / pixels_per_label
-
-        # Adjust the labels by finding the <<skip>> factor to filter the
-        # potential list. If - for example - we have 1000 potential labels but
-        # room for 20 we should include the 1000/20'th label.
-        skip_factor = math.ceil(len(axis_max) / labels)
-
-        raw_labels = adjusted_range[::skip_factor] # OK. This is smart
+        if not axis_data:
+            # Find the lowest element. This is 0 unless we have a log scale, 
+            # in case we use 1 (otherwise we'll get a math domain error)
+            raw_labels = self.get_initial_range(axis_max, format_type, scale_type)
+        else:
+            raw_labels = axis_data
 
         # 4) Format the data. 
-        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale }[format_type]
-        formatted_labels = [ (x, formatter(x)) for x in raw_labels]
+        formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'traffic' : self.format_traffic }[format_type]
+        used_strs = []
+        formatted_labels = []
+        for label in raw_labels:
+            fmt = formatter(label)
+            if fmt in used_strs:
+                continue
+
+            used_strs.append(fmt)
+            formatted_labels.append("'%s' %d" % (formatter(label), label))
 
         return formatted_labels
-
-       #if self.y_type == "time":
-       #    y_tics = self.gnuplot_time_tics(self.y_max)
-       #else:
-       #    y_tics = self.gnuplot_traffic_tics(self.y_max)
-
-       #print >> gnu_fp, 'set ytics (%s)' % ", ".join(y_tics)
     # }}}2 
     def find_max_and_min(self): # {{{2
         x_data = []
@@ -462,17 +544,20 @@ class GNUPlot(object): # {{{1
     # }}}2
     def set_y_type(self, y_type): # {{{2
         self.y_type = y_type
-        lookup = { 'time' : "Wallclock", 'scale' : "Speedup", 'throughput' : "Throughput" }
+        lookup = { 'time' : "Wallclock", 'scale' : "Speedup", 'traffic' : "Throughput" }
         self.y_label = lookup[y_type]
     # }}}2
 # }}}1
 class LinePlot(GNUPlot): # {{{1
-    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None): # {{{2
+    def __init__(self, title_help=None, test_name=None, test_type="single", output_folder=None, extra=None, show_errors=False): # {{{2
+        self.buffer_factor = 1.25
         self.test_name = test_name
         self.test_type = test_type
         self.title_help = title_help
         self.data = []
         self.output_folder = output_folder
+        self.extra = extra
+        self.show_errors = show_errors
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
@@ -495,7 +580,10 @@ class LinePlot(GNUPlot): # {{{1
 
             for e in plots:
                 if e[1] is not None:
-                    print >> dat_fp, "%d %f" % e
+                    if self.show_errors:
+                        print >> dat_fp, "%d %f %f" % (e[0], e[1], e[2])
+                    else:
+                        print >> dat_fp, "%d %f" % (e[0], e[1])
 
             dat_fp.close()
 
@@ -503,28 +591,45 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
-        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
-        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set xtic nomirror rotate by -45'
+        print >> gnu_fp, 'set key top left'
+        print >> gnu_fp, 'set tics out'
+        self.write_extra(gnu_fp, self.extra)
 
-        self._print_and_format(gnu_fp, axis_max=self.y_max)
 
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
+
+        y_min = 0
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
+            y_min = 1
 
+        x_min = 0
         if self.x_axis_type == "log":
             print >> gnu_fp, "set log x"
+            x_min = 1
+
+        # Setting x-range and y-range. 
+        print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
+        print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
         plot_str = 'plot '
         plot_strs = []
         for p in dat_files:
             (procs, tag, dat_filename) = p
+            errorbar = ""
+            if self.show_errors:
+                title = "std. var. error for %s procs (Tag: %s)" % (procs, ".".join(tag))
+                plot_strs.append(' "%s" with yerrorbars title "%s" %s' % (dat_filename, title, errorbar))
+
             title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
-            plot_strs.append(' "%s" with linespoints title "%s"' % (dat_filename, title))
+            plot_strs.append(' "%s" with linespoints title "%s" %s' % (dat_filename, title, errorbar))
             
         plot_str += ", ".join(plot_strs)
         print >> gnu_fp, plot_str
@@ -533,21 +638,16 @@ class LinePlot(GNUPlot): # {{{1
     # }}}2
 # }}}1
 class ScatterPlot(GNUPlot): # {{{1
-    def __init__(self, test_name=None, test_type="single", output_folder=None): # {{{2
+    def __init__(self, test_name=None, test_type="single", output_folder=None, extra=None): # {{{2
         self.test_name = test_name
         self.test_type = test_type
         self.data = []
         self.output_folder = output_folder
         self.buffer_factor = 1.25
+        self.extra = extra
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
         self.data.append( (procs, tag, plots) )
-    # }}}2
-    def get_buffered_x_max(self): # {{{2
-        return max(1, round(self.x_max*self.buffer_factor))
-    # }}}2
-    def get_buffered_y_max(self): # {{{2
-        return max(1, round(self.y_max*self.buffer_factor))
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
@@ -574,34 +674,32 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
-        print >> gnu_fp, 'set xtic nomirror rotate by -45 scale 0 offset 0,-2 '
-        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.gnuplot_datasize_tics(self.x_data))
+        print >> gnu_fp, 'set xtic nomirror rotate by -45'
+        print >> gnu_fp, 'set key top left'
+        print >> gnu_fp, 'set tics out'
+        self.write_extra(gnu_fp, self.extra)
 
-        self._print_and_format(gnu_fp, axis_max=self.y_max)
+        print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
+        print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 
+        y_min = 0
         if self.y_axis_type == "log":
             print >> gnu_fp, "set log y"
+            y_min = 1
 
+        x_min = 0
         if self.x_axis_type == "log":
             print >> gnu_fp, "set log x"
+            x_min = 1
 
         # Setting x-range and y-range. 
-        print >> gnu_fp, "set xrange [1:%d]" % max(2,self.get_buffered_x_max())
-        print >> gnu_fp, "set yrange [1:%d]" % max(2, self.get_buffered_y_max())
-
-        # Different line types. 
-        print >> gnu_fp, 'set style line 1 linetype 1 linecolor rgb "red" linewidth 1.000 pointtype 1 pointsize default'
-        print >> gnu_fp, 'set style line 2 linetype 2 linecolor rgb "orange" linewidth 1.000 pointtype 2 pointsize default'
-        print >> gnu_fp, 'set style line 3 linetype 3 linecolor rgb "yellow" linewidth 1.000 pointtype 3 pointsize default'
-        print >> gnu_fp, 'set style line 4 linetype 4 linecolor rgb "green" linewidth 1.000 pointtype 4 pointsize default'
-        print >> gnu_fp, 'set style line 5 linetype 5 linecolor rgb "cyan" linewidth 1.000 pointtype 5 pointsize default'
-        print >> gnu_fp, 'set style line 6 linetype 6 linecolor rgb "blue" linewidth 1.000 pointtype 6 pointsize default'
-        print >> gnu_fp, 'set style line 7 linetype 7 linecolor rgb "violet" linewidth 1.000 pointtype 7 pointsize default'
+        print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
+        print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
         i = 0
         plot_str = 'plot '
@@ -639,7 +737,9 @@ class SinglePlotter(Plotter): # {{{1
                 for agg_e in self.agg_methods:
                     agg_name, agg_func = agg_e
 
-                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder)
+                    show_errors = self.settings.show_errors and agg_name == "avg"
+
+                    lp = LinePlot(test_name=test, title_help=agg_name, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra, show_errors=show_errors)
                     lp.set_prefix( run_type[0] )
                     lp.set_height(self.settings.plot_height)
                     lp.set_width(self.settings.plot_width)
@@ -666,7 +766,7 @@ class SinglePlotter(Plotter): # {{{1
         """
         for run_type in [ ("normal", "data"), ("scale", "scale_data") ]:
             for test in self.data.get_tests():
-                sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder)
+                sp = ScatterPlot(test_name=test, test_type="single", output_folder=self.output_folder, extra=self.settings.plot_extra)
                 sp.set_prefix( run_type[0] )
                 sp.set_height(self.settings.plot_height)
                 sp.set_width(self.settings.plot_width)
