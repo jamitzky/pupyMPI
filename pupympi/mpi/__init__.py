@@ -37,6 +37,11 @@ try:
 except ImportError:
     pass
 
+try:
+    import pupyprof
+except ImportError:
+    pass
+
 class MPI(Thread):
     """
     This is the main class containing most of the public API. Initializing 
@@ -79,6 +84,9 @@ class MPI(Thread):
             mpi.finalize()
             
         """
+
+        self.name = "MPI" # Thread name
+
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
@@ -134,6 +142,7 @@ class MPI(Thread):
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
         parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
+        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
 
         # _ is args
         options, _ = parser.parse_args()
@@ -190,6 +199,19 @@ class MPI(Thread):
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
 
+        # Start built-in profiling facility
+        self._profiler_enabled = False
+        if options.enable_profiling:
+            if self._yappi_enabled:
+                logger.warn("Running yappi and pupyprof simultaneously is unpossible. Pupyprof has been disabled.");
+            else:
+                try:
+                    import pupyprof
+                    self._profiler_enabled = True
+                except ImportError:
+                    logger.warn("Pupyprof is not supported on this system. Tracefile will not be generated");
+                    self._profiler_enabled = False
+
         self.network = Network(self, options)
         
         # Create the initial global Group, and assign the network all_procs as members
@@ -227,6 +249,9 @@ class MPI(Thread):
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
         
+        if self._profiler_enabled:
+            pupyprof.start()
+
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
@@ -279,7 +304,7 @@ class MPI(Thread):
     def run(self):
 
         if self._yappi_enabled:
-            yappi.start()
+            yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():            
             # NOTE: If someone sets this event between the wait and the clear that
@@ -356,6 +381,11 @@ class MPI(Thread):
         #Logger().info("MPI environment shutting down.")
         
         self.queues_flushed.set()
+
+        # Start built-in profiling facility
+        if self._profiler_enabled:
+            pupyprof.stop()
+            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
