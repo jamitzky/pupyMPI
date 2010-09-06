@@ -119,6 +119,12 @@ def test_Alltoall(size, max_iterations):
     return time 
        
 def test_Scatter(size, max_iterations):
+    """
+    NOTE:
+    It appears that we have been mistaken with our comparison with LAM MPI and the IMB benchmark suite.
+    They measure data size as the size received at each individual process, not the size to be scattered.
+    We have to change that.
+    """
     rank = ci.rank
     num_procs = ci.num_procs
     comm = ci.communicator
