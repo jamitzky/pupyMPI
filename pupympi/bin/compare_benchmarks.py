@@ -32,6 +32,14 @@ def avg(l):
         return None
     else:
         return sum(l)/float(len(l))
+
+def format_tag(tag):
+    try:
+        int(tag)
+        return ".".join(tag)
+    except:
+        return tag.replace("_","-")
+
 def options_and_arguments(): # {{{1
     from optparse import OptionParser, OptionGroup
     
@@ -411,7 +419,7 @@ class DataGather(object): # {{{1
         data = {}
         
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\d+)-benchmark_output.*\.(sing|coll)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -445,7 +453,11 @@ class DataGather(object): # {{{1
                     # new format
                     time_min = float(row[4])
                     time_max = float(row[5])
-                    throughput = float(row[6])
+                    try:
+                        throughput = float(row[6])
+                    except:
+                        throughput = 0
+
                     run_type = row[8].replace("test_","")
 
                     # The number of procs seems inconsistant. 
@@ -504,6 +516,7 @@ class DataGather(object): # {{{1
         self.data = data
     # }}}2
 # }}}1
+
 class Plotter(object): # {{{1
     def __init__(self, data_obj, settings, **kwargs): # {{{2
         self.data = data_obj
@@ -530,6 +543,21 @@ class Plotter(object): # {{{1
     # }}}2
 # }}}1
 class GNUPlot(object): # {{{1
+    def sort_data(self):
+        def compare(t1, t2): 
+            if int(t1[0]) < int(t2[0]):
+                return -1
+            elif int(t1[0]) > int(t2[0]):
+                return 1
+            else:
+                if t1[1] < t2[1]:
+                    return -1
+                elif t1[1] > t2[1]:
+                    return 1
+                else:
+                    return 0
+
+        self.data = sorted(self.data, compare)
     def write_extra(self, gnu_fp, filename): # {{{2
         if filename:
             fp = open(filename, "r")
@@ -719,6 +747,9 @@ class LinePlot(GNUPlot): # {{{1
 
         # Flush all the data files. 
         dat_files = []
+
+        self.sort_data()
+
         for element in self.data:
             # only create files for non-empty plots
             procs, tag, plots = element
@@ -777,10 +808,10 @@ class LinePlot(GNUPlot): # {{{1
             (procs, tag, dat_filename) = p
             errorbar = ""
             if self.show_errors:
-                title = "std. var. error for %s procs (Tag: %s)" % (procs, ".".join(tag))
+                title = "std. var. error for %s procs (Tag: %s)" % (procs, format_tag(tag))
                 plot_strs.append(' "%s" with yerrorbars title "%s" %s' % (dat_filename, title, errorbar))
 
-            title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
+            title = "%s procs (Tag: %s)" % (procs, format_tag(tag))
             plot_strs.append(' "%s" with linespoints title "%s" %s' % (dat_filename, title, errorbar))
             
         plot_str += ", ".join(plot_strs)
@@ -806,6 +837,8 @@ class ScatterPlot(GNUPlot): # {{{1
         
         # Basic data for all the files.
         filename = "%s_scatter_%s" % (self.prefix, self.test_name)
+
+        self.sort_data()
 
         # Flush all the data files. 
         dat_files = []
@@ -859,7 +892,7 @@ class ScatterPlot(GNUPlot): # {{{1
         for p in dat_files:
             i += 1
             (procs, tag, dat_filename) = p
-            title = "%s procs (Tag: %s)" % (procs, ".".join(tag))
+            title = "%s procs (Tag: %s)" % (procs, format_tag(tag))
             plot_strs.append(' "%s" ls %d title "%s"' % (dat_filename, i, title))
             
         plot_str += ", ".join(plot_strs)
@@ -972,7 +1005,7 @@ if __name__ == "__main__":
     # Formatting the tags proper
     formatted_tags = []
     for tag in gather.get_tags():
-        formatted_tags.append( ".".join(tag) )
+        formatted_tags.append( format_tag(tag) )
 
     # Print some informative text to the end user.
     if options.verbose:
