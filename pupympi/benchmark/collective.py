@@ -64,7 +64,6 @@ def test_Bcast(size, max_iterations):
     time = (t2 - t1)
     return time
 
-# Goes to max 16384 on the cluster with 8 procs
 def test_Allgather(size, max_iterations):
     comm = ci.communicator
 
@@ -73,11 +72,7 @@ def test_Allgather(size, max_iterations):
         for _ in xrange(max_iterations):
             comm.allgather( data )
     # end of test
-    
-    # Allgather is not valid for size < num_procs
-    if size < ci.num_procs:
-        return -42
-    
+        
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
@@ -103,9 +98,10 @@ def test_Alltoall(size, max_iterations):
     if size < ci.num_procs:
         return -42
     
-    #Prepack data into lists for nicer iteration
+    # Prepack data into lists for nicer iteration
     # We send size/numprocs data to each process
-    chunksize = size/ci.num_procs
+    #chunksize = size/ci.num_procs
+    chunksize = size
     # each distinct chunk goes to a distinct process
     datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
@@ -138,16 +134,12 @@ def test_Scatter(size, max_iterations):
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
-    
-    # Scatter is not valid for size < numprocs
-    if size < num_procs:
-        return -42
-    
+        
     ci.synchronize_processes()
     t1 = ci.clock_function()
     
     # do magic
-    Scatter(ci.data[:size], max_iterations)
+    Scatter(ci.data[:(size*num_procs)], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
