@@ -944,7 +944,7 @@ class SinglePlotter(Plotter): # {{{1
                             try:
                                 lp.add_data(procs, tag, data[procs][tag][agg_name])
                             except KeyError:
-                                print "KeyError", procs, tag, test, data[procs][tag].keys()
+                                #print "KeyError", procs, tag, test, data[procs][tag].keys()
                                 error = True
                     if not error:
                         lp.plot()
