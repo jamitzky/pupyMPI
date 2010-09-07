@@ -337,38 +337,37 @@ class DataGather(object): # {{{1
         
         These data is then used to construct a number of line graphs. 
         """
-        for item in ("data", ): 
-            data = getattr(self, item)
-            agg_data = {}
-            for test in data:
-                if test not in agg_data:
-                    agg_data[test] = {}
+        data = copy.deepcopy(self.data)
+        agg_data = {}
+        for test in data:
+            if test not in agg_data:
+                agg_data[test] = {}
 
-                for procs in data[test]:
-                    if procs not in agg_data[test]:
-                        agg_data[test][procs] = {}
+            for procs in data[test]:
+                if procs not in agg_data[test]:
+                    agg_data[test][procs] = {}
 
-                    for tag in data[test][procs]:
-                        if tag not in agg_data[test][procs]:
-                            agg_data[test][procs][tag] = {}
+                for tag in data[test][procs]:
+                    if tag not in agg_data[test][procs]:
+                        agg_data[test][procs][tag] = {}
 
-                        d = {}
-                        for e in data[test][procs][tag]:
-                            x, y = e
-                            if x not in d:
-                                d[x] = []
-                            d[x].append(y)
-                        # The dict d now contains a number of elements for each x value. We can how
-                        # run through that dict constructing a tuple with (x, agg_f(y_values)) and
-                        # use that. 
-                        for x in d:
-                            for ft in methods:
-                                (fname, func) = ft
-                                if fname not in agg_data[test][procs][tag]:
-                                    agg_data[test][procs][tag][fname] = []
-                                values = filter(lambda x: x is not None, d[x])
-                                agg_data[test][procs][tag][fname].append((x, func(values), std_dev(values)))
-            setattr(self, "agg_"+item, agg_data)
+                    d = {}
+                    for e in data[test][procs][tag]:
+                        x, y = e
+                        if x not in d:
+                            d[x] = []
+                        d[x].append(y)
+                    # The dict d now contains a number of elements for each x value. We can how
+                    # run through that dict constructing a tuple with (x, agg_f(y_values)) and
+                    # use that. 
+                    for x in d:
+                        for ft in methods:
+                            (fname, func) = ft
+                            if fname not in agg_data[test][procs][tag]:
+                                agg_data[test][procs][tag][fname] = []
+                            values = filter(lambda x: x is not None, d[x])
+                            agg_data[test][procs][tag][fname].append((x, func(values), std_dev(values)))
+            self.agg_data = agg_data
     # }}}2
     def _add_tag(self, tag): # {{{2
         self.tags.add(tag)
@@ -939,10 +938,16 @@ class SinglePlotter(Plotter): # {{{1
 
                     lp.set_axis_type(self.settings.x_axis_type, self.settings.y_axis_type)
                     data = getattr(self.data, "agg_"+run_type[1])[test]
+                    error = False
                     for procs in data:
                         for tag in data[procs]:
-                            lp.add_data(procs, tag, data[procs][tag][agg_name])
-                    lp.plot()
+                            try:
+                                lp.add_data(procs, tag, data[procs][tag][agg_name])
+                            except KeyError:
+                                print "KeyError", procs, tag, test, data[procs][tag].keys()
+                                error = True
+                    if not error:
+                        lp.plot()
     # }}}2
     def scatter_plot(self): # {{{2
         """
