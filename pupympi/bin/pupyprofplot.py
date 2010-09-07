@@ -2,15 +2,47 @@
 
 import datetime
 import sys
-from pylab import figure, show, plot, ylim, yticks
+import pylab
+from pylab import figure, show, plot, ylim, yticks, arange, pi, sin, cos, sqrt
 from numpy import arange
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-if len(sys.argv) < 2:
-    print "Usage: %s <file0> [file1] [file2] ..." % (sys.argv[0])
+files = []
+outfile = None
+
+for arg in sys.argv[1:]:
+    if arg == "--out":
+        outfile = ""
+    elif outfile == "":
+        outfile = arg
+    else:
+        files.append(arg)
+
+
+if files == [] or outfile == "":
+    print "Usage: %s [--out <outfile.eps>] <file0> [file1] [file2] ..." % (sys.argv[0])
     sys.exit(-1)
+
+if len(outfile) > 0:
+    # Parameters for plotting to image
+    fig_width_pt = 442.0  # Get this from LaTeX using \showthe\columnwidth
+    inches_per_pt = 1.0/72.27               # Convert pt to inch
+    golden_mean = (sqrt(5)-1.0)/2.0         # Aesthetic ratio
+    fig_width = fig_width_pt*inches_per_pt  # width in inches
+    fig_height = fig_width*golden_mean      # height in inches
+    fig_size =  [fig_width,fig_height]
+    params = {'backend': 'ps',
+              'axes_labelsize': 10,
+              'text.fontsize': 10,
+              'legend.fontsize': 10,
+              'xtick.labelsize': 8,
+              'ytick.labelsize': 8,
+              'font.family': 'Palatino',
+              'text.usetex': True,
+              'figure.figsize': fig_size}
+    matplotlib.rcParams.update(params)
 
 xs = []
 ys = []
@@ -18,14 +50,14 @@ cs = []
 rank = 0
 state_colors = {
     'UNKNOWN'        : 'grey',
-    'RUNNING'        : 'green',
+    'RUNNING'        : 'white',
     'MPI_WAIT'       : 'red',
     'MPI_COMM'       : 'blue',
     'MPI_COLLECTIVE' : 'orange',
     'FINALIZED'      : 'magenta',
 }
 
-for arg in sys.argv[1:]:
+for arg in files:
     try:
         f = open(arg, 'r')
     except IOError:
@@ -89,10 +121,13 @@ for state in state_colors:
     ps.append(p)
     ax.add_patch(p)
 
-leg = fig.legend(tuple(ps), tuple(state_colors.keys()))
+leg = fig.legend(tuple(ps), tuple(map(lambda x: x.replace("_", "\_"), state_colors.keys())))
 
 for patch in leg.get_patches():
     patch.set_picker(5)
 
-plt.show()
+if len(outfile) > 0:
+    plt.savefig(outfile)
+else:
+    plt.show()
 
