@@ -407,6 +407,7 @@ class DataGather(object): # {{{1
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
             self.csv_files.extend(glob.glob(fp+ "pupymark.coll.[0-9]*procs*"))
+            self.csv_files.extend(glob.glob(fp+ "pupymark.para.[0-9]*procs*"))
     # }}}2
     def _parse(self, value_method="avg"): # {{{2
         """
@@ -419,7 +420,7 @@ class DataGather(object): # {{{1
         data = {}
         
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
