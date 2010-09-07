@@ -1,0 +1,10 @@
+These benchmark runs were done with version 0.7.3 of pupyMPI
+(up to commit ????)
+======================================
+
+Changes from 0.6 are the use of epoll and poll
+Changes from 0.7.0 is handling writelist only when outgoing requests exist
+
+Changes from 0.7.1 are split handling of in and out sockets in select/poll functions and for in thread and out thread
+
+Changes from 0.7.2 only trying accept on a read socket if it is the main receive socket
