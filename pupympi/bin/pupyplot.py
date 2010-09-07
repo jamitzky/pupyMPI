@@ -775,8 +775,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
-        #print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -861,8 +861,8 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
-        #print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.png"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
