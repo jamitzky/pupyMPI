@@ -26,17 +26,6 @@ identity = lambda x : x
 
 class CollectiveRequest(BaseRequest):
     """    
-    ISSUES:
-    - We should test that the broadcast trees are indeed reused
-    - As of version 0.8.1 we are within a factor 10 of LAM for most operations even with small datasizes
-      The operations that are not within 10x are:
-      gather (not until 4k size)
-      scatter (not until 2k size)
-      alltoall (not until 256k size) NOTE: Was there a regression here???
-      bcast(not until 2k size)
-      
-      in general all operations look worse  on 32 nodes where we drop to 20x-30x
-      which is probably due to thread contention      
     """
 
     def __init__(self, tag, communicator, data=None, root=0, mpi_op=None):
