@@ -60,8 +60,8 @@ def options_and_arguments(): # {{{1
     parser.add_option_group(timing_group)
 
     plot_group = OptionGroup(parser, "Plotting options", "Handling different sizes, axis scale etc. Changing settings here will change all the generated pictures. Changing a single picture can be done in a single .gnu file in the result folder")
-    plot_group.add_option("--plot-height", type="int", default=600, dest="plot_height", help="The height of the generated images. Defaults to %default")
-    plot_group.add_option("--plot-width", type="int", default=800, dest="plot_width", help="The width of the generated images. Defaults to %default")
+    plot_group.add_option("--plot-height", type="int", default=6, dest="plot_height", help="The height of the generated images. Defaults to %default")
+    plot_group.add_option("--plot-width", type="int", default=8, dest="plot_width", help="The width of the generated images. Defaults to %default")
     plot_group.add_option("--plot-x-axis-type", dest="x_axis_type", default="log", choices=['log','lin'], help="How the x axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-y-axis-type", dest="y_axis_type", default="log", choices=['log','lin'], help="How the y axis should be scaled. Options: log or lin. Defaults to %default")
     plot_group.add_option("--plot-extra", dest="plot_extra", help="Link to a file that contains extra gnuplot commands. These will be inserted before the plot call")
@@ -764,7 +764,13 @@ class LinePlot(GNUPlot): # {{{1
                 for e in plots:
                     if e[1] is not None:
                         if self.show_errors:
-                            print >> dat_fp, "%d %f %f" % (e[0], e[1], e[2])
+                            err = 0
+                            try:
+                                err = e[2]
+                            except IndexError:
+                                pass
+
+                            print >> dat_fp, "%d %f %f" % (e[0], e[1], err)
                         else:
                             print >> dat_fp, "%d %f" % (e[0], e[1])
 
@@ -774,14 +780,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
-        png = False
-        if png:
-            print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
-            print >> gnu_fp, 'set output "%s.png"' % filename
-        else:
-            print >> gnu_fp, "set term postscript eps enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
-            print >> gnu_fp, 'set output "%s.eps"' % filename
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
@@ -865,9 +865,8 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set terminal png nocrop enhanced font '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 10 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, "set terminal png nocrop enhanced font '/Library/Fonts/Palatino' 10 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, 'set output "%s.png"' % filename
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
         print >> gnu_fp, 'set ylabel "%s"' % self.y_label
