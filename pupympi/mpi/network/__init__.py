@@ -552,9 +552,7 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         in_list = []
         error_list = []
         
-        #events = self.epoll.poll(1) # TODO: This busy wait should be worked around
         events = self.epoll.poll(0.001)
-        #events = self.epoll.poll()
         for fileno, event in events:    
             if event & select.EPOLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
@@ -614,9 +612,7 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         in_list = []
         error_list = []
         
-        #events = self.poll.poll(1) # TODO: This busy wait should be worked around
         events = self.poll.poll(0.00001)
-        #events = self.poll.poll()
         for fileno, event in events:    
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))

@@ -25,7 +25,7 @@ if files == [] or outfile == "":
     print "Usage: %s [--out <outfile.eps>] <file0> [file1] [file2] ..." % (sys.argv[0])
     sys.exit(-1)
 
-if len(outfile) > 0:
+if outfile != None and len(outfile) > 0:
     # Parameters for plotting to image
     fig_width_pt = 442.0  # Get this from LaTeX using \showthe\columnwidth
     inches_per_pt = 1.0/72.27               # Convert pt to inch
@@ -36,9 +36,10 @@ if len(outfile) > 0:
     params = {'backend': 'ps',
               'axes_labelsize': 10,
               'text.fontsize': 10,
-              'legend.fontsize': 10,
+              'legend.fontsize': 7,
               'xtick.labelsize': 8,
               'ytick.labelsize': 8,
+              'xlabel.fontsize': 10,
               'font.family': 'Palatino',
               'text.usetex': True,
               'figure.figsize': fig_size}
@@ -117,7 +118,7 @@ ax.set_yticklabels(['P' + str(x) for x in range(0,rank)])
 
 ps = []
 for state in state_colors:
-    p = Rectangle((0, 0), 1, 1, fc=state_colors[state])
+    p = Rectangle((0, 0), -1, -1, fc=state_colors[state])
     ps.append(p)
     ax.add_patch(p)
 
@@ -126,7 +127,7 @@ leg = fig.legend(tuple(ps), tuple(map(lambda x: x.replace("_", "\_"), state_colo
 for patch in leg.get_patches():
     patch.set_picker(5)
 
-if len(outfile) > 0:
+if outfile != None and len(outfile) > 0:
     plt.savefig(outfile)
 else:
     plt.show()
