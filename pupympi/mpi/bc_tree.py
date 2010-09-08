@@ -21,12 +21,12 @@ tree.
 
 """
 import copy
-from mpi.logger import Logger # TODO: remove this when done debugging
 
 class BroadCastTree(object):
     
     def __init__(self, nodes, rank, root):
-        # TODO: initialization could be done more gracefully, no need to remove and extend when a swap could do the trick
+        # TODO: initialization could be done more gracefully, no need to remove
+        # and extend when a swap could do the trick
         
         # Make sure the root is the first element in the list
         # we use to generate the tree. 
