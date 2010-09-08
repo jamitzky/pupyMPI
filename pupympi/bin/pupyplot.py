@@ -518,7 +518,6 @@ class DataGather(object): # {{{1
         self.data = data
     # }}}2
 # }}}1
-
 class Plotter(object): # {{{1
     def __init__(self, data_obj, settings, **kwargs): # {{{2
         self.data = data_obj
