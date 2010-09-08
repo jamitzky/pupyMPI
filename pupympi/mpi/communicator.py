@@ -40,7 +40,7 @@ class Communicator:
         self.attr = {}
         if name == "MPI_COMM_WORLD":
             self.attr = {   "MPI_TAG_UB": 2**30, \
-                            "MPI_HOST": "TODO", \ # FIXME: What's with the "TODO"? Is it supposed to be set to the host?
+                            "MPI_HOST": "TODO", \
                             "MPI_IO": rank, \
                             "MPI_WTIME_IS_GLOBAL": False
                         }
