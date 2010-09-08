@@ -30,7 +30,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,210.0,0.21,0.2,0.23,,16,Reduce,2010-09-06_17-46-21
 4,1000,224060.0,224.06,223.92,224.18,,16,Reduce,2010-09-06_17-46-21
 8,1000,217050.0,217.05,216.92,217.16,,16,Reduce,2010-09-06_17-46-21
 16,1000,216960.0,216.96,216.81,217.1,,16,Reduce,2010-09-06_17-46-21
@@ -55,7 +54,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,15030.0,15.03,8.5,25.82,,16,Allreduce,2010-09-06_17-46-21
 4,1000,296180.0,296.18,296.16,296.19,,16,Allreduce,2010-09-06_17-46-21
 8,1000,305870.0,305.87,305.86,305.89,,16,Allreduce,2010-09-06_17-46-21
 16,1000,305680.0,305.68,305.66,305.69,,16,Allreduce,2010-09-06_17-46-21
@@ -107,7 +105,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,11920.0,11.92,5.19,20.63,,16,Allgather,2010-09-06_17-46-21
 1,1000,267830.0,267.83,267.82,267.85,,16,Allgather,2010-09-06_17-46-21
 2,1000,265880.0,265.88,265.86,265.89,,16,Allgather,2010-09-06_17-46-21
 4,1000,292960.0,292.96,292.94,292.98,,16,Allgather,2010-09-06_17-46-21
@@ -134,7 +131,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,210.0,0.21,0.19,0.23,,16,Bcast,2010-09-06_17-46-21
 1,1000,94260.0,94.26,94.06,94.35,,16,Bcast,2010-09-06_17-46-21
 2,1000,94030.0,94.03,93.84,94.11,,16,Bcast,2010-09-06_17-46-21
 4,1000,94340.0,94.34,94.14,94.43,,16,Bcast,2010-09-06_17-46-21
