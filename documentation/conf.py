@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pupyMPI'
-copyright = u'2009, Jan Wiberg, Frederik Hantho, Asser Schrøder Femø & Rune Bromer'
+copyright = u'2009, Jan Wiberg, Frederik Hantho, Asser Schroeder Femoe & Rune Bromer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -174,7 +174,7 @@ htmlhelp_basename = 'pupympidoc'
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'pupympi.tex', u'pupympi Documentation',
-   u'Jan Wiberg, Frederik Hantho,\\Asser Schrøder Femø & Rune Bromer', 'manual'),
+   u'Jan Wiberg, Frederik Hantho,\\Asser Schroeder Femoe & Rune Bromer', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
