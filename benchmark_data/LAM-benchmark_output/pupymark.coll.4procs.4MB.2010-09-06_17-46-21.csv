@@ -55,7 +55,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,220.0,0.22,0.21,0.23,,4,Reduce,2010-09-06_17-46-21
 4,1000,69550.0,69.55,69.5,69.63,,4,Reduce,2010-09-06_17-46-21
 8,1000,69440.0,69.44,69.39,69.5,,4,Reduce,2010-09-06_17-46-21
 16,1000,70650.0,70.65,70.59,70.74,,4,Reduce,2010-09-06_17-46-21
@@ -77,7 +76,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 1048576,40,1060763.6,26519.09,26209.77,26721.53,,4,Reduce,2010-09-06_17-46-21
 2097152,20,1043878.2,52193.91,50969.65,52985.45,,4,Reduce,2010-09-06_17-46-21
 4194304,10,1035471.0,103547.1,98704.2,106767.89,,4,Reduce,2010-09-06_17-46-21
-0,1000,210.0,0.21,0.21,0.23,,4,Reduce,2010-09-06_17-46-21
 4,1000,69490.0,69.49,69.44,69.58,,4,Reduce,2010-09-06_17-46-21
 8,1000,70070.0,70.07,70.01,70.16,,4,Reduce,2010-09-06_17-46-21
 16,1000,69920.0,69.92,69.85,70.01,,4,Reduce,2010-09-06_17-46-21
@@ -251,7 +249,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,220.0,0.22,0.19,0.23,,4,Bcast,2010-09-06_17-46-21
 1,1000,72480.0,72.48,72.41,72.52,,4,Bcast,2010-09-06_17-46-21
 2,1000,72880.0,72.88,72.82,72.92,,4,Bcast,2010-09-06_17-46-21
 4,1000,70070.0,70.07,70.01,70.11,,4,Bcast,2010-09-06_17-46-21
@@ -275,7 +272,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 1048576,40,1090241.6,27256.04,27240.93,27263.68,,4,Bcast,2010-09-06_17-46-21
 2097152,20,1081303.2,54065.16,54041.76,54076.35,,4,Bcast,2010-09-06_17-46-21
 4194304,10,1076831.9,107683.19,107588.29,107735.99,,4,Bcast,2010-09-06_17-46-21
-0,1000,220.0,0.22,0.2,0.23,,4,Bcast,2010-09-06_17-46-21
 1,1000,73420.0,73.42,73.36,73.46,,4,Bcast,2010-09-06_17-46-21
 2,1000,70780.0,70.78,70.72,70.83,,4,Bcast,2010-09-06_17-46-21
 4,1000,67600.0,67.6,67.54,67.65,,4,Bcast,2010-09-06_17-46-21

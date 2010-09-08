@@ -30,7 +30,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,210.0,0.21,0.2,0.24,,32,Reduce,2010-09-06_17-46-21
 4,1000,236310.0,236.31,236.15,236.45,,32,Reduce,2010-09-06_17-46-21
 8,1000,239410.0,239.41,239.15,239.57,,32,Reduce,2010-09-06_17-46-21
 16,1000,237660.0,237.66,237.36,237.84,,32,Reduce,2010-09-06_17-46-21
@@ -55,7 +54,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,25010.0,25.01,20.16,37.38,,32,Allreduce,2010-09-06_17-46-21
 4,1000,323830.0,323.83,323.8,323.86,,32,Allreduce,2010-09-06_17-46-21
 8,1000,328860.0,328.86,328.84,328.89,,32,Allreduce,2010-09-06_17-46-21
 16,1000,344920.0,344.92,344.9,344.93,,32,Allreduce,2010-09-06_17-46-21
@@ -107,7 +105,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,25020.0,25.02,17.69,36.36,,32,Allgather,2010-09-06_17-46-21
 1,1000,278290.0,278.29,278.26,278.31,,32,Allgather,2010-09-06_17-46-21
 2,1000,305750.0,305.75,305.71,305.76,,32,Allgather,2010-09-06_17-46-21
 4,1000,310100.0,310.1,310.07,310.12,,32,Allgather,2010-09-06_17-46-21
@@ -134,7 +131,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,200.0,0.2,0.19,0.24,,32,Bcast,2010-09-06_17-46-21
 1,1000,111230.0,111.23,111.0,111.32,,32,Bcast,2010-09-06_17-46-21
 2,1000,110990.0,110.99,110.72,111.12,,32,Bcast,2010-09-06_17-46-21
 4,1000,112860.0,112.86,112.62,112.98,,32,Bcast,2010-09-06_17-46-21
