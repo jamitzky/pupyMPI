@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.6
 #
-# Copyright 2010 Rune Bromer, Asser Schrøder Femø, Frederik Hantho, Jan Wiberg and Asser Femoe
+# Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho, Jan Wiberg and Asser Femoe
 # This file is part of pupyMPI.
 #
 # pupyMPI is free software: you can redistribute it and/or modify
