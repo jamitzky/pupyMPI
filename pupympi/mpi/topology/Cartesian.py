@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 #
-# Copyright 2010 Rune Bromer, Frederik Hantho and Jan Wiberg
+# Copyright 2010 Rune Bromer, Asser Schrøder Femø, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
 # 
 # pupyMPI is free software: you can redistribute it and/or modify
