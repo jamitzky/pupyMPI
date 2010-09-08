@@ -32,15 +32,10 @@ enum events { EV_COLLECTIVE_ENTER, EV_COLLECTIVE_LEAVE, EV_COMM_ENTER,
 			  EV_UNKNOWN, MAX_EVENTS 
 			} new_event;
 
-// stat related definitions
-typedef struct {
-	struct timeval tv;
-	enum states state;
-} _statitem; //statitem created while getting stats
-
 // Linked list for storing traces
 struct _stat_node_t {
-	_statitem *it;
+	struct timeval tv;
+	enum states state;
 	struct _stat_node_t *next;
 };
 typedef struct _stat_node_t _statnode; // linked list used for appending stats
@@ -100,13 +95,13 @@ void (*const state_table [MAX_STATES][MAX_EVENTS]) (void) = {
 };
 /* End state change functions }}} */
 
-_statitem *
-_create_statitem(enum states state)
+_statnode *
+_create_statnode(enum states state)
 {
-    _statitem *si;
+    _statnode *si;
 
-	// Allocate memory for this statitem
-    si = (_statitem *)ymalloc(sizeof(_statitem));
+	// Allocate memory for this statnode
+    si = (_statnode *)ymalloc(sizeof(_statnode));
     if (!si)
         return NULL;
 
@@ -118,7 +113,6 @@ _create_statitem(enum states state)
 }
 
 void _state_change(enum states new_state) {
-	_statitem *si;
 	_statnode *p, *sni;
 
 	// State depth ensures we only count the outermost state changes, ie. those
@@ -130,9 +124,7 @@ void _state_change(enum states new_state) {
 		state_depth++;
 
 		// Create stats item and insert at end of stat list
-		si = _create_statitem(new_state);
-		sni = (_statnode *)ymalloc(sizeof(_statnode));
-		sni->it = si;
+		sni = _create_statnode(new_state);
 		sni->next = NULL;
 
 		if(NULL == statshead) {
@@ -440,7 +432,7 @@ get_stats(PyObject *self, PyObject *args)
     fcnt = 0;
     p = statshead;
     while(p) {
-		snprintf(temp, 127, "%.3f %s", (p->it->tv.tv_sec + (p->it->tv.tv_usec / 1000000.0)), state_names[p->it->state]);
+		snprintf(temp, 127, "%.3f %s", (p->tv.tv_sec + (p->tv.tv_usec / 1000000.0)), state_names[p->state]);
         buf = PyString_FromString(temp);
         if (!buf)
             goto err;
@@ -462,16 +454,16 @@ err:
 void
 clear_stats(PyObject *self, PyObject *args)
 {
-	_statnode *p;
+	_statnode *p, *pn;
 
 	p = statshead;
 
 	statshead = statstail = NULL;
 
 	while(NULL != p) {
+		pn = p;
 		p = p->next;
-		yfree(p->it);
-		yfree(p);
+		yfree(pn);
 	}
 }
 
