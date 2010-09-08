@@ -1,8 +1,6 @@
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
 1000,407.74,166255.985,407.75,407.75,407.75,407.75,8,Barrier,2010-09-06_17-46-21
 1000,409.73,167886.8675,409.75,409.75,409.75,409.74,8,Barrier,2010-09-06_17-46-21
-jaws@n0:~/imb/src$,mpirun,mpirunmpirunmpirunmpirunmpirunmpirunmpirunmpirun,8,C,-c,IMB-MPI1,8,Barrier,2010-09-06_17-46-21
-
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
 0,1000,65680.0,65.68,65.54,65.83,,8,Gather,2010-09-06_17-46-21
@@ -56,7 +54,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,220.0,0.22,0.2,0.23,,8,Reduce,2010-09-06_17-46-21
 4,1000,199350.0,199.35,199.24,199.45,,8,Reduce,2010-09-06_17-46-21
 8,1000,202150.0,202.15,202.04,202.25,,8,Reduce,2010-09-06_17-46-21
 16,1000,201650.0,201.65,201.51,201.76,,8,Reduce,2010-09-06_17-46-21
@@ -78,7 +75,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 1048576,40,1181411.2,29535.28,29124.75,29961.55,,8,Reduce,2010-09-06_17-46-21
 2097152,20,1168540.4,58427.02,56776.55,60130.16,,8,Reduce,2010-09-06_17-46-21
 4194304,10,1136794.9,113679.49,107016.9,120433.9,,8,Reduce,2010-09-06_17-46-21
-0,1000,210.0,0.21,0.2,0.23,,8,Reduce,2010-09-06_17-46-21
 4,1000,199090.0,199.09,198.97,199.2,,8,Reduce,2010-09-06_17-46-21
 8,1000,200500.0,200.5,200.38,200.6,,8,Reduce,2010-09-06_17-46-21
 16,1000,200540.0,200.54,200.42,200.63,,8,Reduce,2010-09-06_17-46-21
@@ -252,7 +248,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 
 
 datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mb/second,nodes,name of test,timestamp of testrun
-0,1000,220.0,0.22,0.19,0.23,,8,Bcast,2010-09-06_17-46-21
 1,1000,64880.0,64.88,64.59,65.03,,8,Bcast,2010-09-06_17-46-21
 2,1000,63810.0,63.81,63.56,63.95,,8,Bcast,2010-09-06_17-46-21
 4,1000,65020.0,65.02,64.82,65.1,,8,Bcast,2010-09-06_17-46-21
@@ -276,7 +271,6 @@ datasize,repetitions,total time,avg time/repetition,min time/repetition,max time
 1048576,40,1102460.8,27561.52,27547.92,27571.57,,8,Bcast,2010-09-06_17-46-21
 2097152,20,1096248.0,54812.4,54772.85,54857.5,,8,Bcast,2010-09-06_17-46-21
 4194304,10,1088032.6,108803.26,108732.32,108879.28,,8,Bcast,2010-09-06_17-46-21
-0,1000,210.0,0.21,0.2,0.22,,8,Bcast,2010-09-06_17-46-21
 1,1000,64510.0,64.51,64.31,64.59,,8,Bcast,2010-09-06_17-46-21
 2,1000,63850.0,63.85,63.66,63.94,,8,Bcast,2010-09-06_17-46-21
 4,1000,64390.0,64.39,64.18,64.49,,8,Bcast,2010-09-06_17-46-21
