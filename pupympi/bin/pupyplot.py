@@ -737,8 +737,7 @@ class LinePlot(GNUPlot): # {{{1
         self.show_errors = show_errors
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
-        if procs in ("8", "32"):
-            self.data.append( (procs, tag, plots) )
+        self.data.append( (procs, tag, plots) )
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
@@ -836,8 +835,7 @@ class ScatterPlot(GNUPlot): # {{{1
         self.extra = extra
     # }}}2
     def add_data(self, procs, tag, plots): # {{{2
-        if procs in ("8", "32"):
-            self.data.append( (procs, tag, plots) )
+        self.data.append( (procs, tag, plots) )
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
