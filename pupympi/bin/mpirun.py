@@ -2,17 +2,17 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -25,7 +25,7 @@ mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
-import processloaders 
+import processloaders
 from mpi.logger import Logger
 from mpi.network import utils
 from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
@@ -35,6 +35,19 @@ import threading
 
 from mpi.network.utils import pickle
 
+def write_cmd_handle(all_procs, filename=None):
+    if not filename:
+        # Generate a file and write to that one
+        import tempfile
+        _, filename = tempfile.mkstemp(prefix="pupy")
+
+    fh = open(filename, "w")
+    pickle.dump(all_procs, fh)
+
+    fh.close()
+    return filename
+
+
 def parse_options():
     usage = 'usage: %prog [options] arg'
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
@@ -42,7 +55,7 @@ def parse_options():
     parser.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
     # Add logging and debugging options
-    parser_debug_group = OptionGroup(parser, "Logging and debugging", 
+    parser_debug_group = OptionGroup(parser, "Logging and debugging",
             "Use these settings to control the level of output to the program. The --debug and --quiet options can't be used at the same time. Trying to will result in an error.")
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
@@ -52,7 +65,7 @@ def parse_options():
     parser.add_option_group( parser_debug_group )
 
     # Add advanced options
-    parser_adv_group = OptionGroup(parser, "Advanced options", 
+    parser_adv_group = OptionGroup(parser, "Advanced options",
             "Be careful. You could do strange things here.")
     parser_adv_group.add_option('--remote-python', dest='remote_python', default="`which python2.6`", help='Path to Python 2.6 on remote hosts. Defaults to  %default')
     parser_adv_group.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh, rsh (not supported) and popen (local only). Defaults to %default')
@@ -65,18 +78,19 @@ def parse_options():
     parser_adv_group.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
     parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
+    parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for pupysh usage). ")
     parser.add_option_group( parser_adv_group )
 
     try:
         options, args = parser.parse_args()
-        
+
         if options.debug and options.quiet:
             parser.error("options --debug and -quiet are mutually exclusive")
 
         if options.np is None:
             parser.error("You need to specify the number of processes to start with -c or --np.")
-            
-        if args is None or len(args) == 0: 
+
+        if args is None or len(args) == 0:
             parser.error("You need to specify a positional argument: the user program to run.")
 
         executeable = args[0]
@@ -90,7 +104,7 @@ def parse_options():
     except Exception, e:
         print "It's was not possible to parse the arguments. Error received: %s" % e
         sys.exit(1)
-        
+
 global sender_conns
 
 def signal_handler(signal, frame):
@@ -107,8 +121,8 @@ def signal_handler(signal, frame):
 def io_forwarder(process_list):
     """
     Take a list of processes and relay from their stdout and stderr pipes.
-    
-    This function continually listens on out and error pipes from all started    
+
+    This function continually listens on out and error pipes from all started
     processes and relays the output to the stdout of the calling process.
     During shutdown a final run through of all the pipes is done to print any
     remaining data.
@@ -119,26 +133,26 @@ def io_forwarder(process_list):
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
 
     logger.debug("Starting the IO forwarder")
-    
+
     # Main loop, select, output, check for shutdown - repeat
     while True:
-        
+
         try:
         # Trying to get stuck processes to accept Ctrl+C and DIE!
             # Any pipes ready with output?
             readlist, _, _ =  select.select(pipes, [], [], 0.5)
-            
+
             # Output anything that we may have found
             for fh in readlist:
                 content = fh.readlines()
                 for line in content:
                     print >> sys.stdout, line.strip()
-            
-            # Check if shutdown is in progress    
+
+            # Check if shutdown is in progress
             if io_shutdown_event.is_set():
                 logger.debug("IO forwarder got the signal !.. breaking")
                 break
-    
+
             time.sleep(1)
         except KeyboardInterrupt:
             logger.debug("IO forwarder was manually interrupted")
@@ -157,20 +171,20 @@ def io_forwarder(process_list):
 
 if __name__ == "__main__":
     # Try to get around export pythonpath issue
-    
+
     options, args, user_options, executeable = parse_options() # Get options from cli
 
     # Set log dir
     logdir = constants.LOGDIR # NOTE: This could be command line option
     if not os.access(logdir, os.W_OK):
         raise Exception("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
-    
+
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
     # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method) 
-    
+    mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method)
+
     #logger.debug("Hosts are now configured: " + str(mappedHosts))
     s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
     s.listen(5)
@@ -187,17 +201,17 @@ if __name__ == "__main__":
 
     # Mimic our cli call structure also for remotely started processes
     global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
-            "--mpirun-conn-port=%d" % mpi_run_port, 
-            "--size=%d" % options.np, 
-            "--socket-pool-size=%d" % options.socket_pool_size, 
-            "--verbosity=%d" % options.verbosity, 
+            "--mpirun-conn-port=%d" % mpi_run_port,
+            "--size=%d" % options.np,
+            "--socket-pool-size=%d" % options.socket_pool_size,
+            "--verbosity=%d" % options.verbosity,
             "--process-io=%s" % options.process_io,
             "--log-file=%s" % options.logfile,
-    ] 
-    
+    ]
+
     if options.socket_poll_method:
         global_run_options.append('--socket-poll-method=%s' % options.socket_poll_method)
-    
+
     if options.disable_full_network_startup:
         global_run_options.append('--disable-full-network-startup')
 
@@ -215,19 +229,19 @@ if __name__ == "__main__":
         if value:
             global_run_options.append("--"+flag)
 
-    # Start a process for each rank on the host 
+    # Start a process for each rank on the host
     for (host, rank, port) in mappedHosts:
         run_options = copy.copy(global_run_options)
-        run_options.append("--rank=%d" % rank) 
-        
+        run_options.append("--rank=%d" % rank)
+
         # Adding user options. GNU style says this must be after the --
         run_options.append( "--" )
         run_options.extend( user_options )
-        
+
         # Now start the process and keep track of it
         p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
-            
+
         #logger.debug("Process with rank %d started" % rank)
 
 
@@ -244,51 +258,54 @@ if __name__ == "__main__":
         # Declare an event for proper shutdown. When the system is ready to
         # shutdown we signal the event. People looking at the signal will catch
         # it and shutdown.
-        io_shutdown_event = threading.Event() 
+        io_shutdown_event = threading.Event()
         t = threading.Thread(target=io_forwarder, args=(process_list,))
         t.start()
-        
+
     # Listing of (rank, host, port) for all the processes
     all_procs = []
     # Listing of socket connections to all the processes
     sender_conns = []
 
     #logger.debug("Waiting for %d processes" % options.np)
-    
+
     # Recieve listings from newly started proccesses phoning in
-    for i in range(options.np):       
+    for i in range(options.np):
         sender_conn, sender_addr = s.accept()
         sender_conns.append( sender_conn )
-        
+
         # Receiving data about the communicator, by unpacking the head etc.
-        
+
         rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
         message = pickle.loads(data)
-        
+
         all_procs.append( message ) # add (rank,host,port) for process to the listing
     #logger.debug("Received information for all %d processes" % options.np)
-    
+
     # Send all the data to all the connections, closing each connection afterwards
     message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
     for conn in sender_conns:
         utils.robust_send(conn, message)
 
     s.close()
-    
+
     # Trap CTRL-C before we let processes loose on the world
     signal.signal(signal.SIGINT, signal_handler)
-    
-    
+
+    cmd_handle = write_cmd_handle(all_procs, filename=options.cmd_handle)
+    print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
+
     # Wait for all started processes to die
-    exit_codes = processloaders.wait_for_shutdown(process_list)    
+    exit_codes = processloaders.wait_for_shutdown(process_list)
     for conn in sender_conns: # if still up (shouldn't be)
-        conn.close()        
+        conn.close()
+
 
     # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
-   
+
     if options.process_io == "asyncdirect":
         logger.debug("IO forward thread will be stopped")
         # Signal shutdown to io_forwarder thread
@@ -297,5 +314,6 @@ if __name__ == "__main__":
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
+
 
     sys.exit(1 if any_failures else 0)
