@@ -1,17 +1,17 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -40,7 +40,7 @@ def get_communicator_class(socket_poll_method=False):
 
     if socket_poll_method == "epoll":
         c_class = CommunicationHandlerEpoll
-    
+
     elif socket_poll_method == "poll":
         c_class = CommunicationHandlerPoll
 
@@ -54,21 +54,21 @@ def get_communicator_class(socket_poll_method=False):
         epoll = getattr(select, "epoll", None)
         if epoll:
             c_class = CommunicationHandlerEpoll
-    
+
         poll = getattr(select, "poll", None)
         if poll and not c_class:
             c_class = CommunicationHandlerPoll
-        
+
         if not c_class:
             c_class = CommunicationHandlerSelect
-    
+
     #Logger().debug("Found communicator class of type %s, called with socket_poll_method parameter %s" % (c_class, socket_poll_method))
     return c_class
 
 class Network(object):
     def __init__(self, mpi, options):
 
-        if options.disable_full_network_startup:            
+        if options.disable_full_network_startup:
             socket_pool_size = options.socket_pool_size
             #Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
@@ -85,7 +85,7 @@ class Network(object):
         self.t_in.daemon = True
         self.t_in.name = "Comms Rx"
         self.t_in.start()
-        
+
         if options.single_communication_thread:
             self.t_out = self.t_in
             self.t_out.type = "combo"
@@ -97,7 +97,7 @@ class Network(object):
             self.t_out.start()
             self.t_out.type = "out"
             self.t_in.type = "in"
-        
+
         # Create the main receieve socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
@@ -110,12 +110,12 @@ class Network(object):
 
         # Set main receive socket for comparison in _handle_readlist
         self.t_in.main_receive_socket = server_socket
-        
+
         #Logger().debug("--starting handshake, main socket is: %s" % server_socket)
-        
+
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
-        
+
         self.full_network_startup = not options.disable_full_network_startup
 
         #Logger().debug("Network initialized")
@@ -126,22 +126,22 @@ class Network(object):
         """
         This method creates the MPI_COMM_WORLD communicator, by receiving
         (hostname, port, rank) for all the processes started by mpirun.
-        
+
         For mpirun to have this information we first send all the data
-        from our own process. So we bind a socket. 
+        from our own process. So we bind a socket.
         """
         # Packing the data
         data = (self.hostname, self.port, internal_rank )
-        
+
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
         #Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
-        
+
         # Pack the data with our special format
-        utils.robust_send(s_conn, prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING))        
-        
+        utils.robust_send(s_conn, prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING))
+
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
         _, _, _, _, _, all_procs = get_raw_message(s_conn)
@@ -156,10 +156,10 @@ class Network(object):
 
 
     def start_full_network(self):
-        
+
         #Logger().debug("Starting a full network startup")
 
-        # We make a full network startup by receiving from all with lower ranks and 
+        # We make a full network startup by receiving from all with lower ranks and
         # sending to higher ranks
         our_rank = self.mpi.MPI_COMM_WORLD.rank()
         size = self.mpi.MPI_COMM_WORLD.size()
@@ -170,11 +170,11 @@ class Network(object):
         #Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
 
         recv_handles = []
-        # Start all the receive 
+        # Start all the receive
         for r_rank in receiver_ranks:
             handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
             recv_handles.append(handle)
-        
+
         #Logger().debug("Start_full_network: All recieves posted")
 
         # Send all
@@ -186,15 +186,15 @@ class Network(object):
         # Finish the receives
         for handle in recv_handles:
             handle.wait()
-        
+
         #DEBUG
         #print "Socket pool sockets",self.socket_pool.sockets
         #print "Socket pool meta",self.socket_pool.metainfo
         # Full network start up means a static socket pool
         self.socket_pool.readonly = True
-        
+
         #Logger().debug("Network (fully) started")
-        
+
     def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
         from mpi.request import Request
         rl = []
@@ -204,14 +204,14 @@ class Network(object):
             request.is_pickled = True
             self.t_out.add_out_request(request)
             rl.append(request)
-            
+
         return rl
 
     def finalize(self):
         """
-        Forwarding the finalize call to the threads. Look at the 
+        Forwarding the finalize call to the threads. Look at the
         CommunicationHandlerSelect.finalize for a deeper description of
-        the shutdown procedure. 
+        the shutdown procedure.
         """
         #Logger().debug("Network got finalize call")
         #Logger().debug("socketpool size:%i - metainfo:%s" % (len(self.socket_pool.sockets), self.socket_pool.metainfo) )
@@ -221,43 +221,43 @@ class Network(object):
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
-        
-        #Logger().debug("Waiting for threads to die")        
+
+        #Logger().debug("Waiting for threads to die")
         # Wait for network threads to die
         self.t_in.join()
         self.t_out.join()
-        
-        #Logger().debug("Closing socket pool in finalize call")        
+
+        #Logger().debug("Closing socket pool in finalize call")
         # Close socketpool
         self.socket_pool.close_all_sockets()
 
 class BaseCommunicationHandler(threading.Thread):
     def __init__(self, network, rank, socket_pool):
         super(BaseCommunicationHandler, self).__init__()
-        
+
         # Store all procs in the network for lookup
         self.network = network
-        
+
         # Add two TCP specific lists. Read and write sockets
         self.sockets_in = []
         self.sockets_out = []
-        
+
         # Structure for finding request objects from a socket connection.
         # a dict mapping a socket key to a list of requests on that socket
         self.socket_to_request = {}
-        
+
         self.outbound_requests = 0 # Number of send requests queued (only acessed with socket_to_request_lock)
         self.rank = rank
         self.socket_pool = socket_pool
-        
+
         self.type = "unset" # Will be set to "in","out" or "combo" and allow easy way of detecting role
         self.main_receive_socket = None # For threads handling incoming this is the main socket on which new connections can be accepted
-        
-        self.shutdown_event = threading.Event() # signal for shutdown        
+
+        self.shutdown_event = threading.Event() # signal for shutdown
         #self.outbound_requests_event = threading.Event() # signal for something to send
-        
-        
-        
+
+
+
         # Locks for proper access to the internal socket->request structure and counter
         self.socket_to_request_lock = threading.Lock()
 
@@ -265,27 +265,26 @@ class BaseCommunicationHandler(threading.Thread):
         self.debug_counter = 0
 
     def finalize(self):
-        self.shutdown_event.set()        
+        self.shutdown_event.set()
         #Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )
 
     def add_out_request(self, request):
         """
-        Put a requested out operation (eg. send) on the out list        
+        Put a requested out operation (eg. send) on the out list
         """
         # Find the global rank of recipient process
         global_rank = request.communicator.group().members[request.participant]['global_rank']
-        
+
         # Find a socket and port of recipient process
         host = self.network.all_procs[global_rank]['host']
         port = self.network.all_procs[global_rank]['port']
-        
+
         # Create the proper data structure and pickle the data
-        #print "We found cmd: %d" % request.cmd
-        request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd, 
+        request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
                                        tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
-        
+
         ##Logger().warning("SHOW request %s" % request)
-        
+
         #Logger().debug("rank:%i calling get_socket for globrank:%i" % (self.rank, global_rank))
         # TODO: This call should be extended to allow asking for a persistent connection
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
@@ -296,33 +295,33 @@ class BaseCommunicationHandler(threading.Thread):
 
         with self.socket_to_request_lock:
             try:
-                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list                
+                self.network.t_out.socket_to_request[client_socket].append(request) # socket already exists just add another request to the list
                 self.outbound_requests += 1
             except Exception, e: # This should not happen
                 Logger().error("Network-thread (%s) got error: %s of type: %s, socket_to_request was: %s" % (self.type, e, type(e), self.network.t_out.socket_to_request ) )
 
     def add_in_socket(self, client_socket):
         self.sockets_in.append(client_socket)
-        
+
     def add_out_socket(self, client_socket):
         with self.socket_to_request_lock:
             self.socket_to_request[client_socket] = []
-            
+
         self.sockets_out.append(client_socket)
-    
+
     def close_all_sockets(self):
         Logger().debug("Closing all sockets")
-        for s in self.sockets_in + self.sockets_out:            
+        for s in self.sockets_in + self.sockets_out:
             try:
                 #s.shutdown(0)   # Further receives are disallowed
                 #s.shutdown(1)   # Further sends are disallowed.
                 #s.shutdown(2)   # Further sends and receives are disallowed.
-                s.close()                
+                s.close()
             except Exception, e:
                 Logger().error("Got error when closing socket: %s" % e)
 
     def _handle_readlist(self, readlist):
-        
+
         for read_socket in readlist:
             add_to_pool = False
 
@@ -331,7 +330,7 @@ class BaseCommunicationHandler(threading.Thread):
                 try:
                     # _ is sender_address
                     (conn, _) = read_socket.accept()
-                    
+
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
@@ -344,15 +343,10 @@ class BaseCommunicationHandler(threading.Thread):
                     Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
             else:
                 conn = read_socket
-            
+
             try:
                 rank, msg_command, tag, ack, comm_id, raw_data = get_raw_message(conn)
-                #Logger().debug("Found rank %d and command %s" % (rank, msg_command))
-                #if add_to_pool:
-                #    Logger().warning("Read from accepted connection")
-                #else:
-                #    Logger().warning("Normal read")
-            except MPIException, e:                    
+            except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
                     #Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
@@ -365,11 +359,11 @@ class BaseCommunicationHandler(threading.Thread):
             except Exception, e:
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
                 continue
-            
+
             # Now that we know the rank of sender we can add the socket to the pool
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
-            
+
             #Logger().debug("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
                 try:
@@ -384,7 +378,7 @@ class BaseCommunicationHandler(threading.Thread):
                     pass
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
-                    
+
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
 
@@ -396,7 +390,7 @@ class BaseCommunicationHandler(threading.Thread):
             for request in request_list:
                 if request.status == "cancelled":
                     removal.append((socket, request))
-                elif request.status == "new":                        
+                elif request.status == "new":
                     #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
@@ -409,55 +403,55 @@ class BaseCommunicationHandler(threading.Thread):
                         #Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
-                    
+
                     removal.append((write_socket, request))
-                    
+
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
                         #Logger().debug("Ssend done, status set to unacked")
-                    else:                            
-                        request.update("ready") # update status and signal anyone waiting on this request                            
+                    else:
+                        request.update("ready") # update status and signal anyone waiting on this request
                 else:
                     pass
-                    #Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" % 
+                    #Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" %
                     #        (request.status, request.request_type, request.tag, request.participant))
-                    
+
             # Remove the requests (messages) that was successfully sent from the list for that socket
             if removal:
                 removed = len(removal)
-                with self.socket_to_request_lock:                
+                with self.socket_to_request_lock:
                     for (write_socket,matched_request) in removal:
                         self.socket_to_request[write_socket].remove(matched_request)
-                    
+
                     self.outbound_requests -= removed
 
     def run(self):
         # DEBUG
         emptyreads = 0
         emptywrites = 0
-        
+
         # Stall until network thread type is set
         # TODO: This hack should be refactored.
         while not self.type in ("combo","in","out"):
             time.sleep(0.001)
-        
+
         #Logger().debug("Network running, self.type:%s" %(self.type))
         if self.type == "combo":
             Logger().debug("C-c-combo")
-            # Main loop        
+            # Main loop
             while not self.shutdown_event.is_set():
                 # _ is errorlist
                 (in_list, out_list, _) = self.select_combo()
                 self._handle_readlist(in_list)
-                
+
                 # Only look at outbound if there are any
                 # (we don't take the socket_to_request_lock but worst case is we
                 # might miss postpone a send for one iteration or handle_writelist
                 # once too much, both are acceptable compared to locking)
                 if self.outbound_requests > 0:
                     self._handle_writelist(out_list)
-                
-                
+
+
                 # NOTE:
                 # This microsleep is to avoid busy waiting which starves the other threads
                 # especially on a single node (localhost testing) this has significant effect
@@ -469,17 +463,17 @@ class BaseCommunicationHandler(threading.Thread):
         elif self.type == "in":
             #Logger().debug("- - in")
             while not self.shutdown_event.is_set():
-                #Logger().debug("Select in - for base communication handler type:%s" %(self.type))   
+                #Logger().debug("Select in - for base communication handler type:%s" %(self.type))
                 (in_list, _, _) = self.select_in()
-                
+
                 #DEBUG
                 if not in_list:
                     #Logger().warning("empty IN list")
                     emptyreads += 1
-                    
+
                 self._handle_readlist(in_list)
                 time.sleep(0.00001)
-        
+
         elif self.type == "out":
             #Logger().debug("- - out")
             while not self.shutdown_event.is_set():
@@ -490,33 +484,33 @@ class BaseCommunicationHandler(threading.Thread):
                         #Logger().warning("empty OUT list")
                         emptywrites += 1
                     self._handle_writelist(out_list)
-                    
+
                 time.sleep(0.00001)
-        
-        
+
+
         # The shutdown events is called, so we're finishing the network. This means
         # flushing all the send jobs we have and then closing the sockets.
         if self.type in ("combo","out"):
             while self.socket_to_request:
                 (_, out_list, _) = self.select_out()
                 self._handle_writelist(out_list)
-    
+
                 removal = []
                 for wsocket in self.socket_to_request:
                     if not self.socket_to_request[wsocket]:
                         removal.append(wsocket)
-                
+
                 for r in removal:
                     del self.socket_to_request[r]
-        
-        #Logger().warning("Done for base communication handler - type:%s emptyreads:%i emptywrites:%i" %(self.type,emptyreads,emptywrites))        
+
+        #Logger().warning("Done for base communication handler - type:%s emptyreads:%i emptywrites:%i" %(self.type,emptyreads,emptywrites))
 
 class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerEpoll, self).__init__(*args, **kwargs)
-        
+
         # Add a special epoll environment we can later use to poll
-        # the system. 
+        # the system.
         self.epoll = select.epoll()
 
         self.in_fd_to_socket = {}
@@ -537,10 +531,10 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
         in_list = []
         out_list = []
         error_list = []
-        
+
         events = self.epoll.poll(1)
         #events = self.epoll.poll()
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.EPOLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
             if event & select.EPOLLOUT:
@@ -551,21 +545,21 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def select_in(self):
         in_list = []
         error_list = []
-        
+
         events = self.epoll.poll(0.001)
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.EPOLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
-                
+
         return (in_list, [], error_list)
 
     def select_out(self):
         out_list = []
         error_list = []
-        
+
         #events = self.epoll.poll(1)
         events = self.epoll.poll()
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.EPOLLOUT:
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
@@ -575,9 +569,9 @@ class CommunicationHandlerEpoll(BaseCommunicationHandler):
 class CommunicationHandlerPoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
         super(CommunicationHandlerPoll, self).__init__(*args, **kwargs)
-        
+
         # Add a special poll environment we can later use to poll
-        # the system. 
+        # the system.
         self.poll = select.poll()
 
         self.in_fd_to_socket = {}
@@ -597,10 +591,10 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
         in_list = []
         out_list = []
         error_list = []
-        
+
         events = self.poll.poll(0.00001)
         #events = self.poll.poll()
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
             if event & select.POLLOUT:
@@ -611,26 +605,26 @@ class CommunicationHandlerPoll(BaseCommunicationHandler):
     def select_in(self):
         in_list = []
         error_list = []
-        
+
         events = self.poll.poll(0.00001)
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.POLLIN:
                 in_list.append(self.in_fd_to_socket.get(fileno))
-                
+
         return (in_list, [], error_list)
 
     def select_out(self):
         out_list = []
         error_list = []
-        
+
         #events = self.poll.poll(1)
         events = self.poll.poll()
-        for fileno, event in events:    
+        for fileno, event in events:
             if event & select.POLLOUT:
                 out_list.append(self.out_fd_to_socket.get(fileno))
 
         return ([], out_list, error_list)
-        
+
 class CommunicationHandlerSelect(BaseCommunicationHandler):
     """
     This is a single thread doing both in and out or there are two threaded instances one for each

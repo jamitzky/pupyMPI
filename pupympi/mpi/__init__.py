@@ -1,17 +1,17 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -21,13 +21,13 @@ import sys
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
-        
+
 from mpi.communicator import Communicator
 from mpi.logger import Logger
 from mpi.network import Network
-from mpi.group import Group 
+from mpi.group import Group
 from mpi.exceptions import MPIException
-from mpi import constants 
+from mpi import constants
 from mpi.network.utils import pickle
 
 from mpi.request import Request
@@ -44,24 +44,24 @@ except ImportError:
 
 class MPI(Thread):
     """
-    This is the main class containing most of the public API. Initializing 
+    This is the main class containing most of the public API. Initializing
     the MPI system is done by creating an instance of this class. Via an
     MPI instance a program can interact with other processes through different
-    communicators. 
+    communicators.
 
     .. note::
         The MPI instance state is a static class variable, so creating multiple
         instances will always yield 'the same' instance, much like a singleton design
-        pattern. 
+        pattern.
     """
 
     MPI_COMM_WORLD = None
     """
     The largest and first communicator containing all the started processes as
-    members. 
+    members.
 
-    Look at the API documentation for :ref:`communicators <api-communicator-label>` 
-    for more information about the available methods. 
+    Look at the API documentation for :ref:`communicators <api-communicator-label>`
+    for more information about the available methods.
     """
 
     def __init__(self):
@@ -78,11 +78,11 @@ class MPI(Thread):
             mpi = MPI()
             rank = mpi.MPI_COMM_WORLD.rank()
             size = mpi.MPI_COMM_WORLD.size()
-        
+
             print "Proc %d of %d started" % (rank, size)
 
             mpi.finalize()
-            
+
         """
 
         self.name = "MPI" # Thread name
@@ -90,22 +90,22 @@ class MPI(Thread):
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
-        
+
         # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
         self.unstarted_requests_has_work = threading.Event()
-        
+
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
         self.pending_requests_lock = threading.Lock()
         self.pending_requests_has_work = threading.Event()
-        
+
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
-        self.raw_data_has_work = threading.Event() 
-        
+        self.raw_data_has_work = threading.Event()
+
         # Recieved data are messages that have arrived and are unpickled
         # (ie. ready for matching with a posted recv request)
         #There are no events as this is handled through the "pending_request_" event.
@@ -114,17 +114,17 @@ class MPI(Thread):
 
         # General event to wake up main mpi thread
         self.has_work_event = threading.Event()
-        
+
         # Shutdown signals
         self.shutdown_event = threading.Event() # MPI finalize has been called, shutdown in progress
         self.queues_flushed = threading.Event() # Queues are flushed, shutting down network threads can begin
-        
+
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
-        
 
-        
+
+
         parser = OptionParser()
         parser.add_option('--rank', type='int')
         parser.add_option('--size', type='int')
@@ -147,16 +147,16 @@ class MPI(Thread):
         # _ is args
         options, _ = parser.parse_args()
 
-        if options.process_io == "remotefile": 
+        if options.process_io == "remotefile":
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
             try:
                 output = open(filename, "w")
-            except:            
+            except:
                 raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
-            
+
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
@@ -169,7 +169,7 @@ class MPI(Thread):
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
         #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
-            
+
         # First check for required Python version
         self._version_check()
 
@@ -194,7 +194,7 @@ class MPI(Thread):
                         self._yappi_sorttype = yappi.SORTTYPE_TAVG
                     else:
                         logger.warn("Unknown yappi sorttype '%s' - defaulting to ncall." % options.yappi_sorttype)
-                
+
             except ImportError:
                 logger.warn("Yappi is not supported on this system. Statistics will not be logged.")
                 self._yappi_enabled = False
@@ -213,31 +213,31 @@ class MPI(Thread):
                     self._profiler_enabled = False
 
         self.network = Network(self, options)
-        
+
         # Create the initial global Group, and assign the network all_procs as members
         world_Group = Group(options.rank)
         world_Group.members = self.network.all_procs
 
-        # Create the initial communicator MPI_COMM_WORLD. It is initialized with 
+        # Create the initial communicator MPI_COMM_WORLD. It is initialized with
         # the rank of the process that holds it and size.
         # The members are filled out after the network is initialized.
         self.communicators = {}
 
         self.MPI_COMM_WORLD = Communicator(self, options.rank, options.size, self.network, world_Group, comm_root=None)
 
-        # Tell the network about the global MPI_COMM_WORLD, and let it start to 
+        # Tell the network about the global MPI_COMM_WORLD, and let it start to
         # listen on the corresponding network channels
         self.network.MPI_COMM_WORLD = self.MPI_COMM_WORLD
-        
-        # Change the contents of sys.argv runtime, so the user processes 
+
+        # Change the contents of sys.argv runtime, so the user processes
         # can't see all the mpi specific parameters we start with.
-        user_options =[sys.argv[0], ] 
+        user_options =[sys.argv[0], ]
         user_options.extend(sys.argv[sys.argv.index("--")+1:])
         sys.argv = user_options
 
         # Set up the global mpi constants
         constants.MPI_GROUP_EMPTY = Group()
-        
+
         self.daemon = True
         self.start()
 
@@ -248,7 +248,7 @@ class MPI(Thread):
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
-        
+
         if self._profiler_enabled:
             pupyprof.start()
 
@@ -256,16 +256,16 @@ class MPI(Thread):
         """
         Tries to match a pending request with something in
         the received data.
-        
+
         If the received data is found we remove it from the
         list.
-        
+
         The request is updated with the data if found and this
         status update returned from the function so it's possible
         to remove the item from the list.
         """
         match = False
-        remove = [] 
+        remove = []
         with self.received_data_lock:
             #Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
 
@@ -274,10 +274,10 @@ class MPI(Thread):
 
                 # Any communication must take place within the same communicator
                 if request.communicator.id == communicator_id:
-                    
+
                     # The participant must match or any rank have been specified
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
-                        
+
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
                         if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
                             remove.append(element)
@@ -292,9 +292,9 @@ class MPI(Thread):
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
                                 Logger().debug("ACK RECIEVED request: %s" % request)
-                            
+
                             break # We can only find matching data for one request and we have
-                        
+
             for data in remove:
                 self.received_data.remove(data)
         #Logger().debug("-- Match pending released lock! Match:%s" % match)
@@ -306,7 +306,7 @@ class MPI(Thread):
         if self._yappi_enabled:
             yappi.start(builtins=True)
 
-        while not self.shutdown_event.is_set():            
+        while not self.shutdown_event.is_set():
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
@@ -315,9 +315,9 @@ class MPI(Thread):
             #Logger().debug("Raw_data_event is set (%s) and contains: %s" % (self.raw_data_has_work.is_set(), self.raw_data_queue))
             #Logger().debug("unstarted_requests_has_work is set (%s) and contains: %s" % (self.unstarted_requests_has_work.is_set(), self.unstarted_requests))
             #Logger().debug("pending_requests_has_work is set (%s) and contains: %s" % (self.pending_requests_has_work.is_set(), self.pending_requests))
-            
+
             self.has_work_event.clear()
-            
+
             # Schedule unstarted requests (outbound requests)
             if self.unstarted_requests_has_work.is_set():
                 with self.unstarted_requests_lock:
@@ -327,7 +327,7 @@ class MPI(Thread):
 
                     self.unstarted_requests = []
                     self.unstarted_requests_has_work.clear()
-                
+
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
                 #Logger().debug("raw_data_has_work is set")
@@ -339,11 +339,11 @@ class MPI(Thread):
                             data = pickle.loads(raw_data)
                             self.received_data.append( (rank, tag, ack, comm_id, data) )
                             #Logger().debug("Adding data: %s" % data)
-                        
+
                         self.pending_requests_has_work.set()
                         self.raw_data_queue = []
                     self.raw_data_has_work.clear()
-                    
+
             # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
                 with self.pending_requests_lock:
@@ -354,13 +354,13 @@ class MPI(Thread):
                             # and will remove matched data from received_data queue
                             # we only need to update our own queue
                             removal.append(request)
-                    
+
                     for request in removal:
                         self.pending_requests.remove(request)
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
-        
+
         #Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
         #Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
 
@@ -371,14 +371,14 @@ class MPI(Thread):
                 self.network.t_out.add_out_request(request)
             self.unstarted_requests = []
             self.unstarted_requests_has_work.clear()
-            
+
         #Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
         #Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
         #Logger().debug("QUITTING: recieved data: %s" % self.received_data)
         #Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
         #Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
         #Logger().info("MPI environment shutting down.")
-        
+
         self.queues_flushed.set()
 
         # Start built-in profiling facility
@@ -388,16 +388,16 @@ class MPI(Thread):
 
         if self._yappi_enabled:
             yappi.stop()
-            
+
             filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
-            except:            
+            except:
                 raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
-            
+
             stats = yappi.get_stats(self._yappi_sorttype)
-            
+
             for stat in stats:
                 print >>f, stat
             yappi.clear_stats()
@@ -406,17 +406,17 @@ class MPI(Thread):
 
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
-        
+
 
     def abort(self):
         """
         Makes a best attempt to cancel all the tasks in the world
         communicator and makes every process shut down. Don't expect
-        anything to behave nicely after this call. 
+        anything to behave nicely after this call.
 
         You should use this method if something bad and irreversible
         happens. The system will have a better chance - but it's not
-        guaranteed - of finalizing nicely. 
+        guaranteed - of finalizing nicely.
         """
         world = self.MPI_COMM_WORLD
         rank = world.rank()
@@ -427,14 +427,14 @@ class MPI(Thread):
             if r == rank:
                 continue
 
-            # send about message to the process with rank r. 
+            # send about message to the process with rank r.
             # Create a send request object
             handle = Request("send", world, r, constants.MPI_TAG_ANY, False)
             handle.cmd = constants.CMD_ABORT
 
             # Add the request to the MPI layer unstarted requests queue. We
             # signal the condition variable to wake the MPI thread and have
-            # it handle the request start. 
+            # it handle the request start.
             world._add_unstarted_request(handle)
             request_list.append(handle)
 
@@ -445,43 +445,42 @@ class MPI(Thread):
 
     def handle_system_message(self, rank, command, raw_data):
         if command == constants.CMD_ABORT:
-            #Logger().debug("Got abort command!")
             sys.exit(1)
 
     def finalize(self):
         """
-        This method cleans up after a MPI run. Closes filehandles, 
-        logfiles and sockets. 
+        This method cleans up after a MPI run. Closes filehandles,
+        logfiles and sockets.
 
-        Remember to always end your MPI program with this call. Otherwise proper 
-        shutdown is not guaranteed. 
+        Remember to always end your MPI program with this call. Otherwise proper
+        shutdown is not guaranteed.
 
         .. note::
             Part of the finalizing call is to flush all outgoing requests. You
-            don't need to wait() on all your started isends before you call 
-            finalize. 
+            don't need to wait() on all your started isends before you call
+            finalize.
         """
         #Logger().debug("--- Finalize has been called ---")
         self.shutdown_event.set() # signal shutdown to mpi thread
-        self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work        
-        
+        self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work
+
         self.queues_flushed.wait()
-        
+
         #Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
-            
+
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
         #Logger().debug("--- Network finally finalized --")
-        
+
         # Asser experimental
         self.join()
 
     @classmethod
     def initialized(cls):
         """
-        Returns a boolean indicating whether the MPI environment is 
-        initialized:: 
+        Returns a boolean indicating whether the MPI environment is
+        initialized::
 
             from mpi import MPI
 
@@ -494,16 +493,16 @@ class MPI(Thread):
             This method is usefull if you're using threads in your
             calculation. You can use the method to ensure the MPI
             enviroment is fully initializing before a tread starts
-            actual communication. 
+            actual communication.
         """
         return getattr(cls, '_initialized', False)
-                    
+
     def get_version(self):
         """
-        Return the version number of the pupyMPI installation. 
+        Return the version number of the pupyMPI installation.
         """
         return __version__
-    
+
     def _version_check(self):
         """
         Check that the required Python version is installed
@@ -514,4 +513,4 @@ class MPI(Thread):
             sys.exit(1)
         elif major >= 2 and minor is not 6:
             Logger().warn("pupyMPI is only certified to run on Python 2.6")
-    
+
