@@ -17,7 +17,7 @@
 #
 __version__ = 0.8 # It bumps the version or else it gets the hose again!
 
-import sys
+import sys, hashlib
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
@@ -143,9 +143,12 @@ class MPI(Thread):
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
         parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
         parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
+        parser.add_option('--disable-utilities', dest='disable_utilities' action='store_false')
 
         # _ is args
         options, _ = parser.parse_args()
+
+        self.disable_utilities = options.disable_utilities
 
         if options.process_io == "remotefile":
             # Initialise the logger
@@ -513,4 +516,34 @@ class MPI(Thread):
             sys.exit(1)
         elif major >= 2 and minor is not 6:
             Logger().warn("pupyMPI is only certified to run on Python 2.6")
+
+    def generate_security_component(self):
+        """
+        Generate a rank specific security component. This component is saved on
+        the MPI instance so requests by the pupyMPI utilities can be checked.
+
+        Note that this is a very limited security model. As long as we are
+        primarly dealing with students we just want to avoid somebody finding
+        other peoples processes and aborting them because they want the grid
+        time.
+
+        Note that no component will be generated if the user did not want to
+        allow run time manipulation of the execution environment.
+        """
+        if self.security_component:
+            raise Exception("Security component already genearted!")
+
+        if self.disable_utilities:
+            return None
+
+        h = hashlib.sha1()
+        h.update(str(time.time()))
+        h.update(str(self.MPI_COMM_WORLD.rank()))
+        self.security_component = h.hexdigest()
+
+        return get_security_component()
+
+    def get_security_component(self):
+        """ Return the generated component """
+        return self.security_component
 
