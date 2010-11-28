@@ -79,6 +79,7 @@ def parse_options():
     parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
     parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for pupysh usage). ")
+    parser_adv_group.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
     parser.add_option_group( parser_adv_group )
 
     try:
@@ -221,6 +222,9 @@ if __name__ == "__main__":
     if options.yappi:
         global_run_options.append('--yappi')
 
+    if options.disable_utilities:
+        global_run_options.append('--disable-utilities')
+
     if options.yappi_sorttype:
         global_run_options.append('--yappi-sorttype=%s' % options.yappi_sorttype)
 
@@ -241,9 +245,6 @@ if __name__ == "__main__":
         # Now start the process and keep track of it
         p = remote_start(host, run_options, options.process_io, rank)
         process_list.append(p)
-
-        #logger.debug("Process with rank %d started" % rank)
-
 
     """
     NOTE: Now we have a proccess list and can start the io forwarder if needed
@@ -279,7 +280,7 @@ if __name__ == "__main__":
         rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
         message = pickle.loads(data)
 
-        all_procs.append( message ) # add (rank,host,port) for process to the listing
+        all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
     #logger.debug("Received information for all %d processes" % options.np)
 
     # Send all the data to all the connections, closing each connection afterwards
@@ -300,7 +301,6 @@ if __name__ == "__main__":
     for conn in sender_conns: # if still up (shouldn't be)
         conn.close()
 
-
     # Check exit codes from started processes
     any_failures = sum(exit_codes) is not 0
     if any_failures:
@@ -314,6 +314,5 @@ if __name__ == "__main__":
         # Wait for the IO_forwarder thread to stop
         t.join()
         logger.debug("IO forward thread joined")
-
 
     sys.exit(1 if any_failures else 0)

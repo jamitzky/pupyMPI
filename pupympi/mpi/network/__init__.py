@@ -130,8 +130,10 @@ class Network(object):
         For mpirun to have this information we first send all the data
         from our own process. So we bind a socket.
         """
+        sec_comp = self.mpi.generate_security_component()
+
         # Packing the data
-        data = (self.hostname, self.port, internal_rank )
+        data = (self.hostname, self.port, internal_rank, sec_comp)
 
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -153,7 +155,6 @@ class Network(object):
 
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
-
 
     def start_full_network(self):
 
