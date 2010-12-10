@@ -17,7 +17,7 @@
 #
 __version__ = 0.8 # It bumps the version or else it gets the hose again!
 
-import sys, hashlib
+import sys, hashlib, random
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
@@ -123,8 +123,6 @@ class MPI(Thread):
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
 
-
-
         parser = OptionParser()
         parser.add_option('--rank', type='int')
         parser.add_option('--size', type='int')
@@ -143,12 +141,14 @@ class MPI(Thread):
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
         parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
         parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
-        parser.add_option('--disable-utilities', dest='disable_utilities' action='store_false')
+        parser.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
 
         # _ is args
         options, _ = parser.parse_args()
 
+        # Attributes for the security component.
         self.disable_utilities = options.disable_utilities
+        self.security_component = None
 
         if options.process_io == "remotefile":
             # Initialise the logger
@@ -447,8 +447,30 @@ class MPI(Thread):
         sys.exit(1)
 
     def handle_system_message(self, rank, command, raw_data):
+        """
+        Handle a system message. We define a list of read only commands and all
+        others are considered writeable. The raw data contains a security
+        component we need to check in the case of a write command.
+
+        This method returns a boolean indicating if the command was actually
+        tried.
+        """
+        read_only = ()
+
+        # Security check.
+        sec_comp = pickle.loads(raw_data)
+        if command not in read_only:
+            if sec_comp != self.get_security_component():
+                Logger().warning("Failed security check in system command. Expected security component was %s but received %s for command %s" % (self.get_security_component(), sec_comp, command))
+                return False
+
+        # Go through the different commands we know and handle them.
         if command == constants.CMD_ABORT:
-            sys.exit(1)
+            # We need to set some trigger for aborting through the user thread.
+            # Maybe a decorator on all the functions?
+            pass
+        else:
+            Logger().info("Received unknown command: %s" % command)
 
     def finalize(self):
         """
@@ -538,10 +560,11 @@ class MPI(Thread):
 
         h = hashlib.sha1()
         h.update(str(time.time()))
-        h.update(str(self.MPI_COMM_WORLD.rank()))
+        h.update(str(random.random()))
+
         self.security_component = h.hexdigest()
 
-        return get_security_component()
+        return self.get_security_component()
 
     def get_security_component(self):
         """ Return the generated component """

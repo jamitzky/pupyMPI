@@ -66,7 +66,6 @@ class SocketPool(object):
         newly_created = False
 
         # It's not valid to not have a socket and a readonly pool
-        print "Want to add rank", rank
         if rank >= 0 and self.readonly and not client_socket:
             raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket")
 
@@ -80,13 +79,6 @@ class SocketPool(object):
             client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
 
             client_socket.connect( receiver )
-            # DEBUG - TESTING SOCKET OPTIONS
-            #print "OPTIONS"
-            #print str(client_socket.getsockopt(socket.SOL_TCP,socket.SOCK_STREAM))
-            #print str(client_socket.getsockopt(socket.SOL_TCP,socket.AF_INET))
-            #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
-            ##client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-            #print "NODELAY:" + str(client_socket.getsockopt(socket.SOL_TCP,socket.TCP_NODELAY))
 
             # Add the new socket to the list
             self._add(rank, client_socket, force_persistent)
