@@ -16,23 +16,19 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-import sys, os, copy, signal
+import sys, os, copy, signal, select, time, processloaders, threading
 from optparse import OptionParser, OptionGroup
-import select, time
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
-import processloaders
 from mpi.logger import Logger
 from mpi.network import utils
 from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
 from mpi import constants
 from mpi.lib.hostfile import parse_hostfile, map_hostfile
-import threading
-
 from mpi.network.utils import pickle
 
 def write_cmd_handle(all_procs, filename=None):
@@ -41,12 +37,11 @@ def write_cmd_handle(all_procs, filename=None):
         import tempfile
         _, filename = tempfile.mkstemp(prefix="pupy")
 
-    fh = open(filename, "w")
+    fh = open(filename, "wb")
     pickle.dump(all_procs, fh)
 
     fh.close()
     return filename
-
 
 def parse_options():
     usage = 'usage: %prog [options] arg'
@@ -79,7 +74,7 @@ def parse_options():
     parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
     parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for pupysh usage). ")
-    parser_adv_group.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
+    parser_adv_group.add_option('--disable-utilities', dest='disable_utilities', action='store_false', default=False)
     parser.add_option_group( parser_adv_group )
 
     try:
@@ -137,7 +132,6 @@ def io_forwarder(process_list):
 
     # Main loop, select, output, check for shutdown - repeat
     while True:
-
         try:
         # Trying to get stuck processes to accept Ctrl+C and DIE!
             # Any pipes ready with output?
@@ -283,7 +277,6 @@ if __name__ == "__main__":
 
         all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
         handle_procs.append( message )
-    #logger.debug("Received information for all %d processes" % options.np)
 
     # Send all the data to all the connections, closing each connection afterwards
     message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
@@ -294,9 +287,10 @@ if __name__ == "__main__":
 
     # Trap CTRL-C before we let processes loose on the world
     signal.signal(signal.SIGINT, signal_handler)
-
-    cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
-    print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
+    
+    if not options.disable_utilities: # This very verbose check is important. If not set, the value will be None.
+        cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
+        print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
 
     # Wait for all started processes to die
     exit_codes = processloaders.wait_for_shutdown(process_list)

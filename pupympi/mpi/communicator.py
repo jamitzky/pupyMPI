@@ -14,14 +14,15 @@
 # 
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
-#
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf,MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException
-from mpi.logger import Logger
+
 import sys, copy, time
+
+from mpi import constants
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException
+from mpi.logger import Logger
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
 from mpi.collectiverequest import CollectiveRequest
-from mpi import constants
 
 class Communicator:
 
@@ -124,6 +125,8 @@ class Communicator:
             the amount of created communicators but is significantly slower. 
         
         """
+        self.mpi._check_messages() # See documentation
+        
         # check if group is a subset of this communicators' group
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
@@ -162,6 +165,8 @@ class Communicator:
             *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
         
         """
+        self.mpi._check_messages() # See documentation
+        
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)                
 
         # thats it....dont do anything more. This deviates from the MPI standard.
@@ -187,7 +192,7 @@ class Communicator:
             groups (albeit this is simpler), and it requires special handling.
             Target implementation version: 1.1 
         """
-
+        self.mpi._check_messages() # See documentation
         # one suggestion for implementation:
         # 1: collective exchange color/key info
         # 2: order into groups (each process will only be in one of N groups)
@@ -211,6 +216,7 @@ class Communicator:
         
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
+        self.mpi._check_messages() # See documentation
         new_comm = self.comm_create(self.group())
         for a in self.attr: 
             if a.startswith("MPI_"):
@@ -229,7 +235,7 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
-        
+        self.mpi._check_messages() # See documentation
         if not isinstance(other_communicator, Communicator):
             return constants.MPI_UNEQUAL
         
@@ -319,7 +325,7 @@ class Communicator:
         .. note::
             It's possible for rank N to receive data from N.  
         """
-
+        
         # Check that destination exists
         if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
             raise MPINoSuchRankException("No process with rank %d in communicator %s. " % (sender, self.name))
@@ -338,7 +344,9 @@ class Communicator:
             self.mpi.pending_requests.append(handle)
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
-            
+        
+        self.mpi._check_messages() # See documentation
+        
         return handle
     
     # Add an outbound request to the queue
@@ -418,6 +426,7 @@ class Communicator:
         # If sending to self, take a short-cut
         if destination == self.rank():
             self._send_to_self(handle)
+            self.mpi._check_messages() # See documentation
             return handle
                 
         # Add the request to the MPI layer unstarted requests queue. We
@@ -425,7 +434,7 @@ class Communicator:
         # it handle the request start. 
         ##Logger().warning("NEW request %s -->> DATA:%s" % (handle,content))
         self._add_unstarted_request(handle)
-
+        self.mpi._check_messages() # See documentation
         return handle
 
     def issend(self, content, destination, tag = constants.MPI_TAG_ANY):
@@ -514,6 +523,8 @@ class Communicator:
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start. 
         self._add_unstarted_request(dummyhandle)
+
+        self.mpi._check_messages() # See documentation
 
         return handle
     
@@ -716,6 +727,7 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
+        self.mpi._check_messages() # See documentation
         cr = CollectiveRequest(constants.TAG_BARRIER, self)
         return cr.wait()
     
@@ -751,6 +763,7 @@ class Communicator:
         # Start collective request
         #cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root, start=False)
         #cr.start_bcast()
+        self.mpi._check_messages() # See documentation
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()
 
@@ -787,6 +800,7 @@ class Communicator:
         """
         #cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data, start=False)
         #cr.start_allgather()
+        self.mpi._check_messages() # See documentation
         cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data)
         return cr.wait()
 
@@ -824,8 +838,8 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("The reduce operation supplied should be a callable")
 
-        #cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, start=False)
-        #cr.start_allreduce(op)
+        self.mpi._check_messages() # See documentation
+
         cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
         return cr.wait()
         
@@ -861,8 +875,8 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        #cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data, start=False)
-        #cr.start_alltoall()
+        self.mpi._check_messages() # See documentation
+
         cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
         return cr.wait()
 
@@ -905,8 +919,8 @@ class Communicator:
         .. note:: 
             See also the :func:`allgather` and :func:`alltoall` functions. 
         """
-        #cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, start=False, root=root)
-        #cr.start_allgather()
+        self.mpi._check_messages() # See documentation
+
         cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, root=root)
         data = cr.wait()
         if self.rank() == root:
@@ -944,13 +958,11 @@ class Communicator:
         if not getattr(op, "__call__", False):
             raise MPIException("The reduce operation supplied should be a callable")
 
-        #cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data, start=False)
-        #cr.start_allreduce(op)
+        self.mpi._check_messages() # See documentation
+
         cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data,root=root, mpi_op=op)
         data = cr.wait()
         
-        #Logger().debug("--------------------------- REDUCE DONE ---------------------------")
-
         if self.rank() == root:
             return data
     
@@ -983,8 +995,8 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call. 
         """
-        #cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, start=False)
-        #cr.start_scan(operation)
+        self.mpi._check_messages() # See documentation
+        
         cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, mpi_op=operation)
         return cr.wait()
 
@@ -1058,27 +1070,11 @@ class Communicator:
         if self.rank() != root:
             data = None
 
+        self.mpi._check_messages() # See documentation
+
         cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
         return cr.wait()
 
-
-        #if self.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
-        #    raise MPIException("Scatter used with invalid arguments.")
-        #
-        #if self.rank() != root:
-        #    data = None
-        #
-        ## Create a list with size N
-        #if data:
-        #    if len(data) != self.size():
-        #        elements_per_rank = len(data) / self.size()
-        #        data = [ data[i*elements_per_rank:(i+1)*elements_per_rank] for i in range(self.size())]
-        #
-        #cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        #data = cr.wait().pop()['value']
-        #return data[self.rank()]
-
-        
     def testall(self, request_list):
         """
         Test if all the requests in the request list are finished. Returns a boolean
@@ -1120,6 +1116,8 @@ class Communicator:
 
             mpi.finalize()
         """
+        self.mpi._check_messages() # See documentation
+
         # We short circuit this to make it faster
         for request in request_list:
             if not request.test():
@@ -1166,6 +1164,8 @@ class Communicator:
 
             mpi.finalize()
         """
+        self.mpi._check_messages() # See documentation
+
         for request in request_list:
             if request.test():
                 return (True, request)
@@ -1212,6 +1212,8 @@ class Communicator:
 
             mpi.finalize()
         """
+        self.mpi._check_messages() # See documentation
+
         return_list = []
         for request in request_list:
             if request.test():
@@ -1261,24 +1263,7 @@ class Communicator:
         .. note:: 
             See also the :func:`waitany` and :func:`waitsome` functions. 
         """
-        
-        # The original King of Code (tm) version
-        
-        #return_d = {}
-        #requests = {}
-        #for i in range(len(request_list)):
-        #    requests[i] = request_list[i]
-        #    
-        #while requests:
-        #    idxs = requests.keys()
-        #    for idx in idxs:
-        #        if requests[idx].test():
-        #            return_d[idx] = requests[idx].wait()
-        #            del requests[idx]
-        #    
-        #    time.sleep(0.01)
-        #            
-        #return return_d.values()
+        self.mpi._check_messages() # See documentation
         
         # New and improved Creamboy version
         remaining = len(request_list)
@@ -1295,8 +1280,7 @@ class Communicator:
             time.sleep(0.00001)
                     
         return return_list
-
-        
+          
     def waitany(self, request_list):
         """
         Wait for **one** request in the request list and return a tuple

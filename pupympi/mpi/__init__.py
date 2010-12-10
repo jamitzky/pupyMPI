@@ -122,6 +122,12 @@ class MPI(Thread):
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
+        
+        # Pending system commands. These will be executed at first chance we have (we
+        # need access to the user code). We also have a lock around the list, to ensure
+        # proper access.  
+        self.pending_systems_commands = []
+        self.pending_systems_commands_lock = threading.Lock()
 
         parser = OptionParser()
         parser.add_option('--rank', type='int')
@@ -445,6 +451,23 @@ class MPI(Thread):
 
         # We have tried to signal every process so we can "safely" exit.
         sys.exit(1)
+        
+    def _check_messages(self):
+        # quick check if we can return fast.
+        if not self.pending_systems_commands:
+            return
+        
+        with self.pending_systems_commands_lock:
+            for cmd in self.pending_systems_commands:
+                # Handle the message in a big if-statement. When / if the number
+                # of commands escalades, we should consider moving them away. 
+                if cmd == constants.CMD_ABORT:
+                    # Note. It is very important that this is not replaced with
+                    # self.mpi.abort(), as this will send messages around with
+                    # the same CMD. It will not be pretty.
+                    sys.exit(1)
+                    
+            self.pending_systems_commands = []
 
     def handle_system_message(self, rank, command, raw_data):
         """
@@ -456,21 +479,22 @@ class MPI(Thread):
         tried.
         """
         read_only = ()
-
+        commands = (constants.CMD_ABORT, )
+        
+        security_component = pickle.loads(raw_data)
+        
         # Security check.
-        sec_comp = pickle.loads(raw_data)
         if command not in read_only:
-            if sec_comp != self.get_security_component():
-                Logger().warning("Failed security check in system command. Expected security component was %s but received %s for command %s" % (self.get_security_component(), sec_comp, command))
+            if security_component != self.get_security_component():
+                Logger().warning("Failed security check in system command. Expected security component was %s but received %s for command %s" % (self.get_security_component(), raw_data, command))
                 return False
-
-        # Go through the different commands we know and handle them.
-        if command == constants.CMD_ABORT:
-            # We need to set some trigger for aborting through the user thread.
-            # Maybe a decorator on all the functions?
-            pass
-        else:
-            Logger().info("Received unknown command: %s" % command)
+            
+        # Check we have a system command
+        if command in commands:
+            with self.pending_systems_commands_lock:
+                self.pending_systems_commands.append(command)
+                
+        Logger().info("Adding system message. The command list is now: %s" % self.pending_systems_commands)
 
     def finalize(self):
         """
