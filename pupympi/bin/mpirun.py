@@ -265,6 +265,7 @@ if __name__ == "__main__":
 
     # Listing of (rank, host, port) for all the processes
     all_procs = []
+    handle_procs = []
     # Listing of socket connections to all the processes
     sender_conns = []
 
@@ -281,6 +282,7 @@ if __name__ == "__main__":
         message = pickle.loads(data)
 
         all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
+        handle_procs.append( message )
     #logger.debug("Received information for all %d processes" % options.np)
 
     # Send all the data to all the connections, closing each connection afterwards
@@ -293,7 +295,7 @@ if __name__ == "__main__":
     # Trap CTRL-C before we let processes loose on the world
     signal.signal(signal.SIGINT, signal_handler)
 
-    cmd_handle = write_cmd_handle(all_procs, filename=options.cmd_handle)
+    cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
     print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
 
     # Wait for all started processes to die

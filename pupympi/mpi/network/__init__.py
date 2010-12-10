@@ -327,7 +327,6 @@ class BaseCommunicationHandler(threading.Thread):
             add_to_pool = False
 
             if read_socket == self.main_receive_socket:
-                #Logger().warning("Yes it shows")
                 try:
                     # _ is sender_address
                     (conn, _) = read_socket.accept()
@@ -335,11 +334,9 @@ class BaseCommunicationHandler(threading.Thread):
                     self.network.t_in.add_in_socket(conn)
                     self.network.t_out.add_out_socket(conn)
                     add_to_pool = True
-                    #Logger().debug("Accepted connection on the main socket testCounter:%i" % testCounter)
                 except socket.error, e:
                     # We try to accept but if accept fails maybe it just data coming in?
                     Logger().error("accept() threw: %s on the main recv socket:%s" % (e,read_socket) )
-                    #conn = read_socket
                 except Exception, e:
                     Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
             else:
@@ -369,17 +366,14 @@ class BaseCommunicationHandler(threading.Thread):
             if msg_command == constants.CMD_USER:
                 try:
                     with self.network.mpi.raw_data_lock:
-                        #Logger().debug("Got lock")
                         self.network.mpi.raw_data_queue.append( (rank, tag, ack, comm_id, raw_data))
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
-                        #Logger().debug("Releasing lock")
                 except AttributeError, e:
                     #Logger().error("Failed grabbing raw_data_lock!")
                     pass
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
-
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data)
 
@@ -414,8 +408,6 @@ class BaseCommunicationHandler(threading.Thread):
                         request.update("ready") # update status and signal anyone waiting on this request
                 else:
                     pass
-                    #Logger().warning("The socket select found an invalid request status: %s, type (%s), tag(%s) participant(%d)" %
-                    #        (request.status, request.request_type, request.tag, request.participant))
 
             # Remove the requests (messages) that was successfully sent from the list for that socket
             if removal:
