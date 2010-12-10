@@ -17,15 +17,10 @@
 #
 import socket, threading, struct, select, time
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
 from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
 from mpi.network import utils # Some would like the rest of the utils to be more explicitly used ... maybe later
-from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
+from mpi.network.utils import create_random_socket, get_raw_message, prepare_message, pickle
 from mpi import constants
 from mpi.logger import Logger
 
@@ -284,9 +279,6 @@ class BaseCommunicationHandler(threading.Thread):
         request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
                                        tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
 
-        ##Logger().warning("SHOW request %s" % request)
-
-        #Logger().debug("rank:%i calling get_socket for globrank:%i" % (self.rank, global_rank))
         # TODO: This call should be extended to allow asking for a persistent connection
         client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
@@ -314,9 +306,6 @@ class BaseCommunicationHandler(threading.Thread):
         Logger().debug("Closing all sockets")
         for s in self.sockets_in + self.sockets_out:
             try:
-                #s.shutdown(0)   # Further receives are disallowed
-                #s.shutdown(1)   # Further sends are disallowed.
-                #s.shutdown(2)   # Further sends and receives are disallowed.
                 s.close()
             except Exception, e:
                 Logger().error("Got error when closing socket: %s" % e)
@@ -347,12 +336,10 @@ class BaseCommunicationHandler(threading.Thread):
             except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
-                    #Logger().debug("_handle_readlist: get_raw_message threw: %s during shutdown" % e)
                     break # We don't care about incoming during shutdown
                 else:
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
-                    #Logger().debug("_handle_readlist: Broken connection or worse. Error was: %s" % e)
                     continue
             except Exception, e:
                 Logger().error("_handle_readlist: Unexpected error thrown from get_raw_message. Error was: %s" % e)
@@ -362,7 +349,6 @@ class BaseCommunicationHandler(threading.Thread):
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
 
-            #Logger().debug("Received message with command: %d" % msg_command)
             if msg_command == constants.CMD_USER:
                 try:
                     with self.network.mpi.raw_data_lock:
@@ -370,7 +356,6 @@ class BaseCommunicationHandler(threading.Thread):
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
                 except AttributeError, e:
-                    #Logger().error("Failed grabbing raw_data_lock!")
                     pass
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
@@ -428,7 +413,6 @@ class BaseCommunicationHandler(threading.Thread):
         while not self.type in ("combo","in","out"):
             time.sleep(0.001)
 
-        #Logger().debug("Network running, self.type:%s" %(self.type))
         if self.type == "combo":
             Logger().debug("C-c-combo")
             # Main loop
@@ -461,7 +445,6 @@ class BaseCommunicationHandler(threading.Thread):
 
                 #DEBUG
                 if not in_list:
-                    #Logger().warning("empty IN list")
                     emptyreads += 1
 
                 self._handle_readlist(in_list)
@@ -474,7 +457,6 @@ class BaseCommunicationHandler(threading.Thread):
                     (_, out_list, _) = self.select_out()
                     #DEBUG
                     if not out_list:
-                        #Logger().warning("empty OUT list")
                         emptywrites += 1
                     self._handle_writelist(out_list)
 
@@ -495,8 +477,6 @@ class BaseCommunicationHandler(threading.Thread):
 
                 for r in removal:
                     del self.socket_to_request[r]
-
-        #Logger().warning("Done for base communication handler - type:%s emptyreads:%i emptywrites:%i" %(self.type,emptyreads,emptywrites))
 
 class CommunicationHandlerEpoll(BaseCommunicationHandler):
     def __init__(self, *args, **kwargs):
