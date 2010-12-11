@@ -28,7 +28,7 @@ from mpi.network import Network
 from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
-from mpi.network.utils import pickle
+from mpi.network.utils import pickle, robust_send, prepare_message
 
 from mpi.request import Request
 
@@ -458,7 +458,8 @@ class MPI(Thread):
             return
         
         with self.pending_systems_commands_lock:
-            for cmd in self.pending_systems_commands:
+            for obj in self.pending_systems_commands:
+                cmd, connection = obj
                 # Handle the message in a big if-statement. When / if the number
                 # of commands escalades, we should consider moving them away. 
                 if cmd == constants.CMD_ABORT:
@@ -467,9 +468,13 @@ class MPI(Thread):
                     # the same CMD. It will not be pretty.
                     sys.exit(1)
                     
+                elif cmd == constants.CMD_PING:
+                    # Just send a package. 
+                    robust_send(connection, prepare_message(None, self.MPI_COMM_WORLD.rank(), comm_id=-1, tag=-1))
+                    
             self.pending_systems_commands = []
 
-    def handle_system_message(self, rank, command, raw_data):
+    def handle_system_message(self, rank, command, raw_data, connection):
         """
         Handle a system message. We define a list of read only commands and all
         others are considered writeable. The raw data contains a security
@@ -478,8 +483,8 @@ class MPI(Thread):
         This method returns a boolean indicating if the command was actually
         tried.
         """
-        read_only = ()
-        commands = (constants.CMD_ABORT, )
+        read_only = (constants.CMD_PING, )
+        commands = (constants.CMD_ABORT, constants.CMD_PING, )
         
         security_component = pickle.loads(raw_data)
         
@@ -492,7 +497,7 @@ class MPI(Thread):
         # Check we have a system command
         if command in commands:
             with self.pending_systems_commands_lock:
-                self.pending_systems_commands.append(command)
+                self.pending_systems_commands.append( (command, connection))
                 
         Logger().info("Adding system message. The command list is now: %s" % self.pending_systems_commands)
 

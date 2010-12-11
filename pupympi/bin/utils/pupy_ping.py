@@ -26,27 +26,27 @@ def main():
     # Test if we have a "simple" command. That is, we can handle it by simply
     # sending a
     try:
-        scmd_id = constants.CMD_ABORT
+        scmd_id = constants.CMD_PING
 
         # Start a thread for each rand we want to send the command to.
         threads = {}
         for rank in ranks:
-            t = SendSimpleCommand(scmd_id, rank, hostinfo)
-            threads[rank] = t
+            t = SendSimpleCommand(scmd_id, rank, hostinfo, pong=True, timeout=30)
             t.start()
+            threads[rank] = t
 
         reports = []
         for rank in threads:
             t = threads[rank]
             report, data = t.wait_until_ready()
             if report:
-                msg = "Successful sent"
+                reports.append("Pong received for rank %d: %s" % (rank, report))
             else:
-                msg ="Problem with sending the command"
-            reports.append("%d: %s" % (rank, msg))
+                reports.append("%d: %s" % (rank, data))
             t.join()
 
         print_reports(reports)
+        
         sys.exit(0)
 
     except KeyError:
