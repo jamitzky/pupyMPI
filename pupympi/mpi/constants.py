@@ -117,5 +117,8 @@ JOB_INITIALIZING = -1
 # commands used for indicating is this is a system
 # message.
 CMD_USER = 0
-CMD_ABORT = 1
 CMD_SYSTEM = 2
+
+# Utilities
+CMD_ABORT = 1
+CMD_PING = 3

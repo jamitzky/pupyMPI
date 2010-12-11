@@ -152,9 +152,6 @@ class Network(object):
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
     def start_full_network(self):
-
-        #Logger().debug("Starting a full network startup")
-
         # We make a full network startup by receiving from all with lower ranks and
         # sending to higher ranks
         our_rank = self.mpi.MPI_COMM_WORLD.rank()
@@ -171,8 +168,6 @@ class Network(object):
             handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
             recv_handles.append(handle)
 
-        #Logger().debug("Start_full_network: All recieves posted")
-
         # Send all
         for s_rank in sender_ranks:
             self.mpi.MPI_COMM_WORLD.send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
@@ -183,13 +178,8 @@ class Network(object):
         for handle in recv_handles:
             handle.wait()
 
-        #DEBUG
-        #print "Socket pool sockets",self.socket_pool.sockets
-        #print "Socket pool meta",self.socket_pool.metainfo
         # Full network start up means a static socket pool
         self.socket_pool.readonly = True
-
-        #Logger().debug("Network (fully) started")
 
     def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
         from mpi.request import Request
@@ -209,21 +199,15 @@ class Network(object):
         CommunicationHandlerSelect.finalize for a deeper description of
         the shutdown procedure.
         """
-        #Logger().debug("Network got finalize call")
-        #Logger().debug("socketpool size:%i - metainfo:%s" % (len(self.socket_pool.sockets), self.socket_pool.metainfo) )
-        #Logger().debug("Finalize unstarted calls: %s" % self.mpi.unstarted_requests)
-        #Logger().debug("Finalize pending_requests: %s" % self.mpi.pending_requests)
         self.t_in.finalize()
 
         if not self.options.single_communication_thread:
             self.t_out.finalize()
 
-        #Logger().debug("Waiting for threads to die")
         # Wait for network threads to die
         self.t_in.join()
         self.t_out.join()
 
-        #Logger().debug("Closing socket pool in finalize call")
         # Close socketpool
         self.socket_pool.close_all_sockets()
 
@@ -252,12 +236,9 @@ class BaseCommunicationHandler(threading.Thread):
         self.shutdown_event = threading.Event() # signal for shutdown
         #self.outbound_requests_event = threading.Event() # signal for something to send
 
-
-
         # Locks for proper access to the internal socket->request structure and counter
         self.socket_to_request_lock = threading.Lock()
 
-        # DEBUG
         self.debug_counter = 0
 
     def finalize(self):
@@ -303,7 +284,6 @@ class BaseCommunicationHandler(threading.Thread):
         self.sockets_out.append(client_socket)
 
     def close_all_sockets(self):
-        Logger().debug("Closing all sockets")
         for s in self.sockets_in + self.sockets_out:
             try:
                 s.close()
@@ -360,7 +340,7 @@ class BaseCommunicationHandler(threading.Thread):
                 except Exception, e:
                     Logger().error("Strange error - Failed grabbing raw_data_lock!")
             else:
-                self.network.mpi.handle_system_message(rank, msg_command, raw_data)
+                self.network.mpi.handle_system_message(rank, msg_command, raw_data, conn)
 
     def _handle_writelist(self, writelist):
         for write_socket in writelist:
