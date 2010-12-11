@@ -463,7 +463,7 @@ class MPI(Thread):
         tried.
         """
         read_only = (constants.CMD_PING, )
-        commands = (constants.CMD_ABORT, constants.CMD_PING, )
+        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, )
 
         security_component = pickle.loads(raw_data)
 
@@ -477,8 +477,6 @@ class MPI(Thread):
         if command in commands:
             with self.pending_systems_commands_lock:
                 self.pending_systems_commands.append( (command, connection))
-
-        Logger().info("Adding system message. The command list is now: %s" % self.pending_systems_commands)
 
     def finalize(self):
         """
