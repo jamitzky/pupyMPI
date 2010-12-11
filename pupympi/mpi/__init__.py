@@ -30,6 +30,7 @@ from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
 
+from mpi.syscommands import handle_system_commands
 from mpi.request import Request
 
 try:
@@ -122,10 +123,10 @@ class MPI(Thread):
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
         self.current_request_id = 0
-        
+
         # Pending system commands. These will be executed at first chance we have (we
         # need access to the user code). We also have a lock around the list, to ensure
-        # proper access.  
+        # proper access.
         self.pending_systems_commands = []
         self.pending_systems_commands_lock = threading.Lock()
 
@@ -451,28 +452,6 @@ class MPI(Thread):
 
         # We have tried to signal every process so we can "safely" exit.
         sys.exit(1)
-        
-    def _check_messages(self):
-        # quick check if we can return fast.
-        if not self.pending_systems_commands:
-            return
-        
-        with self.pending_systems_commands_lock:
-            for obj in self.pending_systems_commands:
-                cmd, connection = obj
-                # Handle the message in a big if-statement. When / if the number
-                # of commands escalades, we should consider moving them away. 
-                if cmd == constants.CMD_ABORT:
-                    # Note. It is very important that this is not replaced with
-                    # self.mpi.abort(), as this will send messages around with
-                    # the same CMD. It will not be pretty.
-                    sys.exit(1)
-                    
-                elif cmd == constants.CMD_PING:
-                    # Just send a package. 
-                    robust_send(connection, prepare_message(None, self.MPI_COMM_WORLD.rank(), comm_id=-1, tag=-1))
-                    
-            self.pending_systems_commands = []
 
     def handle_system_message(self, rank, command, raw_data, connection):
         """
@@ -485,20 +464,20 @@ class MPI(Thread):
         """
         read_only = (constants.CMD_PING, )
         commands = (constants.CMD_ABORT, constants.CMD_PING, )
-        
+
         security_component = pickle.loads(raw_data)
-        
+
         # Security check.
         if command not in read_only:
             if security_component != self.get_security_component():
                 Logger().warning("Failed security check in system command. Expected security component was %s but received %s for command %s" % (self.get_security_component(), raw_data, command))
                 return False
-            
+
         # Check we have a system command
         if command in commands:
             with self.pending_systems_commands_lock:
                 self.pending_systems_commands.append( (command, connection))
-                
+
         Logger().info("Adding system message. The command list is now: %s" % self.pending_systems_commands)
 
     def finalize(self):
@@ -551,6 +530,7 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
 
+    @handle_system_commands
     def get_version(self):
         """
         Return the version number of the pupyMPI installation.

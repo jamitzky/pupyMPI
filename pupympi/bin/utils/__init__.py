@@ -18,7 +18,7 @@ class SendSimpleCommand(threading.Thread):
 
         self.cmd_id = cmd_id
         self.rank = rank
-        
+
         self.timeout = timeout
         self.pong = pong
 
@@ -45,19 +45,19 @@ class SendSimpleCommand(threading.Thread):
 
                 # Test if we should also receive a message back from the rank. If so, we wait
                 # for that message for a specific timeout. If we haven't received the message
-                # by then, the command was not a sucess. Otherwise it was. 
+                # by then, the command was not a sucess. Otherwise it was.
                 if self.pong:
                     incomming, _, errors = select.select([connection], [], [connection], self.timeout or 5)
                     if incomming:
-                        # We read the message from the connection and set that as the result_data. 
+                        # We read the message from the connection and set that as the result_data.
                         rank, cmd, tag, ack, comm_id, data = get_raw_message(incomming[0])
-                        
+
                         self.report = True
                         self.report_data = data
                     else:
                         self.report_data = "Connection timeout (30 seconds)"
                 else:
-                    self.report = True        
+                    self.report = True
         except Exception, e:
             self.report = "Error in connecting to rank %d: %s" % (self.rank, str(e))
 
