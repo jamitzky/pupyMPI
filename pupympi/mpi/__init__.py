@@ -98,16 +98,21 @@ class MPI(Thread):
         # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
+
+        print "Unstarted request", self.unstarted_requests_lock
+
         self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
         self.pending_requests_lock = threading.Lock()
+        print "Pending requests lock", self.pending_requests_lock
         self.pending_requests_has_work = threading.Event()
 
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
+        print "self.raw_data_lock", self.raw_data_lock
         self.raw_data_has_work = threading.Event()
 
         # Recieved data are messages that have arrived and are unpickled
@@ -115,6 +120,7 @@ class MPI(Thread):
         #There are no events as this is handled through the "pending_request_" event.
         self.received_data = []
         self.received_data_lock = threading.Lock()
+        print "self.received_data_lock", self.received_data_lock
 
         # General event to wake up main mpi thread
         self.has_work_event = threading.Event()
@@ -125,6 +131,7 @@ class MPI(Thread):
 
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
+        print "self.current_request_id_lock", self.current_request_id_lock
         self.current_request_id = 0
 
         # Pending system commands. These will be executed at first chance we have (we
@@ -180,8 +187,6 @@ class MPI(Thread):
         else:
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
-        #logger.debug("Starting with options: %s %s" % (options.disable_full_network_startup, options.socket_pool_size))
 
         # First check for required Python version
         self._version_check()
@@ -514,12 +519,9 @@ class MPI(Thread):
 
         self.queues_flushed.wait()
 
-        #Logger().debug("--- Queues flushed mpi thread dead, finalizing network thread(s) --")
-
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
         self.network.finalize()
-        #Logger().debug("--- Network finally finalized --")
 
         # Asser experimental
         self.join()

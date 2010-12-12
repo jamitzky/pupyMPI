@@ -96,7 +96,7 @@ def availablity():
     """
     avail_pack = True
     try:
-        import dill
+        from mpi import dill
     except ImportError:
         avail_pack = False
 
