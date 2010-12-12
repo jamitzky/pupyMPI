@@ -1,8 +1,13 @@
 # use glob syntax.
 syntax: glob
 
+.project
+.pydevproject
 *.kpf
 *.log
 *.pyc
+*.swp
 *~
-
+*.*~
+.DS_Store
+*.log

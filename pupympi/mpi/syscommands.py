@@ -43,14 +43,14 @@ def handle_system_commands(f, *args, **kwargs):
         run_inner_func = True
         with mpi.pending_systems_commands_lock:
             if mpi.pending_systems_commands:
-                run_inner_func = execute_commands(mpi)
+                run_inner_func = execute_commands(mpi, (f, args, kwargs))
 
         # calling the original function
         if run_inner_func:
             return f(self, *args, **kwargs)
     return inner
 
-def execute_commands(mpi):
+def execute_commands(mpi, bypassed):
     """
     Execute the actual system commands. This functions returns a
     boolean indicating if the decorated function should be called.
@@ -77,7 +77,7 @@ def execute_commands(mpi):
             # mpi instance, connection and other usefull information
             # to a class and let it handle everything.
             from mpi.migrate import MigratePack
-            migration = MigratePack(mpi, connection)
+            migration = MigratePack(mpi, connection, bypassed)
 
             run_inner = run_inner and migration.mpi_continue()
 
