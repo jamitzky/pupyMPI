@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     # Trap CTRL-C before we let processes loose on the world
     signal.signal(signal.SIGINT, signal_handler)
-    
+
     if not options.disable_utilities: # This very verbose check is important. If not set, the value will be None.
         cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
         print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle

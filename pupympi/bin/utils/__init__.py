@@ -9,7 +9,7 @@ from mpi.network import utils
 
 class SendSimpleCommand(threading.Thread):
 
-    def __init__(self, cmd_id, rank, hostinfo, timeout=None, pong=False):
+    def __init__(self, cmd_id, rank, hostinfo, bypass=False, timeout=None, pong=False):
         super(SendSimpleCommand, self).__init__()
 
         self.report = False
@@ -23,17 +23,31 @@ class SendSimpleCommand(threading.Thread):
         self.pong = pong
 
         for participant in hostinfo:
-            hostname, portno, rank, security_component = participant
+            hostname, portno, rank, security_component, avail = participant
             if rank == self.rank:
                 self.hostname = hostname
                 self.portno = portno
                 self.security_component = security_component
+
+                self.do_run = True
+                if not bypass:
+                    try:
+                        self.do_run = avail[cmd_id]
+                    except KeyError:
+                        print "Can not determine if the command can be executed. Playing it safe and will not execute anything. Use --bypass-avail-check (-b) if you want to force the command through"
+                        self.do_run = False
+
 
     def wait_until_ready(self):
         self.finished.wait()
         return self.report, self.report_data
 
     def run(self, *args, **kwargs):
+        if not self.do_run:
+            self.finished.set()
+            self.report_data = "Cancelled due to availablity check on the remote host"
+            return
+
         try:
             connection = socket.create_connection( (self.hostname, self.portno), 4.0 )
             if not connection:
@@ -86,6 +100,7 @@ def parse_args():
     parser = OptionParser(usage=usage, version="pupysh version %s" % (constants.PUPYVERSION))
 
     parser.add_option("-r", "--ranks", dest="ranks", help="A comma sep list of ranks this command should be executed on")
+    parser.add_option("-b", "--bypass-avail-check", dest="bypass", action="store_true", default=False)
 
     options, args = parser.parse_args()
     handle = args[0]
@@ -101,7 +116,7 @@ def parse_args():
     except Exception, e:
         parser.error("Invalid ranks")
 
-    return ranks, hostinfo
+    return ranks, hostinfo, options.bypass
 
 def print_reports(reports):
     for r in reports:

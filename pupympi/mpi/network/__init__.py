@@ -21,7 +21,7 @@ from mpi.exceptions import MPIException
 from mpi.network.socketpool import SocketPool
 from mpi.network import utils # Some would like the rest of the utils to be more explicitly used ... maybe later
 from mpi.network.utils import create_random_socket, get_raw_message, prepare_message, pickle
-from mpi import constants
+from mpi import constants, syscommands
 from mpi.logger import Logger
 
 def get_communicator_class(socket_poll_method=False):
@@ -123,17 +123,33 @@ class Network(object):
         (hostname, port, rank) for all the processes started by mpirun.
 
         For mpirun to have this information we first send all the data
-        from our own process. So we bind a socket.
+        from our own process. So we can bind a socket.
+
+        The data sent back to mpirun.py is a tuple containing the following
+        elements:
+
+            * hostname           : Our hostname
+            * port               : Our port number. Together with hostname, this
+                                   information makes it possible to connect with
+                                   this instance.
+            * rank               : Our rank. The mpirun.py process will distribute
+                                   this information among the other processes.
+            * security_component : A SHA1 hash used for "security". Scripts
+                                   communicating with the MPI environment must
+                                   supply this as a simple way to disallow
+                                   other than the starting user.
+            * availability       : Information about each system commands
+                                   availability on this host.
         """
         sec_comp = self.mpi.generate_security_component()
+        avail = syscommands.availablity()
 
         # Packing the data
-        data = (self.hostname, self.port, internal_rank, sec_comp)
+        data = (self.hostname, self.port, internal_rank, sec_comp, avail)
 
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         recipient = (mpirun_hostname, mpirun_port)
-        #Logger().debug("Trying to connect to (%s,%s)" % recipient)
         s_conn.connect(recipient)
 
         # Pack the data with our special format
