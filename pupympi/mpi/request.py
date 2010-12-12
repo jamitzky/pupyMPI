@@ -1,23 +1,23 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
-from mpi.network.utils import _nice_data 
+from mpi.network.utils import _nice_data
 from mpi import constants
 
 import threading
@@ -26,7 +26,7 @@ class BaseRequest(object):
     def __init__(self):
         self.status = "new"
         # Start a lock for this request object. The lock should be taken
-        # whenever we change the content. It should be legal to read 
+        # whenever we change the content. It should be legal to read
         # information without locking (like test()). We implement the release() and
         # acquire function on this class directly so the variable stays private
         self._lock = threading.Lock()
@@ -36,14 +36,14 @@ class BaseRequest(object):
         plausible we should remove this lock and with it the release and acquire functions
         below.
         """
-        
+
         # Flag to keep track if the data is pickled. Some methods
         # will pickle directly.
-        self.is_pickled = False        
-        
+        self.is_pickled = False
+
         # Start an event for waiting on the request
         self._waitevent = threading.Event()
-        
+
     def release(self, *args, **kwargs):
         """
         Just forwarding method call to the internal lock
@@ -74,7 +74,7 @@ class Request(BaseRequest):
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
-        # 'new' ->       The object is newly created. If this is send the lower layer can start to 
+        # 'new' ->       The object is newly created. If this is send the lower layer can start to
         #                do stuff with the data
         # 'unacked'   -> An ssend that has not been acknowledged yet.
         # 'ready'     -> Means we have the data (in receive) or pickled the data (send) and can
@@ -83,22 +83,22 @@ class Request(BaseRequest):
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
         #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
-    
-    def __repr__(self):        
+
+    def __repr__(self):
         orig_repr = super(Request, self).__repr__()
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
-    
+
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
         if self.status not in ("finished", "cancelled"): # No updating on dead requests
             self.status = status
         else:
             raise Exception("Updating a request from %s to %s" % self.status, status)
-        
+
         # We only update if there is data (ie. a recv operation)
         if data is not None:
             self.data = data
-            
+
         # Enable the wait operation to complete if the status is ready or cancelled
         if status in ("ready", "cancelled"):
             self._waitevent.set()
@@ -111,13 +111,13 @@ class Request(BaseRequest):
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self.update("cancelled")
-        
+
     def test_cancelled(self):
         """
-        Returns True if this request was cancelled. 
+        Returns True if this request was cancelled.
         """
         return self.status == "cancelled"
-    
+
     def wait(self):
         """
         Blocks until the request data can be garbage collected. This method can be used
@@ -130,14 +130,14 @@ class Request(BaseRequest):
         be garbage collected.
         """
         #Logger().info("Starting a %s wait, tag: %s" % (self.request_type,self.tag) )
-        
+
         if self.status == "cancelled":
             #Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
-        
+
         self._waitevent.wait()
         #Logger().info("Waiting done for request %s wait, tag: %s" % (self.request_type,self.tag) )
-        
+
         # We're done at this point. Set the request to be completed so it can be removed
         # later.
         self.status = 'finished'
@@ -148,7 +148,7 @@ class Request(BaseRequest):
 
     def test(self):
         """
-        A non-blocking check to see if the request is ready to complete. If true a 
+        A non-blocking check to see if the request is ready to complete. If true a
         following wait() should return very fast.
         """
         return self._waitevent.is_set()

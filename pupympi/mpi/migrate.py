@@ -1,5 +1,6 @@
 from datetime import datetime
-import dill, sys, socket
+import sys, socket
+from mpi import dill
 
 class Migrate(object):
     def __init__(self, mpi, bypassed_function, script_hostinfo):
@@ -55,6 +56,12 @@ class Migrate(object):
         self.data['t_in'] = self.t_in.get_state()
         self.data['bypassed'] = self.bypassed_function
 
+        # Simply remove class instances etc from our scope
+        self.mpi.finalize()
+        self.network.finalize()
+
+        self.clear_unpickable_objects()
+
         # Dump the session into a file.
         import tempfile
         _, filename = tempfile.mkstemp(prefix="pupy")
@@ -85,4 +92,21 @@ class Migrate(object):
         sys.exit()
         """
         return not self.success
+
+    def clear_unpickable_objects(self):
+        del self.mpi
+        del self.network
+        del self.t_in.socket_pool
+        try:
+            del self.t_out.socket_pool
+        except:
+            pass
+        del self.t_in
+        del self.t_out
+
+        # This might be freaky stuff..
+        import __main__
+        del __main__.MPI
+        del __main__.mpi
+        del __main__.world
 
