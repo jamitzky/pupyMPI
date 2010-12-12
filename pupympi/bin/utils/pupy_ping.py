@@ -21,7 +21,7 @@ from mpi import constants
 import sys
 
 def main():
-    ranks, hostinfo = parse_args()
+    ranks, hostinfo, bypass = parse_args()
 
     # Test if we have a "simple" command. That is, we can handle it by simply
     # sending a
@@ -31,7 +31,7 @@ def main():
         # Start a thread for each rand we want to send the command to.
         threads = {}
         for rank in ranks:
-            t = SendSimpleCommand(scmd_id, rank, hostinfo, pong=True, timeout=30)
+            t = SendSimpleCommand(scmd_id, rank, hostinfo, bypass, pong=True, timeout=30)
             t.start()
             threads[rank] = t
 
@@ -46,7 +46,7 @@ def main():
             t.join()
 
         print_reports(reports)
-        
+
         sys.exit(0)
 
     except KeyError:

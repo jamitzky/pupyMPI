@@ -50,12 +50,12 @@ def handle_system_commands(f, *args, **kwargs):
             return f(self, *args, **kwargs)
     return inner
 
+from mpi import constants
 def execute_commands(mpi, bypassed):
     """
     Execute the actual system commands. This functions returns a
     boolean indicating if the decorated function should be called.
     """
-    from mpi import constants
     from mpi.network.utils import robust_send, prepare_message
     run_inner = True
     for obj in mpi.pending_systems_commands:
@@ -83,4 +83,26 @@ def execute_commands(mpi, bypassed):
 
     mpi.pending_systems_commands = []
     return run_inner
+
+def availablity():
+    """
+    A function testing the system for command support. This function is
+    called when the environment is started (as we know all the commands
+    from the start).
+
+    We simply hard code the first couple of avils as they should be there
+    always. But wrapping it server side is a nicer way to handle everything
+    at the mpirun-host.
+    """
+    avail_pack = True
+    try:
+        import dill
+    except ImportError:
+        avail_pack = False
+
+    return {
+        constants.CMD_ABORT : True,
+        constants.CMD_PING : True,
+        constants.CMD_MIGRATE_PACK : avail_pack,
+    }
 
