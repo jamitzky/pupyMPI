@@ -88,6 +88,9 @@ class MPI(Thread):
 
         self.name = "MPI" # Thread name
 
+        # Event for handling thread packing.
+        self.packing = threading.Event()
+
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
@@ -371,52 +374,57 @@ class MPI(Thread):
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
 
-        #Logger().debug("QUITTY: unstarted requests: %s" % self.unstarted_requests)
-        #Logger().debug("QUITTY: t_out: %s " % (self.network.t_out.socket_to_request ) )
+        # We handle packing a bit different.
+        if not self.packing.is_set():
+            # The main loop is now done. We flush all the messages so there are not any outbound messages
+            # stuck in the pipline.
+            with self.unstarted_requests_lock:
+                for request in self.unstarted_requests:
+                    self.network.t_out.add_out_request(request)
+                self.unstarted_requests = []
+                self.unstarted_requests_has_work.clear()
 
-        # The main loop is now done. We flush all the messages so there are not any outbound messages
-        # stuck in the pipline.
-        with self.unstarted_requests_lock:
-            for request in self.unstarted_requests:
-                self.network.t_out.add_out_request(request)
-            self.unstarted_requests = []
-            self.unstarted_requests_has_work.clear()
+            self.queues_flushed.set()
 
-        #Logger().debug("QUITTING: unstarted requests: %s" % self.unstarted_requests)
-        #Logger().debug("QUITTING: raw data: %s" % self.raw_data_queue)
-        #Logger().debug("QUITTING: recieved data: %s" % self.received_data)
-        #Logger().debug("QUITTING: pending_requests: %s" % self.pending_requests)
-        #Logger().debug("QUITTING: t_out: %s " % (self.network.t_out.socket_to_request ) )
-        #Logger().info("MPI environment shutting down.")
+            # Start built-in profiling facility
+            if self._profiler_enabled:
+                pupyprof.stop()
+                pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
-        self.queues_flushed.set()
+            if self._yappi_enabled:
+                yappi.stop()
 
-        # Start built-in profiling facility
-        if self._profiler_enabled:
-            pupyprof.stop()
-            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+                filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+                Logger().debug("Writing yappi stats to %s" % filename)
+                try:
+                    f = open(filename, "w")
+                except:
+                    raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
 
-        if self._yappi_enabled:
-            yappi.stop()
+                stats = yappi.get_stats(self._yappi_sorttype)
 
-            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
-            Logger().debug("Writing yappi stats to %s" % filename)
-            try:
-                f = open(filename, "w")
-            except:
-                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+                for stat in stats:
+                    print >>f, stat
+                yappi.clear_stats()
 
-            stats = yappi.get_stats(self._yappi_sorttype)
+                f.close()
 
-            for stat in stats:
-                print >>f, stat
-            yappi.clear_stats()
+            if sys.stdout is not None:
+                sys.stdout.flush() # Slight hack to get the rest of the output out
 
-            f.close()
-
-        if sys.stdout is not None:
-            sys.stdout.flush() # Slight hack to get the rest of the output out
-
+    def get_state(self):
+        """
+        A function for getting the current state of the MPI environment.
+        """
+        return {
+            'state_origin' : 'mpi',
+            'unstarted_requests' : self.unstarted_requests,
+            'pending_requests' : self.pending_requests,
+            'raw_data_queue' : self.raw_data_queue,
+            'received_data' : self.received_data,
+            'current_request_id' : self.current_request_id,
+            'pending_systems_commands' : self.pending_systems_commands,
+        }
 
     def abort(self):
         """
