@@ -209,7 +209,7 @@ class Network(object):
 
         return rl
 
-    def finalize(self, close_sockets=True):
+    def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the
         CommunicationHandlerSelect.finalize for a deeper description of
@@ -223,10 +223,6 @@ class Network(object):
         # Wait for network threads to die
         self.t_in.join()
         self.t_out.join()
-
-        # Close socketpool
-        if close_sockets:
-            self.socket_pool.close_all_sockets()
 
 class BaseCommunicationHandler(threading.Thread):
     def __init__(self, network, rank, socket_pool):

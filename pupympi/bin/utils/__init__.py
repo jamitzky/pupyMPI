@@ -118,6 +118,18 @@ def parse_args():
 
     return ranks, hostinfo, options.bypass
 
+def avail_or_error(avail, rank, cmd):
+    succ = True
+    try:
+        succ = avail[cmd]
+    except:
+        succ = False
+
+    if not succ:
+        print "This command is not avaiable on the host with rank %d" % rank
+
+    return succ
+
 def print_reports(reports):
     for r in reports:
         print r

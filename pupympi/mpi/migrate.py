@@ -1,10 +1,9 @@
 from datetime import datetime
-import dill, sys
+import dill, sys, socket
 
-class MigratePack(object):
-    def __init__(self, mpi, socket_connection, bypassed_function):
+class Migrate(object):
+    def __init__(self, mpi, bypassed_function, script_hostinfo):
         self.mpi = mpi
-        self.socket_connection = socket_connection
         self.success = False
 
         # The bypassed function is the one decorated with
@@ -13,6 +12,7 @@ class MigratePack(object):
         # of the variable is a tuple with 3 elements:
         # (function, args, kwargs)
         self.bypassed_function = bypassed_function
+        self.script_hostinfo = script_hostinfo
 
         # Start migration.
         self.pack()
@@ -29,7 +29,6 @@ class MigratePack(object):
             self.network_type = "normal"
 
         self.rank = self.mpi.MPI_COMM_WORLD.comm_group.rank()
-
 
         # This dict will be sent to the admin caller, who will
         # serialize it (probably with data from other ranks).
@@ -48,19 +47,13 @@ class MigratePack(object):
         self.mpi.shutdown_event.set()
         self.mpi.has_work_event.set()
 
-        self.network.finalize(close_sockets=False)
+        self.network.finalize()
 
         # Serialize other data
-#       self.data['mpi'] = self.mpi.get_state()
-#       self.data['t_out'] = self.t_out.get_state()
-#       self.data['t_in'] = self.t_in.get_state()
-#       self.data['bypassed'] = self.bypassed_function
-
-        # Close down what is needed to close down.
-        try:
-            del threading # more
-        except UnboundLocalError:
-            print "Can't unset threading"
+        self.data['mpi'] = self.mpi.get_state()
+        self.data['t_out'] = self.t_out.get_state()
+        self.data['t_in'] = self.t_in.get_state()
+        self.data['bypassed'] = self.bypassed_function
 
         # Dump the session into a file.
         import tempfile
@@ -71,18 +64,16 @@ class MigratePack(object):
 
             # Load the session data into the dict so we can sent it.
             self.data['session'] = dill.load(open(filename))
-        except:
-            print "Cant pickle the current session into a file"
+        except Exception as e:
+            print "Cant pickle the current session into a file", e
 
         # Send the data+file on the connection.
         from mpi.network.utils import robust_send, prepare_message
 
-        if self.rank == 0:
-            print "data", self.data
-            print "connection", self.socket_connection
+        connection = socket.create_connection(self.script_hostinfo, 4.0 )
 
-
-        robust_send(self.socket_connection, prepare_message(self.data, self.rank))
+        msg = prepare_message(dill.dumps(self.data), self.rank, is_pickled=True)
+        robust_send(connection, msg)
 
         sys.exit(0)
 
