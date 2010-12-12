@@ -22,7 +22,7 @@ import sys
 from mpi.network.utils import pickle
 
 def main():
-    ranks, hostinfo, pypass = parse_args()
+    ranks, hostinfo, bypass = parse_args()
 
     # Test if we have a "simple" command. That is, we can handle it by simply
     # sending a

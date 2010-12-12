@@ -209,7 +209,7 @@ class Network(object):
 
         return rl
 
-    def finalize(self):
+    def finalize(self, close_sockets=True):
         """
         Forwarding the finalize call to the threads. Look at the
         CommunicationHandlerSelect.finalize for a deeper description of
@@ -225,7 +225,8 @@ class Network(object):
         self.t_out.join()
 
         # Close socketpool
-        self.socket_pool.close_all_sockets()
+        if close_sockets:
+            self.socket_pool.close_all_sockets()
 
 class BaseCommunicationHandler(threading.Thread):
     def __init__(self, network, rank, socket_pool):
@@ -257,9 +258,15 @@ class BaseCommunicationHandler(threading.Thread):
 
         self.debug_counter = 0
 
+    def get_state(self):
+        return {
+            'type' : self.type,
+            'debug_counter' : self.debug_counter,
+            'rank' : self.rank,
+        }
+
     def finalize(self):
         self.shutdown_event.set()
-        #Logger().debug("Communication handler (%s) closed by finalize call, socket_to_request: %s" % (self.type, self.socket_to_request) )
 
     def add_out_request(self, request):
         """
@@ -410,7 +417,7 @@ class BaseCommunicationHandler(threading.Thread):
             time.sleep(0.001)
 
         if self.type == "combo":
-            Logger().debug("C-c-combo")
+
             # Main loop
             while not self.shutdown_event.is_set():
                 # _ is errorlist
@@ -433,6 +440,7 @@ class BaseCommunicationHandler(threading.Thread):
                 # Also it seems to improve the speed of high computation-to-communication like
                 # in the Monte Carlo Pi application where 20% speed has been observed
                 time.sleep(0.00001)
+
         elif self.type == "in":
             #Logger().debug("- - in")
             while not self.shutdown_event.is_set():
