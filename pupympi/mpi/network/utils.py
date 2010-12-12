@@ -45,8 +45,6 @@ def create_random_socket(min=10000, max=30000):
     hostname = socket.gethostname()
     port_no = None
 
-    #logger.debug("get_socket: Starting loop with hostname %s" % hostname)
-
     while True:
         port_no = random.randint(min, max)
         if port_no in used:

@@ -59,7 +59,7 @@ def execute_commands(mpi, bypassed):
     from mpi.network.utils import robust_send, prepare_message
     run_inner = True
     for obj in mpi.pending_systems_commands:
-        cmd, connection = obj
+        cmd, connection, user_data = obj
         # Handle the message in a big if-statement. When / if the number
         # of commands escalades, we should consider moving them away.
         if cmd == constants.CMD_ABORT:
@@ -76,8 +76,8 @@ def execute_commands(mpi, bypassed):
             # This is a very complex operation, so we simply pass the
             # mpi instance, connection and other usefull information
             # to a class and let it handle everything.
-            from mpi.migrate import MigratePack
-            migration = MigratePack(mpi, connection, bypassed)
+            from mpi.migrate import Migrate
+            migration = Migrate(mpi, bypassed, user_data)
 
             run_inner = run_inner and migration.mpi_continue()
 

@@ -473,7 +473,14 @@ class MPI(Thread):
         read_only = (constants.CMD_PING, )
         commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, )
 
-        security_component = pickle.loads(raw_data)
+        data = pickle.loads(raw_data)
+        user_data = None
+        security_component = None
+
+        if isinstance(data, tuple):
+            security_component, user_data = data
+        else:
+            security_component = data
 
         # Security check.
         if command not in read_only:
@@ -484,7 +491,9 @@ class MPI(Thread):
         # Check we have a system command
         if command in commands:
             with self.pending_systems_commands_lock:
-                self.pending_systems_commands.append( (command, connection))
+                self.pending_systems_commands.append( (command, connection, user_data))
+        else:
+            print "Error: Unknown system command"
 
     def finalize(self):
         """
