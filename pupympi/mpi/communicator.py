@@ -420,6 +420,10 @@ class Communicator:
         .. note::
             See also the :func:`send` and :func:`irecv` functions.
         """
+        return self._isend(content, destination, tag)
+    
+    def _isend(self, content, destination, tag = constants.MPI_TAG_ANY):
+
         # Check that destination exists
         if not self.have_rank(destination):
             if isinstance(destination, int):
@@ -570,7 +574,10 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.issend(content, destination, tag).wait()
+        return self._ssend(content, destination, tag)
+    
+    def _ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
+        return _self.issend(content, destination, tag).wait()
 
     @handle_system_commands
     def send(self, content, destination, tag = constants.MPI_TAG_ANY):
@@ -615,7 +622,10 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self.isend(content, destination, tag).wait()
+        return self._send(content, destination, tag).wait()
+
+    def _send(self, content, destination, tag = constants.MPI_TAG_ANY):
+        return self._isend(content, destination, tag).wait()
 
     @handle_system_commands
     def recv(self, source, tag = constants.MPI_TAG_ANY):
@@ -642,6 +652,9 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
+        return self_recv(source, tag).wait()
+    
+    def _recv(self, source, tag = constants.MPI_TAG_ANY):
         return self.irecv(source, tag).wait()
 
     @handle_system_commands
@@ -697,10 +710,10 @@ class Communicator:
             return senddata
 
         if source is not None:
-            recvhandle = self.irecv(source, recvtag)
+            recvhandle = self._irecv(source, recvtag)
 
         if dest is not None:
-            self.send(senddata, dest, sendtag)
+            self._send(senddata, dest, sendtag)
 
         if source is not None:
             return recvhandle.wait()
@@ -1261,6 +1274,9 @@ class Communicator:
         .. note::
             See also the :func:`waitany` and :func:`waitsome` functions.
         """
+        return self._waitall(request_list)
+    
+    def _waitall(self, request_list):
         remaining = len(request_list)
         incomplete = [True for _ in range(remaining)]
         return_list = [None for _ in range(remaining)]
@@ -1315,6 +1331,9 @@ class Communicator:
         .. note::
             See also the :func:`waitall` and :func:`waitsome` functions.
         """
+        return self._waitany(request_list)
+    
+    def _waitany(self, request_list):
         if len(request_list) == 0:
             raise MPIException("The request_list argument to waitany can't be empty.. ")
 
@@ -1397,7 +1416,7 @@ class Communicator:
         if return_list:
             return return_list
 
-        return [ self.waitany(request_list) ]
+        return [ self._waitany(request_list) ]
 
     @handle_system_commands
     def Wtime(self):

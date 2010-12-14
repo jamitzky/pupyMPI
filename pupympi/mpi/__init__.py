@@ -306,7 +306,7 @@ class MPI(Thread):
                                 Logger().debug("SSEND RECIEVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
                                 # NOTE: Consider using an empty message string, to save (a little) resources
-                                self.communicators[communicator_id].isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
+                                self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
                                 Logger().debug("ACK RECIEVED request: %s" % request)
@@ -461,7 +461,7 @@ class MPI(Thread):
             world._add_unstarted_request(handle)
             request_list.append(handle)
 
-        world.waitall(request_list)
+        world._waitall(request_list)
 
         # We have tried to signal every process so we can "safely" exit.
         sys.exit(1)
