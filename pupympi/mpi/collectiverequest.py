@@ -176,7 +176,7 @@ class CollectiveRequest(BaseRequest):
             
         # TODO: Reimplement so that lists are not flattened
 
-        tmp_list = self.communicator.waitall(request_list)
+        tmp_list = self.communicator._waitall(request_list)
         for data in tmp_list:
             if isinstance(data, list):
                 for data_item in data:
@@ -248,7 +248,7 @@ class CollectiveRequest(BaseRequest):
         elif len(nodes_from) == 1:
             node_from = nodes_from[0]                
             # Get data from above
-            data = self.communicator.recv(node_from, self.tag)
+            data = self.communicator._recv(node_from, self.tag)
         else:
             raise MPIException("More than one parent in nodes_from.")
                 
@@ -261,7 +261,7 @@ class CollectiveRequest(BaseRequest):
 
         # Wait until they are sent
         # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
-        tmp_list = self.communicator.waitall(request_list)
+        tmp_list = self.communicator._waitall(request_list)
 
         #if self.communicator.rank() == self.root:
         #    Logger().debug("data:%s, nodes_from:%s, nodes_to:%s" % (data,nodes_from, nodes_to))
@@ -281,7 +281,7 @@ class CollectiveRequest(BaseRequest):
         elif len(nodes_from) == 1:
             node_from = nodes_from[0]                
             # Get data from above
-            data_list = self.communicator.recv(node_from, self.tag)
+            data_list = self.communicator._recv(node_from, self.tag)
         else:
             raise MPIException("More than one parent in nodes_from.")
             
@@ -299,7 +299,7 @@ class CollectiveRequest(BaseRequest):
             for desc in descendants[i]:
                 filtered_data_list[desc] = data_list[desc]
                 
-            handle = self.communicator.isend(filtered_data_list, rank, self.tag)
+            handle = self.communicator._isend(filtered_data_list, rank, self.tag)
             request_list.append(handle)
             
             #if self.communicator.rank() == self.root:
@@ -309,7 +309,7 @@ class CollectiveRequest(BaseRequest):
             
         # Wait until they are sent
         # TODO: Check with MPI conditions and our general design, maybe we don't actually have to wait for the isends to complete
-        tmp_list = self.communicator.waitall(request_list)
+        tmp_list = self.communicator._waitall(request_list)
         
         return data_list
 
@@ -384,7 +384,7 @@ class CollectiveRequest(BaseRequest):
             
             # Receive messages from children
             unreduced_data = []
-            tmp_list = self.communicator.waitall(request_list)
+            tmp_list = self.communicator._waitall(request_list)
             i = 0 # index into descendants
             for message in tmp_list:
                 # If we got it from a leaf node, or there is partial reducing, the message is in element form and should be appended
@@ -636,10 +636,10 @@ class CollectiveRequest(BaseRequest):
         s_requests = []
         for r in range(size):
             r_requests.append(self.communicator.irecv(r, self.tag))
-            s_requests.append(self.communicator.isend(self.initial_data[r*chunk_size:(r+1)*chunk_size], r, self.tag))
+            s_requests.append(self.communicator._isend(self.initial_data[r*chunk_size:(r+1)*chunk_size], r, self.tag))
         
         ### RECEIVE AND STORE    
-        res = self.communicator.waitall(r_requests+s_requests)        
+        res = self.communicator._waitall(r_requests+s_requests)        
         results = res[0:-size] # Only recv results - discard return values from sends
         
         # Check if string (we need to join)
@@ -674,8 +674,8 @@ class CollectiveRequest(BaseRequest):
             
             # Exchange data
             r_handle = self.communicator.irecv(recv_from, self.tag)
-            s_handle = self.communicator.isend(data_list, send_to, self.tag)
-            res = self.communicator.waitall([r_handle,s_handle])
+            s_handle = self.communicator._isend(data_list, send_to, self.tag)
+            res = self.communicator._waitall([r_handle,s_handle])
             
             # TODO: For now we send unconditionally during normal iterations and
             #       thus have to check validity (not None) during updating. This
@@ -707,7 +707,7 @@ class CollectiveRequest(BaseRequest):
             # Exchange gaps
             r_handle = self.communicator.irecv(recv_from, self.tag)
             s_handle = self.communicator.isend(gap, send_to, self.tag)
-            res = self.communicator.waitall([r_handle,s_handle])
+            res = self.communicator._waitall([r_handle,s_handle])
             
             # Fill out gap
             my_gap_start = rank+1
