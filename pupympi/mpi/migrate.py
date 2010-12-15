@@ -50,17 +50,23 @@ class Migrate(object):
 
         self.network.finalize()
 
+        # Make the MPI thread run out if its main loop. We keep it around so
+        # the network threads and add messages to it (there might be some on
+        # the network layer while we are shuttig down)
+        mpi.shutdown_event.set()
+        mpi.queues_flushed.wait()
+
+        # Make the network send CONN_CLOSE on every socket connection. This way
+        # we are sure not to miss messages "on the wire".
+        self.close_all_connections()
+
+        self.clear_unpickable_objects()
+
         # Serialize other data
         self.data['mpi'] = self.mpi.get_state()
         self.data['t_out'] = self.t_out.get_state()
         self.data['t_in'] = self.t_in.get_state()
         self.data['bypassed'] = self.bypassed_function
-
-        # Simply remove class instances etc from our scope
-        self.mpi.finalize()
-        self.network.finalize()
-
-        self.clear_unpickable_objects()
 
         # Dump the session into a file.
         import tempfile
@@ -83,6 +89,9 @@ class Migrate(object):
         robust_send(connection, msg)
 
         sys.exit(0)
+
+    def close_all_connections(self):
+        pass
 
     def mpi_continue(self):
         """
