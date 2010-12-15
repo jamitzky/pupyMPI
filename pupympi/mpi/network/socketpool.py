@@ -164,7 +164,6 @@ class SocketPool(object):
         Attempts to find an already created socket with a connection to a
         specific rank. If this does not exist we return None
         """
-        #Logger().debug("SocketPool._get_socket_for_rank: Trying to fetch socket for rank %d" % rank)
         for client_socket in self.sockets:
             (srank, referenced, fp) = self.metainfo[client_socket]
             if srank == rank:
@@ -182,8 +181,7 @@ class SocketPool(object):
         #Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
         with self.sockets_lock:
             if len(self.sockets) >= self.max_size: # Throw one out if there are too many
-                    #Logger().debug("Socket pool LIMIT (%i) reached, throwing one out" % self.max_size)
-                    self._remove_element()
+                self._remove_element()
 
             self.metainfo[client_socket] = (rank, False, force_persistent)
             self.sockets.append(client_socket)

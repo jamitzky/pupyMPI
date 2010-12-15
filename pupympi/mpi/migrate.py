@@ -15,15 +15,17 @@ class Migrate(object):
         self.bypassed_function = bypassed_function
         self.script_hostinfo = script_hostinfo
 
+        self.network = self.mpi.network
+        self.t_in = self.network.t_in
+        self.t_out = self.network.t_out
+        self.pool = self.network.socket_pool
+
         # Start migration.
         self.pack()
 
     def pack(self):
         # Find the network threads, as we need direct access to them
         # for extracting state and pause commands.
-        self.network = self.mpi.network
-        self.t_in = self.network.t_in
-        self.t_out = self.network.t_out
         if self.t_in.type == "combo":
             self.network_type = "combo"
         else:
@@ -91,7 +93,14 @@ class Migrate(object):
         sys.exit(0)
 
     def close_all_connections(self):
-        pass
+        print "close all connections: entering"
+
+        # Find the sockets in the socketpool
+        for sock in self.pool.sockets:
+            pass
+            #(srank, referenced, fp) = self.metainfo[client_socket]
+
+        print "close all connections: leaving"
 
     def mpi_continue(self):
         """
