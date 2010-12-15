@@ -55,7 +55,6 @@ class SocketPool(object):
         self.metainfo = {}
 
         self.sockets_lock = threading.Lock()
-        print "socket pook lock", self.sockets_lock
 
     def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
         """

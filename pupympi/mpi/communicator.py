@@ -18,7 +18,7 @@
 import sys, copy, time
 
 from mpi import constants
-from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException
+from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
 from mpi.request import Request
 from mpi.bc_tree import BroadCastTree
@@ -335,6 +335,9 @@ class Communicator:
         .. note::
             It's possible for rank N to receive data from N.
         """
+        return self._irecv(sender, tag)
+
+    def _irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
 
         # Check that destination exists
         if not sender is constants.MPI_SOURCE_ANY and not self.have_rank(sender):
@@ -421,7 +424,7 @@ class Communicator:
             See also the :func:`send` and :func:`irecv` functions.
         """
         return self._isend(content, destination, tag)
-    
+
     def _isend(self, content, destination, tag = constants.MPI_TAG_ANY):
 
         # Check that destination exists
@@ -444,7 +447,6 @@ class Communicator:
         # Add the request to the MPI layer unstarted requests queue. We
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start.
-        ##Logger().warning("NEW request %s -->> DATA:%s" % (handle,content))
         self._add_unstarted_request(handle)
         return handle
 
@@ -575,7 +577,7 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         return self._ssend(content, destination, tag)
-    
+
     def _ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
         return _self.issend(content, destination, tag).wait()
 
@@ -622,7 +624,7 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self._send(content, destination, tag).wait()
+        return self._send(content, destination, tag)
 
     def _send(self, content, destination, tag = constants.MPI_TAG_ANY):
         return self._isend(content, destination, tag).wait()
@@ -652,10 +654,10 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
-        return self_recv(source, tag).wait()
-    
+        return self._recv(source, tag)
+
     def _recv(self, source, tag = constants.MPI_TAG_ANY):
-        return self.irecv(source, tag).wait()
+        return self._irecv(source, tag).wait()
 
     @handle_system_commands
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
@@ -1275,7 +1277,7 @@ class Communicator:
             See also the :func:`waitany` and :func:`waitsome` functions.
         """
         return self._waitall(request_list)
-    
+
     def _waitall(self, request_list):
         remaining = len(request_list)
         incomplete = [True for _ in range(remaining)]
@@ -1332,7 +1334,7 @@ class Communicator:
             See also the :func:`waitall` and :func:`waitsome` functions.
         """
         return self._waitany(request_list)
-    
+
     def _waitany(self, request_list):
         if len(request_list) == 0:
             raise MPIException("The request_list argument to waitany can't be empty.. ")

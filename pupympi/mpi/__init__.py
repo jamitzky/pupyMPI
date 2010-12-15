@@ -99,20 +99,16 @@ class MPI(Thread):
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
 
-        print "Unstarted request", self.unstarted_requests_lock
-
         self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
         self.pending_requests_lock = threading.Lock()
-        print "Pending requests lock", self.pending_requests_lock
         self.pending_requests_has_work = threading.Event()
 
         # Raw data are messages that have arrived but not been unpickled yet
         self.raw_data_queue = []
         self.raw_data_lock = threading.Lock()
-        print "self.raw_data_lock", self.raw_data_lock
         self.raw_data_has_work = threading.Event()
 
         # Recieved data are messages that have arrived and are unpickled
@@ -120,7 +116,6 @@ class MPI(Thread):
         #There are no events as this is handled through the "pending_request_" event.
         self.received_data = []
         self.received_data_lock = threading.Lock()
-        print "self.received_data_lock", self.received_data_lock
 
         # General event to wake up main mpi thread
         self.has_work_event = threading.Event()
@@ -131,7 +126,6 @@ class MPI(Thread):
 
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
-        print "self.current_request_id_lock", self.current_request_id_lock
         self.current_request_id = 0
 
         # Pending system commands. These will be executed at first chance we have (we
@@ -329,11 +323,6 @@ class MPI(Thread):
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
-            #Logger().debug("Waited for the has_work_event")
-            #Logger().debug("Raw_data_event is set (%s) and contains: %s" % (self.raw_data_has_work.is_set(), self.raw_data_queue))
-            #Logger().debug("unstarted_requests_has_work is set (%s) and contains: %s" % (self.unstarted_requests_has_work.is_set(), self.unstarted_requests))
-            #Logger().debug("pending_requests_has_work is set (%s) and contains: %s" % (self.pending_requests_has_work.is_set(), self.pending_requests))
-
             self.has_work_event.clear()
 
             # Schedule unstarted requests (outbound requests)
