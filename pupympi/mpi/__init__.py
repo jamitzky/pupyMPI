@@ -65,6 +65,15 @@ class MPI(Thread):
     for more information about the available methods.
     """
 
+    user_register = None
+    """
+    A dict created for the users to input values in. The dict can be read from
+    the commandline with the :ref:`readregister.py utility <readregister>`. This
+    is useful when you don not want a lot of print output, but need to keep
+    an eye with the progress / state of a running instance. The the utility
+    documentation for an example.
+    """
+
     def __init__(self):
         Thread.__init__(self)
 
@@ -226,7 +235,7 @@ class MPI(Thread):
 
         # Enable a register for the users to put values in. This register can be read
         # with the readregister.py script found in bin/utils/
-        self.user_register = {'test_message_key' : 'test'}
+        self.user_register = {}
 
         self.network = Network(self, options)
 
