@@ -73,7 +73,7 @@ these values and prints them on ``STDOUT``.
 
 **Limiting the outout**: It is posible to limit the number of processes asked
 like the above scripts, but it is also possible to furhter limit the output
-by using the ``-i`` and ``--index=`` flags to indicate which keys from the
+by using the ``-k`` and ``--keys=`` flags to indicate which keys from the
 dict should be extracted.
 
 The following python code shows a small MPI program *faking* a SOR. After each
@@ -158,3 +158,19 @@ and again::
     delta: 0.00830986055712
     ----------------------------------------------------------
 
+if we only wish to see the local delta it is enough to add the ``-k``
+parameter:: 
+
+    python pupy_readregisters.py /var/folders/Yb/YbuXflfJFemHX4JTvqTG8U+++TI/-Tmp-/pupyznYwGE -k delta
+    ---------------- Registers for rank 0 -------------------
+    delta: 8.35777630149e-05
+    ----------------------------------------------------------
+
+    ---------------- Registers for rank 1 -------------------
+    delta: 0.00129261521508
+    ----------------------------------------------------------
+
+    ---------------- Registers for rank 2 -------------------
+    delta: 0.00350836441784
+    ----------------------------------------------------------
+    
