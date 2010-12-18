@@ -123,3 +123,4 @@ CMD_SYSTEM = 2
 CMD_ABORT = 1
 CMD_PING = 3
 CMD_MIGRATE_PACK = 4 # Pack the entire system.
+CMD_READ_REGISTER = 5

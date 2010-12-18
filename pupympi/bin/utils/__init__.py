@@ -65,6 +65,7 @@ class SendSimpleCommand(threading.Thread):
                     if incomming:
                         # We read the message from the connection and set that as the result_data.
                         rank, cmd, tag, ack, comm_id, data = get_raw_message(incomming[0])
+                        data = pickle.loads(data)
 
                         self.report = True
                         self.report_data = data
