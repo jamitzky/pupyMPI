@@ -224,6 +224,10 @@ class MPI(Thread):
                     logger.warn("Pupyprof is not supported on this system. Tracefile will not be generated");
                     self._profiler_enabled = False
 
+        # Enable a register for the users to put values in. This register can be read
+        # with the readregister.py script found in bin/utils/
+        self.user_register = {'test_message_key' : 'test'}
+
         self.network = Network(self, options)
 
         # Create the initial global Group, and assign the network all_procs as members
@@ -464,8 +468,8 @@ class MPI(Thread):
         This method returns a boolean indicating if the command was actually
         tried.
         """
-        read_only = (constants.CMD_PING, )
-        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, )
+        read_only = (constants.CMD_PING, constants.CMD_READ_REGISTER)
+        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER)
 
         data = pickle.loads(raw_data)
         user_data = None

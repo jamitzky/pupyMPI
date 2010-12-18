@@ -60,6 +60,7 @@ def execute_commands(mpi, bypassed):
     run_inner = True
     for obj in mpi.pending_systems_commands:
         cmd, connection, user_data = obj
+        rank = mpi.MPI_COMM_WORLD.comm_group.rank()
         # Handle the message in a big if-statement. When / if the number
         # of commands escalades, we should consider moving them away.
         if cmd == constants.CMD_ABORT:
@@ -69,7 +70,13 @@ def execute_commands(mpi, bypassed):
             # We need to access the rank like this. Calling rank() on the
             # communicator will active this function again. Should be
             # apply some locking?
-            msg = prepare_message("PONG", mpi.MPI_COMM_WORLD.comm_group.rank())
+            msg = prepare_message("PONG", rank)
+            robust_send(connection, msg)
+
+        elif cmd == constants.CMD_READ_REGISTER:
+            # Send our registers. We just send everything and let the
+            # client filter.
+            msg = prepare_message(mpi.user_register, rank)
             robust_send(connection, msg)
 
         elif cmd == constants.CMD_MIGRATE_PACK:
@@ -104,5 +111,6 @@ def availablity():
         constants.CMD_ABORT : True,
         constants.CMD_PING : True,
         constants.CMD_MIGRATE_PACK : avail_pack,
+        constants.CMD_READ_REGISTER : True,
     }
 
