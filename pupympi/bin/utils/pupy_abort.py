@@ -38,12 +38,13 @@ def main():
         reports = []
         for rank in threads:
             t = threads[rank]
-            report, data = t.wait_until_ready()
-            if report:
-                msg = "Successful sent"
+            t.wait_until_ready()
+
+            if t.error:
+                reports.append("%d: %s" % (rank, t.error))
             else:
-                msg ="Problem with sending the command"
-            reports.append("%d: %s" % (rank, msg))
+                reports.append("%d: Abort command sent!" % rank)
+
             t.join()
 
         print_reports(reports)

@@ -16,12 +16,26 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-from utils import SendSimpleCommand, print_reports, parse_args
+from utils import SendSimpleCommand, get_standard_parser, parse_extended_args
 from mpi import constants
 import sys
 
 def main():
-    ranks, hostinfo, bypass = parse_args()
+    # Get the standard parser and add some arguments to it.
+    parser = get_standard_parser()
+
+    parser.add_option("-k", "--keys=", dest="keys")
+
+    options, args = parse_extended_args(parser=parser)
+
+    keys = []
+    try:
+        if options.keys:
+            keys = options.keys.split(",")
+            keys = [s.strip() for s in keys]
+    except Exception as e:
+        parser.error("Can't handle the supplied keys. Error was: %s" % str(e))
+
 
     # Test if we have a "simple" command. That is, we can handle it by simply
     # sending a
@@ -30,24 +44,34 @@ def main():
 
         # Start a thread for each rand we want to send the command to.
         threads = {}
-        for rank in ranks:
-            t = SendSimpleCommand(scmd_id, rank, hostinfo, bypass, pong=True, timeout=30)
+        for rank in options.ranks:
+            t = SendSimpleCommand(scmd_id, rank, options.hostinfo, options.bypass, pong=True, timeout=30)
             t.start()
             threads[rank] = t
 
         reports = {}
         for rank in threads:
             t = threads[rank]
-            report, data = t.wait_until_ready()
-            if report:
-                reports[rank] = data
+            t.wait_until_ready()
+
+            if t.error:
+                reports[rank] = t.error
+            else:
+                reports[rank] = t.data
             t.join()
 
         for rank in reports:
             print "---------------- Registers for rank %d -------------------" % rank
-            for key in reports[rank]:
-                d = reports[rank][key]
-                print "%s: %s" % (key, d)
+
+            # Check for single strings (ie. errors)
+            rank_data = reports[rank]
+            if type(rank_data) == str:
+                print rank_data
+            else:
+                for key in rank_data:
+                    if (not keys) or key in keys:
+                        d = reports[rank][key]
+                        print "%s: %s" % (key, d)
 
             print "----------------------------------------------------------"
             print ""

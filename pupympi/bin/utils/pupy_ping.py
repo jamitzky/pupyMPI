@@ -38,11 +38,11 @@ def main():
         reports = []
         for rank in threads:
             t = threads[rank]
-            report, data = t.wait_until_ready()
-            if report:
-                reports.append("Pong received for rank %d: %s" % (rank, report))
+            t.wait_until_ready()
+            if t.error:
+                reports.append("%d: %s" % (rank, t.error))
             else:
-                reports.append("%d: %s" % (rank, data))
+                reports.append("Pong received for rank %d" % rank)
             t.join()
 
         print_reports(reports)

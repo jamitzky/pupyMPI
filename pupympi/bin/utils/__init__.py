@@ -12,8 +12,7 @@ class SendSimpleCommand(threading.Thread):
     def __init__(self, cmd_id, rank, hostinfo, bypass=False, timeout=None, pong=False):
         super(SendSimpleCommand, self).__init__()
 
-        self.report = False
-        self.report_data = ""
+        self.data = None
         self.finished = threading.Event()
 
         self.cmd_id = cmd_id
@@ -21,6 +20,7 @@ class SendSimpleCommand(threading.Thread):
 
         self.timeout = timeout
         self.pong = pong
+        self.error = ""
 
         for participant in hostinfo:
             hostname, portno, rank, security_component, avail = participant
@@ -40,18 +40,17 @@ class SendSimpleCommand(threading.Thread):
 
     def wait_until_ready(self):
         self.finished.wait()
-        return self.report, self.report_data
 
     def run(self, *args, **kwargs):
         if not self.do_run:
             self.finished.set()
-            self.report_data = "Cancelled due to availablity check on the remote host"
+            self.data = "Cancelled due to availablity check on the remote host"
             return
 
         try:
             connection = socket.create_connection( (self.hostname, self.portno), 4.0 )
             if not connection:
-                self.report = "Could not connect to rank %d. We received a connect timeout" % self.rank
+                self.error = "Could not connect to rank %d. We received a connect timeout" % self.rank
             else:
                 # Send the message
                 message = utils.prepare_message(self.security_component, -1, cmd=self.cmd_id, comm_id=-1)
@@ -67,18 +66,23 @@ class SendSimpleCommand(threading.Thread):
                         rank, cmd, tag, ack, comm_id, data = get_raw_message(incomming[0])
                         data = pickle.loads(data)
 
-                        self.report = True
-                        self.report_data = data
+                        self.data = data
                     else:
-                        self.report_data = "Connection timeout (30 seconds)"
-                else:
-                    self.report = True
+                        self.error = "Connection timeout (30 seconds)"
         except Exception, e:
-            self.report = "Error in connecting to rank %d: %s" % (self.rank, str(e))
+            self.error = "Error in connecting to rank %d: %s" % (self.rank, str(e))
 
         self.finished.set()
 
-def parse_args():
+def get_standard_parser():
+    usage = 'usage: %prog [options] arg'
+    parser = OptionParser(usage=usage, version="pupysh version %s" % (constants.PUPYVERSION))
+
+    parser.add_option("-r", "--ranks", dest="ranks", help="A comma sep list of ranks this command should be executed on")
+    parser.add_option("-b", "--bypass-avail-check", dest="bypass", action="store_true", default=False)
+    return parser
+
+def parse_extended_args(parser=None):
     def parse_handle(filename):
         return pickle.load(open(filename, "rb"))
 
@@ -97,27 +101,27 @@ def parse_args():
         ranks.sort()
         return ranks
 
-    usage = 'usage: %prog [options] arg'
-    parser = OptionParser(usage=usage, version="pupysh version %s" % (constants.PUPYVERSION))
-
-    parser.add_option("-r", "--ranks", dest="ranks", help="A comma sep list of ranks this command should be executed on")
-    parser.add_option("-b", "--bypass-avail-check", dest="bypass", action="store_true", default=False)
+    if not parser:
+        parser = get_standard_parser()
 
     options, args = parser.parse_args()
     handle = args[0]
-    err = False
 
     try:
-        hostinfo = parse_handle(handle)
+        options.hostinfo = parse_handle(handle)
     except:
         parser.error("Cant parse the handle file")
 
     try:
-        ranks = get_ranks(options.ranks, hostinfo)
+        options.ranks = get_ranks(options.ranks, options.hostinfo)
     except Exception, e:
         parser.error("Invalid ranks")
 
-    return ranks, hostinfo, options.bypass
+    return options, args
+
+def parse_args(parser=None):
+    options, args = parse_extended_args(parser=parser)
+    return options.ranks, options.hostinfo, options.bypass
 
 def avail_or_error(avail, rank, cmd):
     succ = True
