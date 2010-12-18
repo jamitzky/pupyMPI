@@ -57,7 +57,7 @@ def execute_commands(mpi, bypassed):
     boolean indicating if the decorated function should be called.
     """
     from mpi.network.utils import robust_send, prepare_message
-    run_inner = True
+    rest_list = []
     for obj in mpi.pending_systems_commands:
         cmd, connection, user_data = obj
         rank = mpi.MPI_COMM_WORLD.comm_group.rank()
@@ -80,16 +80,11 @@ def execute_commands(mpi, bypassed):
             robust_send(connection, msg)
 
         elif cmd == constants.CMD_MIGRATE_PACK:
-            # This is a very complex operation, so we simply pass the
-            # mpi instance, connection and other usefull information
-            # to a class and let it handle everything.
-            from mpi.migrate import Migrate
-            migration = Migrate(mpi, bypassed, user_data)
+            # This if is just here so people know it is not missing. We
+            # handle this command in a different way.
+            rest_list.append(obj)
 
-            run_inner = run_inner and migration.mpi_continue()
-
-    mpi.pending_systems_commands = []
-    return run_inner
+    mpi.pending_systems_commands = rest_list
 
 def availablity():
     """
