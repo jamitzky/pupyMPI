@@ -67,8 +67,8 @@ class Network(object):
             socket_pool_size = options.socket_pool_size
             #Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
-            socket_pool_size = options.size
-            #Logger().debug("Socket Pool STATIC size:%i" % socket_pool_size)
+            # We need extra room for an admin connection.
+            socket_pool_size = options.size+1
 
         self.socket_pool = SocketPool(socket_pool_size)
 
@@ -176,8 +176,6 @@ class Network(object):
         receiver_ranks = [x for x in range(0, our_rank)]
         sender_ranks = range(our_rank+1, size)
 
-        #Logger().debug("Full network startup with receiver_ranks (%s) and sender_ranks (%s)" % (receiver_ranks, sender_ranks))
-
         recv_handles = []
         # Start all the receive
         for r_rank in receiver_ranks:
@@ -187,8 +185,6 @@ class Network(object):
         # Send all
         for s_rank in sender_ranks:
             self.mpi.MPI_COMM_WORLD._send(our_rank, s_rank, constants.TAG_FULL_NETWORK)
-
-        #Logger().debug("Start_full_network: All sends done")
 
         # Finish the receives
         for handle in recv_handles:

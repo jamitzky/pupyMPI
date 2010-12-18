@@ -67,7 +67,7 @@ class SocketPool(object):
 
         # It's not valid to not have a socket and a readonly pool
         if rank >= 0 and self.readonly and not client_socket:
-            raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket")
+            raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket for rank %d" % rank)
 
         if not client_socket: # If we didn't find one, create one
             receiver = (socket_host, socket_port)
