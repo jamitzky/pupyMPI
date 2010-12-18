@@ -2,10 +2,9 @@ from datetime import datetime
 import sys, socket
 from mpi import dill
 
-class Migrate(object):
+class MigratePack(object):
     def __init__(self, mpi, bypassed_function, script_hostinfo):
         self.mpi = mpi
-        self.success = False
 
         # The bypassed function is the one decorated with
         # handle_system_commands. When the environment is
@@ -102,15 +101,6 @@ class Migrate(object):
 
         print "close all connections: leaving"
 
-    def mpi_continue(self):
-        """
-        Indicating if the MPI environment should try to continue
-        after a migration attempt. If the migration is sucessful,
-        this will never be called as this class will have called
-        sys.exit()
-        """
-        return not self.success
-
     def clear_unpickable_objects(self):
         del self.mpi
         del self.network
@@ -122,9 +112,36 @@ class Migrate(object):
         del self.t_in
         del self.t_out
 
-        # This might be freaky stuff..
+        # This might be freaky stuff.. FIXME: There is not always a world
         import __main__
         del __main__.MPI
         del __main__.mpi
         del __main__.world
+
+from functools import wraps
+
+def checkpoint(f, *args, **kwargs):
+    @wraps(f)
+    def inner(self, *args, **kwargs):
+        bypassed_function = (f, args, kwargs)
+
+        migrate = False
+        all_commands = []
+
+        # Try to find a migrate command.
+        with mpi.pending_systems_commands_lock:
+            for obj in mpi.pending_systems_commands:
+                cmd, connection, user_data = obj
+                if cmd == constants.CMD_MIGRATE_PACK:
+                    migrate = True
+                else:
+                    all_commands.append(obj)
+
+            mpi.pending_systems_commands = all_commands
+
+        if migrate:
+            from mpi.migrate import Migrate
+            migration = MigratePack(mpi, bypassed_function, user_data)
+
+    return inner
 
