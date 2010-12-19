@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-from utils import parse_args, avail_or_error
+from utils import parse_extended_args, avail_or_error
 from mpi import constants
 from mpi.network.utils import create_random_socket
 from mpi.logger import Logger
@@ -25,7 +25,11 @@ import sys, dill, select, socket
 def main():
     Logger("migrate.log", "migrate", True, True, True)
 
-    ranks, hostinfo, bypass = parse_args()
+    options, args = parse_extended_args()
+
+    ranks = options.ranks
+    hostinfo = options.hostinfo
+    bypass = options.bypass
 
     # Create a socket we can receive results from.
     sock, hostname, port_no = create_random_socket()
@@ -55,7 +59,10 @@ def main():
         message = mpi_utils.prepare_message(data, -1, cmd=constants.CMD_MIGRATE_PACK)
         mpi_utils.robust_send(connection, message)
 
-    all_data = {}
+    all_data = {
+        'procs' : {},
+        'mpirun_args' : options.mpirun_args,
+    }
 
     # Receive the messages back from each of the ranks.
     succ = True
@@ -66,7 +73,7 @@ def main():
         if incomming:
             rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(incomming[0])
             connection.close()
-            all_data[rank] = dill.loads(data)
+            all_data['procs'][rank] = dill.loads(data)
         else:
             succ = False
             print "Connection read timeout"
