@@ -105,7 +105,7 @@ class MigratePack(object):
 
     def clear_unpickable_objects(self):
         # Let the user remove other elements.
-        f = mpi.migrate_onpack
+        f = self.mpi.migrate_onpack
         if f:
             f()
 
