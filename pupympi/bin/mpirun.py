@@ -198,126 +198,146 @@ def io_forwarder(process_list):
 
     logger.debug("IO forwarder finished")
 
+def determine_run_type():
+    import sys
+
+    filename = None
+
+    for parameter in sys.argv[1:]:
+        if not parameter.startswith("-"):
+            filename = parameter
+
+    if not filename:
+        raise Exception("Can't find the filename to look at. What's wrong?")
+
+    try:
+        import dill
+        dill.load(open(filename, 'r'))
+        return "resume"
+    except Exception as e:
+        return "normal"
+
 if __name__ == "__main__":
-    # Try to get around export pythonpath issue
+    run_type = determine_run_type()
 
-    options, args, user_options, executeable = parse_options() # Get options from cli
+    if run_type == "normal":
+        # Try to get around export pythonpath issue
+        options, args, user_options, executeable = parse_options() # Get options from cli
 
-    # Set log dir
-    logdir = constants.LOGDIR # NOTE: This could be command line option
-    if not os.access(logdir, os.W_OK):
-        raise Exception("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+        # Set log dir
+        logdir = constants.LOGDIR # NOTE: This could be command line option
+        if not os.access(logdir, os.W_OK):
+            raise Exception("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
 
-    # Start the logger
-    logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
+        # Start the logger
+        logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
-    # Map processes/ranks to hosts/CPUs
-    mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method)
+        # Map processes/ranks to hosts/CPUs
+        mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method)
 
-    #logger.debug("Hosts are now configured: " + str(mappedHosts))
-    s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
-    s.listen(5)
+        s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
+        s.listen(5)
 
-    # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
-    remote_start = getattr(processloaders, options.startup_method)
+        # Whatever is specified at cli is chosen as remote start function (popen or ssh for now)
+        remote_start = getattr(processloaders, options.startup_method)
 
-    # List of process objects (instances of subprocess.Popen class)
-    process_list = []
+        # List of process objects (instances of subprocess.Popen class)
+        process_list = []
 
-    # Make sure we have a full path
-    if not executeable.startswith("/"):
-        executeable = os.path.join( os.getcwd(), executeable)
+        # Make sure we have a full path
+        if not executeable.startswith("/"):
+            executeable = os.path.join( os.getcwd(), executeable)
 
-    # Mimic our cli call structure also for remotely started processes
-    global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
-            "--mpirun-conn-port=%d" % mpi_run_port,
-            "--size=%d" % options.np,
-            "--socket-pool-size=%d" % options.socket_pool_size,
-            "--verbosity=%d" % options.verbosity,
-            "--process-io=%s" % options.process_io,
-            "--log-file=%s" % options.logfile,
-    ]
+        # Mimic our cli call structure also for remotely started processes
+        global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+                "--mpirun-conn-port=%d" % mpi_run_port,
+                "--size=%d" % options.np,
+                "--socket-pool-size=%d" % options.socket_pool_size,
+                "--verbosity=%d" % options.verbosity,
+                "--process-io=%s" % options.process_io,
+                "--log-file=%s" % options.logfile,
+        ]
 
-    if options.socket_poll_method:
-        global_run_options.append('--socket-poll-method=%s' % options.socket_poll_method)
+        if options.socket_poll_method:
+            global_run_options.append('--socket-poll-method=%s' % options.socket_poll_method)
 
-    if options.disable_full_network_startup:
-        global_run_options.append('--disable-full-network-startup')
+        if options.disable_full_network_startup:
+            global_run_options.append('--disable-full-network-startup')
 
-    if options.enable_profiling:
-        global_run_options.append('--enable-profiling')
+        if options.enable_profiling:
+            global_run_options.append('--enable-profiling')
 
-    if options.yappi:
-        global_run_options.append('--yappi')
+        if options.yappi:
+            global_run_options.append('--yappi')
 
-    if options.disable_utilities:
-        global_run_options.append('--disable-utilities')
+        if options.disable_utilities:
+            global_run_options.append('--disable-utilities')
 
-    if options.yappi_sorttype:
-        global_run_options.append('--yappi-sorttype=%s' % options.yappi_sorttype)
+        if options.yappi_sorttype:
+            global_run_options.append('--yappi-sorttype=%s' % options.yappi_sorttype)
 
-    for flag in ("quiet", "debug"):
-        value = getattr(options, flag, None)
-        if value:
-            global_run_options.append("--"+flag)
+        for flag in ("quiet", "debug"):
+            value = getattr(options, flag, None)
+            if value:
+                global_run_options.append("--"+flag)
 
-    # Start a process for each rank on the host
-    for (host, rank, port) in mappedHosts:
-        run_options = copy.copy(global_run_options)
-        run_options.append("--rank=%d" % rank)
+        # Start a process for each rank on the host
+        for (host, rank, port) in mappedHosts:
+            run_options = copy.copy(global_run_options)
+            run_options.append("--rank=%d" % rank)
 
-        # Adding user options. GNU style says this must be after the --
-        run_options.append( "--" )
-        run_options.extend( user_options )
+            # Adding user options. GNU style says this must be after the --
+            run_options.append( "--" )
+            run_options.extend( user_options )
 
-        # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.process_io, rank)
-        process_list.append(p)
+            # Now start the process and keep track of it
+            p = remote_start(host, run_options, options.process_io, rank)
+            process_list.append(p)
 
-    """
-    NOTE: Now we have a proccess list and can start the io forwarder if needed
-    At this point processes are of course already running meaning we could
-    theoretically miss a bit of the first output. The solution is a bit bothersome
-    since we would need to delay actually starting the remotely created processes
-    and it does not matter a whole lot since they all have to phone in to mother
-    before really doing anything.
-    """
-    # Start a thread to handle io forwarding from processes
-    if options.process_io == "asyncdirect":
-        # Declare an event for proper shutdown. When the system is ready to
-        # shutdown we signal the event. People looking at the signal will catch
-        # it and shutdown.
-        io_shutdown_event = threading.Event()
-        t = threading.Thread(target=io_forwarder, args=(process_list,))
-        t.start()
+        """
+        NOTE: Now we have a proccess list and can start the io forwarder if needed
+        At this point processes are of course already running meaning we could
+        theoretically miss a bit of the first output. The solution is a bit bothersome
+        since we would need to delay actually starting the remotely created processes
+        and it does not matter a whole lot since they all have to phone in to mother
+        before really doing anything.
+        """
+        # Start a thread to handle io forwarding from processes
+        if options.process_io == "asyncdirect":
+            # Declare an event for proper shutdown. When the system is ready to
+            # shutdown we signal the event. People looking at the signal will catch
+            # it and shutdown.
+            io_shutdown_event = threading.Event()
+            t = threading.Thread(target=io_forwarder, args=(process_list,))
+            t.start()
 
-    all_procs, handle_procs, sender_conns = communicate_startup(options.np, s)
+        all_procs, handle_procs, sender_conns = communicate_startup(options.np, s)
 
-    s.close()
+        s.close()
 
-    # Trap CTRL-C before we let processes loose on the world
-    signal.signal(signal.SIGINT, signal_handler)
+        # Trap CTRL-C before we let processes loose on the world
+        signal.signal(signal.SIGINT, signal_handler)
 
-    if not options.disable_utilities: # This very verbose check is important. If not set, the value will be None.
-        cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
-        print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
+        if not options.disable_utilities: # This very verbose check is important. If not set, the value will be None.
+            cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
+            print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
 
-    # Wait for all started processes to die
-    exit_codes = processloaders.wait_for_shutdown(process_list)
-    for conn in sender_conns: # if still up (shouldn't be)
-        conn.close()
+        # Wait for all started processes to die
+        exit_codes = processloaders.wait_for_shutdown(process_list)
+        for conn in sender_conns: # if still up (shouldn't be)
+            conn.close()
 
-    # Check exit codes from started processes
-    if any(exit_codes):
-        logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
+        # Check exit codes from started processes
+        if any(exit_codes):
+            logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
 
-    if options.process_io == "asyncdirect":
-        logger.debug("IO forward thread will be stopped")
-        # Signal shutdown to io_forwarder thread
-        io_shutdown_event.set()
+        if options.process_io == "asyncdirect":
+            logger.debug("IO forward thread will be stopped")
+            # Signal shutdown to io_forwarder thread
+            io_shutdown_event.set()
 
-        # Wait for the IO_forwarder thread to stop
-        t.join()
-        logger.debug("IO forward thread joined")
+            # Wait for the IO_forwarder thread to stop
+            t.join()
+            logger.debug("IO forward thread joined")
 
-    sys.exit(int(any(exit_codes)))
+        sys.exit(int(any(exit_codes)))
