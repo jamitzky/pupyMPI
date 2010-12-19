@@ -308,8 +308,7 @@ if __name__ == "__main__":
         conn.close()
 
     # Check exit codes from started processes
-    any_failures = sum(exit_codes) is not 0
-    if any_failures:
+    if any(exit_codes):
         logger.error("Some processes failed to execute, exit codes in order: %s" % exit_codes)
 
     if options.process_io == "asyncdirect":
@@ -321,4 +320,4 @@ if __name__ == "__main__":
         t.join()
         logger.debug("IO forward thread joined")
 
-    sys.exit(1 if any_failures else 0)
+    sys.exit(int(any(exit_codes)))
