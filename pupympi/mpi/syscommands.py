@@ -24,20 +24,23 @@ syscommands.py - contains logic for handling system messages.
 from functools import wraps
 import sys
 
+def find_mpi(obj):
+    from mpi import MPI
+    from mpi.communicator import Communicator
+
+    if isinstance(obj, MPI):
+        return obj
+    elif isinstance(obj, Communicator):
+        return obj.mpi
+    else:
+        print type(obj)
+
 def handle_system_commands(f, *args, **kwargs):
     @wraps(f)
     def inner(self, *args, **kwargs):
-        # Find the MPI instance by looking at self.
-        # inner logic.
-        from mpi import MPI
-        from mpi.communicator import Communicator
-        mpi = None
-        if isinstance(self, MPI):
-            mpi = self
-        elif isinstance(self, Communicator):
-            mpi = self.mpi
-        else:
-            Logger().warning("Can't find MPI instance when checking system messages. Looking at an object of type: %s" % type(self))
+
+        # Find MPI instance.
+        mpi = find_mpi(self)
 
         # execute the system messages if there are any
         run_inner_func = True

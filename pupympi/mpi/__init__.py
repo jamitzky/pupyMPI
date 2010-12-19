@@ -74,8 +74,17 @@ class MPI(Thread):
     documentation for an example.
     """
 
+    # Singleton.. see first line
+    __shared_state = {}
+
     def __init__(self):
+        self.__dict__ = self.__shared_state
+
+        if "_mpi_instance" in self.__dict__:
+            return
+
         Thread.__init__(self)
+        self.__dict__['_mpi_instance'] = True
 
         """
         Initializes the MPI environment. This will give each process a separate
