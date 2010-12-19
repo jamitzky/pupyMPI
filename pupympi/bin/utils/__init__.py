@@ -84,7 +84,12 @@ def get_standard_parser():
 
 def parse_extended_args(parser=None):
     def parse_handle(filename):
-        return pickle.load(open(filename, "rb"))
+        obj = pickle.load(open(filename, "rb"))
+
+        all_procs = obj['procs']
+        args = obj['args']
+
+        return all_procs, args
 
     def get_ranks(ranks, hostinfo):
         all_ranks = [h[2] for h in hostinfo]
@@ -108,7 +113,9 @@ def parse_extended_args(parser=None):
     handle = args[0]
 
     try:
-        options.hostinfo = parse_handle(handle)
+        hostinfo, mpirun_args = parse_handle(handle)
+        options.hostinfo = hostinfo
+        options.mpirun_args = mpirun_args
     except:
         parser.error("Cant parse the handle file")
 

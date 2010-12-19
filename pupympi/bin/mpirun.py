@@ -32,13 +32,20 @@ from mpi.lib.hostfile import parse_hostfile, map_hostfile
 from mpi.network.utils import pickle
 
 def write_cmd_handle(all_procs, filename=None):
+    import sys
+
     if not filename:
         # Generate a file and write to that one
         import tempfile
         _, filename = tempfile.mkstemp(prefix="pupy")
 
+    data = {
+        'procs' : all_procs,
+        'args' : sys.argv,
+    }
+
     fh = open(filename, "wb")
-    pickle.dump(all_procs, fh)
+    pickle.dump(data, fh)
 
     fh.close()
     return filename
