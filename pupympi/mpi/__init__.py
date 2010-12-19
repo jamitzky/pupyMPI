@@ -500,7 +500,7 @@ class MPI(Thread):
 
         # Security check.
         if command not in read_only:
-            if security_component != self.get_security_component():
+            if security_component != self.get_security_component() and rank < 0:
                 Logger().warning("Failed security check in system command. Expected security component was %s but received %s for command %s" % (self.get_security_component(), raw_data, command))
                 return False
 
