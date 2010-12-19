@@ -115,7 +115,6 @@ class Unpickler(StockUnpickler):
     _session = False
 
     def find_class(self, module, name):
-        print "(module, name)", module, name
         if (module, name) == ('__builtin__', '__main__'):
             return self._main_module.__dict__ #XXX: above set w/save_module_dict
         return StockUnpickler.find_class(self, module, name)
