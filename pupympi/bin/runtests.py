@@ -3,17 +3,17 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -65,7 +65,7 @@ def output_console(text, color = None, newline = True, block = "", output=True):
         out += "\n\r"
     if output:
         sys.stdout.write(out)
-        sys.stdout.flush() 
+        sys.stdout.flush()
     return out
 
 def output_console_nocolor(text, color = None, newline = True, block = "", output=True):
@@ -76,31 +76,31 @@ def output_console_nocolor(text, color = None, newline = True, block = "", outpu
         out += "\n\r"
     if output:
         sys.stdout.write(out)
-        sys.stdout.flush() 
+        sys.stdout.flush()
     return out
 
-    
+
 # def output_latex(test):
 #     """Adds one block/line of output as latex output"""
 #     global latex_output
-# 
-#     
+#
+#
 #     description = test.meta["description"].replace("_", "\\_") if "description" in test.meta else ""
 #     testname = test.test.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
 #     result = "success" if test.returncode == test.expectedresult and not test.killed else "failed"
-#     
+#
 #     latex_output.write("%s & %s & %s & %s \\\\ \n" % (testname, test.processes, result, description))
-            
+
 output = output_console
 
 
-path = os.path.dirname(os.path.abspath(__file__)) 
+path = os.path.dirname(os.path.abspath(__file__))
 class RunTest(Thread):
 
     #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     # With dynamic socket pool
-    cmd = "bin/mpirun.py --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "bin/mpirun.py --disable-utilities --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
     def __init__(self, test, number, primary_log, options, test_meta_data):
@@ -116,21 +116,21 @@ class RunTest(Thread):
         self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
-        
+
         # If socket pool size is specified in meta description we add appropriate parameter
         if "socket-pool-size" in test_meta_data:
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size "+test_meta_data["socket-pool-size"])
         else:
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
             #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
-        
+
         # Adds testswitches if used
         if options.socket_poll_method:
             self.cmd += " --socket-poll-method=" + options.socket_poll_method
-        # Adds user arguments to the test if there are meta descriptions for it. 
+        # Adds user arguments to the test if there are meta descriptions for it.
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
-        
+
         output( "Launching(%i) %s: " % (number, self.cmd), newline=False)
         self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
@@ -144,7 +144,7 @@ class RunTest(Thread):
                 break
             time.sleep(TEST_EXECUTION_TIME_GRANULARITY)
 
-        self.executiontime = time.time() - self.start 
+        self.executiontime = time.time() - self.start
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
@@ -156,22 +156,22 @@ class RunTest(Thread):
         elif self.process.returncode != self.expectedresult:
             output("Failed", OKRED)
         else:
-            output("OK")  
+            output("OK")
         #print self.process.communicate()
         self.returncode = self.process.returncode
 
 def get_testnames(skipto = 0):
     """returns a list of files that match our 'official' requirement to qualify as a pupympi test"""
     tests = sorted([f for f in os.listdir("tests/") if f.startswith("TEST_")])
-    
+
     if skipto > 0: # skip some tests from the beginning
         tests = tests[skipto:]
     elif skipto < 0: # skip some tests from the end
         tests = tests[:skipto]
-    
+
     return tests
 
-    
+
 def _status_str(ret, expres):
     """helper function to write human friendly status string"""
     if ret == expres:
@@ -180,13 +180,13 @@ def _status_str(ret, expres):
         return output("Timed Out", newline=False, output=False)
     else:
         return output("FAIL: %s" % ret, color=OKRED,newline=False, output=False)
-        
+
 def format_output(threads):
     """prints the final output in purty colors, and logs to latex for report inclusion"""
     testcounter = 1
     total_time = 0
     odd = False
-    output("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED") 
+    output("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED")
     output("--------------------------------------------------------------------------------")
     for thread in threads:
         total_time += thread.executiontime
@@ -196,11 +196,11 @@ def format_output(threads):
                                             "KILLED" if thread.killed else "no", \
                                             _status_str(thread.returncode, thread.expectedresult)),
                                             color=OKOFFWHITE if odd else OKBLACK,
-                                            block="Results table console")                                                    
+                                            block="Results table console")
         odd = True if odd == False else False
         # output_latex(thread)
         testcounter += 1
-        
+
     output( "\nTotal execution time: %ss" % (round(total_time, 1)))
 
 def combine_logs(logfile_prefix):
@@ -216,9 +216,9 @@ def combine_logs(logfile_prefix):
         combined.writelines(lines)
         combined.write("\n\n")
         lf.close()
-        os.remove(log)    
+        os.remove(log)
 
-    combined.close()        
+    combined.close()
     print "Combined %d log files into %s.log" % (counter, logfile_prefix)
 
 def get_test_data(test):
@@ -228,21 +228,21 @@ def get_test_data(test):
         for lines in testfile.readlines():
             if not lines.startswith("#"):
                 break
-                
+
             if lines.startswith("# meta-"):
                 meta[lines[7:lines.find(":")]] = lines[lines.find(":")+1:].strip()
-        
-        return meta            
+
+        return meta
 
 def run_tests(test_files, options):
     """for each test in tests directory, run the test"""
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
-    
+
     # with open("testrun.tex", "w") as latex:
     #     global latex_output
     #     latex_output = latex
-    
+
     testcounter = 1
     # We run tests sequentially since many of them are rather hefty and may
     # interfere with others. Also breakage can lead to side effects and so
@@ -257,7 +257,7 @@ def run_tests(test_files, options):
 
     format_output(threadlist)
     combine_logs(logfile_prefix)
-    
+
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
