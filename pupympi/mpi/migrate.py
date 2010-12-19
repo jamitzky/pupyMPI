@@ -1,6 +1,7 @@
 from datetime import datetime
 import sys, socket
 from mpi import dill, MPI, constants
+from mpi.communicator import Communicator
 
 class MigratePack(object):
     def __init__(self, mpi, bypassed_function, script_hostinfo):
@@ -113,9 +114,17 @@ class MigratePack(object):
         del self.t_in
         del self.t_out
 
-        # This might be freaky stuff.. FIXME: There is not always a world
+        # Look at the main modules scope. We go through everything in there
+        # and delete things we know we can not handle.
+        # FIXME: Should this be recursive.
         import __main__
-        del __main__.MPI
+        unwanted = [MPI, Communicator, ]
+        for field_name in dir(__main__):
+            element = getattr(__main__, field_name, None)
+
+            for enemy in unwanted:
+                if isinstance(element, enemy) or enemy == element:
+                    delattr(__main__, field_name)
 
 from functools import wraps
 
