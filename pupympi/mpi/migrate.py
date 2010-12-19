@@ -136,8 +136,6 @@ def checkpoint(f, *args, **kwargs):
         migrate = False
         all_commands = []
 
-        print "checkpoint called", mpi.pending_systems_commands
-
         # Try to find a migrate command.
         with mpi.pending_systems_commands_lock:
             for obj in mpi.pending_systems_commands:

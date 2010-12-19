@@ -58,6 +58,7 @@ def main():
     all_data = {}
 
     # Receive the messages back from each of the ranks.
+    succ = True
     for _ in range(len(ranks)):
         connection, _ = sock.accept()
 
@@ -67,16 +68,22 @@ def main():
             connection.close()
             all_data[rank] = dill.loads(data)
         else:
+            succ = False
             print "Connection read timeout"
 
-    # Write the final data to a file
-    import tempfile
-    _, filename = tempfile.mkstemp(prefix="pupy")
+    if succ:
+        # Write the final data to a file
+        import tempfile
+        _, filename = tempfile.mkstemp(prefix="pupy")
 
-    fh = open(filename, "wb")
-    dill.dump(all_data, fh)
+        fh = open(filename, "wb")
+        dill.dump(all_data, fh)
 
-    fh.close()
+        fh.close()
+
+        print "Halted system saved to file: ", filename
+    else:
+        print "Something went wrong. System probably dead... sorry"
 
     sys.exit(0)
 
