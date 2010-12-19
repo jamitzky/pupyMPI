@@ -95,7 +95,7 @@ def parse_options(start_mode):
         if options.debug and options.quiet:
             parser.error("options --debug and -quiet are mutually exclusive")
 
-        if options.np is None:
+        if start_mode == "normal" and options.np is None:
             parser.error("You need to specify the number of processes to start with -c or --np.")
 
         if args is None or len(args) == 0:
@@ -134,7 +134,6 @@ def communicate_startup(no_procs, ssocket):
         sender_conns.append( sender_conn )
 
         # Receiving data about the communicator, by unpacking the head etc.
-
         rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
         message = pickle.loads(data)
 
@@ -147,7 +146,6 @@ def communicate_startup(no_procs, ssocket):
         utils.robust_send(conn, message)
 
     return all_procs, handle_procs, sender_conns
-
 
 def signal_handler(signal, frame):
     print 'Interrupt signal trapped - attempting to nuke children. You may want to verify manually that nothing is hanging.'
@@ -169,7 +167,6 @@ def io_forwarder(process_list):
     During shutdown a final run through of all the pipes is done to print any
     remaining data.
     """
-
     pipes = [p.stderr for p in process_list] # Put all stderr pipes in process_list
     pipes.extend( [p.stdout for p in process_list] ) # Put all stdout pipes in process_list
     pipes = filter(None, pipes) # Get rid any pipes that aren't pipes (shouldn't happen but we like safety)
@@ -234,6 +231,16 @@ if __name__ == "__main__":
 
     # Parse the options. The run type will disable some parameters.
     options, args, user_options, executeable = parse_options(start_type) # Get options from cli
+
+    # If we are resuming a job we need to parse the handle file. This will tell us
+    # the state of the instance for each rank. And it will tell us how many processes
+    # we should start :) The handle is in the 'executeable' variable.
+    if start_type == "resume":
+        import dill
+        resume_handle = dill.load(open(executeable, "r"))
+
+        # Set the number of ranks on the options object so the startup can continue.
+        options.np = len(resume_handle['procs'])
 
     # Set log dir
     logdir = constants.LOGDIR # NOTE: This could be command line option

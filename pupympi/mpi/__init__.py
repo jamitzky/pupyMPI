@@ -74,18 +74,8 @@ class MPI(Thread):
     documentation for an example.
     """
 
-    # Singleton.. see first line
-    __shared_state = {}
-
     def __init__(self):
-        self.__dict__ = self.__shared_state
-
-        if "_mpi_instance" in self.__dict__:
-            return
-
         Thread.__init__(self)
-        self.__dict__['_mpi_instance'] = True
-
         """
         Initializes the MPI environment. This will give each process a separate
         rank in the MPI_COMM_WORLD communicator along with the total number of
@@ -247,6 +237,10 @@ class MPI(Thread):
         # with the readregister.py script found in bin/utils/
         self.user_register = {}
 
+        # Place to keep functions needed when packing / unpacking the running MPI
+        # instance. The best place to start is migrate.py
+        self.migrate_onpack = None
+
         self.network = Network(self, options)
 
         # Create the initial global Group, and assign the network all_procs as members
@@ -286,6 +280,45 @@ class MPI(Thread):
 
         if self._profiler_enabled:
             pupyprof.start()
+
+    def set_migrate_onpack(self, callback):
+        """
+        Use this function to set a callback the MPI instance should call if the
+        system is being migrated. This is useful if you use threaded
+        programming which can not be packed directly. This method should then
+        tear down those structures and create them aagin on the other side with
+        the function set by :func:`set_migrate_onunpack`.
+        """
+        if not callable(callback):
+            raise Exception("The supplied parameter is not callable.")
+
+        self.migrate_onpack = callback
+
+    def get_migrate_onpack(self):
+        """
+        Returns the callable (or None) used when the running instance is
+        migrated.
+        """
+        return self.migrate_onpack
+
+    def set_migrate_onunpack(self, callback):
+        """
+        Use this function to set a callback the MPI instance should call if the
+        system is being migrated. This is useful if you use threaded
+        programming which can not be packed directly. This method should then
+        setup those structures.
+        """
+        if not callable(callback):
+            raise Exception("The supplied parameter is not callable.")
+
+        self.migrate_onunpack = callback
+
+    def get_migrate_onunpack(self):
+        """
+        Returns the callable (or None) used when the running instance is
+        migrated (setup on the other side).
+        """
+        return self.migrate_unonpack
 
     def match_pending(self, request):
         """
@@ -441,6 +474,7 @@ class MPI(Thread):
             'received_data' : self.received_data,
             'current_request_id' : self.current_request_id,
             'pending_systems_commands' : self.pending_systems_commands,
+            'migrate_pack' : self.migrate_onpack,
         }
 
     def abort(self):

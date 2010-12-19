@@ -104,6 +104,11 @@ class MigratePack(object):
         print "close all connections: leaving"
 
     def clear_unpickable_objects(self):
+        # Let the user remove other elements.
+        f = mpi.migrate_onpack
+        if f:
+            f()
+
         del self.mpi
         del self.network
         del self.t_in.socket_pool
