@@ -48,7 +48,6 @@ def main():
         data = (security_component, (hostname, port_no))
         connection = socket.create_connection( (remote_host, remote_port), 4.0 )
         if not connection:
-            print "connection timeout for rank", rank
             sys.exit(1)
 
         from mpi.network import utils as mpi_utils
@@ -78,7 +77,6 @@ def main():
     dill.dump(all_data, fh)
 
     fh.close()
-    print "The processes is now packed into a file: %s" % filename
 
     sys.exit(0)
 

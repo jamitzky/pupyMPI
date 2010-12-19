@@ -1,6 +1,6 @@
 from datetime import datetime
 import sys, socket
-from mpi import dill
+from mpi import dill, MPI, constants
 
 class MigratePack(object):
     def __init__(self, mpi, bypassed_function, script_hostinfo):
@@ -54,20 +54,21 @@ class MigratePack(object):
         # Make the MPI thread run out if its main loop. We keep it around so
         # the network threads and add messages to it (there might be some on
         # the network layer while we are shuttig down)
-        mpi.shutdown_event.set()
-        mpi.queues_flushed.wait()
+        self.mpi.shutdown_event.set()
+        self.mpi.queues_flushed.wait()
 
         # Make the network send CONN_CLOSE on every socket connection. This way
         # we are sure not to miss messages "on the wire".
         self.close_all_connections()
-
-        self.clear_unpickable_objects()
 
         # Serialize other data
         self.data['mpi'] = self.mpi.get_state()
         self.data['t_out'] = self.t_out.get_state()
         self.data['t_in'] = self.t_in.get_state()
         self.data['bypassed'] = self.bypassed_function
+
+        # Remove stuff we can't pickle.
+        self.clear_unpickable_objects()
 
         # Dump the session into a file.
         import tempfile
@@ -115,18 +116,18 @@ class MigratePack(object):
         # This might be freaky stuff.. FIXME: There is not always a world
         import __main__
         del __main__.MPI
-        del __main__.mpi
-        del __main__.world
 
 from functools import wraps
 
 def checkpoint(f, *args, **kwargs):
     @wraps(f)
-    def inner(self, *args, **kwargs):
+    def inner(mpi, *args, **kwargs):
         bypassed_function = (f, args, kwargs)
 
         migrate = False
         all_commands = []
+
+        print "checkpoint called", mpi.pending_systems_commands
 
         # Try to find a migrate command.
         with mpi.pending_systems_commands_lock:
@@ -140,8 +141,10 @@ def checkpoint(f, *args, **kwargs):
             mpi.pending_systems_commands = all_commands
 
         if migrate:
-            from mpi.migrate import Migrate
+            from mpi.migrate import MigratePack
             migration = MigratePack(mpi, bypassed_function, user_data)
+        else:
+            return f(mpi, *args, **kwargs)
 
     return inner
 
