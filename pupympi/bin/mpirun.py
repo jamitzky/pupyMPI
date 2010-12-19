@@ -103,6 +103,40 @@ def parse_options():
 
 global sender_conns
 
+def communicate_startup(no_procs, ssocket):
+    """
+    This methods listen on a server sockets for a number of processes
+    to return with their main socket information. Once every process
+    have returned, the data is gathered and broadcasted back. This
+    way, each process will have information on how to contact each other.
+    """
+    # Listing of (rank, host, port) for all the processes
+    all_procs = []
+    handle_procs = []
+    # Listing of socket connections to all the processes
+    sender_conns = []
+
+    # Recieve listings from newly started proccesses phoning in
+    for i in range(no_procs):
+        sender_conn, sender_addr = ssocket.accept()
+        sender_conns.append( sender_conn )
+
+        # Receiving data about the communicator, by unpacking the head etc.
+
+        rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
+        message = pickle.loads(data)
+
+        all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
+        handle_procs.append( message )
+
+    # Send all the data to all the connections, closing each connection afterwards
+    message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
+    for conn in sender_conns:
+        utils.robust_send(conn, message)
+
+    return all_procs, handle_procs, sender_conns
+
+
 def signal_handler(signal, frame):
     print 'Interrupt signal trapped - attempting to nuke children. You may want to verify manually that nothing is hanging.'
     COMM_ID = -1
@@ -257,31 +291,7 @@ if __name__ == "__main__":
         t = threading.Thread(target=io_forwarder, args=(process_list,))
         t.start()
 
-    # Listing of (rank, host, port) for all the processes
-    all_procs = []
-    handle_procs = []
-    # Listing of socket connections to all the processes
-    sender_conns = []
-
-    #logger.debug("Waiting for %d processes" % options.np)
-
-    # Recieve listings from newly started proccesses phoning in
-    for i in range(options.np):
-        sender_conn, sender_addr = s.accept()
-        sender_conns.append( sender_conn )
-
-        # Receiving data about the communicator, by unpacking the head etc.
-
-        rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
-        message = pickle.loads(data)
-
-        all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
-        handle_procs.append( message )
-
-    # Send all the data to all the connections, closing each connection afterwards
-    message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
-    for conn in sender_conns:
-        utils.robust_send(conn, message)
+    all_procs, handle_procs, sender_conns = communicate_startup(options.np, s)
 
     s.close()
 

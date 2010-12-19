@@ -11,3 +11,4 @@ syntax: glob
 *.*~
 .DS_Store
 *.log
+*.orig
