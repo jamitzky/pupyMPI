@@ -171,6 +171,7 @@ class MPI(Thread):
         parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
         parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
         parser.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
+        parser.add_option('--start-type', dest='start_type', default='normal')
 
         # _ is args
         options, _ = parser.parse_args()
