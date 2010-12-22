@@ -300,10 +300,13 @@ class MPI(Thread):
         dill.dump(session_data, open(filename, "w"))
         dill.load_session(filename=filename)
 
-        # Find the unpacked state of the mpi instance.
-        print obj.keys()
+        # Restore the mpi state.
+        for att_name in obj['mpi']:
+            setattr(self, att_name, obj['mpi'][att_name])
 
-        session_data.main(self)
+        # Find the function we need to resume
+        resumer = getattr(session_data, self.resumer.__name__)
+        resumer(self)
 
     def set_migrate_onpack(self, callback):
         """
