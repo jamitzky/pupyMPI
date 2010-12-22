@@ -34,10 +34,12 @@ class Receiver(Thread):
         self.connections = []
 
         self.done_event = Event()
+        self.start_event = Event()
 
     def run(self, *args, **kwargs):
         while not self.done_event.is_set():
             try:
+                self.start_event.set()
                 connection, _ = self.server_sock.accept()
                 self.connections.append(connection)
             except:
@@ -88,6 +90,7 @@ def main():
     # Start a tread for reaciing.
     receiver = Receiver(sock, len(ranks), all_data)
     receiver.start()
+    receiver.start_event.wait()
 
     for participant in hostinfo:
         remote_host, remote_port, rank, security_component, avail = participant
