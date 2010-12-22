@@ -345,6 +345,10 @@ class MPI(Thread):
         return self.migrate_unonpack
 
     def set_resume_function(self, callback):
+        """
+        Set the function responsible for resuming an instance run. See the
+        section about migrating a running instance.
+        """
         if not callable(callback):
             raise Exception("The supplied parameter is not callable.")
 
