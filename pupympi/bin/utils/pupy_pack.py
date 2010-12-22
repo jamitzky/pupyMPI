@@ -21,6 +21,49 @@ from mpi import constants
 from mpi.network.utils import create_random_socket
 from mpi.logger import Logger
 import sys, dill, select, socket
+from threading import Thread, Event
+
+class Receiver(Thread):
+    def __init__(self, server_sock, no_procs, all_data):
+        Thread.__init__(self)
+
+        self.server_sock = server_sock
+        self.no_procs = no_procs
+        self.all_data = all_data
+
+        self.connections = []
+
+        self.done_event = Event()
+
+    def run(self, *args, **kwargs):
+        while not self.done_event.is_set():
+            try:
+                connection, _ = self.server_sock.accept()
+                self.connections.append(connection)
+            except:
+                pass
+
+            # Run through the connections and receive unhandled messages.
+            incomming, _, errors = select.select(self.connections, [], self.connections, 5)
+            if incomming:
+                for connection in incomming:
+                    from mpi.network import utils as mpi_utils
+                    rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(connection)
+                    connection.close()
+
+                    # An important note. We send this as a string. This way there is no reason
+                    # for mpirun.py to unpickle it and then pickle it again.
+                    self.all_data['procs'][rank] = data
+                    print "Received for rank", rank
+
+            # Test if we are done.
+            print "no_procs", self.no_procs
+            print "procs recv", len(self.all_data['procs'].values())
+            if self.no_procs == len(self.all_data['procs'].values()):
+                self.done_event.set()
+
+    def wait(self):
+        return self.done_event.wait()
 
 def main():
     Logger("migrate", "migrate", True, True, True)
@@ -33,14 +76,21 @@ def main():
 
     # Create a socket we can receive results from.
     sock, hostname, port_no = create_random_socket()
-
     sock.listen(len(ranks))
+
+    all_data = {
+        'procs' : {},
+        'mpirun_args' : options.mpirun_args,
+    }
+
+    # Start a tread for reaciing.
+    receiver = Receiver(sock, len(ranks), all_data)
+    receiver.start()
 
     for participant in hostinfo:
         remote_host, remote_port, rank, security_component, avail = participant
 
         succ = True
-
         if not bypass:
             succ = avail_or_error(avail, rank, constants.CMD_MIGRATE_PACK)
 
@@ -55,45 +105,23 @@ def main():
             sys.exit(1)
 
         from mpi.network import utils as mpi_utils
-
         message = mpi_utils.prepare_message(data, -1, cmd=constants.CMD_MIGRATE_PACK)
         mpi_utils.robust_send(connection, message)
 
-    all_data = {
-        'procs' : {},
-        'mpirun_args' : options.mpirun_args,
-    }
+    # Wait until everybody sent back.
+    receiver.wait()
+    receiver.join()
 
-    # Receive the messages back from each of the ranks.
-    succ = True
-    for _ in range(len(ranks)):
-        connection, _ = sock.accept()
+    # Write the final data to a file
+    import tempfile
+    _, filename = tempfile.mkstemp(prefix="pupy")
 
-        incomming, _, errors = select.select([connection], [], [connection], 5)
-        if incomming:
-            rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(incomming[0])
-            connection.close()
+    fh = open(filename, "wb")
+    dill.dump(all_data, fh)
 
-            # An important note. We send this as a string. This way there is no reason
-            # for mpirun.py to unpickle it and then pickle it again.
-            all_data['procs'][rank] = data
-        else:
-            succ = False
-            print "Connection read timeout"
+    fh.close()
 
-    if succ:
-        # Write the final data to a file
-        import tempfile
-        _, filename = tempfile.mkstemp(prefix="pupy")
-
-        fh = open(filename, "wb")
-        dill.dump(all_data, fh)
-
-        fh.close()
-
-        print "Halted system saved to file: ", filename
-    else:
-        print "Something went wrong. System probably dead... sorry"
+    print "Halted system saved to file: ", filename
 
     sys.exit(0)
 
