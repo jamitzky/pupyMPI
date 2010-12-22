@@ -51,6 +51,8 @@ class Receiver(Thread):
                     rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(connection)
                     connection.close()
 
+                    self.connections.remove(connection)
+
                     # An important note. We send this as a string. This way there is no reason
                     # for mpirun.py to unpickle it and then pickle it again.
                     self.all_data['procs'][rank] = data
