@@ -59,7 +59,6 @@ class MigratePack(object):
 
         # Make the network send CONN_CLOSE on every socket connection. This way
         # we are sure not to miss messages "on the wire".
-        self.flush_outbound_messages()
         self.close_all_connections()
 
         # Serialize other data
@@ -92,9 +91,6 @@ class MigratePack(object):
 
         sys.exit(0)
 
-    def flush_outbound_messages(self):
-        pass
-
     def close_all_connections(self):
         print "close all connections: entering"
 
@@ -121,8 +117,8 @@ class MigratePack(object):
         del self.t_in
         del self.t_out
 
-        # Look at the main modules scope. We go through everything in there
-        # and delete things we know we can not handle.
+        # Look at the main modules scope. We go through everything in there and
+        # delete things we know we can not handle.
         # FIXME: Should this be recursive.
         import __main__
         unwanted = [MPI, Communicator, ]

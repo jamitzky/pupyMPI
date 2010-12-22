@@ -37,7 +37,6 @@ class SendSimpleCommand(threading.Thread):
                         print "Can not determine if the command can be executed. Playing it safe and will not execute anything. Use --bypass-avail-check (-b) if you want to force the command through"
                         self.do_run = False
 
-
     def wait_until_ready(self):
         self.finished.wait()
 

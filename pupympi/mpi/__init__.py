@@ -467,43 +467,41 @@ class MPI(Thread):
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
 
-        # We handle packing a bit different.
-        if not self.packing.is_set():
-            # The main loop is now done. We flush all the messages so there are not any outbound messages
-            # stuck in the pipline.
-            with self.unstarted_requests_lock:
-                for request in self.unstarted_requests:
-                    self.network.t_out.add_out_request(request)
-                self.unstarted_requests = []
-                self.unstarted_requests_has_work.clear()
+        # The main loop is now done. We flush all the messages so there are not any outbound messages
+        # stuck in the pipline.
+        with self.unstarted_requests_lock:
+            for request in self.unstarted_requests:
+                self.network.t_out.add_out_request(request)
+            self.unstarted_requests = []
+            self.unstarted_requests_has_work.clear()
 
-            self.queues_flushed.set()
+        self.queues_flushed.set()
 
-            # Start built-in profiling facility
-            if self._profiler_enabled:
-                pupyprof.stop()
-                pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+        # Start built-in profiling facility
+        if self._profiler_enabled:
+            pupyprof.stop()
+            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
-            if self._yappi_enabled:
-                yappi.stop()
+        if self._yappi_enabled:
+            yappi.stop()
 
-                filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
-                Logger().debug("Writing yappi stats to %s" % filename)
-                try:
-                    f = open(filename, "w")
-                except:
-                    raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            Logger().debug("Writing yappi stats to %s" % filename)
+            try:
+                f = open(filename, "w")
+            except:
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
 
-                stats = yappi.get_stats(self._yappi_sorttype)
+            stats = yappi.get_stats(self._yappi_sorttype)
 
-                for stat in stats:
-                    print >>f, stat
-                yappi.clear_stats()
+            for stat in stats:
+                print >>f, stat
+            yappi.clear_stats()
 
-                f.close()
+            f.close()
 
-            if sys.stdout is not None:
-                sys.stdout.flush() # Slight hack to get the rest of the output out
+        if sys.stdout is not None:
+            sys.stdout.flush() # Slight hack to get the rest of the output out
 
     def get_state(self):
         """
