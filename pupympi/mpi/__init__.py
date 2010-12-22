@@ -233,6 +233,10 @@ class MPI(Thread):
                     logger.warn("Pupyprof is not supported on this system. Tracefile will not be generated");
                     self._profiler_enabled = False
 
+        # Set a resume parameter indicating if we are resuming a packed job.
+        # This will be changed (maybe) in the netowrk startup.
+        self.resume = False
+
         # Enable a register for the users to put values in. This register can be read
         # with the readregister.py script found in bin/utils/
         self.user_register = {}
@@ -268,18 +272,38 @@ class MPI(Thread):
         constants.MPI_GROUP_EMPTY = Group()
 
         self.daemon = True
+
+        if self.resume:
+            self.resume_packed_state()
+
         self.start()
 
         # Make every node connect to each other if settings specify it
         if not options.disable_full_network_startup:
             self.network.start_full_network()
-        #logger.info("MPI environment is up and running.")
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
 
         if self._profiler_enabled:
             pupyprof.start()
+
+    def resume_packed_state(self):
+        obj = dill.loads(self.resume_state)
+        session_data = obj['session']
+
+        # We write the session data to a file and then load the session with the
+        # special dill function called load_session.
+        import tempfile
+        _, filename = tempfile.mkstemp(prefix="pupy")
+
+        dill.dump(session_data, open(filename, "w"))
+        dill.load_session(filename=filename)
+
+        # Find the unpacked state of the mpi instance.
+        print obj.keys()
+
+        session_data.main(self)
 
     def set_migrate_onpack(self, callback):
         """
@@ -319,6 +343,12 @@ class MPI(Thread):
         migrated (setup on the other side).
         """
         return self.migrate_unonpack
+
+    def set_resume_function(self, callback):
+        if not callable(callback):
+            raise Exception("The supplied parameter is not callable.")
+
+        self.resume_function = callback
 
     def match_pending(self, request):
         """
@@ -466,6 +496,7 @@ class MPI(Thread):
         """
         A function for getting the current state of the MPI environment.
         """
+        # FIXME: We need to check that everything is needed.
         return {
             'state_origin' : 'mpi',
             'unstarted_requests' : self.unstarted_requests,
@@ -475,6 +506,8 @@ class MPI(Thread):
             'current_request_id' : self.current_request_id,
             'pending_systems_commands' : self.pending_systems_commands,
             'migrate_pack' : self.migrate_onpack,
+            'migrate_unpack' : self.migrate_onunpack,
+            'resumer' : self.resume_function,
         }
 
     def abort(self):

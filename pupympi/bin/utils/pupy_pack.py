@@ -23,7 +23,7 @@ from mpi.logger import Logger
 import sys, dill, select, socket
 
 def main():
-    Logger("migrate.log", "migrate", True, True, True)
+    Logger("migrate", "migrate", True, True, True)
 
     options, args = parse_extended_args()
 
@@ -73,7 +73,10 @@ def main():
         if incomming:
             rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(incomming[0])
             connection.close()
-            all_data['procs'][rank] = dill.loads(data)
+
+            # An important note. We send this as a string. This way there is no reason
+            # for mpirun.py to unpickle it and then pickle it again.
+            all_data['procs'][rank] = data
         else:
             succ = False
             print "Connection read timeout"

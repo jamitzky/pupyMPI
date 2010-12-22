@@ -4,7 +4,7 @@ from mpi import dill, MPI, constants
 from mpi.communicator import Communicator
 
 class MigratePack(object):
-    def __init__(self, mpi, bypassed_function, script_hostinfo):
+    def __init__(self, mpi, script_hostinfo):
         self.mpi = mpi
 
         # The bypassed function is the one decorated with
@@ -12,7 +12,6 @@ class MigratePack(object):
         # unpacked again this needs to be executed. The format
         # of the variable is a tuple with 3 elements:
         # (function, args, kwargs)
-        self.bypassed_function = bypassed_function
         self.script_hostinfo = script_hostinfo
 
         self.network = self.mpi.network
@@ -60,13 +59,13 @@ class MigratePack(object):
 
         # Make the network send CONN_CLOSE on every socket connection. This way
         # we are sure not to miss messages "on the wire".
+        self.flush_outbound_messages()
         self.close_all_connections()
 
         # Serialize other data
         self.data['mpi'] = self.mpi.get_state()
         self.data['t_out'] = self.t_out.get_state()
         self.data['t_in'] = self.t_in.get_state()
-        self.data['bypassed'] = self.bypassed_function
 
         # Remove stuff we can't pickle.
         self.clear_unpickable_objects()
@@ -92,6 +91,9 @@ class MigratePack(object):
         robust_send(connection, msg)
 
         sys.exit(0)
+
+    def flush_outbound_messages(self):
+        pass
 
     def close_all_connections(self):
         print "close all connections: entering"
@@ -136,8 +138,6 @@ from functools import wraps
 def checkpoint(f, *args, **kwargs):
     @wraps(f)
     def inner(mpi, *args, **kwargs):
-        bypassed_function = (f, args, kwargs)
-
         migrate = False
         all_commands = []
 
@@ -154,9 +154,13 @@ def checkpoint(f, *args, **kwargs):
 
         if migrate:
             from mpi.migrate import MigratePack
-            migration = MigratePack(mpi, bypassed_function, user_data)
-        else:
-            return f(mpi, *args, **kwargs)
+            migration = MigratePack(mpi, user_data)
+
+        return f(mpi, *args, **kwargs)
 
     return inner
+
+if __name__ == "__main__":
+    # If this script is called directly it means that we are unpacking.
+    mpi = MPI()
 

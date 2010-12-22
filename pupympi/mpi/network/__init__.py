@@ -140,6 +140,15 @@ class Network(object):
                                    other than the starting user.
             * availability       : Information about each system commands
                                    availability on this host.
+
+        mpirun.py sends a tuple back containing:
+
+            * all_procs          : Prior to release 0.8.0 this was the only data
+                                   sent (and it was not in a tuple).
+            * script-path        : The user script path. This is only used when we
+                                   are resuming a packed job and need to import and
+                                   run it.
+            * state              : The state of the program when the job was packed.
         """
         sec_comp = self.mpi.generate_security_component()
         avail = syscommands.availablity()
@@ -157,8 +166,13 @@ class Network(object):
 
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
-        _, _, _, _, _, all_procs = get_raw_message(s_conn)
-        all_procs = pickle.loads(all_procs)
+        import dill
+        _, _, _, _, _, data = get_raw_message(s_conn)
+        all_procs, state = dill.loads(data)
+
+        if state:
+            self.mpi.resume = True
+            self.mpi.resume_state = state
 
         s_conn.close()
 
