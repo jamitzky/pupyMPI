@@ -304,6 +304,12 @@ class MPI(Thread):
         for att_name in obj['mpi']:
             setattr(self, att_name, obj['mpi'][att_name])
 
+        # Find a user supplied function (if any) and call it so the user script can restore any
+        # unsafe objects if needed.
+        unpacker = self.get_migrate_onunpack()
+        if unpacker:
+            unpacker()
+
         # Find the function we need to resume
         resumer = getattr(session_data, self.resumer.__name__)
         resumer(self)
@@ -345,7 +351,7 @@ class MPI(Thread):
         Returns the callable (or None) used when the running instance is
         migrated (setup on the other side).
         """
-        return self.migrate_unonpack
+        return getattr(self, "migrate_unonpack", None)
 
     def set_resume_function(self, callback):
         """
