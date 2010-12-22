@@ -24,6 +24,8 @@ mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
+import dill
+
 from mpi.logger import Logger
 from mpi.network import utils
 from mpi.network.utils import create_random_socket, get_raw_message, prepare_message
@@ -115,7 +117,7 @@ def parse_options(start_mode):
 
 global sender_conns
 
-def communicate_startup(no_procs, ssocket):
+def communicate_startup(no_procs, ssocket, resume_state=None):
     """
     This methods listen on a server sockets for a number of processes
     to return with their main socket information. Once every process
@@ -128,6 +130,8 @@ def communicate_startup(no_procs, ssocket):
     # Listing of socket connections to all the processes
     sender_conns = []
 
+    conn_idx = {}
+
     # Recieve listings from newly started proccesses phoning in
     for i in range(no_procs):
         sender_conn, sender_addr = ssocket.accept()
@@ -137,12 +141,25 @@ def communicate_startup(no_procs, ssocket):
         rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
         message = pickle.loads(data)
 
+        # Add the connection by the rank.
+        conn_idx[rank] = sender_conn
+
         all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
         handle_procs.append( message )
 
     # Send all the data to all the connections, closing each connection afterwards
-    message = prepare_message(all_procs, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
-    for conn in sender_conns:
+    for rank in conn_idx:
+        conn = conn_idx[rank]
+
+        session = None
+        if resume_state:
+            # The session is already pickled. So we handle this as a simple string. This way we
+            # can send the data normally.
+            session = resume_state['procs'][rank]
+
+        data = (all_procs, session)
+
+        message = prepare_message(data, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
         utils.robust_send(conn, message)
 
     return all_procs, handle_procs, sender_conns
@@ -220,7 +237,6 @@ def determine_start_type():
         raise Exception("Can't find the filename to look at. What's wrong?")
 
     try:
-        import dill
         dill.load(open(filename, 'r'))
         return "resume"
     except Exception as e:
@@ -235,8 +251,8 @@ if __name__ == "__main__":
     # If we are resuming a job we need to parse the handle file. This will tell us
     # the state of the instance for each rank. And it will tell us how many processes
     # we should start :) The handle is in the 'executeable' variable.
+    resume_handle = None
     if start_type == "resume":
-        import dill
         resume_handle = dill.load(open(executeable, "r"))
 
         # Set the number of ranks on the options object so the startup can continue.
@@ -262,11 +278,15 @@ if __name__ == "__main__":
     # List of process objects (instances of subprocess.Popen class)
     process_list = []
 
+    if resume_handle:
+        executeable = "mpi/migrate.py"
+
     # Make sure we have a full path
     if not executeable.startswith("/"):
         executeable = os.path.join( os.getcwd(), executeable)
 
     # Mimic our cli call structure also for remotely started processes
+
     global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
             "--mpirun-conn-port=%d" % mpi_run_port,
             "--size=%d" % options.np,
@@ -330,7 +350,7 @@ if __name__ == "__main__":
         t = threading.Thread(target=io_forwarder, args=(process_list,))
         t.start()
 
-    all_procs, handle_procs, sender_conns = communicate_startup(options.np, s)
+    all_procs, handle_procs, sender_conns = communicate_startup(options.np, s, resume_handle)
 
     s.close()
 
