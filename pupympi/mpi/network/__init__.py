@@ -62,6 +62,17 @@ def get_communicator_class(socket_poll_method=False):
 
 class Network(object):
     def __init__(self, mpi, options):
+        # Structures to keep information regarding a potential connection
+        # closing. Always take the lock before manipulating the data. The dict
+        # structure contains a tuple with information for each connection. The
+        # elements of the tuple is as follows:
+        #  (1) A threading.Event() used for waiting / testing if the connection
+        #      is fully closed.
+        #  (2) A status flag (string) indicating if the connection is considered
+        #      closed on either side. The flash can contain the following values:
+        #      "remote" (other endpoint closed the connection), "local", we closed it.
+        self.closing_socket_lock = threading.Lock()
+        self.closing_socket_data = {}
 
         if options.disable_full_network_startup:
             socket_pool_size = options.socket_pool_size
@@ -186,7 +197,7 @@ class Network(object):
         events = []
         for rank in range(size):
             if rank != out_rank:
-                events.append( self.close_connection(rank, always_event=True))
+                events.append( self.close_connection(rank))
 
         [e.wait() for e in events]
 
@@ -200,41 +211,36 @@ class Network(object):
         If you are using this function you should probably also flush any outgoing
         messages.
 
-        There are 3 possible return values from this function:
-
-            * ``False`` : A connection to this rank does not exists. The False just
-                          indate that nothing was done. You should be able to continue
-                          like you would anyway.
-            * ``True``  : The connection was closed successfully. This can only be
-                          returned when the blocking parameter is set to True.
-            * ``event`` : A threading.Event() object. This makes it possible to
-                          wait() for the completion of the removal or test it with the
-                          is_set() function.
-
-        If you do not want to test the object type it is possible to set a
-        ``always_event=True`` paramter. This that is set and ``blocking=True``
-        the returned object will always return ``True`` for ``is_set`` and
-        return right away for ``wait``.
+        The function will return a threading.Event() object. This makes it
+        possible to wait() for the completion of the removal or test it with
+        the is_set() function.
         """
-        # MOVE
-        self.close_socket_events = {}
 
         # Find the connection in the socket pool.
         connection = self.network._get_socket_for_rank(rank)
         if not connection:
-            if always_event:
-                event = threading.Event()
-                event.set()
-                return event
-            else:
-                return False
-
-        # FIXME: Missing logic for handling the in/out detection.
+            event = threading.Event()
+            event.set()
+            return event
 
         # Send the command on the socket.
         self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE)
 
-        # Register the socket as being "closed" down.
+        with self.closing_socket_lock:
+            if rank not in self.closing_socket_data:
+                self.closing_socket_data[rank] = (threading.Event(), "local")
+
+            event, status = self.closing_socket_data[rank]
+
+            # If the status is local the remote endpoint is missing. So we can not
+            # remove the socket connection. If the status is remove (set when we
+            # remove the proper system command), both endpoints are done and we
+            # can remove the connection.
+            if status == "remote":
+                # remove the connection from the socket pool.
+                event.set()
+
+            return event
 
     def start_full_network(self):
         # We make a full network startup by receiving from all with lower ranks and
