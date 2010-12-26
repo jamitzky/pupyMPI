@@ -117,10 +117,11 @@ JOB_INITIALIZING = -1
 # commands used for indicating is this is a system
 # message.
 CMD_USER = 0
-CMD_SYSTEM = 2
+CMD_SYSTEM = 2  # What is this? I don't think we need it.
 
 # Utilities
 CMD_ABORT = 1
 CMD_PING = 3
 CMD_MIGRATE_PACK = 4 # Pack the entire system.
 CMD_READ_REGISTER = 5
+CMD_CONN_CLOSE = 6

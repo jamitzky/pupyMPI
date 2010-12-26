@@ -92,14 +92,9 @@ class MigratePack(object):
         sys.exit(0)
 
     def close_all_connections(self):
-        print "close all connections: entering"
-
-        # Find the sockets in the socketpool
-        for sock in self.pool.sockets:
-            pass
-            #(srank, referenced, fp) = self.metainfo[client_socket]
-
-        print "close all connections: leaving"
+        # Make the network close all socket connections. See the function
+        # documentation on the network for more information.
+        self.network.close_all_connections()
 
     def clear_unpickable_objects(self):
         # Let the user remove other elements.

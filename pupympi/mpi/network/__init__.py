@@ -98,24 +98,17 @@ class Network(object):
         self.port = port_no
         self.hostname = hostname
         server_socket.listen(5)
-        #self.main_receive_socket = server_socket
+
         # Put main receieve socket on incoming list
         self.t_in.add_in_socket(server_socket)
-        #self.t_in.add_in_socket(self.main_receive_socket)
 
         # Set main receive socket for comparison in _handle_readlist
         self.t_in.main_receive_socket = server_socket
-
-        #Logger().debug("--starting handshake, main socket is: %s" % server_socket)
 
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
 
         self.full_network_startup = not options.disable_full_network_startup
-
-        #Logger().debug("Network initialized")
-        #global done
-        #done = False
 
     def _handshake(self, mpirun_hostname, mpirun_port, internal_rank):
         """
@@ -181,6 +174,61 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
+    def close_all_connections(self):
+        """
+        Close all connections in the network gracefully. This is just a quick
+        way to call the :func:`close_connection` on all the sockets in the
+        socket pool.
+        """
+        pass
+
+    def close_connection(self, rank, blocking=True, always_event=False):
+        """
+        This function closes a socket connection gracefully. This will send a
+        command on the socket and the connection will not be closed before this
+        is send and recieved. This means that any messages "on the wire" will
+        be flushed through the wire before closing the connection.
+
+        If you are using this function you should probably also flush any outgoing
+        messages.
+
+        There are 3 possible return values from this function:
+
+            * ``False`` : A connection to this rank does not exists. The False just
+                          indate that nothing was done. You should be able to continue
+                          like you would anyway.
+            * ``True``  : The connection was closed successfully. This can only be
+                          returned when the blocking parameter is set to True.
+            * ``event`` : A threading.Event() object. This makes it possible to
+                          wait() for the completion of the removal or test it with the
+                          is_set() function.
+
+        If you do not want to test the object type it is possible to set a
+        ``always_event=True`` paramter. This that is set and ``blocking=True``
+        the returned object will always return ``True`` for ``is_set`` and
+        return right away for ``wait``.
+        """
+        self.close_socket_events = {}
+
+        event = threading.Event()
+        # Find the connection in the socket pool.
+        connection = self.network._get_socket_for_rank(rank)
+        if not connection:
+            if always_event:
+                event.set()
+                return event
+            else:
+                return False
+
+        # Send the connection close command on the socket connection and mark
+        # the connection as being closed.
+        self.close_socket_events[rank] = event
+
+        # Send the command on the socket.
+        pass
+
+        # Register the socket as being "closed" down.
+
     def start_full_network(self):
         # We make a full network startup by receiving from all with lower ranks and
         # sending to higher ranks
@@ -193,7 +241,7 @@ class Network(object):
         recv_handles = []
         # Start all the receive
         for r_rank in receiver_ranks:
-            handle = self.mpi.MPI_COMM_WORLD.irecv(r_rank, constants.TAG_FULL_NETWORK)
+            handle = self.mpi.MPI_COMM_WORLD._recv(r_rank, constants.TAG_FULL_NETWORK)
             recv_handles.append(handle)
 
         # Send all
@@ -203,9 +251,6 @@ class Network(object):
         # Finish the receives
         for handle in recv_handles:
             handle.wait()
-
-        # Full network start up means a static socket pool
-        self.socket_pool.readonly = True
 
     def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
         from mpi.request import Request
