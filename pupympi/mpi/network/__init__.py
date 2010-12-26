@@ -180,7 +180,15 @@ class Network(object):
         way to call the :func:`close_connection` on all the sockets in the
         socket pool.
         """
-        pass
+        our_rank = self.mpi.MPI_COMM_WORLD.comm_group.rank()
+        size = self.mpi.MPI_COMM_WORLD.comm_group.size()
+
+        events = []
+        for rank in range(size):
+            if rank != out_rank:
+                events.append( self.close_connection(rank, always_event=True))
+
+        [e.wait() for e in events]
 
     def close_connection(self, rank, blocking=True, always_event=False):
         """
@@ -208,32 +216,31 @@ class Network(object):
         the returned object will always return ``True`` for ``is_set`` and
         return right away for ``wait``.
         """
+        # MOVE
         self.close_socket_events = {}
 
-        event = threading.Event()
         # Find the connection in the socket pool.
         connection = self.network._get_socket_for_rank(rank)
         if not connection:
             if always_event:
+                event = threading.Event()
                 event.set()
                 return event
             else:
                 return False
 
-        # Send the connection close command on the socket connection and mark
-        # the connection as being closed.
-        self.close_socket_events[rank] = event
+        # FIXME: Missing logic for handling the in/out detection.
 
         # Send the command on the socket.
-        pass
+        self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE)
 
         # Register the socket as being "closed" down.
 
     def start_full_network(self):
         # We make a full network startup by receiving from all with lower ranks and
         # sending to higher ranks
-        our_rank = self.mpi.MPI_COMM_WORLD.rank()
-        size = self.mpi.MPI_COMM_WORLD.size()
+        our_rank = self.mpi.MPI_COMM_WORLD.comm_group.rank()
+        size = self.mpi.MPI_COMM_WORLD.comm_group.size()
 
         receiver_ranks = [x for x in range(0, our_rank)]
         sender_ranks = range(our_rank+1, size)
