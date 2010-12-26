@@ -566,7 +566,7 @@ class MPI(Thread):
         tried.
         """
         read_only = (constants.CMD_PING, constants.CMD_READ_REGISTER)
-        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER)
+        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER, constants.CMD_CONN_CLOSE)
 
         data = pickle.loads(raw_data)
         user_data = None
