@@ -185,6 +185,41 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
+    def register_connection_close(rank):
+        """
+        Called when we receive a CMD_CONN_CLOSE message. See the
+        :func:`close_all_connections` and :func:`close_connection` for more
+        information.
+        """
+        with self.closing_socket_lock:
+            if rank not in self.closing_socket_data:
+                self.closing_socket_data[rank] = (threading.Event(), "remote")
+
+            event, status = self.closing_socket_data[rank]
+
+        if status == "local":
+            # local means that we have flushed the message and this function
+            # means that we have received the CMD from the other endpoint. It
+            # should be safe to close the socket.
+            self._remove_connection(rank)
+        elif status == "remote":
+            # nothing
+            pass
+        else:
+            # Warn that something strange might be happening.
+            Logger().warning("Found an unkown status in the connection register: %s" % status)
+
+    def _remove_connection(self, rank)
+        event, status = self.closing_socket_data[rank]
+        event.set() # Signal to people waiting.
+
+        # Remove the index from the internal structure. Note that calling this
+        # function you should have the lock for the following object.
+        del self.closing_socket_data[rank]
+
+        # Remove the connection from the socket pool.
+        self.socket_pool.remove_rank(rank)
+
     def close_all_connections(self):
         """
         Close all connections in the network gracefully. This is just a quick
@@ -224,22 +259,29 @@ class Network(object):
             return event
 
         # Send the command on the socket.
-        self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE)
+        self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE).wait()
 
+        # Create an internal structure to keep track of the progress. The
+        # status consists of a string and an event. When we receive the a
+        # message the status will change to "remote" (unless the string is
+        # currently local.. then it will be "both". When the CMD is sent the
+        # status will be changed from "none" to "local".
         with self.closing_socket_lock:
             if rank not in self.closing_socket_data:
                 self.closing_socket_data[rank] = (threading.Event(), "local")
 
             event, status = self.closing_socket_data[rank]
 
-            # If the status is local the remote endpoint is missing. So we can not
-            # remove the socket connection. If the status is remove (set when we
-            # remove the proper system command), both endpoints are done and we
-            # can remove the connection.
             if status == "remote":
-                self.socket_pool.remove_rank(rank)
-                event.set()
-
+                # remote means that we have received a CMD and we have flushed
+                # the message in this function.
+                self._remove_connection(rank)
+            elif status == "local":
+                # We just created it.
+                pass
+            else:
+                # Warn that something strange might be happening.
+                Logger().warning("Found an unkown status in the connection register: %s" % status)
             return event
 
     def start_full_network(self):
