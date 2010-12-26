@@ -92,9 +92,57 @@ class MigratePack(object):
         sys.exit(0)
 
     def close_all_connections(self):
-        # Make the network close all socket connections. See the function
-        # documentation on the network for more information.
-        self.network.close_all_connections()
+        from mpi.network import utils as mpi_utils
+        import select
+
+        rank = self.mpi.MPI_COMM_WORLD.comm_group.rank()
+
+        # Find all connections in the socket pool.
+        write_connections = [ s for s in self.pool.sockets ]
+        read_connections = [ s for s in write_connections ]
+
+        # Try to find a socket to -1 (the admin). We don't want to close that one
+        admin_conn = self.pool._get_socket_for_rank(-1)
+
+        try:
+            write_connections.remove(admin_conn)
+        except:
+            pass
+
+        try:
+            read_connections.remove(admin_conn)
+        except:
+            pass
+
+        # A list to contain the received objects (not CMD_CONN_CLOSE).
+        received_messages = []
+
+        while write_connections or read_connections:
+            all_connections = write_connections + read_connections
+            rlist, wlist, err_list = select.select(read_connections, write_connections, all_connections, 10)
+
+            if err_list:
+                Logger().warning("Received an error list with %d elements: %s" % (len(err_list), err_list))
+
+            # Handle the writes.
+            for wsocket in wlist:
+                message = mpi_utils.prepare_message("", rank, cmd=constants.CMD_CONN_CLOSE)
+                mpi_utils.robust_send(wsocket, message)
+                write_connections.remove(wsocket)
+
+            # Handle the reads.
+            for rsocket in rlist:
+                rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(rsocket)
+
+                if cmd == constants.CMD_CONN_CLOSE:
+                    read_connections.remove(rsocket)
+                else:
+                    Logger().info("received important information while closing the sockets.")
+                    pass # This message is important. We need to add it to the MPI environment.
+
+        # Close all the sockets.
+        for conn in self.pool.sockets:
+            conn.close()
 
     def clear_unpickable_objects(self):
         # Let the user remove other elements.

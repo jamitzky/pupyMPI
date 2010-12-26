@@ -185,7 +185,7 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
-    def register_connection_close(rank):
+    def register_connection_close(self, rank):
         """
         Called when we receive a CMD_CONN_CLOSE message. See the
         :func:`close_all_connections` and :func:`close_connection` for more
@@ -259,7 +259,9 @@ class Network(object):
             return event
 
         # Send the command on the socket.
-        self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE).wait()
+        request = self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE)
+
+        request.wait()
 
         # Create an internal structure to keep track of the progress. The
         # status consists of a string and an event. When we receive the a
