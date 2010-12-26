@@ -87,6 +87,9 @@ def execute_commands(mpi, bypassed):
             # handle this command in a different way.
             rest_list.append(obj)
 
+        elif cmd == constants.CMD_CONN_CLOSE:
+            mpi.network.register_connection_close(rank)
+
     mpi.pending_systems_commands = rest_list
 
 def availablity():
