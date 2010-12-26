@@ -209,7 +209,7 @@ class Network(object):
             # Warn that something strange might be happening.
             Logger().warning("Found an unkown status in the connection register: %s" % status)
 
-    def _remove_connection(self, rank)
+    def _remove_connection(self, rank):
         event, status = self.closing_socket_data[rank]
         event.set() # Signal to people waiting.
 
@@ -231,7 +231,7 @@ class Network(object):
 
         events = []
         for rank in range(size):
-            if rank != out_rank:
+            if rank != our_rank:
                 events.append( self.close_connection(rank))
 
         [e.wait() for e in events]
@@ -252,7 +252,7 @@ class Network(object):
         """
 
         # Find the connection in the socket pool.
-        connection = self.network._get_socket_for_rank(rank)
+        connection = self.socket_pool._get_socket_for_rank(rank)
         if not connection:
             event = threading.Event()
             event.set()
@@ -296,7 +296,7 @@ class Network(object):
         recv_handles = []
         # Start all the receive
         for r_rank in receiver_ranks:
-            handle = self.mpi.MPI_COMM_WORLD._recv(r_rank, constants.TAG_FULL_NETWORK)
+            handle = self.mpi.MPI_COMM_WORLD._irecv(r_rank, constants.TAG_FULL_NETWORK)
             recv_handles.append(handle)
 
         # Send all
