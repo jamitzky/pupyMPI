@@ -149,8 +149,7 @@ class SocketPool(object):
                 if force_persistent: # skip persistent connections
                     continue
                 else:
-                    self.sockets.remove(client_socket) # remove from socket pool
-                    del self.metainfo[client_socket] # delete metainfo
+                    self.remove_rank(srank, client_socket=client_socket)
                     foundOne = True
                     break
 
@@ -158,6 +157,13 @@ class SocketPool(object):
             if not foundOne:
                 # Alert the user, harshly
                 raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
+
+    def remove_rank(self, rank, client_socket=None):
+        if not client_socket:
+            client_socket = self._get_socket_for_rank(rank):
+
+        self.sockets.remove(client_socket)
+        del self.metainfo[client_socket]
 
     def _get_socket_for_rank(self, rank):
         """
