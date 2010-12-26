@@ -237,7 +237,7 @@ class Network(object):
             # remove the proper system command), both endpoints are done and we
             # can remove the connection.
             if status == "remote":
-                # remove the connection from the socket pool.
+                self.socket_pool.remove_rank(rank)
                 event.set()
 
             return event
