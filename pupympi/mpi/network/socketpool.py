@@ -160,7 +160,7 @@ class SocketPool(object):
 
     def remove_rank(self, rank, client_socket=None):
         if not client_socket:
-            client_socket = self._get_socket_for_rank(rank):
+            client_socket = self._get_socket_for_rank(rank)
 
         self.sockets.remove(client_socket)
         del self.metainfo[client_socket]
