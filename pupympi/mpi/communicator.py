@@ -425,8 +425,12 @@ class Communicator:
         """
         return self._isend(content, destination, tag)
 
-    def _isend(self, content, destination, tag = constants.MPI_TAG_ANY):
-
+    def _isend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER):
+        """
+        An internal send function. It should only be used by the internal
+        MPI environment. It gives some possibilities as it opens for other
+        commands than CMD_USER.
+        """
         # Check that destination exists
         if not self.have_rank(destination):
             if isinstance(destination, int):
@@ -438,7 +442,7 @@ class Communicator:
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
         # Create a send request object
-        handle = Request("send", self, destination, tag, False, data=content)
+        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd)
         # If sending to self, take a short-cut
         if destination == self.rank():
             self._send_to_self(handle)

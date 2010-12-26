@@ -58,7 +58,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None, cmd=constants.CMD_USER):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -70,7 +70,7 @@ class Request(BaseRequest):
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data
 
-        self.cmd = constants.CMD_USER
+        self.cmd = cmd
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
