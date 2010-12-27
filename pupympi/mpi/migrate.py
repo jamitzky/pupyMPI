@@ -116,6 +116,7 @@ class MigratePack(object):
 
         # A list to contain the received objects (not CMD_CONN_CLOSE).
         received_messages = []
+        errors_left = 5
 
         while write_connections or read_connections:
             all_connections = write_connections + read_connections
@@ -132,17 +133,19 @@ class MigratePack(object):
 
             # Handle the reads.
             for rsocket in rlist:
-                rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(rsocket)
+                try:
+                    rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(rsocket)
 
-                if cmd == constants.CMD_CONN_CLOSE:
-                    read_connections.remove(rsocket)
-                else:
-                    Logger().info("received important information while closing the sockets.")
-                    pass # This message is important. We need to add it to the MPI environment.
+                    if cmd == constants.CMD_CONN_CLOSE:
+                        read_connections.remove(rsocket)
+                    else:
+                        Logger().info("received important information while closing the sockets.")
+                        pass # This message is important. We need to add it to the MPI environment.
+                except Exception as e:
+                    errors_left -= 1
 
-        # Close all the sockets.
-        for conn in self.pool.sockets:
-            conn.close()
+            if errors_left <= 0:
+                break
 
     def clear_unpickable_objects(self):
         # Let the user remove other elements.
@@ -178,6 +181,7 @@ def checkpoint(f, *args, **kwargs):
     @wraps(f)
     def inner(mpi, *args, **kwargs):
         migrate = False
+        migrate_data = None
         all_commands = []
 
         # Try to find a migrate command.
@@ -186,6 +190,7 @@ def checkpoint(f, *args, **kwargs):
                 cmd, connection, user_data = obj
                 if cmd == constants.CMD_MIGRATE_PACK:
                     migrate = True
+                    migrate_data = user_data
                 else:
                     all_commands.append(obj)
 
@@ -193,7 +198,7 @@ def checkpoint(f, *args, **kwargs):
 
         if migrate:
             from mpi.migrate import MigratePack
-            migration = MigratePack(mpi, user_data)
+            migration = MigratePack(mpi, migrate_data)
 
         return f(mpi, *args, **kwargs)
 

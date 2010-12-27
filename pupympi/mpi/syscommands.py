@@ -46,7 +46,7 @@ def handle_system_commands(f, *args, **kwargs):
         run_inner_func = True
         with mpi.pending_systems_commands_lock:
             if mpi.pending_systems_commands:
-                run_inner_func = execute_commands(mpi, (f, args, kwargs))
+                run_inner_func = execute_commands(mpi)
 
         # calling the original function
         if run_inner_func:
@@ -54,7 +54,7 @@ def handle_system_commands(f, *args, **kwargs):
     return inner
 
 from mpi import constants
-def execute_commands(mpi, bypassed):
+def execute_commands(mpi):
     """
     Execute the actual system commands. This functions returns a
     boolean indicating if the decorated function should be called.
@@ -86,9 +86,6 @@ def execute_commands(mpi, bypassed):
             # This if is just here so people know it is not missing. We
             # handle this command in a different way.
             rest_list.append(obj)
-
-        elif cmd == constants.CMD_CONN_CLOSE:
-            mpi.network.register_connection_close(rank)
 
     mpi.pending_systems_commands = rest_list
 

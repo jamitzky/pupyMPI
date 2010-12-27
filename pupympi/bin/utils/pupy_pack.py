@@ -69,6 +69,43 @@ class Receiver(Thread):
     def wait(self):
         return self.done_event.wait()
 
+class Sender(Thread):
+    def __init__(self, hostname, portno, data):
+        Thread.__init__(self)
+
+        self.hostname = hostname
+        self.portno = portno
+        self.data = data
+
+        self.event = Event()
+
+    def run(self, *args, **kwargs):
+        timeout = 1
+        errors = 0
+        while errors < 5:
+            try:
+                connection = socket.create_connection( (self.hostname, self.portno), 4.0 )
+                print "got connection", connection
+                break
+            except Exception as e:
+                print "Cought exception:", e
+                import time
+                time.sleep(timeout)
+                timeout *= 2
+                errors += 1
+
+        if not connection:
+            sys.exit(1)
+
+        from mpi.network import utils as mpi_utils
+        message = mpi_utils.prepare_message(self.data, -1, cmd=constants.CMD_MIGRATE_PACK)
+        mpi_utils.robust_send(connection, message)
+
+        self.event.set()
+
+    def wait(self):
+        self.event.wait()
+
 def main():
     Logger("migrate", "migrate", True, True, True)
 
@@ -92,6 +129,8 @@ def main():
     receiver.start()
     receiver.start_event.wait()
 
+    senders = []
+
     for participant in hostinfo:
         remote_host, remote_port, rank, security_component, avail = participant
 
@@ -105,13 +144,15 @@ def main():
         # Data to send is a tuple with the security component, and then
         # command specific data
         data = (security_component, (hostname, port_no))
-        connection = socket.create_connection( (remote_host, remote_port), 4.0 )
-        if not connection:
-            sys.exit(1)
 
-        from mpi.network import utils as mpi_utils
-        message = mpi_utils.prepare_message(data, -1, cmd=constants.CMD_MIGRATE_PACK)
-        mpi_utils.robust_send(connection, message)
+        sender = Sender(remote_host, remote_port, data)
+        sender.start()
+        senders.append(sender)
+
+    # Join all the sender threads.
+    for s in senders:
+        s.wait()
+        s.join()
 
     # Wait until everybody sent back.
     receiver.wait()
