@@ -58,11 +58,8 @@ class Receiver(Thread):
                     # An important note. We send this as a string. This way there is no reason
                     # for mpirun.py to unpickle it and then pickle it again.
                     self.all_data['procs'][rank] = data
-                    print "Received for rank", rank
 
             # Test if we are done.
-            print "no_procs", self.no_procs
-            print "procs recv", len(self.all_data['procs'].values())
             if self.no_procs == len(self.all_data['procs'].values()):
                 self.done_event.set()
 
@@ -85,10 +82,8 @@ class Sender(Thread):
         while errors < 5:
             try:
                 connection = socket.create_connection( (self.hostname, self.portno), 4.0 )
-                print "got connection", connection
                 break
             except Exception as e:
-                print "Cought exception:", e
                 import time
                 time.sleep(timeout)
                 timeout *= 2
