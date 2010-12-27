@@ -408,8 +408,6 @@ class MPI(Thread):
 
             for data in remove:
                 self.received_data.remove(data)
-        #Logger().debug("-- Match pending released lock! Match:%s" % match)
-        #Logger().warning("Show some request!: %s" % request)
         return match
 
     def run(self):
