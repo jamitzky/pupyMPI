@@ -185,107 +185,6 @@ class Network(object):
         for (host, port, global_rank) in all_procs:
             self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
 
-    def register_connection_close(self, rank):
-        """
-        Called when we receive a CMD_CONN_CLOSE message. See the
-        :func:`close_all_connections` and :func:`close_connection` for more
-        information.
-        """
-        with self.closing_socket_lock:
-            if rank not in self.closing_socket_data:
-                self.closing_socket_data[rank] = (threading.Event(), "remote")
-
-            event, status = self.closing_socket_data[rank]
-
-        if status == "local":
-            # local means that we have flushed the message and this function
-            # means that we have received the CMD from the other endpoint. It
-            # should be safe to close the socket.
-            self._remove_connection(rank)
-        elif status == "remote":
-            # nothing
-            pass
-        else:
-            # Warn that something strange might be happening.
-            Logger().warning("Found an unkown status in the connection register: %s" % status)
-
-    def _remove_connection(self, rank):
-        event, status = self.closing_socket_data[rank]
-        event.set() # Signal to people waiting.
-
-        # Remove the index from the internal structure. Note that calling this
-        # function you should have the lock for the following object.
-        del self.closing_socket_data[rank]
-
-        # Remove the connection from the socket pool.
-        self.socket_pool.remove_rank(rank)
-
-    def close_all_connections(self):
-        """
-        Close all connections in the network gracefully. This is just a quick
-        way to call the :func:`close_connection` on all the sockets in the
-        socket pool.
-        """
-        our_rank = self.mpi.MPI_COMM_WORLD.comm_group.rank()
-        size = self.mpi.MPI_COMM_WORLD.comm_group.size()
-
-        events = []
-        for rank in range(size):
-            if rank != our_rank:
-                events.append( self.close_connection(rank))
-
-        [e.wait() for e in events]
-
-    def close_connection(self, rank, blocking=True, always_event=False):
-        """
-        This function closes a socket connection gracefully. This will send a
-        command on the socket and the connection will not be closed before this
-        is send and recieved. This means that any messages "on the wire" will
-        be flushed through the wire before closing the connection.
-
-        If you are using this function you should probably also flush any outgoing
-        messages.
-
-        The function will return a threading.Event() object. This makes it
-        possible to wait() for the completion of the removal or test it with
-        the is_set() function.
-        """
-
-        # Find the connection in the socket pool.
-        connection = self.socket_pool._get_socket_for_rank(rank)
-        if not connection:
-            event = threading.Event()
-            event.set()
-            return event
-
-        # Send the command on the socket.
-        request = self.mpi.MPI_COMM_WORLD._isend(None, rank, cmd=constants.CMD_CONN_CLOSE)
-
-        request.wait()
-
-        # Create an internal structure to keep track of the progress. The
-        # status consists of a string and an event. When we receive the a
-        # message the status will change to "remote" (unless the string is
-        # currently local.. then it will be "both". When the CMD is sent the
-        # status will be changed from "none" to "local".
-        with self.closing_socket_lock:
-            if rank not in self.closing_socket_data:
-                self.closing_socket_data[rank] = (threading.Event(), "local")
-
-            event, status = self.closing_socket_data[rank]
-
-            if status == "remote":
-                # remote means that we have received a CMD and we have flushed
-                # the message in this function.
-                self._remove_connection(rank)
-            elif status == "local":
-                # We just created it.
-                pass
-            else:
-                # Warn that something strange might be happening.
-                Logger().warning("Found an unkown status in the connection register: %s" % status)
-            return event
-
     def start_full_network(self):
         # We make a full network startup by receiving from all with lower ranks and
         # sending to higher ranks
@@ -437,8 +336,10 @@ class BaseCommunicationHandler(threading.Thread):
                 except socket.error, e:
                     # We try to accept but if accept fails maybe it just data coming in?
                     Logger().error("accept() threw: %s on the main recv socket:%s" % (e,read_socket) )
+                    continue
                 except Exception, e:
                     Logger().error("_handle_readlist: Unknown error. Error was: %s" % e)
+                    continue
             else:
                 conn = read_socket
 
