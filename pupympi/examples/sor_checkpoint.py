@@ -1,9 +1,7 @@
 from mpi import MPI
-from mpi.migrate import checkpoint
 
 import time, random
 
-@checkpoint
 def solver_it(mpi):
     world = mpi.MPI_COMM_WORLD
     rank = world.rank()

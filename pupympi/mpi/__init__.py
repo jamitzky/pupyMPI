@@ -514,8 +514,8 @@ class MPI(Thread):
             'received_data' : self.received_data,
             'current_request_id' : self.current_request_id,
             'pending_systems_commands' : self.pending_systems_commands,
-            'migrate_pack' : self.migrate_onpack,
-            'migrate_unpack' : self.migrate_onunpack,
+            'migrate_pack' : getattr(self, "migrate_onpack", None),
+            'migrate_unpack' : getattr(self, "migrate_onunpack", None),
             'resumer' : self.resume_function,
         }
 
