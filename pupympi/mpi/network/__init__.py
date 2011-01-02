@@ -264,13 +264,6 @@ class BaseCommunicationHandler(threading.Thread):
 
         self.debug_counter = 0
 
-    def get_state(self):
-        return {
-            'type' : self.type,
-            'debug_counter' : self.debug_counter,
-            'rank' : self.rank,
-        }
-
     def finalize(self):
         self.shutdown_event.set()
 

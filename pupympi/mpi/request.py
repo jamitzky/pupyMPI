@@ -84,6 +84,22 @@ class Request(BaseRequest):
 
         #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
 
+    @classmethod
+    def from_state(cls, state):
+        return cls(state['type'], state['comm_id'], state['participant'], state['tag'], state['acknowledge'], state['data'], state['cmd'])
+
+    def get_state(self):
+        return {
+            'type' : self.request_type,
+            'cmd' : self.cmd,
+            'acknowledge' : self.acknowledge,
+            'data' : self.data,
+            'participant' : self.participant,
+            'tag' : self.tag,
+            'comm_id' : self.communicator.id,
+        }
+
+
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )

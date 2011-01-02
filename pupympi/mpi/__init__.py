@@ -304,6 +304,25 @@ class MPI(Thread):
         for att_name in obj['mpi']:
             setattr(self, att_name, obj['mpi'][att_name])
 
+        # The MPI state contains a list of request objects. There can not be a
+        # lock object, so only the request state if present now. We restore it
+        # with a helper function.
+        self.unstarted_requests = [ Request.from_state(state) for state in self.unstarted_requests ]
+        self.pending_requests = [ Request.from_state(state) for state in self.pending_requests ]
+
+        # FIXME: Setup the communicator and groups.
+
+        # Import everything from the user module. This is important as the user
+        # might have defined objects / classes etc deleted as part of the
+        # pickle process.
+        user_module = obj['mpi']['user_module']
+        try:
+            user_module = __import__(user_module)
+            import __main__
+            __main__.__dict__.update(user_module.__dict__)
+        except Exception, e:
+            Logger().warning("Can't import the user module: %s. This might not be a problem, but it is better to restore the script with your script in your PYTHONPATH." % user_module)
+
         # Find a user supplied function (if any) and call it so the user script can restore any
         # unsafe objects if needed.
         unpacker = self.get_migrate_onunpack()
@@ -351,7 +370,7 @@ class MPI(Thread):
         Returns the callable (or None) used when the running instance is
         migrated (setup on the other side).
         """
-        return getattr(self, "migrate_unonpack", None)
+        return getattr(self, "migrate_onunpack", None)
 
     def set_resume_function(self, callback):
         """
@@ -505,18 +524,20 @@ class MPI(Thread):
         """
         A function for getting the current state of the MPI environment.
         """
-        # FIXME: We need to check that everything is needed.
+        import sys
+        user_module = sys.argv[0].split("/")[-1].replace(".py","")
+
         return {
-            'state_origin' : 'mpi',
-            'unstarted_requests' : self.unstarted_requests,
-            'pending_requests' : self.pending_requests,
+            'unstarted_requests' : [r.get_state() for r in self.unstarted_requests],
+            'pending_requests' : [r.get_state() for r in self.pending_requests],
             'raw_data_queue' : self.raw_data_queue,
             'received_data' : self.received_data,
             'current_request_id' : self.current_request_id,
             'pending_systems_commands' : self.pending_systems_commands,
-            'migrate_pack' : getattr(self, "migrate_onpack", None),
-            'migrate_unpack' : getattr(self, "migrate_onunpack", None),
+            'migrate_onpack' : getattr(self, "migrate_onpack", None),
+            'migrate_onunpack' : getattr(self, "migrate_onunpack", None),
             'resumer' : self.resume_function,
+            'user_module' : user_module,
         }
 
     def abort(self):
