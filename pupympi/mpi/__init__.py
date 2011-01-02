@@ -273,8 +273,9 @@ class MPI(Thread):
 
         self.daemon = True
 
+        resumer = None
         if self.resume:
-            self.resume_packed_state()
+            resumer = self.resume_packed_state()
 
         self.start()
 
@@ -287,6 +288,9 @@ class MPI(Thread):
 
         if self._profiler_enabled:
             pupyprof.start()
+
+        if self.resume and resumer:
+            resumer(self)
 
     def resume_packed_state(self):
         obj = dill.loads(self.resume_state)
@@ -331,7 +335,7 @@ class MPI(Thread):
 
         # Find the function we need to resume
         resumer = getattr(session_data, self.resumer.__name__)
-        resumer(self)
+        return resumer
 
     def set_migrate_onpack(self, callback):
         """
