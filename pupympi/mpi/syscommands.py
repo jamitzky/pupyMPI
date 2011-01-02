@@ -38,7 +38,6 @@ def find_mpi(obj):
 def handle_system_commands(f, *args, **kwargs):
     @wraps(f)
     def inner(self, *args, **kwargs):
-
         # Find MPI instance.
         mpi = find_mpi(self)
 

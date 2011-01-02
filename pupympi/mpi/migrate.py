@@ -63,8 +63,6 @@ class MigratePack(object):
 
         # Serialize other data
         self.data['mpi'] = self.mpi.get_state()
-        self.data['t_out'] = self.t_out.get_state()
-        self.data['t_in'] = self.t_in.get_state()
 
         # Remove stuff we can't pickle.
         self.clear_unpickable_objects()
@@ -75,11 +73,13 @@ class MigratePack(object):
 
         try:
             dill.dump_session(filename=filename)
-
             # Load the session data into the dict so we can sent it.
             self.data['session'] = dill.load(open(filename))
-        except Exception as e:
-            print "Cant pickle the current session into a file. Received error was", e
+        except Exception, e:
+            print "Cant serialize the current session. Traceback and information follows:"
+            print "\t Error:", e
+            import __main__
+            print "\t Main session:", __main__.__dict__
 
         # Send the data+file on the connection.
         from mpi.network.utils import robust_send, prepare_message
