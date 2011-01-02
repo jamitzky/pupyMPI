@@ -296,13 +296,25 @@ class MPI(Thread):
         obj = dill.loads(self.resume_state)
         session_data = obj['session']
 
-        # We write the session data to a file and then load the session with the
-        # special dill function called load_session.
-        import tempfile
-        _, filename = tempfile.mkstemp(prefix="pupy")
+        # Import everything from the user module. This is important as the user
+        # might have defined objects / classes etc deleted as part of the
+        # pickle process.
+        user_module = obj['mpi']['user_module']
 
-        dill.dump(session_data, open(filename, "w"))
-        dill.load_session(filename=filename)
+        try:
+            user_module = __import__(user_module)
+            import __main__
+
+            for k in user_module.__dict__:
+                if k not in __main__.__dict__:
+                    __main__.__dict__[k] = user_module.__dict__[k]
+
+            user_module.__dict__.update(__main__.__dict__)
+
+        except Exception, e:
+            Logger().warning("Can't import the user module: %s. This might not be a problem, but it is better to restore the script with your script in your PYTHONPATH." % user_module)
+            print e
+
 
         # Restore the mpi state.
         for att_name in obj['mpi']:
@@ -311,30 +323,20 @@ class MPI(Thread):
         # The MPI state contains a list of request objects. There can not be a
         # lock object, so only the request state if present now. We restore it
         # with a helper function.
-        self.unstarted_requests = [ Request.from_state(state) for state in self.unstarted_requests ]
-        self.pending_requests = [ Request.from_state(state) for state in self.pending_requests ]
+        self.unstarted_requests = [ Request.from_state(state, self) for state in self.unstarted_requests ]
+        self.pending_requests = [ Request.from_state(state, self) for state in self.pending_requests ]
 
         # FIXME: Setup the communicator and groups.
 
-        # Import everything from the user module. This is important as the user
-        # might have defined objects / classes etc deleted as part of the
-        # pickle process.
-        user_module = obj['mpi']['user_module']
-        try:
-            user_module = __import__(user_module)
-            import __main__
-            __main__.__dict__.update(user_module.__dict__)
-        except Exception, e:
-            Logger().warning("Can't import the user module: %s. This might not be a problem, but it is better to restore the script with your script in your PYTHONPATH." % user_module)
-
         # Find a user supplied function (if any) and call it so the user script can restore any
         # unsafe objects if needed.
-        unpacker = self.get_migrate_onunpack()
-        if unpacker:
-            unpacker()
+        unpacker_name = self.get_migrate_onunpack().__name__
+        unpacker = getattr(user_module, unpacker_name)
+
+        user_module.__dict__.update(session_data.__dict__)
 
         # Find the function we need to resume
-        resumer = getattr(session_data, self.resumer.__name__)
+        resumer = getattr(user_module, self.resumer.__name__)
         return resumer
 
     def set_migrate_onpack(self, callback):
