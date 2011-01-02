@@ -85,8 +85,9 @@ class Request(BaseRequest):
         #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
 
     @classmethod
-    def from_state(cls, state):
-        return cls(state['type'], state['comm_id'], state['participant'], state['tag'], state['acknowledge'], state['data'], state['cmd'])
+    def from_state(cls, state, mpi):
+        communicator = mpi.communicators[state['comm_id']]
+        return cls(state['type'], communicator, state['participant'], state['tag'], state['acknowledge'], state['data'], state['cmd'])
 
     def get_state(self):
         return {
@@ -98,7 +99,6 @@ class Request(BaseRequest):
             'tag' : self.tag,
             'comm_id' : self.communicator.id,
         }
-
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
