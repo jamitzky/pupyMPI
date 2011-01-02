@@ -43,14 +43,10 @@ def handle_system_commands(f, *args, **kwargs):
         mpi = find_mpi(self)
 
         # execute the system messages if there are any
-        run_inner_func = True
         with mpi.pending_systems_commands_lock:
-            if mpi.pending_systems_commands:
-                run_inner_func = execute_commands(mpi)
+            execute_commands(mpi)
 
-        # calling the original function
-        if run_inner_func:
-            return f(self, *args, **kwargs)
+        return f(self, *args, **kwargs)
     return inner
 
 from mpi import constants

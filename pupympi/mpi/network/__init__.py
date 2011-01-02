@@ -76,7 +76,6 @@ class Network(object):
 
         if options.disable_full_network_startup:
             socket_pool_size = options.socket_pool_size
-            #Logger().debug("Socket Pool DYNAMIC size:%i" % socket_pool_size)
         else:
             # We need extra room for an admin connection.
             socket_pool_size = options.size+1
@@ -279,6 +278,7 @@ class BaseCommunicationHandler(threading.Thread):
         """
         Put a requested out operation (eg. send) on the out list
         """
+
         # Find the global rank of recipient process
         global_rank = request.communicator.group().members[request.participant]['global_rank']
 

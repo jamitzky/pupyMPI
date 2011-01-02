@@ -79,7 +79,7 @@ class MigratePack(object):
             # Load the session data into the dict so we can sent it.
             self.data['session'] = dill.load(open(filename))
         except Exception as e:
-            print "Cant pickle the current session into a file", e
+            print "Cant pickle the current session into a file. Received error was", e
 
         # Send the data+file on the connection.
         from mpi.network.utils import robust_send, prepare_message
@@ -180,9 +180,13 @@ from functools import wraps
 def checkpoint(f, *args, **kwargs):
     @wraps(f)
     def inner(mpi, *args, **kwargs):
+        # Find the rank:
+
         migrate = False
         migrate_data = None
         all_commands = []
+
+        rank = mpi.MPI_COMM_WORLD.comm_group.rank()
 
         # Try to find a migrate command.
         with mpi.pending_systems_commands_lock:
