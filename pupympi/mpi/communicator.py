@@ -140,7 +140,6 @@ class Communicator:
         if group.rank() == -1:
             return constants.MPI_COMM_NULL
 
-        #return self._comm_create_coll(group)
         new_comm = self._comm_create_local(group)
         return new_comm
 
@@ -172,8 +171,6 @@ class Communicator:
             *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
 
         """
-        self.mpi._check_messages() # See documentation
-
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)
 
         # thats it....dont do anything more. This deviates from the MPI standard.
@@ -200,7 +197,6 @@ class Communicator:
             groups (albeit this is simpler), and it requires special handling.
             Target implementation version: 1.1
         """
-        self.mpi._check_messages() # See documentation
         # one suggestion for implementation:
         # 1: collective exchange color/key info
         # 2: order into groups (each process will only be in one of N groups)
@@ -244,7 +240,6 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
-        self.mpi._check_messages() # See documentation
         if not isinstance(other_communicator, Communicator):
             return constants.MPI_UNEQUAL
 
@@ -727,7 +722,11 @@ class Communicator:
         return None
 
     @handle_system_commands
-    def probe(self):
+    def probe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        Logger().warn("Non-Implemented method 'probe' called.")
+
+    @handle_system_commands
+    def iprobe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         Logger().warn("Non-Implemented method 'probe' called.")
 
     @handle_system_commands

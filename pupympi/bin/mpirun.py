@@ -87,7 +87,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
     parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
-    parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for pupysh usage). ")
+    parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for utility usage). ")
     parser_adv_group.add_option('--disable-utilities', dest='disable_utilities', action='store_true', default=False)
     parser.add_option_group( parser_adv_group )
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
     if not options.disable_utilities: # This very verbose check is important. If not set, the value will be None.
         cmd_handle = write_cmd_handle(handle_procs, filename=options.cmd_handle)
-        print "Process handle written (use pupysh to interact with the running system) to: %s" % cmd_handle
+        print "Process handle written (use the utility scripts to interact with the running system) to: %s" % cmd_handle
 
     # Wait for all started processes to die
     exit_codes = processloaders.wait_for_shutdown(process_list)
