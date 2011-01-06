@@ -315,7 +315,6 @@ class MPI(Thread):
             Logger().warning("Can't import the user module: %s. This might not be a problem, but it is better to restore the script with your script in your PYTHONPATH." % user_module)
             print e
 
-
         # Restore the mpi state.
         for att_name in obj['mpi']:
             setattr(self, att_name, obj['mpi'][att_name])
