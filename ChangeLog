@@ -1,9 +1,10 @@
-Changes to version 0.7.5:
+Changes to version 0.8.0:
 
-* Added a utils/pupy_abort.py utility for aborting a running instance.
-* Added a utils/pupy_ping.py utility for testing if a running instance is "running".
-* Added a utils/pupy_readregisters.py utility for reading user defined registers.
-* Added a utils/pupy_pack.py utility for migrating one instance to another. 
+Introduced migration and utilities: 
+* Added a utils/pupy_abort.py utility for aborting a running instance (bromer)
+* Added a utils/pupy_ping.py utility for testing if a running instance is "running" (bromer)
+* Added a utils/pupy_readregisters.py utility for reading user defined registers (bromer)
+* Added a utils/pupy_pack.py utility for migrating one instance to another (bromer)
 
 Changes to version 0.7.4:
 
