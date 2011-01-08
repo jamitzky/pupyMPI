@@ -47,7 +47,7 @@ def write_cmd_handle(all_procs, filename=None):
     }
 
     fh = open(filename, "wb")
-    pickle.dump(data, fh)
+    pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
 
     fh.close()
     return filename
