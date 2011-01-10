@@ -24,7 +24,7 @@ mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
-import dill
+from mpi import dill
 
 from mpi.logger import Logger
 from mpi.network import utils
