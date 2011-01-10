@@ -41,6 +41,9 @@ def handle_system_commands(f, *args, **kwargs):
         # Find MPI instance.
         mpi = find_mpi(self)
 
+        if not mpi.pending_systems_commands:
+            return f(self, *args, **kwargs)
+
         # execute the system messages if there are any
         with mpi.pending_systems_commands_lock:
             execute_commands(mpi)
