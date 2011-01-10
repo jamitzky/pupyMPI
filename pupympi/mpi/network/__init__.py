@@ -169,7 +169,7 @@ class Network(object):
 
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
-        import dill
+        from mpi import dill
         _, _, _, _, _, data = get_raw_message(s_conn)
         all_procs, state = dill.loads(data)
 

@@ -293,6 +293,7 @@ class MPI(Thread):
             resumer(self)
 
     def resume_packed_state(self):
+        from mpi import dill
         obj = dill.loads(self.resume_state)
         session_data = obj['session']
 
