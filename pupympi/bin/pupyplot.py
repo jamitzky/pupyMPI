@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -42,12 +42,12 @@ def format_tag(tag):
 
 def options_and_arguments(): # {{{1
     from optparse import OptionParser, OptionGroup
-    
+
     usage = """usage: %prog [options] folder1 folder2 ... folderN
-    
-    <<folder1>> to <<folderN>> should be folders containing benchmark 
-    data for comparison."""   
-    
+
+    <<folder1>> to <<folderN>> should be folders containing benchmark
+    data for comparison."""
+
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
     parser.add_option("--build-folder", dest="output_folder", help="The folder containing the GNUPlot files. If not given a folder called 'plot_output' will be created. If that folder already exists 'plot_output1', 'plot_output2'... will be created. ")
     parser.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Silent mode. No final message etc")
@@ -127,7 +127,7 @@ class DataGather(object): # {{{1
         lower_is_better = True
         if value_method == "throughput":
             lower_is_better = False
-        
+
         self.tags = set([])
         self.parsed_csv_files = 0
         self._find_csv_files(folder_prefixes)
@@ -144,7 +144,7 @@ class DataGather(object): # {{{1
                 if x not in s:
                     s[x] = []
                 s[x].append(element)
-            return s 
+            return s
 
         struct1 = struct(list1)
         struct2 = struct(list2)
@@ -180,12 +180,12 @@ class DataGather(object): # {{{1
     def calculate_aggregate_speedup(self, baseline_tag=None, lower_is_better=True): # {{{2
         """
         Find the lowest tag and use that as a baseline if you don't give one
-        through the command line options. 
+        through the command line options.
 
         This only calculates the internal speedup, so the plotting afterwards
-        can be both a scatterplot and lineplot. 
+        can be both a scatterplot and lineplot.
         """
-        # If we have a tag, we validate that it actually exists. 
+        # If we have a tag, we validate that it actually exists.
         if baseline_tag and baseline_tag not in self.tags:
             print "Warning. The supplied tag '%s' for speedup is not parsed" % baseline_tag
             baseline_tag = None
@@ -198,7 +198,7 @@ class DataGather(object): # {{{1
         # list and the other list. For <<baseline>> list and <<compare>> list we find
         # scale_i (scaling factor for item i) by dividing baseline_i with compare_i. We
         # also do this for the baseline itself (will just give a plain and nice 1).
-    
+
         scale_data = {}
         for test_name in self.data:
             if test_name not in scale_data:
@@ -235,12 +235,12 @@ class DataGather(object): # {{{1
 
                         try:
                             if lower_is_better:
-                                speedup = float(baseline_avg) / float(tocompare_avg) 
+                                speedup = float(baseline_avg) / float(tocompare_avg)
                             else:
                                 speedup = float(tocompare_avg) / float(baseline_avg)
                         except:
                             speedup = None
-    
+
                         scale_data[test_name][procs][tag]['avg'].append( (key,speedup))
 
         self.agg_scale_data = scale_data
@@ -248,12 +248,12 @@ class DataGather(object): # {{{1
     def calculate_point_speedup(self, baseline_tag=None): # {{{2
         """
         Find the lowest tag and use that as a baseline if you don't give one
-        through the command line options. 
+        through the command line options.
 
         This only calculates the internal speedup, so the plotting afterwards
-        can be both a scatterplot and lineplot. 
+        can be both a scatterplot and lineplot.
         """
-        # If we have a tag, we validate that it actually exists. 
+        # If we have a tag, we validate that it actually exists.
         if baseline_tag and baseline_tag not in self.tags:
             print "Warning. The supplied tag '%s' for speedup is not parsed" % baseline_tag
             baseline_tag = None
@@ -266,7 +266,7 @@ class DataGather(object): # {{{1
         # list and the other list. For <<baseline>> list and <<compare>> list we find
         # scale_i (scaling factor for item i) by dividing baseline_i with compare_i. We
         # also do this for the baseline itself (will just give a plain and nice 1).
-    
+
         scale_data = {}
         data = copy.deepcopy(self.data)
         for test_name in data:
@@ -287,8 +287,8 @@ class DataGather(object): # {{{1
                     # internal compare method {{{3
                     # We sort the lists so we don't get strange items comapred. We need a
                     # custom compare function as we need to sort the tuple by the first
-                    # item, THEN by the second. 
-                    def compare(t1, t2): # 
+                    # item, THEN by the second.
+                    def compare(t1, t2): #
                         if t1[0] < t2[0]:
                             return -1
                         elif t1[0] > t2[0]:
@@ -301,7 +301,7 @@ class DataGather(object): # {{{1
                             else:
                                 return 0
                     # }}}3
-                            
+
                     baseline = sorted(baseline, compare)
                     tocompare = sorted(tocompare, compare)
 
@@ -332,10 +332,10 @@ class DataGather(object): # {{{1
     # }}}2
     def aggregate(self, methods): # {{{2
         """
-        This method runs through the data and aggregates data for equal 
-        x values. 
-        
-        These data is then used to construct a number of line graphs. 
+        This method runs through the data and aggregates data for equal
+        x values.
+
+        These data is then used to construct a number of line graphs.
         """
         data = copy.deepcopy(self.data)
         agg_data = {}
@@ -359,7 +359,7 @@ class DataGather(object): # {{{1
                         d[x].append(y)
                     # The dict d now contains a number of elements for each x value. We can how
                     # run through that dict constructing a tuple with (x, agg_f(y_values)) and
-                    # use that. 
+                    # use that.
                     for x in d:
                         for ft in methods:
                             (fname, func) = ft
@@ -380,7 +380,7 @@ class DataGather(object): # {{{1
     def _filter(self, org_keys, exclude): # {{{2
         keys = []
         for key in org_keys:
-            comp_key = key.lower() 
+            comp_key = key.lower()
             found = False
             for ex in exclude:
                 if comp_key.find(ex) > -1:
@@ -400,7 +400,7 @@ class DataGather(object): # {{{1
         """
         This is the initial phase of the parsing. Using the folder prefixes we
         find all the potential single benchmark datafiles and put them in an
-        internal structure for later parsing. 
+        internal structure for later parsing.
         """
         self.csv_files = []
         for fp in folder_prefixes:
@@ -413,15 +413,15 @@ class DataGather(object): # {{{1
     def _parse(self, value_method="avg"): # {{{2
         """
         Goes through the possile csv files and parse the contents into an
-        internal format. 
+        internal format.
 
         XXX: We could make a very simple argument here to dump the internal
         format to a pickles file so we can re-read it at a later point
         """
         data = {}
-        
+
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile(".*/benchmark_data/.*/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -436,16 +436,16 @@ class DataGather(object): # {{{1
                     fc = row[0].strip()
                     if fc.startswith("#"):
                         continue
-                    
+
                     # Remove headers
                     try:
                         int(row[0])
                     except:
                         continue
-                    
+
                 except:
                     pass
-                
+
                 # Unpack data
                 datasize = row[0]
                 time_p_it = row[3]
@@ -462,7 +462,7 @@ class DataGather(object): # {{{1
 
                     run_type = row[8].replace("test_","")
 
-                    # The number of procs seems inconsistant. 
+                    # The number of procs seems inconsistant.
                     procs = row[7]
                 elif len(row) == 8:
                     # old format. Wasting memory due to lack of coding stills by CB
@@ -472,7 +472,7 @@ class DataGather(object): # {{{1
                     throughput = float(row[4])
                     run_type = row[6].replace("test_","")
 
-                    # The number of procs seems inconsistant. 
+                    # The number of procs seems inconsistant.
                     procs = row[5]
                 elif len(row) == 7:
                     throughput = float(row[4])
@@ -487,11 +487,13 @@ class DataGather(object): # {{{1
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
+                if not match:
+                    print "Found problem with filename", filename
 
                 # We override the <<procs>> here. Maybe we should not
                 tag, _,procs = match.groups()
 
-                self._add_tag(tag) 
+                self._add_tag(tag)
 
                 # Add the data to the internal structure
                 if run_type not in data:
@@ -545,7 +547,7 @@ class Plotter(object): # {{{1
 # }}}1
 class GNUPlot(object): # {{{1
     def sort_data(self):
-        def compare(t1, t2): 
+        def compare(t1, t2):
             if int(t1[0]) < int(t2[0]):
                 return -1
             elif int(t1[0]) > int(t2[0]):
@@ -590,7 +592,7 @@ class GNUPlot(object): # {{{1
     # }}}2
     def format_traffic(self, bytecount): # {{{2
         return self.format_size(bytecount, decimals=1)+"/s"
-    # }}}2 
+    # }}}2
     def format_scale(self, scale): # {{{2
         return "%.0f" % scale
     # }}}2
@@ -658,7 +660,7 @@ class GNUPlot(object): # {{{1
         """
         Find the labels on an axis (x or y) by calculating the maximum distance
         between labels and another things. We know the size of the plot, so we
-        can calculate how many labels fit. 
+        can calculate how many labels fit.
 
         The steps for finding the proper GNUPlot labels:
 
@@ -671,13 +673,13 @@ class GNUPlot(object): # {{{1
               the axis type.
         """
         if not axis_data:
-            # Find the lowest element. This is 0 unless we have a log scale, 
+            # Find the lowest element. This is 0 unless we have a log scale,
             # in case we use 1 (otherwise we'll get a math domain error)
             raw_labels = self.get_initial_range(axis_max, format_type, scale_type)
         else:
             raw_labels = axis_data
 
-        # 4) Format the data. 
+        # 4) Format the data.
         formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'traffic' : self.format_traffic }[format_type]
         used_strs = []
         formatted_labels = []
@@ -690,10 +692,10 @@ class GNUPlot(object): # {{{1
             formatted_labels.append("'%s' %d" % (formatter(label), label))
 
         return formatted_labels
-    # }}}2 
+    # }}}2
     def find_max_and_min(self): # {{{2
         x_data = []
-        y_data = [] 
+        y_data = []
 
         for element in self.data:
             _, _, plots = element
@@ -746,7 +748,7 @@ class LinePlot(GNUPlot): # {{{1
         # Basic data for all the files.
         filename = "%s_line_%s_%s" % (self.prefix, self.title_help, self.test_name)
 
-        # Flush all the data files. 
+        # Flush all the data files.
         dat_files = []
 
         self.sort_data()
@@ -781,8 +783,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -806,7 +808,7 @@ class LinePlot(GNUPlot): # {{{1
             print >> gnu_fp, "set log x"
             x_min = 1
 
-        # Setting x-range and y-range. 
+        # Setting x-range and y-range.
         print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
         print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
@@ -821,7 +823,7 @@ class LinePlot(GNUPlot): # {{{1
 
             title = "%s procs (Tag: %s)" % (procs, format_tag(tag))
             plot_strs.append(' "%s" with linespoints title "%s" %s' % (dat_filename, title, errorbar))
-            
+
         plot_str += ", ".join(plot_strs)
         print >> gnu_fp, plot_str
 
@@ -842,13 +844,13 @@ class ScatterPlot(GNUPlot): # {{{1
     # }}}2
     def plot(self): # {{{2
         self.find_max_and_min()
-        
+
         # Basic data for all the files.
         filename = "%s_scatter_%s" % (self.prefix, self.test_name)
 
         self.sort_data()
 
-        # Flush all the data files. 
+        # Flush all the data files.
         dat_files = []
         for element in self.data:
             procs, tag, plots = element
@@ -867,8 +869,8 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        # print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -891,7 +893,7 @@ class ScatterPlot(GNUPlot): # {{{1
             print >> gnu_fp, "set log x"
             x_min = 1
 
-        # Setting x-range and y-range. 
+        # Setting x-range and y-range.
         print >> gnu_fp, "set xrange [%d:%d]" % (x_min, max(2,self.get_buffered_x_max(format_type=self.y_type)))
         print >> gnu_fp, "set yrange [%d:%d]" % (y_min, max(2, self.get_buffered_y_max(format_type=self.y_type)))
 
@@ -903,7 +905,7 @@ class ScatterPlot(GNUPlot): # {{{1
             (procs, tag, dat_filename) = p
             title = "%s procs (Tag: %s)" % (procs, format_tag(tag))
             plot_strs.append(' "%s" ls %d title "%s"' % (dat_filename, i, title))
-            
+
         plot_str += ", ".join(plot_strs)
         print >> gnu_fp, plot_str
 
@@ -937,7 +939,7 @@ class SinglePlotter(Plotter): # {{{1
                     lp.set_prefix( run_type[0] )
                     lp.set_height(self.settings.plot_height)
                     lp.set_width(self.settings.plot_width)
-            
+
                     if run_type[0] == "scale":
                         lp.set_y_type("scale")
                     else:
@@ -962,7 +964,7 @@ class SinglePlotter(Plotter): # {{{1
         color and labe, so it's possible to see the development.
 
         HINT: If you want data for only 32 procs on the chart, simply copy the genereated .gnu
-        files and remove what you don't want plotted. 
+        files and remove what you don't want plotted.
         """
         for run_type in [ ("normal", "data"), ("scale", "scale_data") ]:
             for test in self.data.get_tests():
@@ -981,33 +983,33 @@ class SinglePlotter(Plotter): # {{{1
                 for procs in data:
                     for tag in data[procs]:
                         sp.add_data(procs, tag, data[procs][tag])
-                
+
                 sp.plot()
     # }}}2
 # }}}1
 def write_gnuplot_makefile(folder_name): # {{{1
     fh = open(folder_name+"/Makefile", "w")
-    
+
     print >> fh, "all:"
     print >> fh, "\tgnuplot *.gnu\n"
     print >> fh, "clean:"
     print >> fh, "\trm *.png"
-    fh.close()            
+    fh.close()
 # }}}1
 # MAIN EXECUTING CODE {{{1
 if __name__ == "__main__":
     start_time = time.time()
-    # Handle arguments etc. 
+    # Handle arguments etc.
     folders, options = options_and_arguments()
 
     # Initialize a gather object. This object will hold all data
-    # and make it possible to extract it later. 
+    # and make it possible to extract it later.
     gather = DataGather(folders, options.agg_methods, options.value_method, options.speedup_baseline_tag)
 
     single_plotter = SinglePlotter(gather, options)
     output_folder = single_plotter.output_folder
 
-    # Check if we should place a makefile in the final folder. 
+    # Check if we should place a makefile in the final folder.
     if options.makefile:
         write_gnuplot_makefile(output_folder)
 
@@ -1025,9 +1027,9 @@ if __name__ == "__main__":
     # Print some informative text to the end user.
     if options.verbose:
         print """
-    ================================================================================ 
+    ================================================================================
     Comparison tags %s
-    ================================================================================ 
+    ================================================================================
 
         Compared tags          :      %s
         Output written to      :      %s
@@ -1036,7 +1038,7 @@ if __name__ == "__main__":
         Timing                 :      %.2f seconds
         Executed Makefile      :      %s
         Aggregation methods    :      %d (%s)
-        
+
     """ % (", ".join(formatted_tags), ", ".join(formatted_tags), output_folder, gather.parsed_csv_files, options.makefile, total_time, options.makefile_executed, len(options.agg_methods), ", ".join([x[0] for x in options.agg_methods]))
 
     if options.verbose:
