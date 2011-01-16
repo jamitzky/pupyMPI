@@ -105,7 +105,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     if is_pickled:
         pickled_data = data
     else:
-        pickled_data = pickle.dumps(data)
+        pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
 
     lpd = len(pickled_data)
 

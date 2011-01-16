@@ -210,7 +210,7 @@ class Network(object):
     def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
         from mpi.request import Request
         rl = []
-        message = pickle.dumps(message)
+        message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
         for recp in receivers:
             request = Request("send", communicator, recp, tag, data=message)
             request.is_pickled = True
