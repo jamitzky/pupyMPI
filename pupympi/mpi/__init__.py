@@ -662,7 +662,7 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
 
-    #@handle_system_commands
+    @handle_system_commands
     def get_version(self):
         """
         Return the version number of the pupyMPI installation.
