@@ -536,7 +536,6 @@ class Communicator:
         # signal the condition variable to wake the MPI thread and have
         # it handle the request start.
         self._add_unstarted_request(dummyhandle)
-
         return handle
 
     @handle_system_commands
@@ -582,6 +581,36 @@ class Communicator:
 
     @handle_system_commands
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        """
+        Function that inspects if a message from a given ``source`` with
+        a specific ``tag`` can be received. This function is blocking
+        meaning it will only return when it possible to call :func:`recv`
+        with the same parameters (without blocking).
+
+        **Example**
+        Rank 0 sends "Hello world!" to rank 1 with tag 3. Rank 1 probes
+        for that message (will return sucessfully) and then probes again
+        for a message. The latest probe will never return.::
+        and rank 0 can be sure the message has gotten through.::
+
+            from mpi import MPI
+            mpi = MPI()
+            TAG = 3 #
+
+            if mpi.MPI_COMM_WORLD.rank() == 0:
+                mpi.MPI_COMM_WORLD.send("Hello World!", 1, TAG)
+            elif mpi.MPI_COMM_WORLD.rank() == 1:
+                mpi.MPI_COMM_WORLD.probe(0, TAG) # will return pretty fast
+                msg = mpi.MPI_COMM_WORLD.recv(0, TAG) # will not block
+
+                mpi.MPI_COMM_WORLD.probe(0, 4) # will never return
+            else:
+                pass
+
+            mpi.finalize()
+
+        **See also**: :func:`iprobe`
+        """
         while True:
             res = self._iprobe(source, tag)
             if res:
@@ -591,6 +620,12 @@ class Communicator:
 
     @handle_system_commands
     def iprobe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        """
+        A non blocking test to check if a message with a given tag and source
+        and be received without blocking. Returns a boolean.
+
+        **See also**: :func:`probe` for an example of how to use probe.
+        """
         return self._iprobe(source, tag)
 
     def _iprobe(self, source, tag):
