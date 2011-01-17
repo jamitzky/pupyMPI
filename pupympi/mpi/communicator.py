@@ -581,6 +581,39 @@ class Communicator:
         return _self.issend(content, destination, tag).wait()
 
     @handle_system_commands
+    def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        while True:
+            res = self._iprobe(source, tag)
+            if res:
+                return
+
+            self.mpi.pending_requests_has_work.wait()
+
+    @handle_system_commands
+    def iprobe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        return self._iprobe(source, tag)
+
+    def _iprobe(self, source, tag):
+        """
+        The inner works of iprobe() and probe()
+        """
+        with self.mpi.received_data_lock:
+            for element in self.mpi.received_data:
+                (sender, recv_tag, _, communicator_id, _) = element
+
+                # Any communication must take place within the same communicator
+                if self.id == communicator_id:
+
+                    # The participant must match or any rank have been specified
+                    if source in (sender, constants.MPI_SOURCE_ANY):
+
+                        # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
+                        if tag in (recv_tag, constants.MPI_TAG_ANY):
+                            return True
+        return False
+
+
+    @handle_system_commands
     def send(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -720,14 +753,6 @@ class Communicator:
             return recvhandle.wait()
 
         return None
-
-    @handle_system_commands
-    def probe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
-        Logger().warn("Non-Implemented method 'probe' called.")
-
-    @handle_system_commands
-    def iprobe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
-        Logger().warn("Non-Implemented method 'probe' called.")
 
     @handle_system_commands
     def barrier(self):
