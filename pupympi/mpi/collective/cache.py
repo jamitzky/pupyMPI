@@ -19,15 +19,6 @@ class Cache(object):
             else:
                 raise CacheIndexException("No index in the cache called", key)
 
-    def keys(self):
-        return self.content.keys()
-
-    def values(self):
-        return self.contenet.values()
-
-    def get_dict(self):
-        return self.content
-
     def clear(self):
         self.content.clear()
 
