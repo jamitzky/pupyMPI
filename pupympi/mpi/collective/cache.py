@@ -40,5 +40,4 @@ class curry:
 def get_cache(cache_obj, prefix):
     f_get = curry(cache_obj.get, prefix=prefix)
     f_set = curry(cache_obj.set, prefix=prefix)
-
     return f_get, f_set
