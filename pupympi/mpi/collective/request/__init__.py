@@ -34,3 +34,6 @@ class BaseCollectiveRequest(object):
 
     def accept_msg(self, *args, **kwargs):
         raise NotImplementedError("The accept_msg() method was not implemented by the inheriting class.")
+
+    def start(self):
+        raise NotImplementedError("The start() method was not implemented by the inheriting class.")
