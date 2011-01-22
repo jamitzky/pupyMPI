@@ -8,10 +8,13 @@ class Controller(object):
         # access the global cache, but with a preset prefix.
         self.cache = Cache()
 
-        # Extract some basic elements from the communicator, so we do not need
-        # to access the communicator object later.
+        # Extract some basic elements from the communicator.
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
+
+        # Set other elements.
+        self.communicator = communicator
+        self.mpi = communicator.mpi
 
         # Setup the tag <-> request type mapping. For each tag, a list of
         # possible request classes are defined. When starting a new request,
@@ -41,10 +44,17 @@ class Controller(object):
         for req_class in req_class_list:
             obj = req_class.accept(self.size, self.rank, *args, **kwargs)
             if obj:
+                # Add the object to the MPI environment and send the start signal.
+                with self.mpi.unstarted_collective_requests_lock:
+                    self.mpi.unstarted_collective_requests.append(obj)
+
+                    # Signal
+                    self.mpi.unstarted_collective_requests_has_work.set()
+                    self.mpi.has_work.set()
+
                 return obj
 
         # Note: If we define a safety net we could select the first / last class
         # and initialize that.
         Logger.warning("Unable to initialize the collective request for tag %s. I suspect failure from this point" % tag)
-
 

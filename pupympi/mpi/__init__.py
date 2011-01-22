@@ -106,7 +106,6 @@ class MPI(Thread):
         # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
-
         self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
@@ -141,6 +140,17 @@ class MPI(Thread):
         # proper access.
         self.pending_systems_commands = []
         self.pending_systems_commands_lock = threading.Lock()
+
+        # Unstarted collective requests.
+        self.unstarted_collective_requests = []
+        self.unstarted_collective_requests_lock = threading.Lock()
+        self.unstarted_collective_requests_has_work = threading.Event()
+
+        # When the collective requsts are started they are moved to this queue until
+        # they are finished.
+        self.pending_collective_requests = []
+        self.pending_collective_requests_lock = threading.Lock()
+
 
         parser = OptionParser()
         parser.add_option('--rank', type='int')
@@ -489,6 +499,16 @@ class MPI(Thread):
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
+            # Collective requests.
+            if self.unstarted_collective_requests_has_work.is_set():
+                self.unstarted_collective_requests_has_work.clear()
+                with self.unstarted_collective_requests_lock:
+                    for coll_req in self.unstarted_collective_requests:
+                        coll_req.start()
+
+                    with self.pending_collective_requsts_lock:
+                        self.pending_collective_requests.extend(self.unstarted_collective_requests)
+                        self.unstarted_collective_requests = []
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.
