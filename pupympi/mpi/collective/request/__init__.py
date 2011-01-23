@@ -2,7 +2,7 @@ import threading
 
 class BaseCollectiveRequest(object):
     def __init__(self):
-        self.tag = None # Should be overwritten by the inheriting class.
+        self.tag = None
 
         # This object (with the acquire() and release() methods) defiend below
         # opens for the pythoic way to lock an object (with-keyword)
@@ -25,8 +25,14 @@ class BaseCollectiveRequest(object):
         """
         Document me
         """
-        # FIXME: Timeout?
         self._finished.wait()
+
+        # Requests are free to override this method, and implement their own
+        # wait(), but it is probably not needed. Look into writing a _get_data
+        # method instead.
+        f = getattr(self, "_get_data", None)
+        if callable(f):
+            return f()
 
     @classmethod
     def accept(self, size, rank, *args, **kwargs):

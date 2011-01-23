@@ -377,7 +377,6 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
-
     @handle_system_commands
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
@@ -792,6 +791,12 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
+
+
+        ### : bcast is replaced with new non-blocking structure.
+        request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
+        return request.wait()
+
         # Start collective request
         cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
         return cr.wait()

@@ -42,8 +42,11 @@ class Controller(object):
             Logger().warning("Unable to find collective list in the cls_mapping for tag %s" % tag)
 
         for req_class in req_class_list:
-            obj = req_class.accept(self.size, self.rank, *args, **kwargs)
+            obj = req_class.accept(self.communicator, *args, **kwargs)
             if obj:
+                # Set the tag on the object.
+                obj.tag = tag
+
                 # Add the object to the MPI environment and send the start signal.
                 with self.mpi.unstarted_collective_requests_lock:
                     self.mpi.unstarted_collective_requests.append(obj)
