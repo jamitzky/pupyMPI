@@ -791,15 +791,22 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
-
-
-        ### : bcast is replaced with new non-blocking structure.
         request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
         return request.wait()
 
-        # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
-        return cr.wait()
+    @handle_system_commands
+    def ibcast(self, data=None, root=0):
+        """
+        A non blocking broad cast operation, taking the same parameters (with
+        the same meaning) as :func:`bcast`. Instead of returning the
+        broadcasted data a handle is returned. It is possible to ``test()` or
+        ``wait()`` for the operation completion.
+
+        It is possible to use the non blocking collective request as any other
+        request object. This means that :func:`test_some``, :func:`wait_all`
+        support the collective requests.
+        """
+        return self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
 
     @handle_system_commands
     def allgather(self, data):
