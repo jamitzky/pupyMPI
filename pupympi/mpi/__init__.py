@@ -409,10 +409,6 @@ class MPI(Thread):
         prune = False
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
-
-                print self.pending_collective_requests
-                print self.received_collective_data
-
                 new_data_list = []
 
                 for item in self.received_collective_data:
@@ -534,6 +530,18 @@ class MPI(Thread):
                         self.raw_data_queue = []
                     self.raw_data_has_work.clear()
 
+            # Collective requests.
+            if self.unstarted_collective_requests_has_work.is_set():
+                self.unstarted_collective_requests_has_work.clear()
+                with self.unstarted_collective_requests_lock:
+                    for coll_req in self.unstarted_collective_requests:
+                        coll_req.start()
+
+                    with self.pending_collective_requests_lock:
+                        self.pending_collective_requests.extend(self.unstarted_collective_requests)
+                        self.unstarted_collective_requests = []
+                self.pending_collective_requests_has_work.set()
+
             if self.pending_collective_requests_has_work.is_set():
                 self.match_collective_pending()
 
@@ -553,16 +561,6 @@ class MPI(Thread):
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
-            # Collective requests.
-            if self.unstarted_collective_requests_has_work.is_set():
-                self.unstarted_collective_requests_has_work.clear()
-                with self.unstarted_collective_requests_lock:
-                    for coll_req in self.unstarted_collective_requests:
-                        coll_req.start()
-
-                    with self.pending_collective_requests_lock:
-                        self.pending_collective_requests.extend(self.unstarted_collective_requests)
-                        self.unstarted_collective_requests = []
 
         # The main loop is now done. We flush all the messages so there are not any outbound messages
         # stuck in the pipline.

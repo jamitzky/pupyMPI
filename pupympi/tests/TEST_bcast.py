@@ -30,6 +30,5 @@ for msg in messages:
             #print "Received", message
             #print "="*80
             raise e
-print "test script before finalize"
 
 mpi.finalize()

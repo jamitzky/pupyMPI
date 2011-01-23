@@ -30,7 +30,6 @@ class FlatTreeBCast(BaseCollectiveRequest):
         if self.rank == self.root:
             for i in range(self.size):
                 if i != self.rank:
-                    print "Sending from %d ==> %d" % (self.rank, i)
                     self.communicator._isend(self.data, i, tag=constants.TAG_BCAST)
 
             # Mark this request as complete.
@@ -40,7 +39,6 @@ class FlatTreeBCast(BaseCollectiveRequest):
         return self.data
 
     def accept_msg(self, rank, data):
-        print "%d <== data received from %d" % (self.rank, rank)
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
