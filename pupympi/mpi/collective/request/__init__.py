@@ -1,7 +1,7 @@
 import threading
 
 class BaseCollectiveRequest(object):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.tag = None
 
         # This object (with the acquire() and release() methods) defiend below

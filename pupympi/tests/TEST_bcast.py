@@ -23,12 +23,13 @@ for msg in messages:
     else:
         message = world.bcast(root=BCAST_ROOT)
         try:
-            assert message == msg 
+            assert message == msg
         except AssertionError, e:
             #print "="*80
             #print "Expected", msg
             #print "Received", message
             #print "="*80
             raise e
+print "test script before finalize"
 
 mpi.finalize()
