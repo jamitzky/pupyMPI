@@ -79,3 +79,90 @@ class FlatTree(Tree):
             all = range(0, self.size)
             all.remove(self.rank)
             return all
+
+class BinomialTree(Tree):
+    """
+    Implement a biniomal tree useful for keeping every node active in
+    communication.
+    """
+    #def __init__(self, communicator, root=0):
+    def __init__(self, root=0, rank=0, size=0):
+        """
+        Creating the topology.
+        """
+       #self.communicator = communicator
+       #self.rank = communicator.comm_group.rank()
+       #self.size = communicator.comm_group.size()
+        self.root = root
+        self.size = size
+        self.rank = rank
+
+        self.tree = self.generate_tree()
+
+        self._find_children()
+        self._find_parent()
+
+    def _find_parent(self):
+        def find(node, candidate):
+            if self.rank == node['rank']:
+                if candidate:
+                    self.parent = candidate['rank']
+            else:
+                for child in node['children']:
+                    find(child, node)
+
+        self.parent = None
+        find(self.tree, None)
+
+    def _find_children(self):
+        """
+        Find all the children of a node.
+        If no node is specified all children of calling rank are returned.
+        """
+        def find(node):
+            if self.rank == node['rank']:
+                self.children = [x['rank'] for x in node['children']]
+            else:
+                for child in node['children']:
+                    find(child)
+
+        find(self.tree)
+
+    def generate_tree(self):
+        ranks = range(self.size)
+        ranks.sort()
+        ranks.remove(self.root)
+        new_ranks = [self.root]
+        new_ranks.extend(ranks)
+
+        def node_create(rank, iteration=0):
+            return {
+              'rank' : rank,
+              'children' : [],
+              'iteration' :iteration
+            }
+
+        def find_all_leafs(node):
+            def find_sub(node):
+                l = [node]
+                childs = node['children']
+                if childs:
+                    for child in childs:
+                        l.extend( find_sub( child ))
+                return l
+            return find_sub(node)
+
+        root = node_create( new_ranks.pop(0) )
+
+        iteration = 1
+        while new_ranks:
+            try:
+                leafs = find_all_leafs( root )
+                for leaf in leafs:
+                    leaf['children'].append( node_create( new_ranks.pop(0), iteration ))
+            except IndexError:
+                break
+
+            iteration += 1
+        return root
+
