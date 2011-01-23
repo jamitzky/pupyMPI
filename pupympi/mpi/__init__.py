@@ -409,6 +409,10 @@ class MPI(Thread):
         prune = False
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
+
+                print self.pending_collective_requests
+                print self.received_collective_data
+
                 new_data_list = []
 
                 for item in self.received_collective_data:
@@ -427,7 +431,6 @@ class MPI(Thread):
 
                     if not match:
                         new_data_list.append( item )
-
 
                 self.received_collective_data = new_data_list
 
@@ -557,7 +560,7 @@ class MPI(Thread):
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
-                    with self.pending_collective_requsts_lock:
+                    with self.pending_collective_requests_lock:
                         self.pending_collective_requests.extend(self.unstarted_collective_requests)
                         self.unstarted_collective_requests = []
 

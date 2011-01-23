@@ -1,5 +1,8 @@
 from mpi.collective.cache import Cache
+from mpi.logger import Logger
 from mpi import constants
+
+from mpi.collective.request.bcast import FlatTreeBCast
 
 class Controller(object):
     def __init__(self, communicator):
@@ -20,15 +23,15 @@ class Controller(object):
         # possible request classes are defined. When starting a new request,
         # the first class accepting the data is created and executed.
         self.cls_mapping = {
-            constants.TAG_BCAST : [],
-            constants.BARRIER : [],
-            constants.ALLREDUCE : [],
-            constants.REDUCE : [],
-            constants.ALLTOALL : [],
-            constants.SCATTER : [],
-            constants.ALLGATHER : [],
-            constants.GATHER : [],
-            constants.SCAN : [],
+            constants.TAG_BCAST : [FlatTreeBCast],
+            constants.TAG_BARRIER : [],
+            constants.TAG_ALLREDUCE : [],
+            constants.TAG_REDUCE : [],
+            constants.TAG_ALLTOALL : [],
+            constants.TAG_SCATTER : [],
+            constants.TAG_ALLGATHER : [],
+            constants.TAG_GATHER : [],
+            constants.TAG_SCAN : [],
         }
 
     def get_request(self, tag, *args, **kwargs):
@@ -53,11 +56,11 @@ class Controller(object):
 
                     # Signal
                     self.mpi.unstarted_collective_requests_has_work.set()
-                    self.mpi.has_work.set()
+                    self.mpi.has_work_event.set()
 
                 return obj
 
         # Note: If we define a safety net we could select the first / last class
         # and initialize that.
-        Logger.warning("Unable to initialize the collective request for tag %s. I suspect failure from this point" % tag)
+        Logger().warning("Unable to initialize the collective request for tag %s. I suspect failure from this point" % tag)
 
