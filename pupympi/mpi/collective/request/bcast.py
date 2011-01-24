@@ -34,8 +34,6 @@ class TreeBCast(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
 
-        print "We got a topology", topology, " with parent", self.parent, " and children", self.children
-
         if self.parent is None:
             # we're the root.. let us send the data to each child
             self.send_to_children()
@@ -84,3 +82,32 @@ class FlatTreeBCast(TreeBCast):
 
             return obj
 
+class BinomialTreeBCast(TreeBCast):
+    ACCEPT_SIZE_LIMIT = 50
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class StaticFanoutTreeBCast(TreeBCast):
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        obj = cls(communicator, *args, **kwargs)
+
+        topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+        # Insert the toplogy as a smart trick
+        obj.topology = topology
+
+        return obj

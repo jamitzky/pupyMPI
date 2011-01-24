@@ -2,7 +2,7 @@ from mpi.collective.cache import Cache
 from mpi.logger import Logger
 from mpi import constants
 
-from mpi.collective.request.bcast import FlatTreeBCast
+from mpi.collective.request.bcast import FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast
 
 class Controller(object):
     def __init__(self, communicator):
@@ -23,7 +23,7 @@ class Controller(object):
         # possible request classes are defined. When starting a new request,
         # the first class accepting the data is created and executed.
         self.cls_mapping = {
-            constants.TAG_BCAST : [FlatTreeBCast],
+            constants.TAG_BCAST : [FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast],
             constants.TAG_BARRIER : [],
             constants.TAG_ALLREDUCE : [],
             constants.TAG_REDUCE : [],

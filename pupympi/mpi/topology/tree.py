@@ -108,7 +108,7 @@ class BinomialTree(Tree):
                 for child in node['children']:
                     find(child, node)
 
-        self.parent = None
+        self._parent = None
         find(self.tree, None)
 
     def parent(self):
