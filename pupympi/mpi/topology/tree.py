@@ -85,17 +85,14 @@ class BinomialTree(Tree):
     Implement a biniomal tree useful for keeping every node active in
     communication.
     """
-    #def __init__(self, communicator, root=0):
-    def __init__(self, root=0, rank=0, size=0):
+    def __init__(self, communicator, root=0):
         """
         Creating the topology.
         """
-       #self.communicator = communicator
-       #self.rank = communicator.comm_group.rank()
-       #self.size = communicator.comm_group.size()
+        self.communicator = communicator
+        self.rank = communicator.comm_group.rank()
+        self.size = communicator.comm_group.size()
         self.root = root
-        self.size = size
-        self.rank = rank
 
         self.tree = self.generate_tree()
 
@@ -166,3 +163,58 @@ class BinomialTree(Tree):
             iteration += 1
         return root
 
+class StaticFanoutTree(BinomialTree):
+
+    #def __init__(self, communicator, root=0, fanout=2):
+    def __init__(self, size=0, rank=0, root=0, fanout=2):
+        """
+        Creating the topology.
+        """
+        self.communicator = communicator
+        self.rank = communicator.comm_group.rank()
+        self.size = communicator.comm_group.size()
+
+        self.root = root
+        self.fanout = fanout
+        self.tree = self.generate_tree()
+
+        self._find_children()
+        self._find_parent()
+
+    def generate_tree(self):
+        ranks = range(self.size)
+        ranks.sort()
+        ranks.remove(self.root)
+        new_ranks = [self.root]
+        new_ranks.extend(ranks)
+
+        def node_create(rank, iteration=0):
+            return {
+              'rank' : rank,
+              'children' : [],
+              'iteration' :iteration
+            }
+
+        root = node_create( new_ranks.pop(0) )
+        leafs = [root]
+
+        iteration = 1
+        while new_ranks:
+            try:
+                new_leafs = []
+                for leaf in leafs:
+                    for _ in range(self.fanout):
+                        try:
+                            r = new_ranks.pop(0)
+                        except IndexError:
+                            return root # we are done
+
+                        node = node_create(r , iteration )
+                        leaf['children'].append(node)
+                        new_leafs.append(node)
+                leafs = new_leafs
+            except IndexError:
+                break
+
+            iteration += 1
+        return root
