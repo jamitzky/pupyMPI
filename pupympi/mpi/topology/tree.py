@@ -21,9 +21,9 @@ class Tree(object):
         """
         raise NotImplementedError()
 
-    def childs(self):
+    def children(self):
         """
-        Return a list of childs ranks. If called on a leaf-node the list
+        Return a list of children ranks. If called on a leaf-node the list
         will be empty.
 
         Different tree topologies might return list with different length. For
@@ -49,9 +49,9 @@ class FlatTree(Tree):
     Implements a flat free:
         -> Maximum hight is 2 (the root and everything else).
         -> The root has size-1 fanout.
-        -> No one other than the root as any childs.
+        -> No one other than the root as any children.
     """
-    def childs(self):
+    def children(self):
         if self.rank == self.root:
             all = range(0, self.size)
             all.remove(self.rank)
@@ -103,13 +103,19 @@ class BinomialTree(Tree):
         def find(node, candidate):
             if self.rank == node['rank']:
                 if candidate:
-                    self.parent = candidate['rank']
+                    self._parent = candidate['rank']
             else:
                 for child in node['children']:
                     find(child, node)
 
         self.parent = None
         find(self.tree, None)
+
+    def parent(self):
+        return self._parent
+
+    def children(self):
+        return self._children
 
     def _find_children(self):
         """
@@ -118,7 +124,7 @@ class BinomialTree(Tree):
         """
         def find(node):
             if self.rank == node['rank']:
-                self.children = [x['rank'] for x in node['children']]
+                self._children = [x['rank'] for x in node['children']]
             else:
                 for child in node['children']:
                     find(child)
@@ -142,9 +148,9 @@ class BinomialTree(Tree):
         def find_all_leafs(node):
             def find_sub(node):
                 l = [node]
-                childs = node['children']
-                if childs:
-                    for child in childs:
+                children = node['children']
+                if children:
+                    for child in children:
                         l.extend( find_sub( child ))
                 return l
             return find_sub(node)
