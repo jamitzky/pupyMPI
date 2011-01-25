@@ -377,10 +377,6 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
-<<<<<<< local
-
-=======
->>>>>>> other
     @handle_system_commands
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
@@ -586,7 +582,6 @@ class Communicator:
         return _self.issend(content, destination, tag).wait()
 
     @handle_system_commands
-<<<<<<< local
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         """
         Function that inspects if a message from a given ``source`` with
@@ -656,8 +651,6 @@ class Communicator:
 
 
     @handle_system_commands
-=======
->>>>>>> other
     def send(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -799,17 +792,6 @@ class Communicator:
         return None
 
     @handle_system_commands
-<<<<<<< local
-=======
-    def probe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
-        Logger().warn("Non-Implemented method 'probe' called.")
-
-    @handle_system_commands
-    def iprobe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
-        Logger().warn("Non-Implemented method 'probe' called.")
-
-    @handle_system_commands
->>>>>>> other
     def barrier(self):
         """
         Blocks all the processes in the communicator until all have
