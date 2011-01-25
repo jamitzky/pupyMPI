@@ -8,6 +8,8 @@ import copy
 
 class TreeAllReduce(BaseCollectiveRequest):
     def __init__(self, communicator, data, operation):
+        super(TreeAllReduce, self).__init__()
+
         self.data = data
         self.communicator = communicator
 
