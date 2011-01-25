@@ -62,15 +62,19 @@ class TreeAllReduce(BaseCollectiveRequest):
 
                 # forward to the parent.
                 self.to_parent()
+            return True
         elif self.phase == "down":
             if rank != self.parent:
                 return False
 
             self.data = data
             self.to_children()
+            return True
 
         else:
             Logger().warning("Accept_msg in unknown phase: %s" % self.phase)
+
+        return False
 
     def _get_data(self):
         return self.data

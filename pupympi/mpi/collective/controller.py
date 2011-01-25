@@ -4,6 +4,7 @@ from mpi import constants
 
 from mpi.collective.request import bcast
 from mpi.collective.request import reduce
+from mpi.collective.request import alltoall
 
 class Controller(object):
     def __init__(self, communicator):
@@ -28,7 +29,7 @@ class Controller(object):
             constants.TAG_BARRIER : [],
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [],
-            constants.TAG_ALLTOALL : [],
+            constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
             constants.TAG_SCATTER : [],
             constants.TAG_ALLGATHER : [],
             constants.TAG_GATHER : [],

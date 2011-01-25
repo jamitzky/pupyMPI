@@ -949,9 +949,6 @@ class Communicator:
             raise MPIException("The reduce operation supplied should be a callable")
         return self.collective_controller.get_request(constants.TAG_ALLREDUCE, data=data, operation=operation)
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
-        return cr.wait()
-
     @handle_system_commands
     def alltoall(self, data):
         """
@@ -985,8 +982,18 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
-        cr = CollectiveRequest(constants.TAG_ALLTOALL, self, data=data)
-        return cr.wait()
+        return self._ialltoall(data).wait()
+
+    @handle_system_commands
+    def ialltoall(self, data):
+        return self._ialltoall(data)
+
+    def _ialltoall(self, data):
+        size = self.comm_group.size()
+        if len(data) % size != 0:
+            raise Exception("Data in alltoall should be a multipla of the communicator size")
+
+        return self.collective_controller.get_request(constants.TAG_ALLTOALL, data=data)
 
     @handle_system_commands
     def gather(self, data, root=0):
