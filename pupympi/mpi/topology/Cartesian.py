@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 import unittest
 from operator import mul
 from mpi.exceptions import MPITopologyException, NotImplementedException
@@ -74,6 +73,11 @@ class Cartesian(object):
         #Logger("Creating new topology %s and associated with communicator %s." % (self, communicator))
 
     def __repr__(self):
+        # convience and "statics"
+        def _writeDimStr(dim, periodic):
+            # used to combine dims and periodic lists for the __repr__ function. There's probably a better way to do this :o
+            return "%s%s" % (dim, "P" if periodic else "")
+
         return "<Cartesian topology, %sD with dims %s>" % (len(self.dims), 'x'.join(map(_writeDimStr, self.dims, self.periodic)))
 
     def _normalize(self, coords):
@@ -85,7 +89,7 @@ class Cartesian(object):
         return normcoords
 
     # MPI Cartesian functions
-    def MPI_Topo_test(self):
+    def topo_test(self):
         """Return type of topology"""
         return constants.MPI_CARTESIAN
 
@@ -165,40 +169,6 @@ class Cartesian(object):
         """
         return self.communicator.rank()
 
-
-# convience and "statics"
-def _writeDimStr(dim, periodic):
-    # used to combine dims and periodic lists for the __repr__ function. There's probably a better way to do this :o
-    return "%s%s" % (dim, "P" if periodic else "")
-
-def _isprime(n):
-    '''check if integer n is a prime'''
-    # range starts with 2 and only needs to go up the squareroot of n
-    for x in range(2, int(n**0.5)+1):
-        if n % x == 0:
-            return False
-    return True
-
-
-def MPI_Cart_Create(communicator):
-    """Build a new topology from an existing 1D communicator"""
-    raise NotImplementedException("Cartesian creation targeted for version 1.1")
-    return None
-
-
-def MPI_Dims_Create(size, d, constraints = None):
-    """
-    MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the
-    user select a balanced distribution of processes per coordinate direction,
-    depending on the number of processes in the group to be balanced and
-    optional constraints that can be specified by the user. One use is to
-    partition all the processes (the size of MPI_COMM_WORLD's group) into an
-    n-dimensional topology.
-
-    This method is not implemented in the public version of pupyMPI because it was not sufficiently stable.
-    """
-
-    raise  MPITopologyException("This method is presently not included")
 
 class CartesianTests(unittest.TestCase):
     """Contains stand-alone unit tests for the CartesianTopology class."""
