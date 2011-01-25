@@ -39,14 +39,14 @@ def test_ThreadSaturationExchange(size, max_iterations):
         if ci.rank == ci.num_procs-1:
             right = 0
         if  ci.rank == 0:
-            left = ci.num_procs-1 
-            
+            left = ci.num_procs-1
+
         return (left, right)
-            
-    def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
+
+    def Exchange(s_tag, r_tag, left, right, data, max_iterations):
         for _ in xrange(max_iterations):
-            ci.communicator.isend(right, data, s_tag)
-            ci.communicator.isend(left, data, s_tag)
+            ci.communicator.isend(data, right, s_tag)
+            ci.communicator.isend(data, left, s_tag)
             ci.communicator.recv(left, r_tag)
             ci.communicator.recv(right, r_tag)
 
@@ -55,7 +55,7 @@ def test_ThreadSaturationExchange(size, max_iterations):
     data = ci.data[0:size]
     ci.synchronize_processes()
 
-    (left, right) = get_leftright_chained()        
+    (left, right) = get_leftright_chained()
 
     t1 = ci.clock_function()
 
@@ -66,7 +66,7 @@ def test_ThreadSaturationExchange(size, max_iterations):
     time = (t2 - t1)
 
     return time
-    
+
 def test_ThreadSaturationBcast(size, max_iterations):
     def Bcast(data, max_iterations):
         root = 0
@@ -88,5 +88,5 @@ def test_ThreadSaturationBcast(size, max_iterations):
     t2 = ci.clock_function()
 
     time = (t2 - t1)
-    return time    
-    
+    return time
+
