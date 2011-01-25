@@ -12,7 +12,7 @@ def fact(n):
         return 1
     else:
         return n * fact(n-1)
-    
+
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 

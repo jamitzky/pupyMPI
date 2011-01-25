@@ -2,8 +2,8 @@ from mpi.collective.cache import Cache
 from mpi.logger import Logger
 from mpi import constants
 
-from mpi.collective.request.bcast import FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast
-from mpi.collective.request.reduce import BinomialAllReduce
+from mpi.collective.request import bcast
+from mpi.collective.request import reduce
 
 class Controller(object):
     def __init__(self, communicator):
@@ -24,9 +24,9 @@ class Controller(object):
         # possible request classes are defined. When starting a new request,
         # the first class accepting the data is created and executed.
         self.cls_mapping = {
-            constants.TAG_BCAST : [FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast],
+            constants.TAG_BCAST : [bcast.FlatTreeBCast, bcast.BinomialTreeBCast, bcast.StaticFanoutTreeBCast],
             constants.TAG_BARRIER : [],
-            constants.TAG_ALLREDUCE : [BinomialAllReduce],
+            constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [],
             constants.TAG_ALLTOALL : [],
             constants.TAG_SCATTER : [],

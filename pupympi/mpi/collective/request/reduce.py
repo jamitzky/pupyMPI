@@ -36,7 +36,6 @@ class TreeAllReduce(BaseCollectiveRequest):
             # We dont wait for messages, we simply send our data to the parent.
             self.to_parent()
 
-
     def accept_msg(self, rank, data):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
@@ -84,16 +83,49 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def to_parent(self):
         # Send self.data to the parent.
-        if self.parent:
+        if self.parent is not None:
             self.communicator._isend(self.data, self.parent, tag=constants.TAG_ALLREDUCE)
 
         self.phase = "down"
 
-        if not self.parent:
+        if self.parent is None:
             # We are the root, so we have the final data. Broadcast to the children
             self.to_children()
 
-class BinomialAllReduce(TreeAllReduce):
+class FlatTreeAllReduce(TreeAllReduce):
+    ACCEPT_SIZE_LIMIT = 10
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+            topology = tree.FlatTree(communicator, root=0)
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class BinomialTreeAllReduce(TreeAllReduce):
+    ACCEPT_SIZE_LIMIT = 50
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.BinomialTree(communicator, root=0)
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class StaticTreeAllReduce(TreeAllReduce):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         obj = cls(communicator, *args, **kwargs)
