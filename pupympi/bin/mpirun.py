@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-import sys, os, copy, signal, select, time, processloaders, threading
+import sys, os, copy, signal, select, time, threading
 from optparse import OptionParser, OptionGroup
 
 # Allow the user to import mpi without specifying PYTHONPATH in the environment
 mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
+
+import processloaders
 
 from mpi import dill
 
@@ -242,7 +244,7 @@ def determine_start_type():
     except Exception as e:
         return "normal"
 
-if __name__ == "__main__":
+if  __name__ == "__main__":
     start_type = determine_start_type()
 
     # Parse the options. The run type will disable some parameters.
