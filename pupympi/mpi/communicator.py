@@ -844,7 +844,7 @@ class Communicator:
         return cr.wait()
 
     @handle_system_commands
-    def allreduce(self, data, op):
+    def allreduce(self, data, operation):
         """
         Combines values from all the processes with the op-function. You can write
         your own operations, see :ref:`the operations module <operations-api-label>`. There is also a number
@@ -875,11 +875,19 @@ class Communicator:
         .. note::
             See also the :func:`reduce` and :func:`scan` functions.
         """
-        if not getattr(op, "__call__", False):
-            raise MPIException("The reduce operation supplied should be a callable")
+        return self._iallreduce(data, operation).wait()
 
-        cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
-        return cr.wait()
+    @handle_system_commands
+    def iallreduce(self, data, operation):
+        """
+        Document me
+        """
+        return self._iallreduce(data, operation)
+
+    def _iallreduce(self, data, operation):
+        if not getattr(operation, "__call__", False):
+            raise MPIException("The reduce operation supplied should be a callable")
+        return self.collective_controller.get_request(constants.TAG_ALLREDUCE, data=data, operation=operation)
 
     @handle_system_commands
     def alltoall(self, data):
