@@ -47,6 +47,9 @@ class Communicator:
                             "MPI_WTIME_IS_GLOBAL": False
                         }
 
+        # Initialize collective elements.
+        from mpi.collective.controller import Controller as CollectiveController
+        self.collective_controller = CollectiveController(communicator=self)
 
     def get_broadcast_tree(self, root=0):
         # Ensure we have the tree structure
@@ -374,7 +377,10 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
+<<<<<<< local
 
+=======
+>>>>>>> other
     @handle_system_commands
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
@@ -580,6 +586,7 @@ class Communicator:
         return _self.issend(content, destination, tag).wait()
 
     @handle_system_commands
+<<<<<<< local
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         """
         Function that inspects if a message from a given ``source`` with
@@ -649,6 +656,8 @@ class Communicator:
 
 
     @handle_system_commands
+=======
+>>>>>>> other
     def send(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -790,6 +799,17 @@ class Communicator:
         return None
 
     @handle_system_commands
+<<<<<<< local
+=======
+    def probe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        Logger().warn("Non-Implemented method 'probe' called.")
+
+    @handle_system_commands
+    def iprobe(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
+        Logger().warn("Non-Implemented method 'probe' called.")
+
+    @handle_system_commands
+>>>>>>> other
     def barrier(self):
         """
         Blocks all the processes in the communicator until all have
@@ -849,9 +869,22 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
-        # Start collective request
-        cr = CollectiveRequest(constants.TAG_BCAST, self, data, root=root)
-        return cr.wait()
+        request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
+        return request.wait()
+
+    @handle_system_commands
+    def ibcast(self, data=None, root=0):
+        """
+        A non blocking broad cast operation, taking the same parameters (with
+        the same meaning) as :func:`bcast`. Instead of returning the
+        broadcasted data a handle is returned. It is possible to ``test()` or
+        ``wait()`` for the operation completion.
+
+        It is possible to use the non blocking collective request as any other
+        request object. This means that :func:`test_some``, :func:`wait_all`
+        support the collective requests.
+        """
+        return self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
 
     @handle_system_commands
     def allgather(self, data):
@@ -889,7 +922,7 @@ class Communicator:
         return cr.wait()
 
     @handle_system_commands
-    def allreduce(self, data, op):
+    def allreduce(self, data, operation):
         """
         Combines values from all the processes with the op-function. You can write
         your own operations, see :ref:`the operations module <operations-api-label>`. There is also a number
@@ -920,8 +953,19 @@ class Communicator:
         .. note::
             See also the :func:`reduce` and :func:`scan` functions.
         """
-        if not getattr(op, "__call__", False):
+        return self._iallreduce(data, operation).wait()
+
+    @handle_system_commands
+    def iallreduce(self, data, operation):
+        """
+        Document me
+        """
+        return self._iallreduce(data, operation)
+
+    def _iallreduce(self, data, operation):
+        if not getattr(operation, "__call__", False):
             raise MPIException("The reduce operation supplied should be a callable")
+        return self.collective_controller.get_request(constants.TAG_ALLREDUCE, data=data, operation=operation)
 
         cr = CollectiveRequest(constants.TAG_ALLREDUCE, self, data=data, mpi_op=op)
         return cr.wait()
