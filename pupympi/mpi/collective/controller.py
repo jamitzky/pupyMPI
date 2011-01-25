@@ -3,6 +3,7 @@ from mpi.logger import Logger
 from mpi import constants
 
 from mpi.collective.request.bcast import FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast
+from mpi.collective.request.reduce import BinomialAllReduce
 
 class Controller(object):
     def __init__(self, communicator):
@@ -25,7 +26,7 @@ class Controller(object):
         self.cls_mapping = {
             constants.TAG_BCAST : [FlatTreeBCast, BinomialTreeBCast, StaticFanoutTreeBCast],
             constants.TAG_BARRIER : [],
-            constants.TAG_ALLREDUCE : [],
+            constants.TAG_ALLREDUCE : [BinomialAllReduce],
             constants.TAG_REDUCE : [],
             constants.TAG_ALLTOALL : [],
             constants.TAG_SCATTER : [],
