@@ -16,8 +16,8 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os, subprocess, time
-from mpi.exceptions import MPIException
 from mpi.logger import Logger
+from mpi.exceptions import MPIException
 from mpi import constants
 import sys
 
