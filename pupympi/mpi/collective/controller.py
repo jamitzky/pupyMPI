@@ -26,7 +26,7 @@ class Controller(object):
             constants.TAG_BCAST : [bcast.FlatTreeBCast, bcast.BinomialTreeBCast, bcast.StaticFanoutTreeBCast],
             constants.TAG_BARRIER : [],
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
-            constants.TAG_REDUCE : [],
+            constants.TAG_REDUCE : [reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
             constants.TAG_SCATTER : [],
             constants.TAG_ALLGATHER : [gather.DisseminationAllGather],

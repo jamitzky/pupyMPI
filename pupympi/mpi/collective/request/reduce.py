@@ -140,3 +140,121 @@ class StaticTreeAllReduce(TreeAllReduce):
 
         return obj
 
+# ------------------------ reduce operation below ------------------------
+class TreeReduce(BaseCollectiveRequest):
+    def __init__(self, communicator, data, operation, root=0):
+        super(TreeReduce, self).__init__()
+
+        self.data = data
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+
+        self.root = root
+
+        self.operation = operation
+
+    def start(self):
+        topology = getattr(self, "topology", None) # You should really set the topology.. please
+        if not topology:
+            raise Exception("Cant reduce without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+
+        self.parent = topology.parent()
+        self.children = topology.children()
+
+        self.received_data = []
+        self.missing_children = copy.copy(self.children)
+
+        # The all reduce operation is handled by receiving data from each
+        # child, reduce the data, and send the result to the parent.
+        if not self.children:
+            # We dont wait for messages, we simply send our data to the parent.
+            self.to_parent()
+
+    def accept_msg(self, rank, data):
+        # Do not do anything if the request is completed.
+
+        if self._finished.is_set():
+            return False
+
+        if rank not in self.missing_children:
+            return False
+
+        # Remove the rank from the missing children.
+        self.missing_children.remove(rank)
+
+        # Add the data to the list of received data
+        self.received_data.append(data)
+
+        # If the list of missing children i empty we have received from
+        # every child and can reduce the data and send to the parent.
+        if not self.missing_children:
+            # Add our own data element
+            self.received_data.append(self.data)
+
+            # reduce the data
+            self.data = self.operation(self.received_data)
+
+            # forward to the parent.
+            self.to_parent()
+        return True
+
+    def _get_data(self):
+        if self.rank == self.root:
+            return self.data
+        else:
+            return None
+
+    def to_parent(self):
+        # Send self.data to the parent.
+        if self.parent is not None:
+            self.communicator._isend(self.data, self.parent, tag=constants.TAG_REDUCE)
+
+        self._finished.set()
+
+class FlatTreeReduce(TreeReduce):
+    ACCEPT_SIZE_LIMIT = 10
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+            topology = tree.FlatTree(communicator, root=kwargs['root'])
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class BinomialTreeReduce(TreeReduce):
+    ACCEPT_SIZE_LIMIT = 50
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class StaticTreeReduce(TreeReduce):
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        obj = cls(communicator, *args, **kwargs)
+
+        topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+        # Insert the toplogy as a smart trick
+        obj.topology = topology
+
+        return obj
+
