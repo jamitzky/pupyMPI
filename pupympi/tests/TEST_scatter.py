@@ -28,9 +28,6 @@ else:
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 expected_data = range(10*rank, 10*(rank+1))
 
-print my_data
-print expected_data
-
 assert my_data == expected_data
 
 mpi.finalize()
