@@ -1194,14 +1194,17 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
-        if self.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        return self._iscatter(data, root).wait()
+
+    @handle_system_commands
+    def iscatter(self, data, root=0):
+        return self._iscatter(data, root)
+
+    def _iscatter(self, data, root):
+        if self.comm_group.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
-        if self.rank() != root:
-            data = None
-
-        cr = CollectiveRequest(constants.TAG_SCATTER, self, data=data, root=root)
-        return cr.wait()
+        return self.collective_controller.get_request(constants.TAG_SCATTER, data=data, root=root)
 
     @handle_system_commands
     def testall(self, request_list):
