@@ -2,7 +2,7 @@ from mpi.collective.cache import Cache
 from mpi.logger import Logger
 from mpi import constants
 
-from mpi.collective.request import bcast, reduce, alltoall, gather
+from mpi.collective.request import bcast, reduce, alltoall, gather, scatter
 
 class Controller(object):
     def __init__(self, communicator):
@@ -28,7 +28,7 @@ class Controller(object):
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
-            constants.TAG_SCATTER : [],
+            constants.TAG_SCATTER : [scatter.NaiveScatter],
             constants.TAG_ALLGATHER : [gather.DisseminationAllGather],
             constants.TAG_GATHER : [gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
             constants.TAG_SCAN : [],
