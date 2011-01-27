@@ -70,7 +70,6 @@ class TreeAllReduce(BaseCollectiveRequest):
             self.data = data
             self.to_children()
             return True
-
         else:
             Logger().warning("Accept_msg in unknown phase: %s" % self.phase)
 

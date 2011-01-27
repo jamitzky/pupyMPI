@@ -900,8 +900,16 @@ class Communicator:
             individual data to each other process.
 
         """
-        cr = CollectiveRequest(constants.TAG_ALLGATHER, self, data=data)
-        return cr.wait()
+        return self._iallgather(data).wait()
+
+    def iallgather(self, data):
+        """
+        Document me
+        """
+        return self._iallgather(data)
+
+    def _iallgather(self, data):
+        return self.collective_controller.get_request(constants.TAG_ALLGATHER, data)
 
     @handle_system_commands
     def allreduce(self, data, operation):
