@@ -1,8 +1,10 @@
 from mpi.collective.request import BaseCollectiveRequest
 from mpi import constants
 from mpi.logger import Logger
+from mpi.topology import tree
 
 from math import log
+import copy
 
 class DisseminationAllGather(BaseCollectiveRequest):
     def __init__(self, communicator, data):
@@ -105,3 +107,116 @@ class DisseminationAllGather(BaseCollectiveRequest):
 
     def _get_data(self):
         return self.data
+
+class TreeGather(BaseCollectiveRequest):
+    """
+    This is a generic gather request using different tree structures. It is
+    simple to use this as it is a matter of extending, adding the wanted
+    topology tree and then implementing the accept() class method. See the below
+    defined classes for examples.
+    """
+    def __init__(self, communicator, data=None, root=0):
+        super(TreeGather, self).__init__()
+
+        self.root = root
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+
+        self.data = [None] * self.size
+        self.data[self.rank] = data
+
+    def start(self):
+        topology = getattr(self, "topology", None) # You should really set the topology.. please
+        if not topology:
+            raise Exception("Cant gather without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+
+        self.parent = topology.parent()
+        self.children = topology.children()
+        self.missing_children = copy.copy(self.children)
+
+        # We forward up the tree unless we have to wait for children
+        if not self.children:
+            self.send_parent()
+
+    def send_parent(self):
+        # Send data to the parent (if any)
+        if (not self._finished.is_set()) and self.parent:
+            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)
+
+        self._finished.set()
+
+    def accept_msg(self, rank, data):
+        if self._finished.is_set() or rank not in self.missing_children:
+            return False
+
+        self.missing_children.remove(rank)
+
+        for i in range(len(data)):
+            item = data[i]
+            if item is not None:
+                self.data[i] = item
+
+        if not self.missing_children:
+            self.send_parent()
+
+        return True
+
+    def _get_data(self):
+        if self.root == self.rank:
+            return self.data
+        else:
+            return None
+
+class FlatTreeGather(TreeGather):
+    """
+    Performs a flat tree broadcast (root sends to all other). This algorithm
+    should only be performed when the size is 10 or smaller.
+    """
+    ACCEPT_SIZE_LIMIT = 10
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.FlatTree(communicator, root=kwargs['root'])
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class BinomialTreeGather(TreeGather):
+    ACCEPT_SIZE_LIMIT = 50
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class StaticFanoutTreeGather(TreeGather):
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        obj = cls(communicator, *args, **kwargs)
+
+        topology = tree.BinomialTree(communicator, root=kwargs['root'])
+
+        # Insert the toplogy as a smart trick
+        obj.topology = topology
+
+        return obj
