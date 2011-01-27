@@ -1082,14 +1082,19 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
+        return self._ireduce(data, op, root).wait()
+
+    @handle_system_commands
+    def ireduce(data, op, root=0):
+        """
+        Document me
+        """
+        return self._ireduce(data, op, root)
+
+    def _ireduce(self, data, op, root):
         if not getattr(op, "__call__", False):
             raise MPIException("The reduce operation supplied should be a callable")
-
-        cr = CollectiveRequest(constants.TAG_REDUCE, self, data=data,root=root, mpi_op=op)
-        data = cr.wait()
-
-        if self.rank() == root:
-            return data
+        return self.collective_controller.get_request(constants.TAG_REDUCE, data=data, root=root, operation=op)
 
     @handle_system_commands
     def scan(self, data, operation):
