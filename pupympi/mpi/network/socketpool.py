@@ -29,14 +29,9 @@ class SocketPool(object):
     connection is heavily used it will probably not be removed. This way your
     call will not create and teardown the connection all the time.
 
-    NOTE: The number of cached elements are controlled through the constants
-    module, even though it might be exposed at a later point through command
-    line arguments for mpirun.py
-
-    NOTE 2: It's possible to mark a connections as mandatory persistent. This
-    will not always give you nice performance. Please don't use this feature
-    too much as it will push other connections out of the cache. And these
-    connections might be more important than your custom one.
+    ISSUES:
+    It is possible to mark a connection as mandatory persistent. This is
+    not used for now.
 
     IMPLEMENTATION: This is a modified "Second change FIFO cache replacement
     policy" algorithm. It's modified by allowing some elements to live
@@ -54,7 +49,7 @@ class SocketPool(object):
         self.readonly = False #This will be set True during network initialization if a static socket pool is specified
         self.metainfo = {}
 
-        self.sockets_lock = threading.Lock()
+        self.sockets_lock = threading.Lock() # Hold this lock before fiddling with the class data
 
     def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
         """
@@ -62,9 +57,11 @@ class SocketPool(object):
         a black box that will cache your connections when it is
         possible.
         """
-        client_socket = self._get_socket_for_rank(rank) # Try to find an existing socket connection
+        with self.sockets_lock:
+            client_socket = self._get_socket_for_rank(rank) # Try to find an existing socket connection
+            
         newly_created = False
-
+        
         # It's not valid to not have a socket and a readonly pool
         if rank >= 0 and self.readonly and not client_socket:
             raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket for rank %d" % rank)
@@ -100,7 +97,8 @@ class SocketPool(object):
             raise Exception("Can't add accepted socket. We're in readonly mode")
 
         #Logger().debug("SocketPool.add_accepted_socket: Adding socket connection for rank %d: %s" % (global_rank, socket_connection))
-        known_socket = self._get_socket_for_rank(global_rank)
+        with self.sockets_lock:
+            known_socket = self._get_socket_for_rank(global_rank)
 
         # TODO: Move this check under the if known_socket: condition since it is more specialized (i.e. saves an if-comparison in the normal case)
         if known_socket == socket_connection:
@@ -118,8 +116,10 @@ class SocketPool(object):
     def _remove_element(self):
         """
         Finds the first element that already had its second chance and
-        remove it from the list.
-
+        remove it from the lis
+        
+        NOTE: Caller makes sure the sockets_lock is held
+        
         NOTE:
         We don't explicitly close the socket once removed. Or remove it from the
         socket_to_request dict.
@@ -149,7 +149,7 @@ class SocketPool(object):
                 if force_persistent: # skip persistent connections
                     continue
                 else:
-                    self.remove_rank(srank, client_socket=client_socket)
+                    self._remove_rank(srank, client_socket=client_socket)
                     foundOne = True
                     break
 
@@ -158,15 +158,20 @@ class SocketPool(object):
                 # Alert the user, harshly
                 raise MPIException("Not possible to add a socket connection to the internal caching system. There are %d persistant connections and they fill out the cache" % self.max_size)
 
-    def remove_rank(self, rank, client_socket=None):
+    def _remove_rank(self, rank, client_socket=None):
+        """
+        NOTE: Caller makes sure the sockets_lock is held
+        """
         if not client_socket:
             client_socket = self._get_socket_for_rank(rank)
-
+        
         self.sockets.remove(client_socket)
         del self.metainfo[client_socket]
 
     def _get_socket_for_rank(self, rank):
         """
+        NOTE: Caller makes sure the sockets_lock is held
+
         Attempts to find an already created socket with a connection to a
         specific rank. If this does not exist we return None
         """
@@ -181,8 +186,6 @@ class SocketPool(object):
     def _add(self, rank, client_socket, force_persistent):
         """
         Add a new socket connection to the pool along with meta info
-
-        NOTE: Only call this function if you hold the sockets_lock
         """
         #Logger().debug("SocketPool._add: for rank %d: %s" % (rank, client_socket))
         with self.sockets_lock:
