@@ -1043,10 +1043,14 @@ class Communicator:
         .. note::
             See also the :func:`allgather` and :func:`alltoall` functions.
         """
-        cr = CollectiveRequest(constants.TAG_GATHER, self, data=data, root=root)
-        data = cr.wait()
-        if self.rank() == root:
-            return data
+        return self._igather(data, root).wait()
+
+    @handle_system_commands
+    def igather(self, data, root=0):
+        return self._igather(data, root)
+
+    def _igather(self, data, root):
+        return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
     @handle_system_commands
     def reduce(self, data, op, root=0):

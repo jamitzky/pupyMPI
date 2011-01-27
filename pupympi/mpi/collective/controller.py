@@ -30,7 +30,7 @@ class Controller(object):
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
             constants.TAG_SCATTER : [],
             constants.TAG_ALLGATHER : [gather.DisseminationAllGather],
-            constants.TAG_GATHER : [],
+            constants.TAG_GATHER : [gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
             constants.TAG_SCAN : [],
         }
 
