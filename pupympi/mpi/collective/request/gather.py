@@ -142,7 +142,7 @@ class TreeGather(BaseCollectiveRequest):
 
     def send_parent(self):
         # Send data to the parent (if any)
-        if (not self._finished.is_set()) and self.parent:
+        if (not self._finished.is_set()) and self.parent is not None:
             self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)
 
         self._finished.set()
