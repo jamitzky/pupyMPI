@@ -506,7 +506,10 @@ class Communicator:
             mpi.finalize()
 
         **See also**: :func:`ssend` and :func:`test`
-        """
+        """ 
+        return self._issend(content, destination, tag)
+        
+    def _issend(self, content, destination, tag = constants.MPI_TAG_ANY):
         # Check that destination exists
         if not self.have_rank(destination):
             if isinstance(destination, int):
@@ -576,8 +579,9 @@ class Communicator:
         """
         return self._ssend(content, destination, tag)
 
+    # TODO: We are all about encapsulation and wrapping, but this is taking it too far
     def _ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
-        return _self.issend(content, destination, tag).wait()
+        return self._issend(content, destination, tag).wait()
 
     @handle_system_commands
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
