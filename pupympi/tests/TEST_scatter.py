@@ -17,6 +17,8 @@ else:
     scatter_data = None
 
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+print "my data", my_data
+print "rank", [rank]
 assert my_data == [rank]
 
 # ensure we can work with larger data
