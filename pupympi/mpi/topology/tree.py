@@ -14,12 +14,36 @@ class Tree(object):
         self.size = communicator.comm_group.size()
         self.root = root
 
+        # Placeholder objects. Each tree must fill the two first with
+        # a _find_children and _find_parent method.
+        self._children = []
+        self._parent = None
+        self._descendants = []
+
+        # Generate the tree if there is a bound function with the
+        # proper name.
+        generator = getattr(self, "generate_tree", None)
+        if generator:
+            generator()
+
+        self._find_children()
+        self._find_parent()
+
+        # Now we have the parent and children (by the actual class). We use
+        # a generic method to find the descendants.
+        self._find_descendants()
+
+    def _find_descendants(self):
+        ## FIXME: This should be implemented and then are are ready to
+        # implement the rest of scatter.
+        pass
+
     def parent(self):
         """
         Returning the rank of the parant, None if the rank is the root of the
         tree.
         """
-        raise NotImplementedError()
+        return self.parent
 
     def children(self):
         """
@@ -30,7 +54,7 @@ class Tree(object):
         example a binary tree will return a list of length 0, 1 or 2. A binomial
         tree can send anywhere between 0 l where the size of the tree is fab(l).
         """
-        raise NotImplementedError()
+        return self.children
 
     def descendants(self, tree_root_rank=None, base_rank=None, levels=None):
         """
@@ -42,7 +66,7 @@ class Tree(object):
         The resursion will - unless otherwise stated below - be a depth first
         recursion.
         """
-        raise NotImplementedError()
+        return self.descendants
 
 class FlatTree(Tree):
     """
@@ -51,54 +75,21 @@ class FlatTree(Tree):
         -> The root has size-1 fanout.
         -> No one other than the root as any children.
     """
-    def children(self):
+    def _find_children(self):
         if self.rank == self.root:
             all = range(0, self.size)
             all.remove(self.rank)
-            return all
-        else:
-            return []
+            self._children = all
 
-    def parent(self):
-        if self.rank == self.root:
-            return None
-        else:
-            return self.root
-
-    def descendants(self, tree_root_rank=None, base_rank=None, levels=None):
-        # If we are not finding for the root the list is empty.
-        if tree_root_rank is None:
-            tree_root_rank = self.root
-
-        if base_rank is None:
-            base_rank = self.rank
-
-        if tree_root_rank != self.root or base_rank != self.root:
-            return []
-        else:
-            all = range(0, self.size)
-            all.remove(self.rank)
-            return all
+    def _find_parent(self):
+        if self.rank != self.root:
+            self._parent = self.root
 
 class BinomialTree(Tree):
     """
     Implement a biniomal tree useful for keeping every node active in
     communication.
     """
-    def __init__(self, communicator, root=0):
-        """
-        Creating the topology.
-        """
-        self.communicator = communicator
-        self.rank = communicator.comm_group.rank()
-        self.size = communicator.comm_group.size()
-        self.root = root
-
-        self.tree = self.generate_tree()
-
-        self._find_children()
-        self._find_parent()
-
     def _find_parent(self):
         def find(node, candidate):
             if self.rank == node['rank']:
@@ -110,12 +101,6 @@ class BinomialTree(Tree):
 
         self._parent = None
         find(self.tree, None)
-
-    def parent(self):
-        return self._parent
-
-    def children(self):
-        return self._children
 
     def _find_children(self):
         """
@@ -171,21 +156,12 @@ class BinomialTree(Tree):
 
 class StaticFanoutTree(BinomialTree):
 
-    #def __init__(self, communicator, root=0, fanout=2):
-    def __init__(self, size=0, rank=0, root=0, fanout=2):
+    def __init__(self, communicator, root=0 fanout=2):
         """
         Creating the topology.
         """
-        self.communicator = communicator
-        self.rank = communicator.comm_group.rank()
-        self.size = communicator.comm_group.size()
-
-        self.root = root
         self.fanout = fanout
-        self.tree = self.generate_tree()
-
-        self._find_children()
-        self._find_parent()
+        super(StaticFanoutTree, self).__init__(communicator, root=root)
 
     def generate_tree(self):
         ranks = range(self.size)
