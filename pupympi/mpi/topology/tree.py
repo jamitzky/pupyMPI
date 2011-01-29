@@ -56,17 +56,10 @@ class Tree(object):
         """
         return self.children
 
-    def descendants(self, tree_root_rank=None, base_rank=None, levels=None):
+    def descendants(self):
         """
-        Find the descendants in the subtree with root ``tree_root_rank`` for
-        ``base_rank``. If ``levels`` is supplied the function will only recurse
-        the given number of times. If not supplied the recursion will continue
-        until all leaf-nodes are found.
-
-        The resursion will - unless otherwise stated below - be a depth first
-        recursion.
         """
-        return self.descendants
+        return self._descendants
 
 class FlatTree(Tree):
     """
@@ -80,10 +73,14 @@ class FlatTree(Tree):
             all = range(0, self.size)
             all.remove(self.rank)
             self._children = all
+            self._descendants = all
 
     def _find_parent(self):
         if self.rank != self.root:
             self._parent = self.root
+
+    def _find_descendants(self):
+        pass
 
 class BinomialTree(Tree):
     """
