@@ -10,20 +10,30 @@ class BaseCollectiveRequest(object):
         self._finished = threading.Event()
 
     def acquire(self):
+        """
+        The central request object. This is an internal locking facility
+        for securing atomic access to the object.
+
+        This function acquires the lock.
+        """
         self._lock.acquire()
 
     def release(self):
+        """
+        This function releases the lock.
+        """
         self._lock.release()
 
     def test(self):
         """
-        Document me.
+        Test if the collective operation is finished. That is if the :func:`wait`
+        function will return right away.
         """
         return self._finished.is_set()
 
     def wait(self):
         """
-        Document me
+        Wait until the collective operation has finihsed and then return the data.
         """
         self._finished.wait()
 
