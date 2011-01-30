@@ -1,0 +1,5 @@
+pupyMPI is an MPI implementation written in Python.
+All files in this package with no exceptions are part of pupyMPI.
+
+pupyMPI is copyrighted 2010 Rune Bromer, Frederik Hantho, Asser Schroeder Femoe, and Jan Wiberg.
+Please see LICENSE for the complete software license.
