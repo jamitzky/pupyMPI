@@ -24,7 +24,6 @@ from mpi.request import Request
 from mpi.syscommands import handle_system_commands, execute_system_commands
 
 class Communicator:
-
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
         self.mpi = mpi
         self.name = name
