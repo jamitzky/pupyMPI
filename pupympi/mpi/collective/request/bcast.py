@@ -47,8 +47,6 @@ class TreeBCast(BaseCollectiveRequest):
             self.data = data
             self.send_to_children()
             return True
-        else:
-            Logger().warning("What to do with data. rank %d, root %d self.rank %d, data %s" % (rank, self.root, self.rank, data))
 
         return False
 
