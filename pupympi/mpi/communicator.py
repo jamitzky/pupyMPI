@@ -21,8 +21,6 @@ from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
 from mpi.request import Request
-from mpi.bc_tree import BroadCastTree
-from mpi.collectiverequest import CollectiveRequest
 from mpi.syscommands import handle_system_commands
 
 class Communicator:
@@ -50,25 +48,6 @@ class Communicator:
         # Initialize collective elements.
         from mpi.collective.controller import Controller as CollectiveController
         self.collective_controller = CollectiveController(communicator=self)
-
-    def get_broadcast_tree(self, root=0):
-        # Ensure we have the tree structure
-        if not getattr(self, "bc_trees", None):
-            self.bc_trees = {}
-
-        # See if the tree root is actually present in this commnicator
-        if not self.have_rank(root):
-            raise MPINoSuchRankException("Invalid root. Not present in this communicator.")
-
-        # Look for the root as key in the structure. If so we use this
-        # tree as it has been generated earlier. This makes the system
-        # act like a caching system, so we don't end up generating trees
-        # all the time.
-        if root not in self.bc_trees:
-            #Logger().debug("Creating a new tree with root %d" % root)
-            self.bc_trees[root] = BroadCastTree(range(self.size()), self.rank(), root)
-
-        return self.bc_trees[root]
 
     def __repr__(self):
         return "<Communicator %s, id %s with %d members>" % (self.name, self.id, self.comm_group.size())
