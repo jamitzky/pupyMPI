@@ -31,7 +31,7 @@ class Controller(object):
             constants.TAG_SCATTER : [scatter.FlatTreeScatter, scatter.BinomialTreeScatter, scatter.StaticFanoutTreeScatter],
             constants.TAG_ALLGATHER : [gather.DisseminationAllGather],
             constants.TAG_GATHER : [gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
-            constants.TAG_SCAN : [],
+            constants.TAG_SCAN : [reduce.FlatTreeScan, reduce.BinomialTreeScan, reduce.StaticFanoutTreeScan],
         }
 
     def get_request(self, tag, *args, **kwargs):
