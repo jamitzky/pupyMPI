@@ -245,7 +245,7 @@ class TreeReduce(BaseCollectiveRequest):
     def to_parent(self):
         # Send self.data to the parent.
         if self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=onstants.TAG_REDUCE)
+            self.communicator._isend(self.data, self.parent, tag=constants.TAG_REDUCE)
 
         self._finished.set()
 
