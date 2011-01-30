@@ -802,7 +802,12 @@ class Communicator:
 
     def ibarrier(self):
         """
-        Document me
+        A non blocking version of the :func:`barrier` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
         """
         execute_system_commands(self.mpi)
         return self.collective_controller.get_request(constants.TAG_BARRIER)
@@ -889,7 +894,35 @@ class Communicator:
 
     def iallgather(self, data):
         """
-        Document me
+        A non blocking version of the collective :func:`allgather` operation.
+        This function will return a handle (request object). The handle gives a
+        number of options for testing / waiting on the operation progress.
+
+        As an example each process can send its rank::
+
+            from mpi import MPI
+            mpi = MPI()
+
+            world = mpi.MPI_COMM_WORLD
+
+            rank = world.rank()
+            size = world.size()
+
+            handle = world.iallgather(rank)
+
+            # calculate while we wait for the collective operation to finish.
+            while not handle.test():
+                calc() # do some calculation
+
+            received = handle.wait()
+
+            assert received == range(size)
+
+            mpi.finalize()
+
+        .. note:: See the :doc:`reference for non blocking collective
+            operations <nbc>` for more information regarding how to use the non
+            blocking operations.
         """
         execute_system_commands(self.mpi)
         return self._iallgather(data)
@@ -905,7 +938,7 @@ class Communicator:
         writing a really bad factorial function would be::
 
             from mpi import MPI
-            from mpi.operations import prod
+            from mpi.collective.operations import prod
 
             mpi = MPI()
 
@@ -933,7 +966,30 @@ class Communicator:
 
     def iallreduce(self, data, operation):
         """
-        Document me
+        A non blocking version of the collective :func:`allreduce` operation.
+        This function will return a handle (request object). The handle gives a
+        number of options for testing / waiting on the operation progress::
+
+            from mpi import MPI
+            from mpi.collective.operations import prod
+
+            mpi = MPI()
+
+            # We start n processes, and try to calculate n!
+            rank = mpi.MPI_COMM_WORLD.rank()
+            handle = mpi.MPI_COMM_WORLD.iallreduce(rank, prod)
+
+            # ...
+
+            fact = handle.wait()
+
+            print "I'm rank %d and I also got the result %d. So cool" % (rank, fact)
+
+            mpi.finalize()
+
+        .. note:: See the :doc:`reference for non blocking collective
+            operations <nbc>` for more information regarding how to use the non
+            blocking operations.
         """
         execute_system_commands(self.mpi)
         return self._iallreduce(data, operation)
@@ -979,6 +1035,14 @@ class Communicator:
         return self._ialltoall(data).wait()
 
     def ialltoall(self, data):
+        """
+        A non blocking version of the :func:`alltoall` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
+        """
         execute_system_commands(self.mpi)
         return self._ialltoall(data)
 
@@ -1032,6 +1096,14 @@ class Communicator:
         return self._igather(data, root).wait()
 
     def igather(self, data, root=0):
+        """
+        A non blocking version of the :func:`gather` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
+        """
         execute_system_commands(self.mpi)
         return self._igather(data, root)
 
@@ -1045,7 +1117,7 @@ class Communicator:
         factorial number of size::
 
             from mpi import MPI
-            from mpi.operations import MPI_prod
+            from mpi.collective.operations import MPI_prod
 
             mpi = MPI()
 
@@ -1072,7 +1144,12 @@ class Communicator:
 
     def ireduce(data, op, root=0):
         """
-        Document me
+        A non blocking version of the :func:`reduce` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
         """
         execute_system_commands(self.mpi)
         return self._ireduce(data, op, root)
@@ -1115,6 +1192,14 @@ class Communicator:
         return self._iscan(data, operation).wait()
 
     def iscan(self, data, operation):
+        """
+        A non blocking version of the :func:`scan` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
+        """
         execute_system_commands(self.mpi)
         return self._iscan(data, operation)
 
@@ -1190,6 +1275,14 @@ class Communicator:
         return self._iscatter(data, root).wait()
 
     def iscatter(self, data, root=0):
+        """
+        A non blocking version of the :func:`scatter` function. This makes it
+        possible to latency hide calculation as normal the operations
+        :func:`irecv` and :func:`isend` does.
+
+        See the :doc:`reference for non blocking collective operations <nbc>`
+        for more information regarding how to use the non blocking operations.
+        """
         execute_system_commands(self.mpi)
         return self._iscatter(data, root)
 
