@@ -5,14 +5,14 @@
 # meta-max_runtime: 60
 
 from mpi import MPI
-from mpi.operations import MPI_prod,MPI_sum, MPI_avg, MPI_min, MPI_max
+from mpi.collective.operations import MPI_prod, MPI_sum, MPI_avg, MPI_min, MPI_max
 
 def fact(n):
     if n == 0:
         return 1
     else:
         return n * fact(n-1)
-    
+
 mpi = MPI()
 
 root = 4
