@@ -7,7 +7,7 @@ from mpi.topology import tree
 import copy
 
 class TreeAllReduce(BaseCollectiveRequest):
-    def __init__(self, communicator, data, operation):
+    def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
         super(TreeAllReduce, self).__init__()
 
         self.communicator = communicator
@@ -15,6 +15,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
         self.root = 0
+        self.tag = tag
 
         self.operation = operation
         self.data = data
@@ -95,18 +96,23 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def to_children(self):
         for child in self.children:
-            self.communicator._isend(self.data, child, tag=constants.TAG_ALLREDUCE)
+            self.communicator._isend(self.data, child, tag=self.tag)
 
         self._finished.set()
 
     def to_parent(self):
         # Send self.data to the parent.
         if self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=constants.TAG_ALLREDUCE)
+            self.communicator._isend(self.data, self.parent, tag=self.tag)
 
         self.phase = "down"
 
         if self.parent is None:
+            # Clean data if possible.
+            cleaner = getattr(self, "clean_data", None)
+            if cleaner:
+                cleaner()
+
             # We are the root, so we have the final data. Broadcast to the children
             self.to_children()
 
@@ -169,7 +175,8 @@ class TreeReduce(BaseCollectiveRequest):
         self.root = root
 
         self.operation = operation
-        self.partial = getattr(operation, "partial_data", False)
+        if not getattr(self, "partial", None):
+            self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -238,7 +245,7 @@ class TreeReduce(BaseCollectiveRequest):
     def to_parent(self):
         # Send self.data to the parent.
         if self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=constants.TAG_REDUCE)
+            self.communicator._isend(self.data, self.parent, tag=onstants.TAG_REDUCE)
 
         self._finished.set()
 
@@ -284,6 +291,75 @@ class StaticTreeReduce(TreeReduce):
 
         # Insert the toplogy as a smart trick
         obj.topology = topology
-
         return obj
 
+# ------------------------ scan operation below ------------------------
+class TreeScan(TreeAllReduce):
+    def __init__(self, communicator, data, operation):
+        self.partial = False
+        super(TreeScan, self).__init__(communicator, data, operation, tag=constants.TAG_SCAN)
+
+    def clean_data(self):
+        keys = self.data.keys()
+        keys.sort()
+
+        new_data = {}
+        so_far = []
+
+        for rank in keys:
+            data = self.data[rank]
+            so_far.append(data)
+
+            reduced = self.operation(so_far)
+            new_data[rank] = reduced
+
+        self.data = new_data
+
+    def _get_data(self):
+        return self.data[self.rank]
+
+
+class FlatTreeScan(TreeScan):
+    ACCEPT_SIZE_LIMIT = 10
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+            topology = tree.FlatTree(communicator, root=0)
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class BinomialTreeScan(TreeScan):
+    ACCEPT_SIZE_LIMIT = 50
+
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        size = communicator.comm_group.size()
+
+        if size <= cls.ACCEPT_SIZE_LIMIT:
+            obj = cls(communicator, *args, **kwargs)
+
+            topology = tree.BinomialTree(communicator, root=0)
+
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+
+            return obj
+
+class StaticFanoutTreeScan(TreeScan):
+    @classmethod
+    def accept(cls, communicator, *args, **kwargs):
+        obj = cls(communicator, *args, **kwargs)
+
+        topology = tree.BinomialTree(communicator, root=0)
+
+        # Insert the toplogy as a smart trick
+        obj.topology = topology
+
+        return obj

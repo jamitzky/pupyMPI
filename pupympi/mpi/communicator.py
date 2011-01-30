@@ -819,7 +819,7 @@ class Communicator:
             The operation will block until every process has entered the call.
         """
         return self.collective_controller.get_request(constants.TAG_BARRIER).wait()
-    
+
     def ibarrier(self):
         """
         Document me
@@ -1131,8 +1131,16 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
-        cr = CollectiveRequest(constants.TAG_SCAN, self, data=data, mpi_op=operation)
-        return cr.wait()
+        return self._iscan(data, operation).wait()
+
+    @handle_system_commands
+    def iscan(self, data, operation):
+        return self._iscan(data, operation)
+
+    def _iscan(self, data, operation):
+        if not getattr(operation, "__call__", False):
+            raise MPIException("The reduce operation supplied should be a callable")
+        return self.collective_controller.get_request(constants.TAG_SCAN, data=data, operation=operation)
 
     @handle_system_commands
     def scatter(self, data=None, root=0):
