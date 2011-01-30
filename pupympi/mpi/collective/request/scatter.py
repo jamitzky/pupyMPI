@@ -38,7 +38,7 @@ class TreeScatter(BaseCollectiveRequest):
 
         self.parent = topology.parent()
         self.children = topology.children()
-        
+
         if self.parent is None:
             # we're the root.. let us send the data to each child
             self.send_to_children()
@@ -52,14 +52,12 @@ class TreeScatter(BaseCollectiveRequest):
             self.data = data
             self.send_to_children()
             return True
-        else:
-            Logger().warning("What to do with data. rank %d, root %d self.rank %d, data %s" % (rank, self.root, self.rank, data))
 
         return False
 
     def send_to_children(self):
         for child in self.children:
-            # Create new data. This will not include a lot of data copies 
+            # Create new data. This will not include a lot of data copies
             # as we are only making references in the new list.
             data = [None] * self.size
             desc = self.topology.descendants()
