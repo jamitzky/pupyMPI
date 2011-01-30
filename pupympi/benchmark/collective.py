@@ -3,7 +3,7 @@
 """
 collective.py - collection of collective tests inspired by Intel MPI Benchmark (IMB)
 """
-from mpi.operations import MPI_max
+from mpi.collective.operations import MPI_max
 
 import comm_info as ci
 
