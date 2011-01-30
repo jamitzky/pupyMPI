@@ -30,7 +30,7 @@ from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
 
-from mpi.syscommands import handle_system_commands
+from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
 
 try:
@@ -734,11 +734,11 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
 
-    @handle_system_commands
     def get_version(self):
         """
         Return the version number of the pupyMPI installation.
         """
+        execute_system_commands(self.mpi)
         return __version__
 
     def _version_check(self):

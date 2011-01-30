@@ -21,7 +21,7 @@ from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
 from mpi.request import Request
-from mpi.syscommands import handle_system_commands
+from mpi.syscommands import handle_system_commands, execute_system_commands
 
 class Communicator:
 
@@ -61,27 +61,27 @@ class Communicator:
 
         return self.comm_group.members[rank]
 
-    @handle_system_commands
     def rank(self):
+        execute_system_commands(self.mpi)
         return self.comm_group.rank()
 
-    @handle_system_commands
     def size(self):
+        execute_system_commands(self.mpi)
         return self.comm_group.size()
 
-    @handle_system_commands
     def group(self):
         """
         returns the group associated with a communicator
         """
+        execute_system_commands(self.mpi)
         return self.comm_group
 
-    @handle_system_commands
     def get_name(self):
+        execute_system_commands(self.mpi)
         return self.name
 
-    @handle_system_commands
     def set_name(self, name):
+        execute_system_commands(self.mpi)
         self.name = name
 
     ################################################################################################################
@@ -95,7 +95,6 @@ class Communicator:
                 self.attr[a](self, **kwargs)
         # done
 
-    @handle_system_commands
     def comm_create(self, group):
         """
         This function creates a new communicator with communication group
@@ -115,6 +114,7 @@ class Communicator:
 
         """
         # check if group is a subset of this communicators' group
+        execute_system_commands(self.mpi)
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
@@ -126,11 +126,11 @@ class Communicator:
         return new_comm
 
     ceiling = sys.maxint
-    @handle_system_commands
     def _comm_create_local(self, group):
         """
         local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth.
         """
+        execute_system_commands(self.mpi)
         if self.ceiling <= 2:
             raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
         # set up some easily understandable vars (can be optimized later)
@@ -144,7 +144,6 @@ class Communicator:
         newcomm.ceiling = new_comm_ceiling
         return newcomm
 
-    @handle_system_commands
     def comm_free(self):
         """
         This operation marks the communicator object as closed.
@@ -153,11 +152,11 @@ class Communicator:
             *Deviation:* This method deviates from the MPI standard by not being collective, and by not actually deallocating the object itself.
 
         """
+        execute_system_commands(self.mpi)
         self._comm_call_attrs(type = self.comm_free, calling_comm = self)
 
         # thats it....dont do anything more. This deviates from the MPI standard.
 
-    @handle_system_commands
     def comm_split(self, existing_communicator, color, key = None):
         """
         This function partitions the group associated with comm into disjoint subgroups, one for each value of color.
@@ -179,6 +178,7 @@ class Communicator:
             groups (albeit this is simpler), and it requires special handling.
             Target implementation version: 1.1
         """
+        execute_system_commands(self.mpi)
         # one suggestion for implementation:
         # 1: collective exchange color/key info
         # 2: order into groups (each process will only be in one of N groups)
@@ -190,7 +190,6 @@ class Communicator:
         if color is None:
             return None
 
-    @handle_system_commands
     def comm_dup(self):
         """
         Duplicates the existing communicator comm with associated key values. For each key value,
@@ -203,6 +202,7 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
+        execute_system_commands(self.mpi)
         new_comm = self.comm_create(self.group())
         for a in self.attr:
             if a.startswith("MPI_"):
@@ -212,7 +212,6 @@ class Communicator:
         new_comm._comm_call_attrs(type = self.comm_dup, calling_comm = new_comm, old_comm = self)
         return new_comm
 
-    @handle_system_commands
     def comm_compare(self, other_communicator):
         """
         MPI_IDENT results if and only if comm1 and comm2 is exactly the same object (identical groups and same contexts).
@@ -222,6 +221,7 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node101.html#Node101
         """
+        execute_system_commands(self.mpi)
         if not isinstance(other_communicator, Communicator):
             return constants.MPI_UNEQUAL
 
@@ -284,7 +284,6 @@ class Communicator:
 
         return self.mpi.network._direct_send(self, message=message, receivers=receivers, tag=tag)
 
-    @handle_system_commands
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
@@ -312,6 +311,7 @@ class Communicator:
         .. note::
             It's possible for rank N to receive data from N.
         """
+        execute_system_commands(self.mpi)
         return self._irecv(sender, tag)
 
     def _irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
@@ -356,7 +356,6 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
-    @handle_system_commands
     def isend(self, content, destination, tag = constants.MPI_TAG_ANY):
         #Logger().debug(" -- isend called -- content:%s, destination:%s, tag:%s" % (content, destination, tag) )
         """
@@ -399,6 +398,7 @@ class Communicator:
         .. note::
             See also the :func:`send` and :func:`irecv` functions.
         """
+        execute_system_commands(self.mpi)
         return self._isend(content, destination, tag)
 
     def _isend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER):
@@ -430,7 +430,6 @@ class Communicator:
         self._add_unstarted_request(handle)
         return handle
 
-    @handle_system_commands
     def issend(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Synchronized non-blocking send function. The function will return as soon as the
@@ -488,6 +487,7 @@ class Communicator:
 
         **See also**: :func:`ssend` and :func:`test`
         """
+        execute_system_commands(self.mpi)
         # Check that destination exists
         if not self.have_rank(destination):
             if isinstance(destination, int):
@@ -519,7 +519,6 @@ class Communicator:
         self._add_unstarted_request(dummyhandle)
         return handle
 
-    @handle_system_commands
     def ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Synchronized send function. Send to the destination rank a message
@@ -555,12 +554,12 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
+        execute_system_commands(self.mpi)
         return self._ssend(content, destination, tag)
 
     def _ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
         return _self.issend(content, destination, tag).wait()
 
-    @handle_system_commands
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         """
         Function that inspects if a message from a given ``source`` with
@@ -592,6 +591,7 @@ class Communicator:
 
         **See also**: :func:`iprobe`
         """
+        execute_system_commands(self.mpi)
         while True:
             res = self._iprobe(source, tag)
             if res:
@@ -599,7 +599,6 @@ class Communicator:
 
             self.mpi.pending_requests_has_work.wait()
 
-    @handle_system_commands
     def iprobe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         """
         A non blocking test to check if a message with a given tag and source
@@ -607,6 +606,7 @@ class Communicator:
 
         **See also**: :func:`probe` for an example of how to use probe.
         """
+        execute_system_commands(self.mpi)
         return self._iprobe(source, tag)
 
     def _iprobe(self, source, tag):
@@ -629,7 +629,6 @@ class Communicator:
         return False
 
 
-    @handle_system_commands
     def send(self, content, destination, tag = constants.MPI_TAG_ANY):
         """
         Basic send function. Send to the destination rank a message
@@ -672,12 +671,12 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
+        execute_system_commands(self.mpi)
         return self._send(content, destination, tag)
 
     def _send(self, content, destination, tag = constants.MPI_TAG_ANY):
         return self._isend(content, destination, tag).wait()
 
-    @handle_system_commands
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
         Basic receive function. Receives from the destination rank a message
@@ -702,12 +701,12 @@ class Communicator:
         .. note::
             See the :ref:`TagRules` page for rules about your custom tags
         """
+        execute_system_commands(self.mpi)
         return self._recv(source, tag)
 
     def _recv(self, source, tag = constants.MPI_TAG_ANY):
         return self._irecv(source, tag).wait()
 
-    @handle_system_commands
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
 
@@ -756,6 +755,8 @@ class Communicator:
             particular order.
 
         """
+        execute_system_commands(self.mpi)
+
         if dest == source:
             return senddata
 
@@ -770,7 +771,6 @@ class Communicator:
 
         return None
 
-    @handle_system_commands
     def barrier(self):
         """
         Blocks all the processes in the communicator until all have
@@ -797,15 +797,16 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
+        execute_system_commands(self.mpi)
         return self.collective_controller.get_request(constants.TAG_BARRIER).wait()
 
     def ibarrier(self):
         """
         Document me
         """
+        execute_system_commands(self.mpi)
         return self.collective_controller.get_request(constants.TAG_BARRIER)
 
-    @handle_system_commands
     def bcast(self, data=None, root=0):
         """
         Broadcast a message (data) from the process with rank <root>
@@ -835,10 +836,10 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
+        execute_system_commands(self.mpi)
         request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
         return request.wait()
 
-    @handle_system_commands
     def ibcast(self, data=None, root=0):
         """
         A non blocking broad cast operation, taking the same parameters (with
@@ -852,7 +853,6 @@ class Communicator:
         """
         return self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
 
-    @handle_system_commands
     def allgather(self, data):
         """
         The allgather function will gather all the data variables from the
@@ -884,18 +884,19 @@ class Communicator:
             individual data to each other process.
 
         """
+        execute_system_commands(self.mpi)
         return self._iallgather(data).wait()
 
     def iallgather(self, data):
         """
         Document me
         """
+        execute_system_commands(self.mpi)
         return self._iallgather(data)
 
     def _iallgather(self, data):
         return self.collective_controller.get_request(constants.TAG_ALLGATHER, data)
 
-    @handle_system_commands
     def allreduce(self, data, operation):
         """
         Combines values from all the processes with the op-function. You can write
@@ -927,13 +928,14 @@ class Communicator:
         .. note::
             See also the :func:`reduce` and :func:`scan` functions.
         """
+        execute_system_commands(self.mpi)
         return self._iallreduce(data, operation).wait()
 
-    @handle_system_commands
     def iallreduce(self, data, operation):
         """
         Document me
         """
+        execute_system_commands(self.mpi)
         return self._iallreduce(data, operation)
 
     def _iallreduce(self, data, operation):
@@ -941,7 +943,6 @@ class Communicator:
             raise MPIException("The reduce operation supplied should be a callable")
         return self.collective_controller.get_request(constants.TAG_ALLREDUCE, data=data, operation=operation)
 
-    @handle_system_commands
     def alltoall(self, data):
         """
         This meethod extends the :func:`scatter` in the situation where you
@@ -974,10 +975,11 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
+        execute_system_commands(self.mpi)
         return self._ialltoall(data).wait()
 
-    @handle_system_commands
     def ialltoall(self, data):
+        execute_system_commands(self.mpi)
         return self._ialltoall(data)
 
     def _ialltoall(self, data):
@@ -987,7 +989,6 @@ class Communicator:
 
         return self.collective_controller.get_request(constants.TAG_ALLTOALL, data=data)
 
-    @handle_system_commands
     def gather(self, data, root=0):
         """
         Each process (root process included) sends the contents of its send buffer to the root
@@ -1027,16 +1028,16 @@ class Communicator:
         .. note::
             See also the :func:`allgather` and :func:`alltoall` functions.
         """
+        execute_system_commands(self.mpi)
         return self._igather(data, root).wait()
 
-    @handle_system_commands
     def igather(self, data, root=0):
+        execute_system_commands(self.mpi)
         return self._igather(data, root)
 
     def _igather(self, data, root):
         return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
-    @handle_system_commands
     def reduce(self, data, op, root=0):
         """
         Reduces the data given by each process by the "op" operator. As with
@@ -1066,13 +1067,14 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
+        execute_system_commands(self.mpi)
         return self._ireduce(data, op, root).wait()
 
-    @handle_system_commands
     def ireduce(data, op, root=0):
         """
         Document me
         """
+        execute_system_commands(self.mpi)
         return self._ireduce(data, op, root)
 
     def _ireduce(self, data, op, root):
@@ -1080,7 +1082,6 @@ class Communicator:
             raise MPIException("The reduce operation supplied should be a callable")
         return self.collective_controller.get_request(constants.TAG_REDUCE, data=data, root=root, operation=op)
 
-    @handle_system_commands
     def scan(self, data, operation):
         """
         The scan function can be through of a partial reducing involving
@@ -1110,10 +1111,11 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
+        execute_system_commands(self.mpi)
         return self._iscan(data, operation).wait()
 
-    @handle_system_commands
     def iscan(self, data, operation):
+        execute_system_commands(self.mpi)
         return self._iscan(data, operation)
 
     def _iscan(self, data, operation):
@@ -1121,7 +1123,6 @@ class Communicator:
             raise MPIException("The reduce operation supplied should be a callable")
         return self.collective_controller.get_request(constants.TAG_SCAN, data=data, operation=operation)
 
-    @handle_system_commands
     def scatter(self, data=None, root=0):
         """
         Takes a list with the size M*N, where N is also the number of participants
@@ -1188,8 +1189,8 @@ class Communicator:
         """
         return self._iscatter(data, root).wait()
 
-    @handle_system_commands
     def iscatter(self, data, root=0):
+        execute_system_commands(self.mpi)
         return self._iscatter(data, root)
 
     def _iscatter(self, data, root):
@@ -1198,7 +1199,6 @@ class Communicator:
 
         return self.collective_controller.get_request(constants.TAG_SCATTER, data=data, root=root)
 
-    @handle_system_commands
     def testall(self, request_list):
         """
         Test if all the requests in the request list are finished. Returns a boolean
@@ -1241,12 +1241,12 @@ class Communicator:
             mpi.finalize()
         """
         # We short circuit this to make it faster
+        execute_system_commands(self.mpi)
         for request in request_list:
             if not request.test():
                 return False
         return True
 
-    @handle_system_commands
     def testany(self, request_list):
         """
         Test if any of the requests in the request list has completed and
@@ -1287,12 +1287,12 @@ class Communicator:
 
             mpi.finalize()
         """
+        execute_system_commands(self.mpi)
         for request in request_list:
             if request.test():
                 return (True, request)
         return (False, None)
 
-    @handle_system_commands
     def testsome(self, request_list):
         """
         Tests if some of the operations has completed. Return a list
@@ -1334,13 +1334,13 @@ class Communicator:
 
             mpi.finalize()
         """
+        execute_system_commands(self.mpi)
         return_list = []
         for request in request_list:
             if request.test():
                 return_list.append( request )
         return return_list
 
-    @handle_system_commands
     def waitall(self, request_list):
         """
         Waits for all the requests in the given list and returns a list
@@ -1384,6 +1384,7 @@ class Communicator:
         .. note::
             See also the :func:`waitany` and :func:`waitsome` functions.
         """
+        execute_system_commands(self.mpi)
         return self._waitall(request_list)
 
     def _waitall(self, request_list):
@@ -1402,7 +1403,6 @@ class Communicator:
 
         return return_list
 
-    @handle_system_commands
     def waitany(self, request_list):
         """
         Wait for **one** request in the request list and return a tuple
@@ -1441,6 +1441,7 @@ class Communicator:
         .. note::
             See also the :func:`waitall` and :func:`waitsome` functions.
         """
+        execute_system_commands(self.mpi)
         return self._waitany(request_list)
 
     def _waitany(self, request_list):
@@ -1456,7 +1457,6 @@ class Communicator:
             time.sleep(sleep_time)
             sleep_time *= 2
 
-    @handle_system_commands
     def waitsome(self, request_list):
         """
         Waits for some requests in the given request list to
@@ -1516,6 +1516,7 @@ class Communicator:
             will however include **some**.
 
         """
+        execute_system_commands(self.mpi)
         return_list = []
 
         for request in request_list:
@@ -1528,7 +1529,6 @@ class Communicator:
 
         return [ self._waitany(request_list) ]
 
-    @handle_system_commands
     def Wtime(self):
         """
         returns a floating-point number of seconds, representing elapsed wall-clock
@@ -1538,10 +1538,10 @@ class Communicator:
             *Deviation* MPI 1.1 states that "The 'time in the past' is guaranteed not to change during the life of the process. ".
             pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
         """
+        execute_system_commands(self.mpi)
 
         return time.time()
 
-    @handle_system_commands
     def Wtick(self):
         """
         returns the resolution of wtime() in seconds. That is, it returns,
@@ -1549,6 +1549,7 @@ class Communicator:
         example, if the clock is implemented by the hardware as a counter that is incremented
         every millisecond, the value returned by wtick() should be 10 to the power of -3.
         """
+        execute_system_commands(self.mpi)
         return 1.0
 
     ################################################################################################################
