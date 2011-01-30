@@ -818,8 +818,13 @@ class Communicator:
             All processes in the communicator **must** participate in this operation.
             The operation will block until every process has entered the call.
         """
-        cr = CollectiveRequest(constants.TAG_BARRIER, self)
-        return cr.wait()
+        return self.collective_controller.get_request(constants.TAG_BARRIER).wait()
+    
+    def ibarrier(self):
+        """
+        Document me
+        """
+        return self.collective_controller.get_request(constants.TAG_BARRIER)
 
     @handle_system_commands
     def bcast(self, data=None, root=0):
