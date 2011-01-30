@@ -10,13 +10,14 @@ class TreeAllReduce(BaseCollectiveRequest):
     def __init__(self, communicator, data, operation):
         super(TreeAllReduce, self).__init__()
 
-        self.data = data
         self.communicator = communicator
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
+        self.root = 0
 
         self.operation = operation
+        self.data = data
         self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
@@ -35,6 +36,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         # child, reduce the data, and send the result to the parent.
         if not self.children:
             # We dont wait for messages, we simply send our data to the parent.
+            self.data = {self.rank : self.data}
             self.to_parent()
 
     def accept_msg(self, rank, data):
@@ -50,7 +52,7 @@ class TreeAllReduce(BaseCollectiveRequest):
             self.missing_children.remove(rank)
 
             # Add the data to the list of received data
-            self.received_data[rank] = data
+            self.received_data.update(data)
 
             # If the list of missing children i empty we have received from
             # every child and can reduce the data and send to the parent.
@@ -60,7 +62,7 @@ class TreeAllReduce(BaseCollectiveRequest):
 
                 # reduce the data
                 if self.partial:
-                    self.data = self.operation(self.received_data.values())
+                    self.data = {self.rank : self.operation(self.received_data.values())}
                 else:
                     self.data = self.received_data
 
@@ -81,7 +83,7 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def _get_data(self):
         if self.partial:
-            return self.data
+            return self.data[self.root]
         else:
             keys = self.data.keys()
             keys.sort()
@@ -167,6 +169,7 @@ class TreeReduce(BaseCollectiveRequest):
         self.root = root
 
         self.operation = operation
+        self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -176,13 +179,14 @@ class TreeReduce(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
 
-        self.received_data = []
+        self.received_data = {}
         self.missing_children = copy.copy(self.children)
 
         # The all reduce operation is handled by receiving data from each
         # child, reduce the data, and send the result to the parent.
         if not self.children:
             # We dont wait for messages, we simply send our data to the parent.
+            self.data = {self.rank : self.data}
             self.to_parent()
 
     def accept_msg(self, rank, data):
@@ -198,16 +202,19 @@ class TreeReduce(BaseCollectiveRequest):
         self.missing_children.remove(rank)
 
         # Add the data to the list of received data
-        self.received_data.append(data)
+        self.received_data.update(data)
 
         # If the list of missing children i empty we have received from
         # every child and can reduce the data and send to the parent.
         if not self.missing_children:
             # Add our own data element
-            self.received_data.append(self.data)
+            self.received_data[self.rank] = self.data
 
             # reduce the data
-            self.data = self.operation(self.received_data)
+            if self.partial:
+                self.data = {self.rank : self.operation(self.received_data.values())}
+            else:
+                self.data = self.received_data
 
             # forward to the parent.
             self.to_parent()
@@ -215,7 +222,16 @@ class TreeReduce(BaseCollectiveRequest):
 
     def _get_data(self):
         if self.rank == self.root:
-            return self.data
+            if self.partial:
+                return self.data[self.rank]
+            else:
+                keys = self.data.keys()
+                keys.sort()
+                new_data = []
+                for k in keys:
+                    new_data.append( self.data[k] )
+
+                return self.operation(new_data)
         else:
             return None
 
