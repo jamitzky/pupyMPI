@@ -5,17 +5,14 @@ other elements / functions, but the basic API **must** be implemented.
 """
 
 class Tree(object):
- #   def __init__(self, communicator, root=0):
-    def __init__(self, rank=0, size=10, root=0):
+    def __init__(self, communicator, root=0):
         """
         Creating the topology.
         """
-#        self.communicator = communicator
-#        self.rank = communicator.comm_group.rank()
-#        self.size = communicator.comm_group.size()
+        self.communicator = communicator
+        self.rank = communicator.comm_group.rank()
+        self.size = communicator.comm_group.size()
         self.root = root
-        self.size = size
-        self.rank = rank
 
         # Placeholder objects. Each tree must fill the two first with
         # a _find_children and _find_parent method.
@@ -32,11 +29,11 @@ class Tree(object):
 
         self._find_children()
         self._find_parent()
-
+        
         # Now we have the parent and children (by the actual class). We use
         # a generic method to find the descendants.
         self._find_descendants()
-
+        
     def _find_descendants(self):
         pass
 
@@ -62,8 +59,7 @@ class Tree(object):
         """
         There are never any descendants
         """
-        for child in self.children():
-            self._descendants[child] = []
+        return self._descendants
 
 class FlatTree(Tree):
     """
@@ -77,11 +73,14 @@ class FlatTree(Tree):
             all = range(0, self.size)
             all.remove(self.rank)
             self._children = all
-            self._descendants = all
 
     def _find_parent(self):
         if self.rank != self.root:
             self._parent = self.root
+            
+    def _find_descendants(self):       
+        for child in self.children():
+            self._descendants[child] = []
 
 class BinomialTree(Tree):
     """
