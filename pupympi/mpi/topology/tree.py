@@ -5,26 +5,30 @@ other elements / functions, but the basic API **must** be implemented.
 """
 
 class Tree(object):
-    def __init__(self, communicator, root=0):
+ #   def __init__(self, communicator, root=0):
+    def __init__(self, rank=0, size=10, root=0):
         """
         Creating the topology.
         """
-        self.communicator = communicator
-        self.rank = communicator.comm_group.rank()
-        self.size = communicator.comm_group.size()
+#        self.communicator = communicator
+#        self.rank = communicator.comm_group.rank()
+#        self.size = communicator.comm_group.size()
         self.root = root
+        self.size = size
+        self.rank = rank
 
         # Placeholder objects. Each tree must fill the two first with
         # a _find_children and _find_parent method.
         self._children = []
         self._parent = None
-        self._descendants = []
+        self._descendants = {}
 
         # Generate the tree if there is a bound function with the
-        # proper name.
+        # proper name
+        self.tree = None
         generator = getattr(self, "generate_tree", None)
         if generator:
-            generator()
+            self.tree = generator()
 
         self._find_children()
         self._find_parent()
@@ -34,8 +38,6 @@ class Tree(object):
         self._find_descendants()
 
     def _find_descendants(self):
-        ## FIXME: This should be implemented and then are are ready to
-        # implement the rest of scatter.
         pass
 
     def parent(self):
@@ -43,7 +45,7 @@ class Tree(object):
         Returning the rank of the parant, None if the rank is the root of the
         tree.
         """
-        return self.parent
+        return self._parent
 
     def children(self):
         """
@@ -54,12 +56,14 @@ class Tree(object):
         example a binary tree will return a list of length 0, 1 or 2. A binomial
         tree can send anywhere between 0 l where the size of the tree is fab(l).
         """
-        return self.children
+        return self._children
 
     def descendants(self):
         """
+        There are never any descendants
         """
-        return self._descendants
+        for child in self.children():
+            self._descendants[child] = []
 
 class FlatTree(Tree):
     """
@@ -78,9 +82,6 @@ class FlatTree(Tree):
     def _find_parent(self):
         if self.rank != self.root:
             self._parent = self.root
-
-    def _find_descendants(self):
-        pass
 
 class BinomialTree(Tree):
     """
@@ -136,7 +137,7 @@ class BinomialTree(Tree):
                         l.extend( find_sub( child ))
                 return l
             return find_sub(node)
-
+            
         root = node_create( new_ranks.pop(0) )
 
         iteration = 1
@@ -150,10 +151,49 @@ class BinomialTree(Tree):
 
             iteration += 1
         return root
+    
+    def _find_descendants(self):
+        """
+        This creates a dict, which values are lists. Each child for the
+        rank of this process has a list with all their descendants.
+        """
+        if not self.tree:
+            raise Exception("Topology cant find descendants without a generated tree.")
+        
+        # The idea is to iterate until we find onw of our children. When this is done
+        # the iteration process will register every seen node from that point as a 
+        # descendant.
+        def rec(node, child=None):
+            def ensure(rank):
+                if rank not in self._descendants:
+                    self._descendants[rank] = []
 
+            def register(rank, desc_rank):
+                ensure(rank)
+                self._descendants[rank].append(desc_rank)
+                
+            # We have already found a child to register for, so we just
+            # return the data and resurse a bit more
+            if child is not None:
+                register(child, node['rank'])
+                # Iterate
+                for node_child in node['children']:
+                    rec(node_child, child=child)
+            # We have not found which child to look for. So if this node is
+            # actually the child of our rank every descendants from there should
+            # be registered.
+            else:
+                if node['rank'] in self.children():
+                    # ensure structure
+                    ensure(node['rank'])
+                    child = node['rank']
+                    
+                for node_child in node['children']:
+                    rec(node_child, child=child)
+        rec(self.tree)
+                    
 class StaticFanoutTree(BinomialTree):
-
-    def __init__(self, communicator, root=0 fanout=2):
+    def __init__(self, communicator, root=0, fanout=2):
         """
         Creating the topology.
         """
