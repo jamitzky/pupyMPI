@@ -38,21 +38,18 @@ class TreeScatter(BaseCollectiveRequest):
 
         self.parent = topology.parent()
         self.children = topology.children()
-
+        
         if self.parent is None:
             # we're the root.. let us send the data to each child
             self.send_to_children()
 
     def accept_msg(self, rank, data):
-        print "received msg for rank", rank, "with data", data
-
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
 
         if rank == self.parent:
             self.data = data
-            self.filter_descendants() # spelling
             self.send_to_children()
             return True
         else:
@@ -60,11 +57,17 @@ class TreeScatter(BaseCollectiveRequest):
 
         return False
 
-    def filter_descendants(self):
-        pass
-
     def send_to_children(self):
         for child in self.children:
+            # Create new data. This will not include a lot of data copies 
+            # as we are only making references in the new list.
+            data = [None] * self.size
+            desc = self.topology.descendants()
+            for r in range(self.size):
+                if r == child or r in desc[child]:
+                    data[r] = self.data[r]
+                else:
+                    data[r] = None
             self.communicator._isend(self.data, child, tag=constants.TAG_SCATTER)
 
         # We only need our own data
