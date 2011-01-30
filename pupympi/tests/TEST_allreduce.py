@@ -5,7 +5,7 @@
 # meta-max_runtime: 25
 
 from mpi import MPI
-from mpi.operations import MPI_prod
+from mpi.collective.operations import MPI_prod
 
 def fact(n):
     if n == 0:

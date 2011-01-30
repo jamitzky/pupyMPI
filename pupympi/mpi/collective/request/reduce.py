@@ -17,6 +17,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
 
         self.operation = operation
+        self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -26,7 +27,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
 
-        self.received_data = []
+        self.received_data = {}
         self.missing_children = copy.copy(self.children)
         self.phase = "up"
 
@@ -49,16 +50,19 @@ class TreeAllReduce(BaseCollectiveRequest):
             self.missing_children.remove(rank)
 
             # Add the data to the list of received data
-            self.received_data.append(data)
+            self.received_data[rank] = data
 
             # If the list of missing children i empty we have received from
             # every child and can reduce the data and send to the parent.
             if not self.missing_children:
                 # Add our own data element
-                self.received_data.append(self.data)
+                self.received_data[self.rank] = self.data
 
                 # reduce the data
-                self.data = self.operation(self.received_data)
+                if self.partial:
+                    self.data = self.operation(self.received_data.values())
+                else:
+                    self.data = self.received_data
 
                 # forward to the parent.
                 self.to_parent()
@@ -76,7 +80,16 @@ class TreeAllReduce(BaseCollectiveRequest):
         return False
 
     def _get_data(self):
-        return self.data
+        if self.partial:
+            return self.data
+        else:
+            keys = self.data.keys()
+            keys.sort()
+            new_data = []
+            for k in keys:
+                new_data.append( self.data[k] )
+
+            return self.operation(new_data)
 
     def to_children(self):
         for child in self.children:
