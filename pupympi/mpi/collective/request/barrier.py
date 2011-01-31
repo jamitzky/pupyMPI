@@ -1,4 +1,4 @@
-from mpi.collective.request import BaseCollectiveRequest
+from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
 from mpi import constants
 from mpi.logger import Logger
 
@@ -95,48 +95,11 @@ class TreeBarrier(BaseCollectiveRequest):
     def _get_data(self):
         return self.data
 
-class FlatTreeBarrier(TreeBarrier):
-    """
-    Performs a flat tree broadcast (root sends to all other). This algorithm
-    should only be performed when the size is 10 or smaller.
-    """
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
-            obj = cls(communicator, *args, **kwargs)
+class FlatTreeBarrier(FlatTreeAccepter, TreeBarrier):
+    pass
 
-            topology = tree.FlatTree(communicator, root=0)
+class BinomialTreeBarrier(BinomialTreeAccepter, TreeBarrier):
+    pass
 
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-
-            return obj
-
-class BinomialTreeBarrier(TreeBarrier):
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
-
-            obj = cls(communicator, *args, **kwargs)
-
-            topology = tree.BinomialTree(communicator, root=0)
-
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-
-            return obj
-
-class StaticFanoutTreeBarrier(TreeBarrier):
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
-            obj = cls(communicator, *args, **kwargs)
-            topology = tree.BinomialTree(communicator, root=0)
-    
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-    
-            return obj
+class StaticFanoutTreeBarrier(StaticFanoutTreeAccepter, TreeBarrier):
+    pass
