@@ -3,6 +3,7 @@ from mpi import constants
 from mpi.logger import Logger
 from mpi.topology import tree
 
+from mpi import settings
 from math import log
 import copy
 
@@ -174,14 +175,10 @@ class FlatTreeGather(TreeGather):
     Performs a flat tree broadcast (root sends to all other). This algorithm
     should only be performed when the size is 10 or smaller.
     """
-    ACCEPT_SIZE_LIMIT = 10
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-
         size = communicator.comm_group.size()
-
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.FlatTree(communicator, root=kwargs['root'])
@@ -192,14 +189,10 @@ class FlatTreeGather(TreeGather):
             return obj
 
 class BinomialTreeGather(TreeGather):
-    ACCEPT_SIZE_LIMIT = 50
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-
         size = communicator.comm_group.size()
-
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.BinomialTree(communicator, root=kwargs['root'])
@@ -212,11 +205,13 @@ class BinomialTreeGather(TreeGather):
 class StaticFanoutTreeGather(TreeGather):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-        obj = cls(communicator, *args, **kwargs)
-
-        topology = tree.BinomialTree(communicator, root=kwargs['root'])
-
-        # Insert the toplogy as a smart trick
-        obj.topology = topology
-
-        return obj
+        size = communicator.comm_group.size()
+        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
+            obj = cls(communicator, *args, **kwargs)
+    
+            topology = tree.BinomialTree(communicator, root=kwargs['root'])
+    
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+    
+            return obj

@@ -3,6 +3,7 @@ from mpi import constants
 from mpi.logger import Logger
 
 from mpi.topology import tree
+from mpi import settings
 
 import copy
 
@@ -117,13 +118,11 @@ class TreeAllReduce(BaseCollectiveRequest):
             self.to_children()
 
 class FlatTreeAllReduce(TreeAllReduce):
-    ACCEPT_SIZE_LIMIT = 10
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
             topology = tree.FlatTree(communicator, root=0)
 
@@ -133,13 +132,11 @@ class FlatTreeAllReduce(TreeAllReduce):
             return obj
 
 class BinomialTreeAllReduce(TreeAllReduce):
-    ACCEPT_SIZE_LIMIT = 50
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.BinomialTree(communicator, root=0)
@@ -152,14 +149,16 @@ class BinomialTreeAllReduce(TreeAllReduce):
 class StaticTreeAllReduce(TreeAllReduce):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-        obj = cls(communicator, *args, **kwargs)
+        size = communicator.comm_group.size()
+        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
+            obj = cls(communicator, *args, **kwargs)
 
-        topology = tree.BinomialTree(communicator, root=0)
+            topology = tree.BinomialTree(communicator, root=0)
 
-        # Insert the toplogy as a smart trick
-        obj.topology = topology
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
 
-        return obj
+            return obj
 
 # ------------------------ reduce operation below ------------------------
 class TreeReduce(BaseCollectiveRequest):
@@ -250,13 +249,11 @@ class TreeReduce(BaseCollectiveRequest):
         self._finished.set()
 
 class FlatTreeReduce(TreeReduce):
-    ACCEPT_SIZE_LIMIT = 10
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
             topology = tree.FlatTree(communicator, root=kwargs['root'])
 
@@ -266,13 +263,11 @@ class FlatTreeReduce(TreeReduce):
             return obj
 
 class BinomialTreeReduce(TreeReduce):
-    ACCEPT_SIZE_LIMIT = 50
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.BinomialTree(communicator, root=kwargs['root'])
@@ -285,13 +280,15 @@ class BinomialTreeReduce(TreeReduce):
 class StaticTreeReduce(TreeReduce):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-        obj = cls(communicator, *args, **kwargs)
+        size = communicator.comm_group.size()
+        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
+            obj = cls(communicator, *args, **kwargs)
 
-        topology = tree.BinomialTree(communicator, root=kwargs['root'])
+            topology = tree.BinomialTree(communicator, root=kwargs['root'])
 
-        # Insert the toplogy as a smart trick
-        obj.topology = topology
-        return obj
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+            return obj
 
 # ------------------------ scan operation below ------------------------
 class TreeScan(TreeAllReduce):
@@ -320,13 +317,11 @@ class TreeScan(TreeAllReduce):
 
 
 class FlatTreeScan(TreeScan):
-    ACCEPT_SIZE_LIMIT = 10
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
             topology = tree.FlatTree(communicator, root=0)
 
@@ -336,13 +331,11 @@ class FlatTreeScan(TreeScan):
             return obj
 
 class BinomialTreeScan(TreeScan):
-    ACCEPT_SIZE_LIMIT = 50
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.BinomialTree(communicator, root=0)
@@ -355,11 +348,13 @@ class BinomialTreeScan(TreeScan):
 class StaticFanoutTreeScan(TreeScan):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-        obj = cls(communicator, *args, **kwargs)
-
-        topology = tree.BinomialTree(communicator, root=0)
-
-        # Insert the toplogy as a smart trick
-        obj.topology = topology
-
-        return obj
+        size = communicator.comm_group.size()
+        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
+            obj = cls(communicator, *args, **kwargs)
+    
+            topology = tree.BinomialTree(communicator, root=0)
+    
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+    
+            return obj
