@@ -1,7 +1,7 @@
 from mpi.collective.cache import Cache
 from mpi.logger import Logger
 from mpi import constants
-
+from mpi import settings
 from mpi.collective.request import bcast, reduce, alltoall, gather, scatter, barrier
 
 class Controller(object):
@@ -63,4 +63,3 @@ class Controller(object):
         # Note: If we define a safety net we could select the first / last class
         # and initialize that.
         Logger().warning("Unable to initialize the collective request for tag %s. I suspect failure from this point" % tag)
-
