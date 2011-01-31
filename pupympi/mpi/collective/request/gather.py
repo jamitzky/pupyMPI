@@ -31,12 +31,12 @@ class DisseminationAllGather(BaseCollectiveRequest):
         self.iterate()
 
     @classmethod
-    def accept(cls, *args, **kwargs):
+    def accept(cls, communicator, cache, *args, **kwargs):
         """
         This implementation is so supreme that we accept problems of any sizes
         and layout. GO TEAM DISSEMINATION.
         """
-        return cls(*args, **kwargs)
+        return cls(communicator, *args, **kwargs)
 
     def iterate(self):
         send_to = (2**self.i+self.rank) % self.size
