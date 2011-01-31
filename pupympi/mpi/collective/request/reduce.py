@@ -20,6 +20,12 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.tag = tag
 
         self.operation = operation
+        self.unpack = False # should we unpack a list to a simpler type (see next if)
+        
+        if not getattr(data, "__iter__", False):
+            data = [data]
+            self.unpack = True
+            
         self.data = data
         self.partial = getattr(operation, "partial_data", False)
 
@@ -65,7 +71,14 @@ class TreeAllReduce(BaseCollectiveRequest):
 
                 # reduce the data
                 if self.partial:
-                    self.data = {self.rank : self.operation(self.received_data.values())}
+                    new_data = []
+                    for i in range(len(self.received_data.values()[0])):
+                        vals = []
+                        for alist in self.received_data.values():
+                            vals.append(alist[i])
+                        new_data.append(self.operation(vals)) 
+                        
+                    self.data = {self.rank : new_data}
                 else:
                     self.data = self.received_data
 
@@ -85,16 +98,29 @@ class TreeAllReduce(BaseCollectiveRequest):
         return False
 
     def _get_data(self):
+        val = None
         if self.partial:
-            return self.data[self.root]
+            val = self.data[self.root]
         else:
             keys = self.data.keys()
             keys.sort()
-            new_data = []
+            ready_data = []
             for k in keys:
-                new_data.append( self.data[k] )
+                ready_data.append( self.data[k] )
 
-            return self.operation(new_data)
+            new_data = []
+            for i in range(len(ready_data.values()[0])):
+                vals = []
+                for alist in self.ready_data.values():
+                    vals.append(alist[i])
+                new_data.append(self.operation(vals)) 
+
+            val = new_data
+            
+        if self.unpack:
+            return val[0]
+        else:
+            return val
 
     def to_children(self):
         for child in self.children:
