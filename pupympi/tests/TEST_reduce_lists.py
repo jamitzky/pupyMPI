@@ -6,7 +6,7 @@ This test tries a global max over lists of integers
 """
 
 from mpi import MPI
-from mpi.operations import MPI_max
+from mpi.collective.operations import MPI_max
 
 import random
 
@@ -36,5 +36,5 @@ if rank == 0: # Root announces the results
     assert expected_result == result
 else:
     assert None == result
-    
+
 mpi.finalize()
