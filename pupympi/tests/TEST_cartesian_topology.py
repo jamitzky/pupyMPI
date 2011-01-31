@@ -4,7 +4,7 @@
 # meta-minprocesses: 8
 
 from mpi import MPI
-from mpi.topology.Cartesian import Cartesian
+from mpi.topology.cartesian import Cartesian
 
 mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
