@@ -32,8 +32,6 @@ class TreeBarrier(BaseCollectiveRequest):
         if not topology:
             raise Exception("Cant barrier without a topology... do you expect me to randomly behave well? I REFUSE!!!")
 
-        print "Starting with topology", topology
-
         self.parent = topology.parent()
         self.children = topology.children()
 
@@ -104,9 +102,7 @@ class FlatTreeBarrier(TreeBarrier):
     """
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-
         size = communicator.comm_group.size()
-
         if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
