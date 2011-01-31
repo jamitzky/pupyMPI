@@ -3,6 +3,7 @@ from mpi import constants
 from mpi.logger import Logger
 
 from mpi.topology import tree
+from mpi import settings
 
 import copy
 
@@ -30,6 +31,8 @@ class TreeBarrier(BaseCollectiveRequest):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
         if not topology:
             raise Exception("Cant barrier without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+
+        print "Starting with topology", topology
 
         self.parent = topology.parent()
         self.children = topology.children()
@@ -99,14 +102,12 @@ class FlatTreeBarrier(TreeBarrier):
     Performs a flat tree broadcast (root sends to all other). This algorithm
     should only be performed when the size is 10 or smaller.
     """
-    ACCEPT_SIZE_LIMIT = 10
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
 
         size = communicator.comm_group.size()
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
+        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.FlatTree(communicator, root=0)
@@ -117,14 +118,11 @@ class FlatTreeBarrier(TreeBarrier):
             return obj
 
 class BinomialTreeBarrier(TreeBarrier):
-    ACCEPT_SIZE_LIMIT = 50
-
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-
         size = communicator.comm_group.size()
+        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
 
-        if size <= cls.ACCEPT_SIZE_LIMIT:
             obj = cls(communicator, *args, **kwargs)
 
             topology = tree.BinomialTree(communicator, root=0)
@@ -137,11 +135,12 @@ class BinomialTreeBarrier(TreeBarrier):
 class StaticFanoutTreeBarrier(TreeBarrier):
     @classmethod
     def accept(cls, communicator, *args, **kwargs):
-        obj = cls(communicator, *args, **kwargs)
-
-        topology = tree.BinomialTree(communicator, root=0)
-
-        # Insert the toplogy as a smart trick
-        obj.topology = topology
-
-        return obj
+        size = communicator.comm_group.size()
+        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
+            obj = cls(communicator, *args, **kwargs)
+            topology = tree.BinomialTree(communicator, root=0)
+    
+            # Insert the toplogy as a smart trick
+            obj.topology = topology
+    
+            return obj
