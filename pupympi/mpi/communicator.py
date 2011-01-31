@@ -840,6 +840,9 @@ class Communicator:
             An :func:`MPINoSuchRankException <mpi.exceptions.MPINoSuchRankException>`
             is raised if the provided root is not a member of this communicator.
         """
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Root not present in this communicator.")
+        
         execute_system_commands(self.mpi)
         request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
         return request.wait()
@@ -855,6 +858,9 @@ class Communicator:
         request object. This means that :func:`test_some``, :func:`wait_all`
         support the collective requests.
         """
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Root not present in this communicator.")
+
         return self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
 
     def allgather(self, data):
@@ -1107,6 +1113,9 @@ class Communicator:
         return self._igather(data, root)
 
     def _igather(self, data, root):
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Root not present in this communicator.")
+
         return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
     def reduce(self, data, op, root=0):
@@ -1154,6 +1163,9 @@ class Communicator:
         return self._ireduce(data, op, root)
 
     def _ireduce(self, data, op, root):
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Root not present in this communicator.")
+
         if not getattr(op, "__call__", False):
             raise MPIException("The reduce operation supplied should be a callable")
         return self.collective_controller.get_request(constants.TAG_REDUCE, data=data, root=root, operation=op)
@@ -1286,6 +1298,9 @@ class Communicator:
         return self._iscatter(data, root)
 
     def _iscatter(self, data, root):
+        if not self.have_rank(root):
+            raise MPINoSuchRankException("Root not present in this communicator.")
+
         if self.comm_group.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
