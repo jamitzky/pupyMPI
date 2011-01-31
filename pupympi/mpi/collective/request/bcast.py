@@ -1,4 +1,4 @@
-from mpi.collective.request import BaseCollectiveRequest
+from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
 from mpi import constants
 from mpi.logger import Logger
 
@@ -58,47 +58,11 @@ class TreeBCast(BaseCollectiveRequest):
     def _get_data(self):
         return self.data
 
-class FlatTreeBCast(TreeBCast):
-    """
-    Performs a flat tree broadcast (root sends to all other). This algorithm
-    should only be performed when the size is 10 or smaller.
-    """
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.FLAT_TREE_MIN and size <= settings.FLAT_TREE_MAX:
-            obj = cls(communicator, *args, **kwargs)
+class FlatTreeBCast(FlatTreeAccepter, TreeBCast):
+    pass
 
-            topology = tree.FlatTree(communicator, root=kwargs['root'])
+class BinomialTreeBCast(BinomialTreeAccepter, TreeBCast):
+    pass
 
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-
-            return obj
-
-class BinomialTreeBCast(TreeBCast):
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.BINOMIAL_TREE_MIN and size <= settings.BINOMIAL_TREE_MAX:
-            obj = cls(communicator, *args, **kwargs)
-
-            topology = tree.BinomialTree(communicator, root=kwargs['root'])
-
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-
-            return obj
-
-class StaticFanoutTreeBCast(TreeBCast):
-    @classmethod
-    def accept(cls, communicator, *args, **kwargs):
-        size = communicator.comm_group.size()
-        if size >= settings.STATIC_FANOUT_MIN and size <= settings.STATIC_FANOUT_MAX:
-            obj = cls(communicator, *args, **kwargs)
-            topology = tree.BinomialTree(communicator, root=kwargs['root'])
-
-            # Insert the toplogy as a smart trick
-            obj.topology = topology
-    
-            return obj
+class StaticFanoutTreeBCast(StaticFanoutTreeAccepter, TreeBCast):
+    pass
