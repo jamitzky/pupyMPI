@@ -285,17 +285,28 @@ class TreeScan(TreeAllReduce):
         keys = self.data.keys()
         keys.sort()
 
-        new_data = {}
+        final_data = {}
         so_far = []
 
         for rank in keys:
             data = self.data[rank]
             so_far.append(data)
+            
+            # Element wise operation
+            new_data = []
+            for i in range(len(so_far[0])):
+                vals = []
+                for alist in so_far:
+                    vals.append(alist[i])
+                new_data.append(self.operation(vals)) 
+            reduced = new_data
+            
+            if self.unpack:
+                reduced = reduced[0]
+            
+            final_data[rank] = reduced
 
-            reduced = self.operation(so_far)
-            new_data[rank] = reduced
-
-        self.data = new_data
+        self.data = final_data
 
     def _get_data(self):
         return self.data[self.rank]
