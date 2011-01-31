@@ -9,7 +9,7 @@ even though we prefer logging in tests.
 """
 
 from mpi import MPI
-from mpi.operations import MPI_max
+from mpi.collective.operations import MPI_max
 
 import random
 
@@ -30,5 +30,5 @@ rolls = [random.randint(1,20) for i in range(6)]
 result = world.reduce(rolls, MPI_max, 0)
 if rank == 0: # Root announces the results
     print "Highest rolls were: ",result
-    
+
 mpi.finalize()
