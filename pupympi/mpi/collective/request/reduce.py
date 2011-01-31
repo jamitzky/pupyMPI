@@ -109,9 +109,9 @@ class TreeAllReduce(BaseCollectiveRequest):
                 ready_data.append( self.data[k] )
 
             new_data = []
-            for i in range(len(ready_data.values()[0])):
+            for i in range(len(ready_data[0])):
                 vals = []
-                for alist in self.ready_data.values():
+                for alist in self.ready_data:
                     vals.append(alist[i])
                 new_data.append(self.operation(vals)) 
 
@@ -158,6 +158,11 @@ class StaticTreeAllReduce(StaticFanoutTreeAccepter, TreeAllReduce):
 class TreeReduce(BaseCollectiveRequest):
     def __init__(self, communicator, data, operation, root=0):
         super(TreeReduce, self).__init__()
+
+        self.unpack = False
+        if not getattr(data, "__iter__", False):
+            data = [data]
+            self.unpack = True
 
         self.data = data
         self.communicator = communicator
@@ -212,7 +217,14 @@ class TreeReduce(BaseCollectiveRequest):
 
             # reduce the data
             if self.partial:
-                self.data = {self.rank : self.operation(self.received_data.values())}
+                new_data = []
+                for i in range(len(self.received_data.values()[0])):
+                    vals = []
+                    for alist in self.received_data.values():
+                        vals.append(alist[i])
+                    new_data.append(self.operation(vals)) 
+                    
+                self.data = {self.rank : new_data}
             else:
                 self.data = self.received_data
 
@@ -222,16 +234,29 @@ class TreeReduce(BaseCollectiveRequest):
 
     def _get_data(self):
         if self.rank == self.root:
+            val = None
             if self.partial:
-                return self.data[self.rank]
+                val = self.data[self.root]
             else:
                 keys = self.data.keys()
                 keys.sort()
-                new_data = []
+                ready_data = []
                 for k in keys:
-                    new_data.append( self.data[k] )
-
-                return self.operation(new_data)
+                    ready_data.append( self.data[k] )
+    
+                new_data = []
+                for i in range(len(ready_data[0])):
+                    vals = []
+                    for alist in ready_data:
+                        vals.append(alist[i])
+                    new_data.append(self.operation(vals)) 
+    
+                val = new_data
+                
+            if self.unpack:
+                return val[0]
+            else:
+                return val
         else:
             return None
 
