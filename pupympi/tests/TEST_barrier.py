@@ -33,7 +33,8 @@ mpi.MPI_COMM_WORLD.barrier()
 
 t2 = time.time()
 
-assert ((t2 - t1) > 4.95), " Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t1))
+if rank == 0:
+    assert ((t2 - t1) > 4.95), " Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t1))
 
 #if not (t2 - t1) > 5.0:
 #    print "Rank %i failed with (t2 - t1) = %s " % (rank, (t2-t1))

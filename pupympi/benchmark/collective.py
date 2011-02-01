@@ -3,7 +3,7 @@
 """
 collective.py - collection of collective tests inspired by Intel MPI Benchmark (IMB)
 """
-from mpi.operations import MPI_max
+from mpi.collective.operations import MPI_max
 
 import comm_info as ci
 
@@ -47,10 +47,10 @@ def test_Bcast(size, max_iterations):
         root = 0
         for _ in xrange(max_iterations):
             comm.bcast(data, root)
-            
+
             # Switch root
             root = (root +1) % num_procs
-        
+
     # end of test
     ci.synchronize_processes()
 
@@ -60,7 +60,7 @@ def test_Bcast(size, max_iterations):
     Bcast(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
-    
+
     time = (t2 - t1)
     return time
 
@@ -72,11 +72,11 @@ def test_Allgather(size, max_iterations):
         for _ in xrange(max_iterations):
             comm.allgather( data )
     # end of test
-        
+
     ci.synchronize_processes()
 
     t1 = ci.clock_function()
-    
+
     # do magic
     Allgather(ci.data[:size], max_iterations)
 
@@ -85,7 +85,7 @@ def test_Allgather(size, max_iterations):
 
     return time
 
-    
+
 def test_Alltoall(size, max_iterations):
     comm = ci.communicator
     def Alltoall(data, max_iterations):
@@ -97,7 +97,7 @@ def test_Alltoall(size, max_iterations):
     # Alltoall is not valid for size < numprocs
     if size < ci.num_procs:
         return -42
-    
+
     # Prepack data into lists for nicer iteration
     # We send size/numprocs data to each process
     #chunksize = size/ci.num_procs
@@ -106,14 +106,14 @@ def test_Alltoall(size, max_iterations):
     datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
     ci.synchronize_processes()
     t1 = ci.clock_function()
-    
+
     # do magic
     Alltoall(datalist, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
-    return time 
-       
+    return time
+
 def test_Scatter(size, max_iterations):
     """
     NOTE:
@@ -125,25 +125,29 @@ def test_Scatter(size, max_iterations):
     num_procs = ci.num_procs
     comm = ci.communicator
 
+    data = ci.data[:(size*num_procs)]
+    if len(data) < comm.size():
+        return None
+
     def Scatter(data, max_iterations):
         current_root = 0
         for _ in xrange(max_iterations):
             my_data = data if rank == current_root else None # NOTE: probably superflous, discuss with Rune
             comm.scatter(my_data, current_root)
-            
+
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
-        
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
-    
+
     # do magic
-    Scatter(ci.data[:(size*num_procs)], max_iterations)
+    Scatter(data, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
-    return time 
+    return time
 
 def test_Gather(size, max_iterations):
     comm = ci.communicator
@@ -152,14 +156,14 @@ def test_Gather(size, max_iterations):
     def Gather(data, max_iterations):
         current_root = 0
         for _ in xrange(max_iterations):
-            comm.gather(data, current_root)            
+            comm.gather(data, current_root)
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
-    
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
-    
+
     # do magic
     Gather(ci.data[:size], max_iterations)
 
@@ -176,14 +180,14 @@ def test_Reduce(size, max_iterations):
         current_root = 0
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            comm.reduce(data, MPI_max, current_root)            
+            comm.reduce(data, MPI_max, current_root)
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
-    
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
-    
+
     # do magic
     Reduce(ci.data[:size], max_iterations)
 
@@ -196,20 +200,20 @@ def test_Allreduce(size, max_iterations):
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            comm.allreduce(data, MPI_max)            
+            comm.allreduce(data, MPI_max)
 
     # end of test
-    
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
-    
+
     # do magic
     Allreduce(ci.data[:size], max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
     return time
- 
+
 def test_Barrier(size, max_iterations):
     comm = ci.communicator
     def Barrier(max_iterations):
@@ -218,9 +222,9 @@ def test_Barrier(size, max_iterations):
             comm.barrier()
     # end of test
 
-    if size is not 0: 
+    if size is not 0:
         return None # We don't care about barrier for increasing sizes
-    
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
 

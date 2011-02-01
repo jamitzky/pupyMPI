@@ -51,6 +51,14 @@ def handle_system_commands(f, *args, **kwargs):
         return f(self, *args, **kwargs)
     return inner
 
+def execute_system_commands(mpi):
+    if not mpi.pending_systems_commands:
+        return
+
+    # execute the system messages if there are any
+    with mpi.pending_systems_commands_lock:
+        execute_commands(mpi)
+
 from mpi import constants
 def execute_commands(mpi):
     """

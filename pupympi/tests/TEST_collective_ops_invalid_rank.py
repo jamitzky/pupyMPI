@@ -13,18 +13,17 @@ world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 size = world.size()
 
-# Make every processes send their rank to the root. 
+# Make every processes send their rank to the root.
 try:
     world.gather(rank, root=size)
-except Exception, e:    
+except Exception, e:
     assert type(e) == MPINoSuchRankException
-    
 
 try:
     world.reduce(rank, sum, root=size)
 except Exception, e:
     assert type(e) == MPINoSuchRankException
-   
+
 try:
     world.bcast(data=rank, root=size)
 except Exception, e:
