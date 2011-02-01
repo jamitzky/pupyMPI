@@ -9,6 +9,9 @@ from mpi import settings
 import copy
 
 class TreeAllReduce(BaseCollectiveRequest):
+    
+    SETTINGS_PREFIX = "AllReduce"
+    
     def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
         super(TreeAllReduce, self).__init__()
 
