@@ -1,6 +1,6 @@
 import sys
 
-COLLECTIVE_FORCE_BINOMIAL_TREE = False
+COLLECTIVE_FORCE_BINOMIAL_TREE = True
 
 if COLLECTIVE_FORCE_BINOMIAL_TREE:
     # Disable the flat tree settings.
