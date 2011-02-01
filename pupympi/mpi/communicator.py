@@ -486,7 +486,9 @@ class Communicator:
 
         **See also**: :func:`ssend` and :func:`test`
         """
-        execute_system_commands(self.mpi)
+        return self._issend(content, destination, tag)
+
+    def _issend(self, content, destination, tag = constants.MPI_TAG_ANY):
         # Check that destination exists
         if not self.have_rank(destination):
             if isinstance(destination, int):
@@ -554,10 +556,7 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._ssend(content, destination, tag)
-
-    def _ssend(self, content, destination, tag = constants.MPI_TAG_ANY):
-        return _self.issend(content, destination, tag).wait()
+        return self._issend(content, destination, tag).wait()
 
     def probe(self, source=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         """
@@ -842,7 +841,7 @@ class Communicator:
         """
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-        
+
         execute_system_commands(self.mpi)
         request = self.collective_controller.get_request(constants.TAG_BCAST, data=data, root=root)
         return request.wait()

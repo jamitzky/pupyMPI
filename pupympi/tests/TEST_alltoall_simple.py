@@ -2,7 +2,7 @@
 # meta-description: Test alltoall, while refactoring collective ops
 # meta-expectedresult: 0
 # meta-minprocesses: 10
-# meta-max_runtime: 25
+# meta-max_runtime: 60
 
 from mpi import MPI
 
@@ -15,9 +15,7 @@ rank = world.rank()
 size = world.size()
 chunk_size = 4
 
-iterations = 100000000
 iterations = 1000
-#iterations = 10
 
 data = [str(i)*chunk_size for i in range(size)]
 
