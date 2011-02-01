@@ -3,58 +3,55 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 import unittest
 from operator import mul
-from BaseTopology import BaseTopology
 from mpi.exceptions import MPITopologyException, NotImplementedException
 from mpi import constants
-            
+
 class dummycomm():
-    """Mock communicator for unittests only"""            
+    """Mock communicator for unittests only"""
     def __init__(self, size):
         self.size = size
         import sys
         sys.path.append("../..")
-                
+
     def associate(self, arg):
         pass
-        
+
     def __repr__(self):
         return "dummycomm"
-    
+
     def rank(self):
         return 0
-            
 
-class Cartesian(BaseTopology):
+class Cartesian(object):
     """
     Cartesian topology class for pupyMPI.
     Supports n'th dimensional topologies with flexible size and with periodicity. Rank reordering not supported.
-    
-    .. note:: 
+
+    .. note::
         if the `periodic` parameter is not supplied or contains less information than `dims` it is automatically extended as False for the remainder of the dimensions.
         It is considered an error to supply a `dims` list of 0 elements or where any element is not a positive integer.
-    
+
     """
     def __init__(self, communicator, dims, periodic = None, rank_reordering = False ):
         if not periodic:
             periodic = []
-            
+
         # Sanity checks
         if not dims:
             raise MPITopologyException("Zeroth dimensional topology not supported")
@@ -69,13 +66,18 @@ class Cartesian(BaseTopology):
 
         if len(periodic) < len(dims):
             periodic.extend([False] * (len(dims) - len(periodic)))
-            
+
         self.dims = dims
         self.periodic = periodic
         self.communicator = communicator
         #Logger("Creating new topology %s and associated with communicator %s." % (self, communicator))
-        
+
     def __repr__(self):
+        # convience and "statics"
+        def _writeDimStr(dim, periodic):
+            # used to combine dims and periodic lists for the __repr__ function. There's probably a better way to do this :o
+            return "%s%s" % (dim, "P" if periodic else "")
+
         return "<Cartesian topology, %sD with dims %s>" % (len(self.dims), 'x'.join(map(_writeDimStr, self.dims, self.periodic)))
 
     def _normalize(self, coords):
@@ -85,21 +87,21 @@ class Cartesian(BaseTopology):
             if checkcoords > dims:
                 raise MPITopologyException("Grid dimensions overflow")
         return normcoords
-        
+
     # MPI Cartesian functions
-    def MPI_Topo_test(self):
+    def topo_test(self):
         """Return type of topology"""
         return constants.MPI_CARTESIAN
-                
+
     def get(self):
         """
         Get my grid coordinates based on my rank
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node136.html#Node136
         """
         rank = self.communicator.rank()
-        
+
         return self.coords(rank)
-        
+
     def coords(self, rank):
         """
         The inverse mapping, rank-to-coordinates translation is provided by MPI_CART_COORDS
@@ -117,9 +119,9 @@ class Cartesian(BaseTopology):
             sum *= coords[k]
             rank = max(0, rank - sum)
         coords[0] = rank % self.dims[0]
-        
-        return coords        
-        
+
+        return coords
+
     def rank(self, coords):
         """
         Get my 1D rank from grid coordinates
@@ -127,86 +129,52 @@ class Cartesian(BaseTopology):
         """
         if len(coords) is not len(self.dims):
             raise MPITopologyException("Dimensions given must match those of this topology.")
-            
+
         coords = self._normalize(coords)
         d = len(coords)
         offset = 0
-        
+
         for k in range(0, d):
             offset += coords[k] * (reduce(mul, self.dims[:k]) if self.dims[:k] else 1)
- 
+
         return offset
-        
+
     def shift(self, direction, displacement, rank_source):
-        """Shifts by rank in one coordinate direction. Displacement specifies step width. 
+        """Shifts by rank in one coordinate direction. Displacement specifies step width.
             Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node137.html#Node137"""
         if direction >= len(self.dims):
             raise MPITopologyException("Dimensionality exceeded")
-            
+
         rank_target = (rank_source + displacement)
-        
+
         if self.periodic[direction]:
             return rank_target % self.dims[direction]
         elif rank_target < 0 or rank_target >= self.dims[direction]:
             raise MPITopologyException("Shift exceeded grid boundaries")
-        
-        return rank_target        
-    
+
+        return rank_target
+
     def map(self):
         """
         MPI_CART_MAP computes an ''optimal'' placement for the calling process
         on the physical machine. A possible implementation of this function is
         to always return the rank of the calling process, that is, not to
-        perform any reordering. 
-        
+        perform any reordering.
+
         This implementation does just that, as mapping to physical hardware is
         not supported.
-        
+
         Original MPI 1.1 specification at
         http://www.mpi-forum.org/docs/mpi-11-html/node139.html
         """
         return self.communicator.rank()
-        
 
-# convience and "statics"
-def _writeDimStr(dim, periodic):
-    # used to combine dims and periodic lists for the __repr__ function. There's probably a better way to do this :o
-    return "%s%s" % (dim, "P" if periodic else "")
-
-def _isprime(n):
-    '''check if integer n is a prime'''
-    # range starts with 2 and only needs to go up the squareroot of n
-    for x in range(2, int(n**0.5)+1):
-        if n % x == 0:
-            return False
-    return True
-
-
-def MPI_Cart_Create(communicator):
-    """Build a new topology from an existing 1D communicator"""    
-    raise NotImplementedException("Cartesian creation targeted for version 1.1")
-    return None
-
-    
-def MPI_Dims_Create(size, d, constraints = None):
-    """
-    MPI6.5.2: For cartesian topologies, the function MPI_DIMS_CREATE helps the
-    user select a balanced distribution of processes per coordinate direction,
-    depending on the number of processes in the group to be balanced and
-    optional constraints that can be specified by the user. One use is to
-    partition all the processes (the size of MPI_COMM_WORLD's group) into an
-    n-dimensional topology. 
-    
-    This method is not implemented in the public version of pupyMPI because it was not sufficiently stable.
-    """      
-    
-    raise  MPITopologyException("This method is presently not included")
 
 class CartesianTests(unittest.TestCase):
     """Contains stand-alone unit tests for the CartesianTopology class."""
     def setUp(self):
         pass
-        
+
     def testCreate(self):
         c = dummycomm(10)
         t = Cartesian(c, [2], [False])
@@ -220,15 +188,15 @@ class CartesianTests(unittest.TestCase):
         t = Cartesian(c, [2, 3, 4, 5, 6, 7], [True])
         self.assertEqual(t.dims, [2, 3, 4, 5, 6, 7])
         self.assertEqual(t.periodic, [True, False, False, False, False, False])
-        
+
     def testCreateError(self):
         c = dummycomm(10)
-        
+
         self.assertRaises(MPITopologyException, Cartesian, None, [2,2])
         self.assertRaises(MPITopologyException, Cartesian, c, [0])
         self.assertRaises(MPITopologyException, Cartesian ,c, [2], [False, False])
         self.assertRaises(MPITopologyException, Cartesian, c, [], [False, False])
-            
+
     def test_normalize(self):
         c = dummycomm(10)
 
@@ -269,20 +237,20 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(ca, [2,3,1])
         self.assertRaises(MPITopologyException,  MPI_Dims_Create, 7,3,[0,3,0]) # test unable to reach multiple scenario
 
-        # based on openmpi 3.x        
+        # based on openmpi 3.x
         ca = MPI_Dims_Create(32,4)
         self.assertEqual(ca, [4,2,2,2])
 
     # test rank -> [grid coords]
     def testCartGet(self):
-        c = dummycomm(10)    
+        c = dummycomm(10)
         c.size = 1 # change the size so we can test.
         t = Cartesian(c, [3], [False], None)
         self.assertRaises(MPITopologyException, t.get, 1)
         result = t.get(0)
         self.assertEqual(result, [0])
-        
-        c.size = 1000 
+
+        c.size = 1000
         result = t.get(0)
         self.assertEqual(result, [0])
         result = t.get(2)
@@ -299,11 +267,11 @@ class CartesianTests(unittest.TestCase):
         t = Cartesian(c, [3, 3, 3, 3])
         result = t.get(22)
         self.assertEqual(result, [1, 1, 2, 0])
-        
-        
+
+
     # test [grid coords] -> 1D rank
     def testCartRank(self):
-        c = dummycomm(10)    
+        c = dummycomm(10)
         t = Cartesian(c, [3], [False], None)
         result = t.rank([0])
         self.assertEqual(result, 0)
@@ -339,10 +307,10 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, 27)
 
         # need more cases and fix expected result
-        
+
     def testCartShift(self):
-        c = dummycomm(10)    
-        
+        c = dummycomm(10)
+
         # test non periodic, 1D
         t = Cartesian(c, [50])
 
@@ -358,7 +326,7 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, 40)
         self.assertRaises(MPITopologyException, t.shift, 0, -10, 5)
         self.assertRaises(MPITopologyException, t.shift, 1, 5, 5)
-        
+
         # test periodic, 1D
         t = Cartesian(c, [50], [True])
         result = t.shift(0, 5, 5)
@@ -375,16 +343,16 @@ class CartesianTests(unittest.TestCase):
         self.assertEqual(result, 40)
         result = t.shift(0, 1024, 45)
         self.assertEqual(result, 19)
-        
+
     def testMap(self):
         c = dummycomm(10)
         t = Cartesian(c, [10, 10, 10])
         result = t.map()
         self.assertEqual(result, 0)
-    
+
 
     def test__repr__(self):
-        c = dummycomm(10)    
+        c = dummycomm(10)
         x = Cartesian(c, [2, 3], [False])
         self.assertEqual(str(x), "<Cartesian topology, 2D with dims 2x3>")
         x = Cartesian(c, [2], [True])

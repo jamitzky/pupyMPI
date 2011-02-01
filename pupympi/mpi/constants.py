@@ -109,6 +109,10 @@ TAG_GATHER = -15
 TAG_SCAN = -16
 TAG_SHUTDOWN = -17
 
+# A list with all the collective tags for easy testing if a received message is
+# actually part of a collective operation.
+COLLECTIVE_TAGS = [TAG_BCAST, TAG_BARRIER, TAG_REDUCE, TAG_ALLREDUCE, TAG_ALLTOALL, TAG_SCATTER, TAG_GATHER, TAG_ALLGATHER, TAG_SCAN ]
+
 # NOT IMPLEMENTED:
 # MPI_COMM_SELF (MPI 2.x)
 

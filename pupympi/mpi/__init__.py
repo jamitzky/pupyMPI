@@ -30,7 +30,7 @@ from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
 
-from mpi.syscommands import handle_system_commands
+from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
 
 try:
@@ -106,7 +106,6 @@ class MPI(Thread):
         # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
         self.unstarted_requests = []
         self.unstarted_requests_lock = threading.Lock()
-
         self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
@@ -141,6 +140,20 @@ class MPI(Thread):
         # proper access.
         self.pending_systems_commands = []
         self.pending_systems_commands_lock = threading.Lock()
+
+        # Unstarted collective requests.
+        self.unstarted_collective_requests = []
+        self.unstarted_collective_requests_lock = threading.Lock()
+        self.unstarted_collective_requests_has_work = threading.Event()
+
+        # When the collective requsts are started they are moved to this queue until
+        # they are finished.
+        self.pending_collective_requests = []
+        self.pending_collective_requests_lock = threading.Lock()
+
+        self.received_collective_data_lock = threading.Lock()
+        self.received_collective_data = []
+        self.pending_collective_requests_has_work = threading.Event()
 
         parser = OptionParser()
         parser.add_option('--rank', type='int')
@@ -388,6 +401,40 @@ class MPI(Thread):
 
         self.resume_function = callback
 
+    def match_collective_pending(self):
+        """
+        Look through all the pending collective requests and match them with
+        the received data.
+        """
+        prune = False
+        with self.pending_collective_requests_lock:
+            with self.received_collective_data_lock:
+                new_data_list = []
+
+                for item in self.received_collective_data:
+                    (rank, tag, ack, comm_id, data) = item
+
+                    # Match with a request.
+                    match = False
+                    for request in self.pending_collective_requests:
+                        # Check we have the correct tag and communicator id.
+                        if request.communicator.id == comm_id and request.tag == tag:
+                            match = request.accept_msg(rank, data)
+                            if match:
+                                if request.test():
+                                    prune = True
+                                break
+
+                    if not match:
+                        new_data_list.append( item )
+
+                self.received_collective_data = new_data_list
+
+            if prune:
+                # We remove all the requests marked as completed.
+                self.pending_collective_requests = [r for r in self.pending_collective_requests if not r.test()]
+
+
     def match_pending(self, request):
         """
         Tries to match a pending request with something in
@@ -466,12 +513,37 @@ class MPI(Thread):
                         for element in self.raw_data_queue:
                             (rank, tag, ack, comm_id, raw_data) = element
                             data = pickle.loads(raw_data)
-                            self.received_data.append( (rank, tag, ack, comm_id, data) )
-                            #Logger().debug("Adding data: %s" % data)
 
-                        self.pending_requests_has_work.set()
+                            if tag in constants.COLLECTIVE_TAGS:
+                                # This is part of a collective request, so it
+                                # should be added on a seperate queue and
+                                # matched later.
+                                with self.received_collective_data_lock:
+                                    self.received_collective_data.append((rank, tag, ack, comm_id, data) )
+                                    self.pending_collective_requests_has_work.set()
+
+                            else:
+                                # Normal reqeust. Will be handled by the normal
+                                # received data queue.
+                                self.received_data.append( (rank, tag, ack, comm_id, data) )
+                                self.pending_requests_has_work.set()
                         self.raw_data_queue = []
                     self.raw_data_has_work.clear()
+
+            # Collective requests.
+            if self.unstarted_collective_requests_has_work.is_set():
+                self.unstarted_collective_requests_has_work.clear()
+                with self.unstarted_collective_requests_lock:
+                    for coll_req in self.unstarted_collective_requests:
+                        coll_req.start()
+
+                    with self.pending_collective_requests_lock:
+                        self.pending_collective_requests.extend(self.unstarted_collective_requests)
+                        self.unstarted_collective_requests = []
+                self.pending_collective_requests_has_work.set()
+
+            if self.pending_collective_requests_has_work.is_set():
+                self.match_collective_pending()
 
             # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
@@ -662,11 +734,11 @@ class MPI(Thread):
         """
         return getattr(cls, '_initialized', False)
 
-    @handle_system_commands
     def get_version(self):
         """
         Return the version number of the pupyMPI installation.
         """
+        execute_system_commands(self.mpi)
         return __version__
 
     def _version_check(self):
