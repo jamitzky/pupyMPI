@@ -24,3 +24,4 @@ else:
 
     STATIC_FANOUT_MIN = 50
     STATIC_FANOUT_MAX = 100
+
