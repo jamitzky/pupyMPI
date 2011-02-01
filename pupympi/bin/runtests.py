@@ -19,6 +19,10 @@
 #
 """
 runtests.py - test runner for pupympi
+
+ISSUES:
+- Logs should only be combined if the test went ok. We could in fact delete these logs, they are mostly interesting for tests that fail
+- Zebra striping of the output only works on white background and not on OSX - if we go with bright and not bright ANSI switches if should work cross platform
 """
 
 import sys

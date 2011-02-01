@@ -111,7 +111,7 @@ class TreeAllReduce(BaseCollectiveRequest):
             new_data = []
             for i in range(len(ready_data[0])):
                 vals = []
-                for alist in self.ready_data:
+                for alist in ready_data:
                     vals.append(alist[i])
                 new_data.append(self.operation(vals)) 
 

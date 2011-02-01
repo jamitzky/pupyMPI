@@ -102,7 +102,8 @@ class MigratePack(object):
         read_connections = [ s for s in write_connections ]
 
         # Try to find a socket to -1 (the admin). We don't want to close that one
-        admin_conn = self.pool._get_socket_for_rank(-1)
+        with self.pool.sockets_lock:
+            admin_conn = self.pool._get_socket_for_rank(-1)
 
         try:
             write_connections.remove(admin_conn)
