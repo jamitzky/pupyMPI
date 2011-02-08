@@ -31,6 +31,7 @@ import subprocess
 import os
 from threading import Thread
 import time
+import platform
 
 help_message = '''
 Read the source, lazy bum.
@@ -44,63 +45,17 @@ sys.path.append(mpipath) # Set PYTHONPATH
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
 TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take, if not otherwise specified
 
-
-HEADER = '\033[95m'
-OKBLACK ='\033[30m'
-OKOFFWHITE = '\033[90m'
-OKRED = '\033[31m'
-OKBLUE = '\033[94m'
-OKGREEN = '\033[92m'
-WARNING = '\033[93m'
-FAIL = '\033[91m'
-ENDC = '\033[0m'
-
-# latex_output = None
-
-def output_console(text, color = None, newline = True, block = "", output=True):
-    """Adds one block/line of output to console"""
-    out = ""
-    if color:
-        out += color
-    out += text
-    if color:
-        out += ENDC
-    if newline:
-        out += "\n\r"
-    if output:
-        sys.stdout.write(out)
-        sys.stdout.flush()
-    return out
-
-def output_console_nocolor(text, color = None, newline = True, block = "", output=True):
-    """Adds one block/line of output to console, no colors for the yuppie types"""
-    out = ""
-    out += text
-    if newline:
-        out += "\n\r"
-    if output:
-        sys.stdout.write(out)
-        sys.stdout.flush()
-    return out
-
-
-# def output_latex(test):
-#     """Adds one block/line of output as latex output"""
-#     global latex_output
-#
-#
-#     description = test.meta["description"].replace("_", "\\_") if "description" in test.meta else ""
-#     testname = test.test.replace("TEST_", "").replace("_", "\\_").replace(".py", "")
-#     result = "success" if test.returncode == test.expectedresult and not test.killed else "failed"
-#
-#     latex_output.write("%s & %s & %s & %s \\\\ \n" % (testname, test.processes, result, description))
-
-output = output_console
+# Color effects
+NORMAL = '\033[0m' 
+BRIGHT = '\033[1m'
+DIM = '\033[2m' # Doesn't work on mac
+FAIL_RED = '\033[31m'
 
 
 path = os.path.dirname(os.path.abspath(__file__))
 class RunTest(Thread):
-
+    
+    ### DEFAULTS USED DURING THE RUNTEST ###
     #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     # With dynamic socket pool
@@ -135,7 +90,9 @@ class RunTest(Thread):
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
 
-        output( "Launching(%i) %s: " % (number, self.cmd), newline=False)
+        #output( "Launching(%i) %s: " % (number, self.cmd), newline=False)        
+        sys.stdout.write("Launching(%i) %s: " % (number, self.cmd))
+        sys.stdout.flush()
         self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
         self.time_to_get_result_or_die = int(test_meta_data["max_runtime"]) if "max_runtime" in test_meta_data else TEST_MAX_RUNTIME
@@ -152,16 +109,15 @@ class RunTest(Thread):
         #print "Time to kill ",str(self.process)
         if self.process.poll() is None: # Still running means it hit time limit
             self.killed = True
-            output( "Timed out" )
+            print("Timed out")
             self.process.terminate() # Try SIGTERM
             time.sleep(0.5)
             if self.process.poll() is None:
                 self.process.kill() # SIGTERM did not do it, now we SIGKILL
         elif self.process.returncode != self.expectedresult:
-            output("Failed", OKRED)
+            print(FAIL_RED+"Failed"+NORMAL)
         else:
-            output("OK")
-        #print self.process.communicate()
+            print("OK")
         self.returncode = self.process.returncode
 
 def get_testnames(skipto = 0):
@@ -176,36 +132,43 @@ def get_testnames(skipto = 0):
     return tests
 
 
-def _status_str(ret, expres):
-    """helper function to write human friendly status string"""
-    if ret == expres:
-        return output("ok", newline=False, output=False)
-    elif ret == -9 or ret == -15:
-        return output("Timed Out", newline=False, output=False)
-    else:
-        return output("FAIL: %s" % ret, color=OKRED,newline=False, output=False)
 
 def format_output(threads):
-    """prints the final output in purty colors, and logs to latex for report inclusion"""
+    """prints the final output to console with zebra striping for readability"""
+
+    def _status_str(ret, expres):
+        """helper function to write human friendly status string"""
+        if ret == expres:
+            return "ok"
+        elif ret == -9 or ret == -15:
+            return NORMAL+FAIL_RED+"Timed Out"+NORMAL
+        else:
+            return NORMAL+FAIL_RED+("FAIL: %s" % ret)+NORMAL
+    
     testcounter = 1
     total_time = 0
-    odd = False
-    output("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED")
-    output("--------------------------------------------------------------------------------")
-    for thread in threads:
-        total_time += thread.executiontime
-        output("%3i %-40s\t\t%4s\t%s\t%s" % (testcounter, \
-                                            thread.test, \
-                                            round(thread.executiontime, 1), \
-                                            "KILLED" if thread.killed else "no", \
-                                            _status_str(thread.returncode, thread.expectedresult)),
-                                            color=OKOFFWHITE if odd else OKBLACK,
-                                            block="Results table console")
-        odd = True if odd == False else False
-        # output_latex(thread)
-        testcounter += 1
 
-    output( "\nTotal execution time: %ss" % (round(total_time, 1)))
+    print("    NAME\t\t\t\tEXECUTION TIME (sec)\tKILLED\tRETURNED")
+    print("--------------------------------------------------------------------------------")
+    for thread in threads:
+        if testcounter % 2 == 0:
+            # Standard OSX terminal doesn't show dimming so we use brightening instead
+            marking = DIM if platform.system() == 'Linux' else BRIGHT
+            filler = '.'
+        else:
+            marking = NORMAL
+            filler = ' '
+        
+        str = marking+"%3i %-51s\t%4s\t%s\t%s" % (testcounter,
+                                                thread.test.ljust(51,filler),
+                                                round(thread.executiontime, 1),
+                                                "KILLED" if thread.killed else "no",
+                                                _status_str(thread.returncode, thread.expectedresult))
+        print(str)
+        testcounter += 1
+        total_time += thread.executiontime       
+
+    print( NORMAL+"\nTotal execution time: %ss" % (round(total_time, 1)))
 
 def combine_logs(logfile_prefix):
     """Logs are initially split to ease debugging. This function combines them, and deletes the original."""
@@ -216,7 +179,7 @@ def combine_logs(logfile_prefix):
         lf = open(log, "r")
         combined.write("LOG DETAILS FOR %s\n------------------------------------------------\n" % log)
         lines = lf.readlines()
-        #print "About to write %s lines to %s" % (len(lines), combined)
+
         combined.writelines(lines)
         combined.write("\n\n")
         lf.close()
@@ -243,10 +206,6 @@ def run_tests(test_files, options):
     threadlist = []
     logfile_prefix = time.strftime("testrun-%m%d%H%M%S")
 
-    # with open("testrun.tex", "w") as latex:
-    #     global latex_output
-    #     latex_output = latex
-
     testcounter = 1
     # We run tests sequentially since many of them are rather hefty and may
     # interfere with others. Also breakage can lead to side effects and so
@@ -259,8 +218,8 @@ def run_tests(test_files, options):
         t.join()
         testcounter += 1
 
-    format_output(threadlist)
-    combine_logs(logfile_prefix)
+    format_output(threadlist) # print to console
+    combine_logs(logfile_prefix) # clean up logs
 
 class Usage(Exception):
     def __init__(self, msg):

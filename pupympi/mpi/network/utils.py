@@ -20,6 +20,7 @@ import random
 
 from mpi.logger import Logger
 from mpi.exceptions import MPIException
+from mpi import constants
 
 try:
     import cPickle as pickle
@@ -100,7 +101,7 @@ def get_raw_message(client_socket):
 
     return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
 
-from mpi import constants
+
 def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_pickled=False):
     if is_pickled:
         pickled_data = data
