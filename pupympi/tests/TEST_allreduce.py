@@ -5,14 +5,14 @@
 # meta-max_runtime: 25
 
 from mpi import MPI
-from mpi.operations import MPI_prod
+from mpi.collective.operations import MPI_prod
 
 def fact(n):
     if n == 0:
         return 1
     else:
         return n * fact(n-1)
-    
+
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 
