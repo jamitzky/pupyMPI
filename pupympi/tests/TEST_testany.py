@@ -21,7 +21,7 @@ if rank != 0:
 
 for i in range(100):
     if rank == 0:
-        # This rank receives every message received by the other 
+        # This rank receives every message sent by the other 
         # processes. 
         for j in range(size-1):
             handle = world.irecv(constants.MPI_SOURCE_ANY) 
