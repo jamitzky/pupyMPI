@@ -421,7 +421,7 @@ class DataGather(object): # {{{1
         data = {}
 
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/.*/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
