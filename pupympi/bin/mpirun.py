@@ -91,6 +91,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
     parser_adv_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for utility usage). ")
     parser_adv_group.add_option('--disable-utilities', dest='disable_utilities', action='store_true', default=False)
+    parser_adv_group.add_option('--settings', dest='settings', default=None, help="A comma separated list of files of settings objects, overriding the default one. If you supply several files they will be parsed and imported one by one overriding each other. This menas that the last file take priority. ")
     parser.add_option_group( parser_adv_group )
 
     try:
@@ -236,7 +237,7 @@ def determine_start_type():
             filename = parameter
 
     if not filename:
-        raise Exception("Can't find the filename to look at. What's wrong?")
+        return None
 
     try:
         dill.load(open(filename, 'r'))
@@ -248,7 +249,7 @@ if  __name__ == "__main__":
     start_type = determine_start_type()
 
     # Parse the options. The run type will disable some parameters.
-    options, args, user_options, executeable = parse_options(start_type) # Get options from cli
+    options, args, user_options, executeable = parse_options(start_type) # Get options from clint
 
     # If we are resuming a job we need to parse the handle file. This will tell us
     # the state of the instance for each rank. And it will tell us how many processes
@@ -297,6 +298,7 @@ if  __name__ == "__main__":
             "--process-io=%s" % options.process_io,
             "--log-file=%s" % options.logfile,
             "--start-type=%s" % start_type,
+            "--settings=%s" % options.settings
     ]
 
     if options.socket_poll_method:

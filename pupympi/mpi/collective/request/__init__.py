@@ -47,7 +47,7 @@ class BaseCollectiveRequest(object):
             return f()
 
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
         raise NotImplementedError("The accept() method was not implemented by the inheriting class.")
 
     def accept_msg(self, *args, **kwargs):
@@ -56,31 +56,31 @@ class BaseCollectiveRequest(object):
     def start(self):
         raise NotImplementedError("The start() method was not implemented by the inheriting class.")
 
-from mpi import settings
-
-def get_accept_range(cls, default_prefix="BINOMIAL_TREE"):
+def get_accept_range(cls, settings, prefix="BINOMIAL_TREE"):
     # This method will check if there should exist
     # any settings for this particular algorithm and
     # tree type. If so these are used. If not the generic
-    # limits will be inspected (from mpi.settings).
+    # limits will be inspected 
     accept_min = None
     accept_max = None
-    settings_prefix = getattr(cls, "SETTINGS_PREFIX", None)
-    if settings_prefix:
-        accept_min = getattr(settings, settings_prefix + "_MIN", None)
-        accept_max = getattr(settings, settings_prefix + "_MAX", None)
-
-    if not accept_min:
-        accept_min = getattr(settings, default_prefix + "_MIN", None)
+    class_prefix = getattr(cls, "SETTINGS_PREFIX", "")
     
-    if not accept_max:
-        accept_max = getattr(settings, default_prefix + "_MAX", None)
-
-    if not accept_min:
-        accept_min = 0
+    # Sanitise the names a bit. 
+    if prefix:
+        prefix = prefix.strip("_") + "_"
+        
+    if class_prefix:
+        class_prefix = class_prefix.strip("_") + "_"
     
-    if not accept_max:
-        accept_max = sys.maxint
+    accept_min = getattr(settings, class_prefix + prefix + "MIN", None)
+    accept_max = getattr(settings, class_prefix + prefix + "MAX", None)
+
+    if accept_min is None:
+        accept_min = getattr(settings, prefix + "MIN", 0)
+    
+    if accept_max is None:
+        accept_max = getattr(settings, prefix + "MAX", sys.maxint)
+
     return accept_min, accept_max
 
 class FlatTreeAccepter(object):
@@ -90,8 +90,8 @@ class FlatTreeAccepter(object):
     will look into simple setting objects for accepting.
     """
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
-        accept_min, accept_max = get_accept_range(cls, default_prefix="FLAT_TREE")
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        accept_min, accept_max = get_accept_range(cls, settings, prefix="FLAT_TREE")
         
         size = communicator.comm_group.size()
         if size >= accept_min and size <= accept_max:
@@ -110,8 +110,8 @@ class FlatTreeAccepter(object):
  
 class BinomialTreeAccepter(object):
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
-        accept_min, accept_max = get_accept_range(cls, default_prefix="BINOMIAL_TREE")
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        accept_min, accept_max = get_accept_range(cls, settings, prefix="BINOMIAL_TREE")
 
         size = communicator.comm_group.size()
         if size >= accept_min and size <= accept_max:
@@ -131,8 +131,8 @@ class BinomialTreeAccepter(object):
 class StaticFanoutTreeAccepter(object):
     # Fetch the fanout parameter from settings as well.
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
-        accept_min, accept_max = get_accept_range(cls, default_prefix="STATIC_FANOUT")
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        accept_min, accept_max = get_accept_range(cls, settings, prefix="STATIC_FANOUT")
 
         size = communicator.comm_group.size()
         if size >= accept_min and size <= accept_max:

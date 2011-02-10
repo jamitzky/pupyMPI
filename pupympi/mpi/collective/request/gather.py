@@ -3,7 +3,6 @@ from mpi import constants
 from mpi.logger import Logger
 from mpi.topology import tree
 
-from mpi import settings
 from math import log
 import copy
 
@@ -31,7 +30,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
         self.iterate()
 
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
         """
         This implementation is so supreme that we accept problems of any sizes
         and layout. GO TEAM DISSEMINATION.
@@ -116,6 +115,9 @@ class TreeGather(BaseCollectiveRequest):
     topology tree and then implementing the accept() class method. See the below
     defined classes for examples.
     """
+    
+    SETTINGS_PREFIX = "GATHER"
+    
     def __init__(self, communicator, data=None, root=0):
         super(TreeGather, self).__init__()
 

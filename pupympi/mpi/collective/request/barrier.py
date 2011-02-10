@@ -3,7 +3,6 @@ from mpi import constants
 from mpi.logger import Logger
 
 from mpi.topology import tree
-from mpi import settings
 
 import copy
 
@@ -18,6 +17,9 @@ class TreeBarrier(BaseCollectiveRequest):
     rank must wait until they receive from their parent, send to their children
     and receive from their children once again.
     """
+    
+    SETTINGS_PREFIX = "BARRIER"
+    
     def __init__(self, communicator):
         super(TreeBarrier, self).__init__()
 

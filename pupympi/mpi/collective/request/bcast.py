@@ -16,6 +16,9 @@ class TreeBCast(BaseCollectiveRequest):
     to each child. If - on the other hand - there is a parent, we wait for
     a message from that rank and send to our own children.
     """
+    
+    SETTINGS_PREFIX = "BCAST"
+    
     def __init__(self, communicator, data=None, root=0):
         super(TreeBCast, self).__init__()
 

@@ -29,7 +29,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
         self.tag = constants.TAG_ALLTOALL
 
     @classmethod
-    def accept(cls, communicator, cache, *args, **kwargs):
+    def accept(cls, communicator, settings,  cache, *args, **kwargs):
         # FIXME: Should it be possible to inherit an accept method that will
         # simply accept with the basic parameters?
         return cls(communicator, *args, **kwargs)
