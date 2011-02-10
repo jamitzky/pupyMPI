@@ -56,7 +56,6 @@ def MPI_prod(input_list):
     for e in input_list:
         p *= e
     return p
-
 MPI_prod.partial_data = True
 
 def MPI_max(input_list):
@@ -70,7 +69,6 @@ def MPI_max(input_list):
     #else:
     #    return max(input_list)
     return max(input_list)
-
 MPI_max.partial_data = True
 
 def MPI_min(input_list):
