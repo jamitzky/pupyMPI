@@ -139,7 +139,6 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def to_children(self):
         for child in self.children:
-            print "The data to children", self.data
             self.communicator._isend(self.data, child, tag=self.tag)
 
         self._finished.set()
