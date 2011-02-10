@@ -1,4 +1,5 @@
 from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
+from mpi.exceptions import MPIException
 
 from mpi import constants
 from mpi.logger import Logger
@@ -7,6 +8,28 @@ from mpi.topology import tree
 from mpi import settings
 
 import copy
+
+def reduce_elementwise(sequences, operation):
+    """
+    Perform a element-wise reduction on elements of equal length sequences
+    
+    Sequences can be everything iterable
+    """                
+    # TODO: Generalize so other iterables than lists work here
+    # TODO: Consider checking that all sequences are same length (max(results) = min(results))
+    reduced_results = []
+    no_seq = len(sequences) # How many sequences
+    seq_len = len(sequences[0]) # How long is a sequence
+    for i in range(seq_len):
+        try:
+            temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
+        except IndexError, e:
+            # If any sequence is shorter than the first one an IndexError will be raised
+            raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
+        # Apply operation to temp list and store result
+        reduced_results.append(operation(temp_list))
+        
+    return reduced_results
 
 class TreeAllReduce(BaseCollectiveRequest):
     
@@ -74,12 +97,14 @@ class TreeAllReduce(BaseCollectiveRequest):
 
                 # reduce the data
                 if self.partial:
-                    new_data = []
-                    for i in range(len(self.received_data.values()[0])):
-                        vals = []
-                        for alist in self.received_data.values():
-                            vals.append(alist[i])
-                        new_data.append(self.operation(vals)) 
+                    new_data = reduce_elementwise(self.received_data.values(), self.operation)
+                    # OLD reduction code
+                    #new_data = []
+                    #for i in range(len(self.received_data.values()[0])):
+                    #    vals = []
+                    #    for alist in self.received_data.values():
+                    #        vals.append(alist[i])
+                     #   new_data.append(self.operation(vals)) 
                         
                     self.data = {self.rank : new_data}
                 else:
@@ -111,14 +136,16 @@ class TreeAllReduce(BaseCollectiveRequest):
             for k in keys:
                 ready_data.append( self.data[k] )
 
-            new_data = []
-            for i in range(len(ready_data[0])):
-                vals = []
-                for alist in ready_data:
-                    vals.append(alist[i])
-                new_data.append(self.operation(vals)) 
+            val = reduce_elementwise(ready_data, self.operation)
 
-            val = new_data
+           # new_data = []
+           # for i in range(len(ready_data[0])):
+           #     vals = []
+           #     for alist in ready_data:
+           #         vals.append(alist[i])
+           #     new_data.append(self.operation(vals)) 
+#
+           # val = new_data
             
         if self.unpack:
             return val[0]
