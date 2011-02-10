@@ -98,13 +98,6 @@ class TreeAllReduce(BaseCollectiveRequest):
                 # reduce the data
                 if self.partial:
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                    # OLD reduction code
-                    #new_data = []
-                    #for i in range(len(self.received_data.values()[0])):
-                    #    vals = []
-                    #    for alist in self.received_data.values():
-                    #        vals.append(alist[i])
-                     #   new_data.append(self.operation(vals)) 
                         
                     self.data = {self.rank : new_data}
                 else:
@@ -138,15 +131,6 @@ class TreeAllReduce(BaseCollectiveRequest):
 
             val = reduce_elementwise(ready_data, self.operation)
 
-           # new_data = []
-           # for i in range(len(ready_data[0])):
-           #     vals = []
-           #     for alist in ready_data:
-           #         vals.append(alist[i])
-           #     new_data.append(self.operation(vals)) 
-#
-           # val = new_data
-            
         if self.unpack:
             return val[0]
         else:
@@ -154,6 +138,7 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def to_children(self):
         for child in self.children:
+            print "The data to children", self.data
             self.communicator._isend(self.data, child, tag=self.tag)
 
         self._finished.set()
@@ -247,12 +232,7 @@ class TreeReduce(BaseCollectiveRequest):
 
             # reduce the data
             if self.partial:
-                new_data = []
-                for i in range(len(self.received_data.values()[0])):
-                    vals = []
-                    for alist in self.received_data.values():
-                        vals.append(alist[i])
-                    new_data.append(self.operation(vals)) 
+                new_data = reduce_elementwise(self.received_data.values(), self.operation)
                     
                 self.data = {self.rank : new_data}
             else:
@@ -263,30 +243,26 @@ class TreeReduce(BaseCollectiveRequest):
         return True
 
     def _get_data(self):
-        if self.rank == self.root:
-            val = None
-            if self.partial:
-                val = self.data[self.root]
-            else:
-                keys = self.data.keys()
-                keys.sort()
-                ready_data = []
-                for k in keys:
-                    ready_data.append( self.data[k] )
-    
-                new_data = []
-                for i in range(len(ready_data[0])):
-                    vals = []
-                    for alist in ready_data:
-                        vals.append(alist[i])
-                    new_data.append(self.operation(vals)) 
-    
-                val = new_data
-                
-            if self.unpack:
-                return val[0]
-            else:
-                return val
+        if self.rank != self.root:
+            return None
+
+        val = None
+        
+        if self.partial:
+            val = self.data[self.root]
+        else:
+            keys = self.data.keys()
+            keys.sort()
+            ready_data = []
+            for k in keys:
+                ready_data.append( self.data[k] )
+
+            val = reduce_elementwise(ready_data, self.operation)
+
+        if self.unpack:
+            return val[0]
+        else:
+            return val
 
     def to_parent(self):
         # Send self.data to the parent.
