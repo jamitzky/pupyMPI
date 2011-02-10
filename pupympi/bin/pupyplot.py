@@ -744,7 +744,15 @@ class LinePlot(GNUPlot): # {{{1
         self.data.append( (procs, tag, plots) )
     # }}}2
     def plot(self): # {{{2
-        self.find_max_and_min()
+        if not self.data:
+            return
+
+        try:
+            self.find_max_and_min()
+        except ValueError:
+            print "Cant find max and min, so there is probably no data"
+            return
+        
         # Basic data for all the files.
         filename = "%s_line_%s_%s" % (self.prefix, self.title_help, self.test_name)
 
@@ -843,6 +851,9 @@ class ScatterPlot(GNUPlot): # {{{1
         self.data.append( (procs, tag, plots) )
     # }}}2
     def plot(self): # {{{2
+        if not self.data:
+            return
+        
         self.find_max_and_min()
 
         # Basic data for all the files.
