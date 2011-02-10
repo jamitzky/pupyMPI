@@ -260,8 +260,6 @@ class TreeReduce(BaseCollectiveRequest):
                 return val[0]
             else:
                 return val
-        else:
-            return None
 
     def to_parent(self):
         # Send self.data to the parent.
