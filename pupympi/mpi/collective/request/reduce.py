@@ -31,6 +31,15 @@ def reduce_elementwise(sequences, operation):
         
     return reduced_results
 
+def reduce_elementwise(sequences, operation):
+    """
+    Perform a element-wise reduction on elements of equal length sequences
+    
+    Sequences can be everything iterable
+    """                
+    # WE are fukcint
+    return operation(sequences)
+
 class TreeAllReduce(BaseCollectiveRequest):
     
     SETTINGS_PREFIX = "AllReduce"
