@@ -1,0 +1,21 @@
+# sample hostfile - showing off some nifty parameterizing
+# TIP: Fill this out properly, copy to filename "hostfile" and you've got yourself a hostfile
+# PROTIP: from # rest of line is ignored. Empty lines likewise.
+
+
+
+node1.serverpark.local
+node2.serverpark.local   cpu=4 max_cpu=16
+busynode.escience.dk     cpu=2 port=12001 # I hate those guys and their friggin fancy ports
+tyr.diku.dk max_cpu=1
+localhost max_cpu=1 port=10020# This dude seems cool though
+
+# PROTIP: Just let lines below stand when using the cluster
+n0  cpu=1 max_cpu=16
+n1  cpu=1 max_cpu=16
+n2  cpu=1 max_cpu=16
+n3  cpu=1 max_cpu=16
+n4  cpu=1 max_cpu=16
+n5  cpu=1 max_cpu=16
+n6  cpu=1 max_cpu=16
+n7  cpu=1 max_cpu=16
