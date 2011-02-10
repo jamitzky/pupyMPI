@@ -420,6 +420,10 @@ class MPI(Thread):
                         # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
                             match = request.accept_msg(rank, data)
+                            
+                            # Debug only. Should go away (maybe)
+                            if match is None:
+                                Logger().warning("A collective request is behaving stragely. Received none from accept_msg. request is: %s" % request)
                             if match:
                                 if request.test():
                                     prune = True
