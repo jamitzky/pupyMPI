@@ -5,7 +5,6 @@ from mpi import constants
 from mpi.logger import Logger
 
 from mpi.topology import tree
-from mpi import settings
 
 import copy
 
@@ -31,10 +30,9 @@ def reduce_elementwise(sequences, operation):
         
     return reduced_results
 
-
 class TreeAllReduce(BaseCollectiveRequest):
     
-    SETTINGS_PREFIX = "AllReduce"
+    SETTINGS_PREFIX = "ALLREDUCE"
     
     def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
         super(TreeAllReduce, self).__init__()
@@ -171,6 +169,9 @@ class StaticTreeAllReduce(StaticFanoutTreeAccepter, TreeAllReduce):
 
 # ------------------------ reduce operation below ------------------------
 class TreeReduce(BaseCollectiveRequest):
+    
+    SETTINGS_PREFIX = "REDUCE"
+    
     def __init__(self, communicator, data, operation, root=0):
         super(TreeReduce, self).__init__()
 
@@ -281,6 +282,9 @@ class StaticTreeReduce(StaticFanoutTreeAccepter, TreeReduce):
     pass
 # ------------------------ scan operation below ------------------------
 class TreeScan(TreeAllReduce):
+    
+    SETTINGS_PREFIX = "SCAN"
+    
     def __init__(self, communicator, data, operation):
         self.partial = False
         super(TreeScan, self).__init__(communicator, data, operation, tag=constants.TAG_SCAN)

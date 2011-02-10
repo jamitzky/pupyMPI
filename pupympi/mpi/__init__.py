@@ -154,30 +154,15 @@ class MPI(Thread):
         self.received_collective_data_lock = threading.Lock()
         self.received_collective_data = []
         self.pending_collective_requests_has_work = threading.Event()
+        
+        # The settings module. This will be handle proper by the
+        # function ``generate_settings``. 
+        self.settings = None
 
-        parser = OptionParser()
-        parser.add_option('--rank', type='int')
-        parser.add_option('--size', type='int')
-        parser.add_option('--verbosity', type='int')
-        parser.add_option('--debug', action='store_true')
-        parser.add_option('--quiet', action='store_true')
-        parser.add_option('--log-file', dest='logfile', default="mpi")
-        parser.add_option('--network-type', dest='network_type')
-        parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
-        parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
-        parser.add_option('--single-communication-thread', dest='single_communication_thread')
-        parser.add_option('--process-io', dest='process_io')
-        parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
-        parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
-        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
-        parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
-        parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
-        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
-        parser.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
-        parser.add_option('--start-type', dest='start_type', default='normal')
-
-        # _ is args
-        options, _ = parser.parse_args()
+        options = self.parse_options()
+        
+        # Parse and save settings. 
+        self.generate_settings(options.settings)
 
         # Attributes for the security component.
         self.disable_utilities = options.disable_utilities
@@ -305,6 +290,57 @@ class MPI(Thread):
         if self.resume and resumer:
             resumer(self)
 
+    def parse_options(self):
+        parser = OptionParser()
+        parser.add_option('--rank', type='int')
+        parser.add_option('--size', type='int')
+        parser.add_option('--verbosity', type='int')
+        parser.add_option('--debug', action='store_true')
+        parser.add_option('--quiet', action='store_true')
+        parser.add_option('--log-file', dest='logfile', default="mpi")
+        parser.add_option('--network-type', dest='network_type')
+        parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
+        parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
+        parser.add_option('--single-communication-thread', dest='single_communication_thread')
+        parser.add_option('--process-io', dest='process_io')
+        parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
+        parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
+        parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
+        parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
+        parser.add_option('--yappi-sorttype', dest='yappi_sorttype')
+        parser.add_option('--enable-profiling', dest='enable_profiling', action='store_true', default=False)
+        parser.add_option('--disable-utilities', dest='disable_utilities', action='store_false')
+        parser.add_option('--start-type', dest='start_type', default='normal')
+        parser.add_option("--settings", dest="settings", default=None)
+
+        # _ is args
+        options, _ = parser.parse_args()
+        return options
+    
+    def generate_settings(self, settings):
+        # We first import our normal settings packed with the mpi environment. These
+        # will make a good base for all the functionality here. If the user supplies
+        # any other settings files these will override the ones in our module.
+        from mpi import settings as base_settings
+        self.settings = base_settings
+
+        if settings:
+            settings = settings.strip().strip(", ")
+            modules = settings.split(",")
+            for module in modules:
+                # help people a bit
+                module = module.strip().strip(".py")
+
+                try:
+                    mod = __import__(module)
+                    self.settings.__dict__.update(mod.__dict__)
+                    
+                except ImportError:
+                    print "Can not import a settings modules by the name of %s" % module
+                except Exception, e:
+                    print "Something very wrong happend with your settings module", e
+                    
+                    
     def resume_packed_state(self):
         from mpi import dill
         obj = dill.loads(self.resume_state)

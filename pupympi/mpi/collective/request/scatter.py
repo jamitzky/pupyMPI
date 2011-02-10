@@ -1,6 +1,5 @@
 from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
 from mpi import constants
-from mpi import settings
 
 from mpi.logger import Logger
 
