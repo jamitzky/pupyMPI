@@ -9,27 +9,27 @@ from mpi import settings
 
 import copy
 
-def reduce_elementwise(sequences, operation):
-    """
-    Perform a element-wise reduction on elements of equal length sequences
-    
-    Sequences can be everything iterable
-    """                
-    # TODO: Generalize so other iterables than lists work here
-    # TODO: Consider checking that all sequences are same length (max(results) = min(results))
-    reduced_results = []
-    no_seq = len(sequences) # How many sequences
-    seq_len = len(sequences[0]) # How long is a sequence
-    for i in range(seq_len):
-        try:
-            temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
-        except IndexError, e:
-            # If any sequence is shorter than the first one an IndexError will be raised
-            raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
-        # Apply operation to temp list and store result
-        reduced_results.append(operation(temp_list))
-        
-    return reduced_results
+#def reduce_elementwise(sequences, operation):
+#    """
+#    Perform a element-wise reduction on elements of equal length sequences
+#    
+#    Sequences can be everything iterable
+#    """                
+#    # TODO: Generalize so other iterables than lists work here
+#    # TODO: Consider checking that all sequences are same length (max(results) = min(results))
+#    reduced_results = []
+#    no_seq = len(sequences) # How many sequences
+#    seq_len = len(sequences[0]) # How long is a sequence
+#    for i in range(seq_len):
+#        try:
+#            temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
+#        except IndexError, e:
+#            # If any sequence is shorter than the first one an IndexError will be raised
+#            raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
+#        # Apply operation to temp list and store result
+#        reduced_results.append(operation(temp_list))
+#        
+#    return reduced_results
 
 def reduce_elementwise(sequences, operation):
     """
