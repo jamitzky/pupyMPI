@@ -337,9 +337,9 @@ class Communicator:
         return handle
 
     # Add an outbound request to the queue
-    def _add_unstarted_request(self, requests):
+    def _add_unstarted_request(self, request):
         with self.mpi.unstarted_requests_lock:
-            self.mpi.unstarted_requests.append( requests )
+            self.mpi.unstarted_requests.append(request)
             self.mpi.unstarted_requests_has_work.set()
             self.mpi.has_work_event.set()
 
