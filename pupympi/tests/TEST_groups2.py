@@ -19,7 +19,7 @@ rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 
-f = open(constants.LOGDIR+"mpi.groups2.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.groups2.rank%s.log" % rank, "w")
 
 #### Test prerequisites ####
 

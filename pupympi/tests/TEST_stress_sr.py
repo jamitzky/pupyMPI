@@ -11,7 +11,7 @@ mpi = MPI()
 world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 
-f = open(constants.LOGDIR+"mpi.stress_sr.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.stress_sr.rank%s.log" % rank, "w")
 
 #max_iterations = 10
 max_iterations = 500

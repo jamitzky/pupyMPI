@@ -17,7 +17,7 @@ rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
 # Log stuff so progress is easier followed
-f = open(constants.LOGDIR+"mpi.big_messages.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.big_messages.rank%s.log" % rank, "w")
 
 # Test does not make sense for 1
 assert size > 1
