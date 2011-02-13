@@ -42,7 +42,7 @@ def main():
     for c in options.data:
         ele = c.split("=")
         if len(ele) != 2:
-            parser.error("Cant parse the settings. You need to set a VEL=KEY after the -c")
+            parser.error("Cant parse the settings. You need to set a KEY=VAL after the -c")
         else:
             key, val= ele
             data[key.upper()] = val

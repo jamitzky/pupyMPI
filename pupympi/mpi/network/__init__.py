@@ -337,7 +337,7 @@ class BaseCommunicationHandler(threading.Thread):
                 conn = read_socket
 
             try:
-                rank, msg_command, tag, ack, comm_id, raw_data = get_raw_message(conn, self.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
+                rank, msg_command, tag, ack, comm_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
             except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
