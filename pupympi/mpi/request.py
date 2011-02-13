@@ -124,6 +124,8 @@ class Request(BaseRequest):
         Cancel a request. This can be used to free memory, but the request must be redone
         by all parties involved.
         """
+        # TODO: The cancel test is simplistic and we should ensure that we can actually cancel in proper MPI fashion
+        
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self.update("cancelled")
