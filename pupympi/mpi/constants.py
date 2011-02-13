@@ -19,14 +19,14 @@
 The constants module contains a number of predefined tags, sources and other
 structures either useable as arguments in MPI functions or returned from
 MPI functions.
-It is intended to be read-only (except for LOGDIR) and changing anything voids the warranty.
+It is intended to be read-only (except for DEFAULT_LOGDIR) and changing anything voids the warranty.
 """
 
 import os
 
 #### PUBLIC VALUES BELOW ####
 PUPYVERSION = "0.8.1" # TODO: Make this automatically updated from hg tag (use the tag hook)
-LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/logs/"
+DEFAULT_LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/user_logs/"
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below

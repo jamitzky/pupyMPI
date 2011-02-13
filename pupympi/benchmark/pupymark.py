@@ -280,9 +280,9 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         
         filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
-            f = open(constants.LOGDIR+filename, "w")
+            f = open(constants.DEFAULT_LOGDIR+filename, "w")
         except:            
-            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
         
         # Test parameters
         header = "# =============================================================\n"

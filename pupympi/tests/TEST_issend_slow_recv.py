@@ -15,7 +15,7 @@ size = mpi.MPI_COMM_WORLD.size()
 
 assert size == 2
 
-f = open(constants.LOGDIR+"mpi.issend_slow_recv.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.issend_slow_recv.rank%s.log" % rank, "w")
 
 message = "Just a basic message from %d" % (rank)
 
