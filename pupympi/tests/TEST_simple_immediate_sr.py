@@ -14,7 +14,7 @@ size = mpi.MPI_COMM_WORLD.size()
 content = "Message from rank %d" % (rank)
 DUMMY_TAG = 1
 
-f = open(constants.LOGDIR+"mpi.simple_immediate_sr.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.simple_immediate_sr.rank%s.log" % rank, "w")
 
 if rank == 0:
     neighbour = 1

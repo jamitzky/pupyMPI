@@ -20,7 +20,7 @@ content = "conch"
 DUMMY_TAG = 1
 
 # Log stuff so progress is easier followed
-f = open(constants.LOGDIR+"mpi.sendreceive.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.sendreceive.rank%s.log" % rank, "w")
 
 
 # Send up in chain, recv from lower (with usual wrap around)

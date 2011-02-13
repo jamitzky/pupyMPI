@@ -15,7 +15,7 @@ size = mpi.MPI_COMM_WORLD.size()
 content = "Message from rank %d" % (rank)
 DUMMY_TAG = 1
 
-#f = open(constants.LOGDIR+"mpi.socket_pool_replace.rank%s.log" % rank, "w")
+#f = open(constants.DEFAULT_LOGDIR+"mpi.socket_pool_replace.rank%s.log" % rank, "w")
 
 neighbours = range(size)
 

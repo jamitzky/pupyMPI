@@ -13,7 +13,7 @@ rank = world.rank()
 
 DUMMY_TAG = 1
 
-f = open(constants.LOGDIR+"mpi.lock_trouble.rank%s.log" % rank, "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.lock_trouble.rank%s.log" % rank, "w")
 
 max_iterations = 500
 

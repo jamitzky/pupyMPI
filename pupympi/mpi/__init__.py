@@ -171,12 +171,12 @@ class MPI(Thread):
         if options.process_io == "remotefile":
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
-            filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
+            filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
             logger.debug("Opening file for I/O: %s" % filename)
             try:
                 output = open(filename, "w")
             except:
-                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
 
             sys.stdout = output
             sys.stderr = output
@@ -615,17 +615,17 @@ class MPI(Thread):
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
-            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            pupyprof.dump_stats(constants.DEFAULT_LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
 
-            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            filename = constants.DEFAULT_LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
             except:
-                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
 
             stats = yappi.get_stats(self._yappi_sorttype)
 
