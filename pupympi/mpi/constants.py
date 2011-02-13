@@ -121,7 +121,7 @@ JOB_INITIALIZING = -1
 # commands used for indicating is this is a system
 # message.
 CMD_USER = 0
-CMD_SYSTEM = 2  # What is this? I don't think we need it.
+#CMD_SYSTEM = 2  # Number two is a dirty number and unused atm.
 
 # Utilities
 CMD_ABORT = 1
