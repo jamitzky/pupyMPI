@@ -143,7 +143,7 @@ class StaticFanoutTreeAccepter(object):
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
             if not topology:
-                topology = tree.StaticFanoutTree(communicator, root=root, fanout=2)
+                topology = tree.StaticFanoutTree(communicator, root=root, fanout=communicator.mpi.settings.STATIC_TREE_FANOUT_COUNT)
                 cache.set(cache_idx, topology)
     
             obj.topology = topology

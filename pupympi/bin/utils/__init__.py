@@ -9,7 +9,7 @@ from mpi.network import utils
 
 class SendSimpleCommand(threading.Thread):
 
-    def __init__(self, cmd_id, rank, hostinfo, bypass=False, timeout=None, pong=False):
+    def __init__(self, cmd_id, rank, hostinfo, bypass=False, timeout=None, pong=False, data=None):
         super(SendSimpleCommand, self).__init__()
 
         self.data = None
@@ -21,6 +21,7 @@ class SendSimpleCommand(threading.Thread):
         self.timeout = timeout
         self.pong = pong
         self.error = ""
+        self.send_data = data
 
         for participant in hostinfo:
             hostname, portno, rank, security_component, avail = participant
@@ -52,7 +53,7 @@ class SendSimpleCommand(threading.Thread):
                 self.error = "Could not connect to rank %d. We received a connect timeout" % self.rank
             else:
                 # Send the message
-                message = utils.prepare_message(self.security_component, -1, cmd=self.cmd_id, comm_id=-1)
+                message = utils.prepare_message((self.security_component, self.send_data), -1, cmd=self.cmd_id, comm_id=-1)
                 utils.robust_send(connection, message)
 
                 # Test if we should also receive a message back from the rank. If so, we wait
