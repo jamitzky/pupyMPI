@@ -124,8 +124,21 @@ CMD_USER = 0
 CMD_SYSTEM = 2  # What is this? I don't think we need it.
 
 # Utilities
+
+# Used to abort a running instance.
 CMD_ABORT = 1
+
+# Used to check if an instance is still alive
 CMD_PING = 3
+
+# Used ot pack a running instance into a file.
 CMD_MIGRATE_PACK = 4 # Pack the entire system.
+
+# Used to inspect registers.
 CMD_READ_REGISTER = 5
+
+# used to close a TCP connection
 CMD_CONN_CLOSE = 6
+
+# Used to change settings at runtime.
+CMD_CONFIG = 7

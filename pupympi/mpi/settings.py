@@ -72,6 +72,10 @@ import sys
 
 COLLECTIVE_FORCE_BINOMIAL_TREE = True
 
+STATIC_TREE_FANOUT_COUNT = 2 # FIXME: Use this
+
+SOCKET_RECEIVE_BYTECOUNT = 4096
+
 if COLLECTIVE_FORCE_BINOMIAL_TREE:
     # Disable the flat tree settings.
     FLAT_TREE_MIN = 100
@@ -95,3 +99,7 @@ else:
     STATIC_FANOUT_MIN = 50
     STATIC_FANOUT_MAX = 100
 
+def restrict_tree_changes(name):
+    return name.find("TREE") == -1
+
+standard_callbacks = [restrict_tree_changes]
