@@ -32,7 +32,7 @@ def test_SOR(size, max_iterations):
     t1 = ci.clock_function()
 
     for n in range(0, max_iterations):
-	ci.synchronize_processes()
+        ci.synchronize_processes()
         sor.parallel.solve(ci.communicator, copy.deepcopy(problem), rboffset)
 
     t2 = ci.clock_function()
