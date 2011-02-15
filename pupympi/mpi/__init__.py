@@ -161,13 +161,7 @@ class MPI(Thread):
 
         options = self.parse_options()
         
-        # Parse and save settings. 
-        self.generate_settings(options.settings)
-
-        # Attributes for the security component.
-        self.disable_utilities = options.disable_utilities
-        self.security_component = None
-
+        # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
@@ -189,6 +183,13 @@ class MPI(Thread):
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
+        # Parse and save settings. 
+        self.generate_settings(options.settings)
+
+        # Attributes for the security component.
+        self.disable_utilities = options.disable_utilities
+        self.security_component = None
+        
         # First check for required Python version
         self._version_check()
 
@@ -336,7 +337,8 @@ class MPI(Thread):
                     self.settings.__dict__.update(mod.__dict__)
                     
                 except ImportError:
-                    Logger().warning("Can not import a settings module by the name of %s" % module)
+                    #Logger().warning("Can not import a settings module by the name of %s" % module)
+                    Logger().warning("Can not import a settings module by ")
                 except Exception, e:
                     Logger().error("Something very wrong happened with your settings module:", e)
                     
