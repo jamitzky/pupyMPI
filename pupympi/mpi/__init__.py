@@ -337,8 +337,8 @@ class MPI(Thread):
                     self.settings.__dict__.update(mod.__dict__)
                     
                 except ImportError:
-                    #Logger().warning("Can not import a settings module by the name of %s" % module)
-                    Logger().warning("Can not import a settings module by ")
+                    #Logger().debug("Can not import a settings module by the name of %s" % module)
+                    pass
                 except Exception, e:
                     Logger().error("Something very wrong happened with your settings module:", e)
                     
