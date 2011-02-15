@@ -32,7 +32,7 @@ import platform
 
 from mpi import MPI
 from mpi import constants
-from mpi import MPIException
+from mpi.exceptions import MPIException
 
 import comm_info as ci
 import single, collective, parallel, special, nonsynthetic
