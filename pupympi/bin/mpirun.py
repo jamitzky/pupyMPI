@@ -261,11 +261,6 @@ if  __name__ == "__main__":
         # Set the number of ranks on the options object so the startup can continue.
         options.np = len(resume_handle['procs'])
 
-    # Set log dir
-    logdir = constants.DEFAULT_LOGDIR # NOTE: This could be command line option
-    if not os.access(logdir, os.W_OK):
-        raise Exception("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
-
     # Start the logger
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
