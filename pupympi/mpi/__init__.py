@@ -164,8 +164,14 @@ class MPI(Thread):
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
+            
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
+
+            import os
+            if not os.path.isdir(constants.DEFAULT_LOGDIR):
+                os.mkdir(constants.DEFAULT_LOGDIR)
+
             logger.debug("Opening file for I/O: %s" % filename)
             try:
                 output = open(filename, "w")
