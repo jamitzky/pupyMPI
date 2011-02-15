@@ -63,12 +63,13 @@ result5 = world.reduce(tu, MPI_min, root)
 if rank == root:
     result5 == tuple(result1)
 
+#TODO: Set is commented out for now until we decide the proper semantics of reduction on sets
 # Set
-se = set(base)
-se = se.union(range(rank))
-print se
-
-result6 = world.reduce(se, MPI_min, root)
-print result6
+#se = set(base)
+#se = se.union(range(rank))
+#print se
+#
+#result6 = world.reduce(se, MPI_min, root)
+#print result6
     
 mpi.finalize()
