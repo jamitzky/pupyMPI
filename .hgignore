@@ -1,0 +1,15 @@
+# use glob syntax.
+syntax: glob
+
+.project
+.pydevproject
+*.komodoproject
+*.kpf
+*.log
+*.pyc
+*.swp
+*~
+*.*~
+.DS_Store
+*.log
+*.orig
