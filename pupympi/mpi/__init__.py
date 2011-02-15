@@ -336,9 +336,9 @@ class MPI(Thread):
                     self.settings.__dict__.update(mod.__dict__)
                     
                 except ImportError:
-                    print "Can not import a settings modules by the name of %s" % module
+                    Logger().warning("Can not import a settings module by the name of %s" % module)
                 except Exception, e:
-                    print "Something very wrong happend with your settings module", e
+                    Logger().error("Something very wrong happened with your settings module:", e)
                     
                     
     def resume_packed_state(self):
