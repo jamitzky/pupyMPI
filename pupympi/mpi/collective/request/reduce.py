@@ -28,7 +28,16 @@ def reduce_elementwise(sequences, operation):
         # Apply operation to temp list and store result
         reduced_results.append(operation(temp_list))
         
+
+    if isinstance(sequences[0],str):
+        reduced_results = ''.join(reduced_results) # join char list into string
+    if isinstance(sequences[0],bytearray):
+        reduced_results = bytearray(reduced_results) # make byte list into bytearray
+    if isinstance(sequences[0],tuple):
+        reduced_results = tuple(reduced_results) # join
+        
     return reduced_results
+
 
 class TreeAllReduce(BaseCollectiveRequest):
     
@@ -176,7 +185,8 @@ class TreeReduce(BaseCollectiveRequest):
         super(TreeReduce, self).__init__()
 
         self.unpack = False
-        if not getattr(data, "__iter__", False):
+        #if not getattr(data, "__iter__", False):
+        if not hasattr(data,"index"):
             data = [data]
             self.unpack = True
 
@@ -234,7 +244,7 @@ class TreeReduce(BaseCollectiveRequest):
             # reduce the data
             if self.partial:
                 new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                    
+                
                 self.data = {self.rank : new_data}
             else:
                 self.data = self.received_data
