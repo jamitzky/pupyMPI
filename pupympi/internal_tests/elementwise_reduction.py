@@ -55,31 +55,45 @@ def xsimple(sequences, operation):
         
     return reduced_results
 
-def runner():
-    # Generate data
-    # How big should the data payload be
-    bytemultiplier = 1000
+def generate_data(bytemultiplier,participants):
+    """
+    Generate the dataset externally from measured functions so that impact is not measured
     
-    # Participants (how wide is the payload)
-    participants = 30
-    
+    The bytemultiplier scales op the 50 char base string to appropriate size
+    Participants represent the number of sequences to reduce on
+    """    
     basestring = "yadunaxmefotimesniggaibeatwhereibeatnahmeanfoooool"
     
     wholeset = []
     for p in range(participants):
         payload = basestring[:p]+'A'+basestring[p+1:]
         wholeset.append(payload*bytemultiplier)
-        
-    res = simple(wholeset,min)    
+    
+    return wholeset
+
+
+def runner(version):
+    if version == 0:
+       res = simple(testdata,min)
+    else:
+        print "Hejhej"
     
     #res = reduce_elementwise(smallbase,min)
     #print res
     
     
 if __name__=='__main__':
+    # How big should the data payload be
+    bytemultiplier = 10000
+    # Participants (how wide is the payload)
+    participants = 5
+    # Generate the data
+    global testdata
+    testdata = generate_data(bytemultiplier,participants)
+    
     from timeit import Timer
-    t = Timer("runner()", "from __main__ import runner")
-    runs = 100
-    duration = t.timeit(runs)
+    t_simple = Timer("runner(0)", "from __main__ import runner")
+    runs = 10
+    duration = t_simple.timeit(runs)
     print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
     
