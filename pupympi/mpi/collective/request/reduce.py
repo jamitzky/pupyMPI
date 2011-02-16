@@ -14,8 +14,6 @@ def reduce_elementwise(sequences, operation):
     
     Sequences can be everything iterable
     """                
-    # TODO: Generalize so other iterables than lists work here
-    # TODO: Consider checking that all sequences are same length (max(results) = min(results))
     reduced_results = []
     no_seq = len(sequences) # How many sequences
     seq_len = len(sequences[0]) # How long is a sequence
@@ -28,7 +26,7 @@ def reduce_elementwise(sequences, operation):
         # Apply operation to temp list and store result
         reduced_results.append(operation(temp_list))
         
-
+    # Restore the type of the sequence
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
