@@ -143,7 +143,7 @@ class TreeAllReduce(BaseCollectiveRequest):
             return val
 
     def to_children(self):
-        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.self.tag)
+        self.communicator._direct_send(self.data, receivers=self.children, tag=self.tag)
         self._finished.set()
 
     def to_parent(self):
