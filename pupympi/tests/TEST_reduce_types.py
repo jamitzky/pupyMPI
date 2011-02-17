@@ -1,4 +1,4 @@
-# meta-description: Reduce with list as type
+# meta-description: Reduce with different python types
 # meta-expectedresult: 0
 # meta-minprocesses: 4
 """
@@ -8,8 +8,6 @@ This test tries a global min on different Python types
 
 from mpi import MPI
 from mpi.collective.operations import MPI_min
-
-import random
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -25,11 +23,8 @@ base = "ibewhereibeat"
 # Every rank puts in an A at own index - A is 'smaller' than the other letters
 st = base[:rank]+"A"+base[rank+1:]
 
-#print "rank:%i, st:%s" % (rank,st)
-
 result1 = world.reduce(st, MPI_min, root)
 if rank == root:
-    #print "Res1",result1
     assert result1 == "AAAAhereibeat"
 
 
