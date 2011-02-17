@@ -54,8 +54,7 @@ class TreeBCast(BaseCollectiveRequest):
         return False
 
     def send_to_children(self):
-        for child in self.children:
-            self.communicator._isend(self.data, child, tag=constants.TAG_BCAST)
+        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BCAST)
         self._finished.set()
 
     def _get_data(self):

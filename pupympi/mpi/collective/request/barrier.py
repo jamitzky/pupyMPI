@@ -87,11 +87,7 @@ class TreeBarrier(BaseCollectiveRequest):
             return False
 
     def send_children(self):
-        for child in self.children:
-            self.communicator._isend(None, child, tag=constants.TAG_BARRIER)
-
-        # We have now sent to every child. This mean that we can exit from
-        # the barrier.
+        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER)
         self._finished.set()
 
     def _get_data(self):
