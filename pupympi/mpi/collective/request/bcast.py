@@ -68,3 +68,51 @@ class BinomialTreeBCast(BinomialTreeAccepter, TreeBCast):
 
 class StaticFanoutTreeBCast(StaticFanoutTreeAccepter, TreeBCast):
     pass
+
+class RingBCast(BaseCollectiveRequest):
+    """
+    Implementation of the bcast collective operations by traversing
+    the communicators participants in a ring. This will introduce
+    more latance in the operations, but also result in less overhead
+    and lower memory footprint.
+    """
+    def __init__(self, communicator, data=None, root=0):
+        super(RingBCast, self).__init__(communicator)
+        
+        self.communicator = communicator
+        self.rank = self.communicator.comm_group.rank()
+        self.size = self.communicator.comm_group.size()
+        
+        self.root = root
+        self.data = data
+        
+        self.next = (self.rank +1) % self.size
+        self.previous = (self.rank -1) % self.size
+        
+    def start(self):
+        if self.rank == self.root:
+            self.forward()
+            
+    def accept_msg(self, rank, data):
+        # Do not do anything if the request is completed.
+        if self._finished.is_set():
+            return False
+        
+        if rank != self.previous:
+            return False
+        
+        self.data = data
+        
+        self.forward()
+        
+        return True
+                
+    def forward(self):
+        self.communicator._isend(self.data, self.next, tag=constants.TAG_BCAST)
+        self._finished.set()
+        
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        # Debug for testing. This will always accept, which makes it 
+        # quite easy to test.
+        return cls(communicator, *args, **kwargs)
