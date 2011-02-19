@@ -25,10 +25,10 @@ for msg in messages:
         try:
             assert message == msg
         except AssertionError, e:
-            #print "="*80
-            #print "Expected", msg
-            #print "Received", message
-            #print "="*80
+            print "="*80
+            print "Expected", msg
+            print "Received", message
+            print "="*80
             raise e
 
 mpi.finalize()
