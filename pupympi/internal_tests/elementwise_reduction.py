@@ -92,6 +92,21 @@ def zippy(sequences, operation):
         
     return reduced_results
 
+def mappy(sequences, operation):
+    """
+    mapping and zipping like there's no tomorrow
+    """
+    reduced_results = map(operation,*sequences)
+    
+    # Restore the type of the sequence
+    if isinstance(sequences[0],str):
+        reduced_results = ''.join(reduced_results) # join char list into string
+    if isinstance(sequences[0],bytearray):
+        reduced_results = bytearray(reduced_results) # make byte list into bytearray
+    if isinstance(sequences[0],tuple):
+        reduced_results = tuple(reduced_results) # join
+        
+    return reduced_results
 
 def generate_data(bytemultiplier,participants):
     """
@@ -118,6 +133,8 @@ def runner(version):
         res = convoluted(testdata,min)
     elif version == 3:
         res = zippy(testdata,min)
+    elif version == 4:
+        res = mappy(testdata,min)
     else:
         print "no version..."
         
@@ -125,14 +142,14 @@ def runner(version):
     
 if __name__=='__main__':
     # How big should the data payload be
-    bytemultiplier = 10000
+    bytemultiplier = 1000
     # Participants (how wide is the payload)
     participants = 5
     # Generate the data
     global testdata
     testdata = generate_data(bytemultiplier,participants)
     
-    runs = 10
+    runs = 100
 
     from timeit import Timer
     t_simple = Timer("runner(0)", "from __main__ import runner")
@@ -149,4 +166,8 @@ if __name__=='__main__':
 
     t_zippy = Timer("runner(3)", "from __main__ import runner")
     duration = t_zippy.timeit(runs)
+    print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
+
+    t_mappy = Timer("runner(4)", "from __main__ import runner")
+    duration = t_mappy.timeit(runs)
     print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
