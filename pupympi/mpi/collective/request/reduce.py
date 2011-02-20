@@ -13,7 +13,10 @@ def reduce_elementwise(sequences, operation):
     Perform a element-wise reduction on elements of equal length sequences
     
     Sequences can be everything iterable
-    """                
+    """
+    # DEBUG
+    #Logger().debug("sequencesPRE:%s" % sequences)
+    
     reduced_results = []
     no_seq = len(sequences) # How many sequences
     seq_len = len(sequences[0]) # How long is a sequence
@@ -26,6 +29,9 @@ def reduce_elementwise(sequences, operation):
         # Apply operation to temp list and store result
         reduced_results.append(operation(temp_list))
         
+    # DEBUG
+    #Logger().debug("sequencesPOST:%s" % reduced_results)
+
     # Restore the type of the sequence
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
@@ -54,7 +60,8 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.operation = operation
         self.unpack = False # should we unpack a list to a simpler type (see next if)
         
-        if not getattr(data, "__iter__", False):
+        #if not getattr(data, "__iter__", False):
+        if not hasattr(data,"index"):
             data = [data]
             self.unpack = True
             
@@ -101,19 +108,21 @@ class TreeAllReduce(BaseCollectiveRequest):
                 # Add our own data element
                 self.received_data[self.rank] = self.data
                 
-                # DEBUG
-                Logger().debug("dataPRE:%s" % self.received_data.values())
                 
                 # reduce the data
                 if self.partial:
+                    # DEBUG
+                    #Logger().debug("partialling")
+                    # DEBUG
+                    #Logger().debug("dataPRE:%s" % self.received_data.values())
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
+                    # DEBUG
+                    #Logger().debug("dataPOST:%s" % new_data)
                         
                     self.data = {self.rank : new_data}
                 else:
                     self.data = self.received_data
 
-                # DEBUG
-                Logger().debug("dataPOST:%s" % self.received_data.values())
 
                 # forward to the parent.
                 self.to_parent()
