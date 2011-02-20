@@ -14,8 +14,6 @@ def reduce_elementwise(sequences, operation):
     
     Sequences can be everything iterable
     """                
-    # TODO: Generalize so other iterables than lists work here
-    # TODO: Consider checking that all sequences are same length (max(results) = min(results))
     reduced_results = []
     no_seq = len(sequences) # How many sequences
     seq_len = len(sequences[0]) # How long is a sequence
@@ -28,7 +26,16 @@ def reduce_elementwise(sequences, operation):
         # Apply operation to temp list and store result
         reduced_results.append(operation(temp_list))
         
+    # Restore the type of the sequence
+    if isinstance(sequences[0],str):
+        reduced_results = ''.join(reduced_results) # join char list into string
+    if isinstance(sequences[0],bytearray):
+        reduced_results = bytearray(reduced_results) # make byte list into bytearray
+    if isinstance(sequences[0],tuple):
+        reduced_results = tuple(reduced_results) # join
+        
     return reduced_results
+
 
 class TreeAllReduce(BaseCollectiveRequest):
     
@@ -93,7 +100,10 @@ class TreeAllReduce(BaseCollectiveRequest):
             if not self.missing_children:
                 # Add our own data element
                 self.received_data[self.rank] = self.data
-
+                
+                # DEBUG
+                Logger().debug("dataPRE:%s" % self.received_data.values())
+                
                 # reduce the data
                 if self.partial:
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
@@ -101,6 +111,9 @@ class TreeAllReduce(BaseCollectiveRequest):
                     self.data = {self.rank : new_data}
                 else:
                     self.data = self.received_data
+
+                # DEBUG
+                Logger().debug("dataPOST:%s" % self.received_data.values())
 
                 # forward to the parent.
                 self.to_parent()
@@ -136,9 +149,7 @@ class TreeAllReduce(BaseCollectiveRequest):
             return val
 
     def to_children(self):
-        for child in self.children:
-            self.communicator._isend(self.data, child, tag=self.tag)
-
+        self.communicator._direct_send(self.data, receivers=self.children, tag=self.tag)
         self._finished.set()
 
     def to_parent(self):
@@ -176,7 +187,8 @@ class TreeReduce(BaseCollectiveRequest):
         super(TreeReduce, self).__init__()
 
         self.unpack = False
-        if not getattr(data, "__iter__", False):
+        #if not getattr(data, "__iter__", False):
+        if not hasattr(data,"index"):
             data = [data]
             self.unpack = True
 
@@ -234,7 +246,7 @@ class TreeReduce(BaseCollectiveRequest):
             # reduce the data
             if self.partial:
                 new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                    
+                
                 self.data = {self.rank : new_data}
             else:
                 self.data = self.received_data

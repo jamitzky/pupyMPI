@@ -166,22 +166,22 @@ class MPI(Thread):
 
         options = self.parse_options()
         
-        # Parse and save settings. 
-        self.generate_settings(options.settings)
-
-        # Attributes for the security component.
-        self.disable_utilities = options.disable_utilities
-        self.security_component = None
-
+        # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
+            
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
-            filename = constants.LOGDIR+'mpi.local.rank%s.log' % options.rank
+            filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
+
+            import os
+            if not os.path.isdir(constants.DEFAULT_LOGDIR):
+                os.mkdir(constants.DEFAULT_LOGDIR)
+
             logger.debug("Opening file for I/O: %s" % filename)
             try:
                 output = open(filename, "w")
             except:
-                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
 
             sys.stdout = output
             sys.stderr = output
@@ -194,6 +194,13 @@ class MPI(Thread):
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
 
+        # Parse and save settings. 
+        self.generate_settings(options.settings)
+
+        # Attributes for the security component.
+        self.disable_utilities = options.disable_utilities
+        self.security_component = None
+        
         # First check for required Python version
         self._version_check()
 
@@ -341,9 +348,10 @@ class MPI(Thread):
                     self.settings.__dict__.update(mod.__dict__)
                     
                 except ImportError:
-                    print "Can not import a settings modules by the name of %s" % module
+                    #Logger().debug("Can not import a settings module by the name of %s" % module)
+                    pass
                 except Exception, e:
-                    print "Something very wrong happend with your settings module", e
+                    Logger().error("Something very wrong happened with your settings module:", e)
                     
                     
     def resume_packed_state(self):
@@ -620,17 +628,17 @@ class MPI(Thread):
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
-            pupyprof.dump_stats(constants.LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            pupyprof.dump_stats(constants.DEFAULT_LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
 
         if self._yappi_enabled:
             yappi.stop()
 
-            filename = constants.LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            filename = constants.DEFAULT_LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
             except:
-                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
 
             stats = yappi.get_stats(self._yappi_sorttype)
 

@@ -22,7 +22,10 @@ class Controller(object):
         # possible request classes are defined. When starting a new request,
         # the first class accepting the data is created and executed.
         self.cls_mapping = {
+            # Non-used bcast algorithms: bcast.RingBCast 
             constants.TAG_BCAST : [bcast.FlatTreeBCast, bcast.BinomialTreeBCast, bcast.StaticFanoutTreeBCast],
+            
+            # Non-used barrier algorithms: barrier.RingBarrier
             constants.TAG_BARRIER : [barrier.FlatTreeBarrier, barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],

@@ -32,6 +32,7 @@ import platform
 
 from mpi import MPI
 from mpi import constants
+from mpi.exceptions import MPIException
 
 import comm_info as ci
 import single, collective, parallel, special, nonsynthetic
@@ -68,7 +69,7 @@ def pmap(limit=32):
 
 # Main functions
 
-def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
+def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     
@@ -86,29 +87,42 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
     
     # Gauge how many tests are to be run (to provide progression status during long tests)
     global testsToRun, testsDone
-    if fixed_test:
-        testsToRun = 0
-        # Run through all modules to make sure that a test of specified name exists
-        for module in modules:
-            for function in dir(module):
-                if function.startswith("test_"):
-                    if function == "test_"+fixed_test:
-                        testsToRun += 1
-        fixed = fixed_test
-    elif fixed_module:
-        testsToRun = 0
-        for module in modules:
-            # Count only tests in the desired module
-            if module.__name__ == fixed_module:
-                for function in dir(module):
-                    if function.startswith("test_"):
-                        testsToRun += 1
-        fixed = fixed_module
     testsDone = 0
+    testsToRun = 0    
+    for module in modules:
+        # Only count in relevant module unless none has been specified
+        if fixed_module is None or module.__name__ == fixed_module:
+            # Get only the test functions of the module, slice away the "test_" prefix and lowercase it
+            tests = [ t[len("test_"):].lower() for t in dir(module) if t.startswith("test_") ]
+
+            # Only count the relevant test unless none has been specified
+            for test in tests:
+                if fixed_test is None or fixed_test == test:
+                    testsToRun += 1
+
+    #
+    #if fixed_test:        
+    #    # Run through all modules to make sure that a test of specified name exists
+    #    for module in modules:
+    #        for function in dir(module):
+    #            if function.startswith("test_"):
+    #                if function == "test_"+fixed_test:
+    #                    testsToRun += 1
+    #    fixed = fixed_test
+    #elif fixed_module:
+    #    for module in modules:
+    #        # Count only tests in the desired module
+    #        if module.__name__ == fixed_module:
+    #            for function in dir(module):
+    #                if function.startswith("test_"):
+    #                    testsToRun += 1
+    #    fixed = fixed_module
+    #else:
+    #    pass
     
     valid_tests = True
     if testsToRun < 1:
-        print "%s is not a valid test or module!" % fixed
+        print "No valid test or module specified"
         valid_tests = False
     
     def run_benchmark(module, test):
@@ -173,7 +187,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         ci.log("(Accumulated) total[sec]: %12.2f %13.2f \n" % ( alltotal, iterationtime))
         return results
         
-    def _set_up_environment(mpi, module):
+    def _set_up_environment(mpi, module):        
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
@@ -211,15 +225,18 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         # end of set up environment subfunction
     
     for module in modules:
+        # Get only the functions of the module, slices away the "test_" prefix and lowercases
+        tests = [ t[len("test_"):].lower() for t in dir(module) if t.startswith("test_") ]
         
-        # Run only the desired modules
-        if fixed_module is not None and module.__name__ != fixed_module: # If a specific module is requested and this was not it, we move on
+        # If a specific module is requested and this was not it, we move on
+        if fixed_module is not None and module.__name__ != fixed_module:
             ci.log("Skipping module %s" % module.__name__)
             continue
-        elif fixed_test is not None and ("test_"+fixed_test) not in dir(module): # If a specific test is requested and this module does not contain that test, we move on
+        # If a specific test is requested and this module does not contain that test, we move on
+        elif fixed_test is not None and fixed_test not in tests:
             ci.log("Skipping module %s" % module.__name__)
             continue
-            
+        
         try:
             _set_up_environment(mpi, module)
         except Exception, e:
@@ -231,7 +248,7 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         else: # participates.
             for function in dir(module):
                 if function.startswith("test_"):
-                    if fixed_test is not None and not function.endswith(fixed_test):
+                    if fixed_test is not None and not function.lower().endswith(fixed_test):
                         ci.log( "Skipping %s" % function)
                         continue
                         
@@ -280,20 +297,37 @@ def testrunner(fixed_module = None, fixed_test = None, limit = 2**32):
         
         filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
-            f = open(constants.LOGDIR+filename, "w")
+            f = open(constants.DEFAULT_LOGDIR+filename, "w")
         except:            
-            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.LOGDIR)
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
         
-        # Test parameters
+        
+        # Show detailed test parameters in header for better overview
+        testtype = "all tests"
+        if fixed_test:
+            testtype = "test:"+fixed_test
+        if fixed_module:
+            testtype = "module:"+fixed_module
+        
+        # mpirun parameters - two and two
+        mpirun_parameters = ""
+        for i,p in enumerate(filtered_args):
+            if i % 2 == 0:
+                mpirun_parameters += "#\t"+p
+            else:
+                mpirun_parameters += " "+p+"\n"
+            
+        
         header = "# =============================================================\n"
         header += "# pupyMark - pupyMPI benchmarking\n"        
         header += "# \n"        
-        header += "# %s limit:%s processes:%i\n" % (("test:"+fixed_test if fixed_test is not None else "module:"+fixed_module),nicelimit,ci.w_num_procs)
+        header += "# %s limit:%s processes:%i\n" % (testtype,nicelimit,ci.w_num_procs)
         header += "# \n"
         header += "# start: %s \n" % nicestart
         header += "# end: %s \n" % niceend
-        header += "# elapsed (wall clock): %s \n" % niceelapsed
-        # TODO: Show mpirun parameters here
+        header += "# elapsed (wall clock): %s\n" % niceelapsed
+        header += "# \n"
+        header += "# parameters for mpirun:\n%s" % mpirun_parameters
         header += "# \n"
         header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)        
         header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
@@ -337,12 +371,36 @@ def main(argv=None):
     
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module (collection of tests)
-            module = arg.split("=")[1]
-        if arg.startswith("--test="): # forces one specific test 
-            test = arg.split("=")[1]
-        if arg.startswith("--limit="): # forces an upper limit on the test data size
+            module = arg.split("=")[1].lower()
+        elif arg.startswith("--test="): # forces one specific test 
+            test = arg.split("=")[1].lower()
+        elif arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
-    testrunner(module, test, limit)
+        else:
+            # DEBUG
+            #print "unparsed arg",arg
+            pass
+        
+    # Filter sys.argv for the interesting mpirun parameters so we can record them with the benchmark run
+    filtered_args = []
+    for a in sys.argv[1:]:
+        # when we reach pupymark parameters no more mpirun parameters are left
+        if a == '--':
+            break
+        
+        # remove long prefix for easier reading
+        if a.startswith('--mpirun-conn-'):
+            filtered_args.append(a[len('--mpirun-conn-'):])
+            continue
+        
+        # Ignore those that we deduce from communicator
+        if a.startswith('--rank=') or a.startswith('--size='):
+            continue
+        
+        # Just chop off needles prefix for other args
+        filtered_args.append(a[len('--'):])
+        
+    testrunner(filtered_args, module, test, limit)
     
 
 if __name__ == "__main__":

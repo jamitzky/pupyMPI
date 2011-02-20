@@ -87,11 +87,7 @@ class TreeBarrier(BaseCollectiveRequest):
             return False
 
     def send_children(self):
-        for child in self.children:
-            self.communicator._isend(None, child, tag=constants.TAG_BARRIER)
-
-        # We have now sent to every child. This mean that we can exit from
-        # the barrier.
+        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER)
         self._finished.set()
 
     def _get_data(self):
@@ -105,3 +101,69 @@ class BinomialTreeBarrier(BinomialTreeAccepter, TreeBarrier):
 
 class StaticFanoutTreeBarrier(StaticFanoutTreeAccepter, TreeBarrier):
     pass
+
+class RingBarrier(BaseCollectiveRequest):
+    """
+    Implementation of the barrier call by traversing the communicator
+    participants in a ring. This will introduce more latency in the
+    operation, but also result in less peak overhead / overload. 
+    """
+    def __init__(self, communicator):
+        super(RingBarrier, self).__init__()
+
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+        
+        self.next = (self.rank +1) % self.size
+        self.previous = (self.rank -1) % self.size
+        
+        # The number of messages to receive before the request is
+        # allowed to finish. 
+        self.msg_count = 2 
+        
+    def start(self):
+        # Rank 0 is the root and will start the ring
+        if self.rank == 0:
+            
+            # The root do not need to recieve the first message, so the
+            # number of messages is just 1.
+            self.msg_count = 1
+            self.send_next()
+
+    def accept_msg(self, rank, data):
+        # Do not do anything if the request is completed.
+        if self._finished.is_set():
+            return False
+        
+        if rank != self.previous:
+            return False
+        
+        if self.msg_count <= 0:
+            return False
+
+        self.msg_count -= 1
+        
+        # We have received from the rank before us, so we forward
+        # the token to the next participant.
+        self.send_next()
+        
+        # If we do not need to receive any more messages simply
+        # set the finished flag.
+        if self.msg_count == 0:
+            self._finished.set()
+            
+        return True
+
+    def send_next(self):
+        self.communicator._isend(None, self.next, tag=constants.TAG_BARRIER)
+
+    def send_previous(self):
+        self.communicator._isend(None, self.previous, tag=constants.TAG_BARRIER)
+        
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        # Debug for testing. This will always accept, which makes it 
+        # quite easy to test.
+        return cls(communicator)

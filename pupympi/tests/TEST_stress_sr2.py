@@ -10,7 +10,7 @@ from mpi import constants
 mpi = MPI()
 dummydata = ''.join(["a"] * 50)
 # Everybody log now
-f = open(constants.LOGDIR+"mpi.stress_sr2.rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
+f = open(constants.DEFAULT_LOGDIR+"mpi.stress_sr2.rank%s.log" % mpi.MPI_COMM_WORLD.rank(), "w")
 maxIterations = 200
 
 size = mpi.MPI_COMM_WORLD.size()
