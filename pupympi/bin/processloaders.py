@@ -61,7 +61,6 @@ def ssh(host, arguments, process_io, rank):
     # Execute the ssh command in a subprocess
     p = subprocess.Popen(sshexec_str, shell=True, stdout=target, stderr=target)
     process_list.append(p)
-
     return p
 
 def popen(host, arguments, process_io, rank):

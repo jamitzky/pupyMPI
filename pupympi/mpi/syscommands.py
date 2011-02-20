@@ -92,7 +92,13 @@ def execute_commands(mpi):
             # This if is just here so people know it is not missing. We
             # handle this command in a different way.
             rest_list.append(obj)
-
+            
+        elif cmd == constants.CMD_CONFIG:
+            res = mpi.set_configuration(user_data)
+            # Send the result back
+            msg = prepare_message(res, rank)
+            robust_send(connection, msg)
+        
     mpi.pending_systems_commands = rest_list
 
 def availablity():
@@ -116,5 +122,6 @@ def availablity():
         constants.CMD_PING : True,
         constants.CMD_MIGRATE_PACK : avail_pack,
         constants.CMD_READ_REGISTER : True,
+        constants.CMD_CONFIG : True, 
     }
 
