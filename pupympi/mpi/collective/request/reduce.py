@@ -100,7 +100,10 @@ class TreeAllReduce(BaseCollectiveRequest):
             if not self.missing_children:
                 # Add our own data element
                 self.received_data[self.rank] = self.data
-
+                
+                # DEBUG
+                Logger().debug("dataPRE:%s" % self.received_data.values())
+                
                 # reduce the data
                 if self.partial:
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
@@ -108,6 +111,9 @@ class TreeAllReduce(BaseCollectiveRequest):
                     self.data = {self.rank : new_data}
                 else:
                     self.data = self.received_data
+
+                # DEBUG
+                Logger().debug("dataPOST:%s" % self.received_data.values())
 
                 # forward to the parent.
                 self.to_parent()
