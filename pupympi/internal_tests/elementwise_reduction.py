@@ -79,11 +79,7 @@ def convoluted(sequences, operation):
 def zippy(sequences, operation):
     """
     mapping and zipping like there's no tomorrow
-    """                
-    reduced_results = []
-    no_seq = len(sequences) # How many sequences
-    seq_len = len(sequences[0]) # How long is a sequence
-    
+    """
     reduced_results = map(operation,zip(*sequences))
     
     # Restore the type of the sequence
