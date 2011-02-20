@@ -19,43 +19,42 @@ Accepted arguments
 -----------------------------
 The ``mpirun`` script accepts a lot of argument of different importance. A call
 to the script with the ``-h`` flag will show all the available options::
-    
+
     > bin/mpirun.py -h
     Usage: mpirun.py [options] arg
 
     Options:
-      --version             show program's version number and exit
-      -h, --help            show this help message and exit
-      -c NP, --np=NP        The number of processes to start.
-      --host-file=HOSTFILE  Path to the host file defining all the available
+    --version             show program's version number and exit
+    -h, --help            show this help message and exit
+    --host-file=HOSTFILE  Path to the host file defining all the available
                             machines the processes should be started on. If not
                             given, all processes will be started on localhost
-    
-      Logging and debugging:
+
+    Logging and debugging:
         Use these settings to control the level of output to the program. The
         --debug and --quiet options can't be used at the same time. Trying to
         will result in an error.
-    
+
         -v VERBOSITY, --verbosity=VERBOSITY
                             How much information should be logged and printed to
                             the screen. Should be an integer between 1 and 3,
                             defaults to 1.
         -d, --debug         Give you a lot of input
+        -u, --unbuffered    Try not to buffer
         -q, --quiet         Give you no input
         -l LOGFILE, --log-file=LOGFILE
                             Which logfile the system should log to. Defaults to
                             mpi(.log)
-    
-      Advanced options:
+
+    Advanced options:
         Be careful. You could do strange things here.
-    
+
         --remote-python=REMOTE_PYTHON
                             Path to Python 2.6 on remote hosts. Defaults to
                             `which python2.6`
         --startup-method=method
                             How the processes should be started. Choose between
-                            ssh, rsh (not supported) and popen (local only).
-                            Defaults to ssh
+                            ssh and popen (local only). Defaults to ssh
         --single-communication-thread
                             Use this if you don't want MPI to start two different
                             threads for communication handling. This will limit
@@ -78,7 +77,30 @@ to the script with the ``-h`` flag will show all the available options::
         --enable-profiling  Whether to enable profiling of MPI scripts. Profiling
                             data are stored in
                             ./logs/pupympi.profiling.rank<rank>. Defaults to off.
-
+        --socket-poll-method=SOCKET_POLL_METHOD
+                            Specify which socket polling method to use. Available
+                            methods are epoll (Linux only), kqueue (*BSD only),
+                            poll (most UNIX variants) and select (all operating
+                            systems). Default behaviour is to attempt to use
+                            either epoll or kqueue depending on the platform, then
+                            fall back to poll and finally select.
+        --yappi             Whether to enable profiling with Yappi. Defaults to
+                            off.
+        --yappi-sorttype=YAPPI_SORTTYPE
+                            Sort type to use with yappi. One of: name (function
+                            name), ncall (call count), ttotal (total time), tsub
+                            (total time minus subcalls), tavg (total average time)
+        --cmd-handle=CMD_HANDLE
+                            Path to where mpirun.py should place the run handle
+                            file (for utility usage).
+        --disable-utilities
+        --settings=SETTINGS
+                            A comma separated list of files of settings objects,
+                            overriding the default one. If you supply several
+                            files they will be parsed and imported one by one
+                            overriding each other. This menas that the last file
+                            take priority.
+    
 Passing arguments through to the user script
 --------------------------------------------
 Normally the internal MPI code will handle all command line arguments and return
