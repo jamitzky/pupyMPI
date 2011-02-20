@@ -1,0 +1,16 @@
+# =============================================================
+# pupyMark - pupyMPI benchmarking
+# 
+# module:parallel limit:4MB processes:2
+# 
+# start: Tue, 11 Jan 2011 14:39:54 +0000 
+# end: Tue, 11 Jan 2011 14:39:54 +0000 
+# elapsed (wall clock): 0:00:00.140024 
+# 
+# pupyMPI version: 0.8.1
+# platform: Linux-2.6.28-19-server-x86_64-with-Ubuntu-9.04-jaunty (64bit)
+# CPython version:2.6.2
+# =============================================================
+
+
+datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun
