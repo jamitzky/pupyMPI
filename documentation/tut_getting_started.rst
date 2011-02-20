@@ -53,7 +53,7 @@ Create a file called pupympi_test1.py and add the following code to it::
      mpi = MPI()
 
      if mpi.MPI_COMM_WORLD.rank() == 0:
-         mpi.MPI_COMM_WORLD.send(1, "Hello World!")
+         mpi.MPI_COMM_WORLD.send("Hello World!", 1)
      else:
          message = mpi.MPI_COMM_WORLD.recv(0)
          print message
@@ -70,6 +70,8 @@ If you did not you might have run into one of these problems:
 The above test example introduce the ``MPI_COMM_WORLD`` communicator holding all the
 started processes.
 
+.. note:: If you run the above script with more than 2 participants, the script will hang. This is due to the participants with higher rank than 1. These will try to receive a message from rank 0, but such a message is never sent.
+
 Filtering messages with tags
 -------------------------------------------------------------------------------
 Unlike the previous example it's possible to filter which type of message you
@@ -85,10 +87,10 @@ want to receive based on a tag. A very simple example::
      RECEIVER = 2
      if rank == 0:
          TAG = 1
-         world.send(RECEIVER, "Hello World from 0!", tag=TAG)
+         world.send("Hello World from 0!", RECEIVER, tag=TAG)
      elif rank == 1:
          TAG = 2
-         world.send(RECEIVER, "Hello World from 1!", tag=TAG)
+         world.send("Hello World from 1!", RECEIVER, tag=TAG)
      elif rank == 2:
          FIRST_TAG = 1
          SECOND_TAG = 2
