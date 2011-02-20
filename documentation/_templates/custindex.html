@@ -1,0 +1,32 @@
+{% extends "defindex.html" %}
+{% block tables %}
+  <p><strong>Getting started with pupyMPI:</strong></p>
+  <table class="contentstable" align="center"><tr>
+    <td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("tut_getting_started") }}">Getting started tutorial</a><br/>
+         <span class="linkdescr">start here</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("mpirun") }}">Running your pupyMPI program</a><br/>
+         <span class="linkdescr">Describes the command line interface for startign prorams</span></p>
+    </td><td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("api") }}">API documentation</a><br/>
+         <span class="linkdescr">keep this under your pillow</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("utils") }}">Utilities</a><br/>
+         <span class="linkdescr">useful scripts to interact with a running pupyMPI instance.</span></p>
+    </td></tr>
+  </table>
+
+  <p><strong>Indices and tables:</strong></p>
+  <table class="contentstable" align="center"><tr>
+    <td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("modindex") }}">Global Module Index</a><br/>
+         <span class="linkdescr">quick access to all modules</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("genindex") }}">General Index</a><br/>
+         <span class="linkdescr">all functions, classes, terms</span></p>
+    </td><td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("search") }}">Search page</a><br/>
+         <span class="linkdescr">search this documentation</span></p>
+    </td></tr>
+  </table>
+
+{% endblock %}
+
