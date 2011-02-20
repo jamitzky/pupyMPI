@@ -36,13 +36,13 @@ def MPI_prod(input_list):
     where n is the size of the world communicator.::
 
         from mpi import MPI
-        from mpi.operations import MPI_prod
+        from mpi.collective.operations import MPI_prod
 
         mpi = MPI()
 
         # We start n processes, and try to calculate n!
         rank = mpi.MPI_COMM_WORLD.rank()
-        fact = mpi.MPI_COMM_WORLD.allreduce(rank, prod)
+        fact = mpi.MPI_COMM_WORLD.allreduce(rank, MPI_prod)
 
         print "I'm rank %d and I also got the result %d. So cool" % (rank, fact)
 
