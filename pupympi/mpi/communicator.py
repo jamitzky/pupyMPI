@@ -367,6 +367,7 @@ class Communicator:
         complete like the following example shows::
 
             from mpi import MPI
+            mpi = MPI()
             world = mpi.MPI_COMM_WORLD
 
             if world.rank() == 0:
@@ -906,6 +907,10 @@ class Communicator:
 
             from mpi import MPI
             mpi = MPI()
+            
+            def calc():
+                import time
+                time.sleep(5)
 
             world = mpi.MPI_COMM_WORLD
 
@@ -942,13 +947,13 @@ class Communicator:
         writing a really bad factorial function would be::
 
             from mpi import MPI
-            from mpi.collective.operations import prod
+            from mpi.collective.operations import MPI_prod
 
             mpi = MPI()
 
             # We start n processes, and try to calculate n!
             rank = mpi.MPI_COMM_WORLD.rank()
-            fact = mpi.MPI_COMM_WORLD.allreduce(rank, prod)
+            fact = mpi.MPI_COMM_WORLD.allreduce(rank, MPI_prod)
 
             print "I'm rank %d and I also got the result %d. So cool" % (rank, fact)
 
@@ -975,13 +980,13 @@ class Communicator:
         number of options for testing / waiting on the operation progress::
 
             from mpi import MPI
-            from mpi.collective.operations import prod
+            from mpi.collective.operations import MPI_prod
 
             mpi = MPI()
 
             # We start n processes, and try to calculate n!
             rank = mpi.MPI_COMM_WORLD.rank()
-            handle = mpi.MPI_COMM_WORLD.iallreduce(rank, prod)
+            handle = mpi.MPI_COMM_WORLD.iallreduce(rank, MPI_prod)
 
             # ...
 
@@ -1018,18 +1023,23 @@ class Communicator:
             from mpi import MPI
 
             mpi = MPI()
+            
+            world = mpi.MPI_COMM_WORLD
 
-            rank = mpi.MPI_COMM_WORLD.rank()
-            size = mpi.MPI_COMM_WORLD.rank()
+            rank = world.rank()
+            size = world.size()
 
             send_data = ["%d --> %d" % (rank, x) for x in range(size)]
             # For size of 4 and rank 2 this looks like
             # ['2 --> 0', '2 --> 1', '2 --> 2', '2 --> 3']
 
-            recv_data = mpi.alltoall(send_data)
+            recv_data = world.alltoall(send_data)
 
             # This will then look like the following. We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
+            print recv_data
+            
+            mpi.finalize()
 
         .. note::
             All processes in the communicator **must** participate in this operation.
@@ -1053,7 +1063,7 @@ class Communicator:
     def _ialltoall(self, data):
         size = self.comm_group.size()
         if len(data) % size != 0:
-            raise Exception("Data in alltoall should be a multipla of the communicator size")
+            raise Exception("Data in alltoall should be a multipla of the communicator size. Received data with length %d and size is %d" % (len(data), size))
 
         return self.collective_controller.get_request(constants.TAG_ALLTOALL, data=data)
 
@@ -1466,7 +1476,7 @@ class Communicator:
 
             if mpi.MPI_COMM_WORLD.rank() == 0:
                 for i in range(10):
-                    mpi.MPI_COMM_WORLD.send(1, "Hello World!")
+                    mpi.MPI_COMM_WORLD.send("Hello World!", 1)
 
                 for i in range(10):
                     handle = mpi.MPI_COMM_WORLD.irecv(1)
@@ -1479,7 +1489,7 @@ class Communicator:
                     request_list.append(handle)
 
                 for i in range(10):
-                    mpi.MPI_COMM_WORLD.send( "Hello World!", 0)
+                    mpi.MPI_COMM_WORLD.send("Hello World!", 0)
 
                 messages = mpi.MPI_COMM_WORLD.waitall(request_list)
             else:
