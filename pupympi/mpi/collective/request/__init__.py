@@ -45,6 +45,8 @@ class BaseCollectiveRequest(object):
         f = getattr(self, "_get_data", None)
         if callable(f):
             return f()
+        else:
+            return getattr(self, "data", None)
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
