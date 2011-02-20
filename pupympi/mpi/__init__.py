@@ -158,6 +158,11 @@ class MPI(Thread):
         # The settings module. This will be handle proper by the
         # function ``generate_settings``. 
         self.settings = None
+        self.config_callbacks = []
+        
+        # Append callbacks
+        from mpi.settings import standard_callbacks
+        self.config_callbacks.extend(standard_callbacks)
 
         options = self.parse_options()
         
@@ -700,7 +705,58 @@ class MPI(Thread):
 
         # We have tried to signal every process so we can "safely" exit.
         sys.exit(1)
-
+        
+    def set_configuration(self, config_data):
+        """
+        Change - if possible - the configuration parameters. The function
+        will return a dict with the configration setting name as the index
+        and a (boo, string) indicating if the parameter was changed.
+        """
+        res = {}
+        for set_name in config_data:
+            set_value = config_data[set_name]
+            res[set_name] = self._set_config(set_name, set_value)
+        
+        # Debug. Print all the stuff
+        for attr in dir(self.settings):
+            print "attr:", attr, getattr(self.settings, attr)
+        
+        return res
+    
+    def _set_config(self, name, value):
+        """
+        An internal function for setting configurations elements. This is not
+        only used in the function above can also be used otherwere in the
+        system.
+        """
+        # First check. Check if the setting is defined in our settings
+        # module. If not, the settings simply does not exists.
+        val = None 
+        try:
+            val = getattr(self.settings, name)
+        except AttributeError:
+            return (False, "No such setting!")
+        
+        # Try to type case
+        try:
+            value = type(val)(value)
+        except ValueError:
+            return (False, "Can not cast this setting into the required value. Required value is %s" % type(val))
+            
+        # Check if there are any callbacks for this setting
+        callbacks = self.config_callbacks
+        valid = True
+        if callbacks:
+            valid = all([c(name) for c in callbacks])
+             
+        if not valid:
+            return (False, "Access to this configuration is restricted")
+        
+        # ALL is okay and we change the setting.
+        setattr(self.settings, name, value)
+        
+        return (True, "Changed!")
+                
     def handle_system_message(self, rank, command, raw_data, connection):
         """
         Handle a system message. We define a list of read only commands and all
@@ -711,7 +767,7 @@ class MPI(Thread):
         tried.
         """
         read_only = (constants.CMD_PING, constants.CMD_READ_REGISTER)
-        commands = (constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER, constants.CMD_CONN_CLOSE)
+        commands = (constants.CMD_CONFIG, constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER, constants.CMD_CONN_CLOSE)
 
         data = pickle.loads(raw_data)
         user_data = None

@@ -63,7 +63,7 @@ def create_random_socket(min=10000, max=30000):
 
     return sock, hostname, port_no
 
-def get_raw_message(client_socket):
+def get_raw_message(client_socket, bytecount=4096):
     """
     The first part of a message is the actual size (N) of the message. The
     rest is N bytes of pickled data. So we start by receiving a long and
@@ -76,7 +76,7 @@ def get_raw_message(client_socket):
         message = ""
         while length > 0:
             try:
-                data = client_socket.recv(min(length, 4096))
+                data = client_socket.recv(min(length, bytecount))
             except socket.error, e:
                 #Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
                 raise MPIException("recieve_fixed threw socket error: %s" % e)
