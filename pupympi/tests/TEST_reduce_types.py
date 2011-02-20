@@ -1,6 +1,6 @@
 # meta-description: Reduce with different python types
 # meta-expectedresult: 0
-# meta-minprocesses: 4
+# meta-minprocesses: 6
 """
 This test tries a global min on different Python types 
 
@@ -25,7 +25,7 @@ st = base[:rank]+"A"+base[rank+1:]
 
 result1 = world.reduce(st, MPI_min, root)
 if rank == root:
-    assert result1 == "AAAAhereibeat"
+    assert result1 == 'A'*size+base[size:]
 
 
 # Bytearray

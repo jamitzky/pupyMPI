@@ -3,6 +3,14 @@ Testing various ways to apply an operation elementwise on a collection of sequen
 Sequences can be everything iterable
 """
 
+#from mpi.collective.operations import MPI_min
+
+def MPI_min(input_list):
+    """
+    Returns the minimum element in the list.
+    """
+    return min(input_list)
+
 def simple(sequences, operation):
     """
     Original, no frills
@@ -80,7 +88,9 @@ def zippy(sequences, operation):
     """
     mapping and zipping like there's no tomorrow
     """
+    print sequences
     reduced_results = map(operation,zip(*sequences))
+    print reduced_results
     
     # Restore the type of the sequence
     if isinstance(sequences[0],str):
@@ -132,24 +142,26 @@ def runner(version):
     elif version == 2:
         res = convoluted(testdata,min)
     elif version == 3:
-        res = zippy(testdata,min)
+        res = zippy(testdata,MPI_min)
     elif version == 4:
-        res = mappy(testdata,min)
+        res = mappy(testdata,MPI_min)
     else:
         print "no version..."
+    
+    print res
         
     
     
 if __name__=='__main__':
     # How big should the data payload be
-    bytemultiplier = 1000
+    bytemultiplier = 2
     # Participants (how wide is the payload)
-    participants = 5
+    participants = 4
     # Generate the data
     global testdata
     testdata = generate_data(bytemultiplier,participants)
     
-    runs = 100
+    runs = 1
 
     from timeit import Timer
     t_simple = Timer("runner(0)", "from __main__ import runner")
@@ -159,15 +171,15 @@ if __name__=='__main__':
     t_xsimple = Timer("runner(1)", "from __main__ import runner")
     duration = t_xsimple.timeit(runs)
     print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
-
+    
     t_convoluted = Timer("runner(2)", "from __main__ import runner")
     duration = t_convoluted.timeit(runs)
     print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
-
+    
     t_zippy = Timer("runner(3)", "from __main__ import runner")
     duration = t_zippy.timeit(runs)
     print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_mappy = Timer("runner(4)", "from __main__ import runner")
-    duration = t_mappy.timeit(runs)
-    print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
+    
+    #t_mappy = Timer("runner(4)", "from __main__ import runner")
+    #duration = t_mappy.timeit(runs)
+    #print "Test took %f seconds meaning %f per call" % (duration, duration/runs)

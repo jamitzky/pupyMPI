@@ -8,32 +8,20 @@ from mpi.topology import tree
 
 import copy
 
+
 def reduce_elementwise(sequences, operation):
     """
     Perform a element-wise reduction on elements of equal length sequences
     
     Sequences can be everything iterable
     """
-    # DEBUG
-    #Logger().debug("sequencesPRE:%s" % sequences)
+    """
+    mapping and zipping like there's no tomorrow
+    """
+    reduced_results = map(operation,zip(*sequences))
     
-    reduced_results = []
-    no_seq = len(sequences) # How many sequences
-    seq_len = len(sequences[0]) # How long is a sequence
-    for i in range(seq_len):
-        try:
-            temp_list = [ sequences[m][i] for m in range(no_seq) ] # Temp list contains i'th element of each subsequence
-        except IndexError, e:
-            # If any sequence is shorter than the first one an IndexError will be raised
-            raise MPIException("Whoops, seems like someone tried to reduce on uneven length sequences")
-        # Apply operation to temp list and store result
-        reduced_results.append(operation(temp_list))
-        
-    # DEBUG
-    #Logger().debug("sequencesPOST:%s" % reduced_results)
-
     # Restore the type of the sequence
-    if isinstance(sequences[0],str):
+    if isinstance(sequences[0],str):    
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
         reduced_results = bytearray(reduced_results) # make byte list into bytearray
@@ -41,7 +29,6 @@ def reduce_elementwise(sequences, operation):
         reduced_results = tuple(reduced_results) # join
         
     return reduced_results
-
 
 class TreeAllReduce(BaseCollectiveRequest):
     
@@ -106,18 +93,11 @@ class TreeAllReduce(BaseCollectiveRequest):
             # every child and can reduce the data and send to the parent.
             if not self.missing_children:
                 # Add our own data element
-                self.received_data[self.rank] = self.data
-                
+                self.received_data[self.rank] = self.data                
                 
                 # reduce the data
                 if self.partial:
-                    # DEBUG
-                    #Logger().debug("partialling")
-                    # DEBUG
-                    #Logger().debug("dataPRE:%s" % self.received_data.values())
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                    # DEBUG
-                    #Logger().debug("dataPOST:%s" % new_data)
                         
                     self.data = {self.rank : new_data}
                 else:
@@ -255,7 +235,6 @@ class TreeReduce(BaseCollectiveRequest):
             # reduce the data
             if self.partial:
                 new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                
                 self.data = {self.rank : new_data}
             else:
                 self.data = self.received_data
