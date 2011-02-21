@@ -4,16 +4,16 @@ Starting your processes with mpirun.py
 ============================================
 
 This section contains information about the mpirun.py script you should use to
-start pupympi programs. You should include the bin directory of pupympi in your
-PATH environment before running the examples in this section.
+start pupympi programs. The executable file mpirun.py is found in the
+pupympi/bin directory, so you should point there, go there or include it in your path.
 
 The script requires one mandatory options -c (the number
 of processes to start) and the user script to start::
 
     > mpirun.py -c 2 the-user-script.py
 
-That's all it takes. Your program will be started and can access the mpi
-environment by creating a new instance of the .. class::`MPI` class.
+That's all it takes. Your program will be started and in it you can access the mpi
+environment by importing and creating a new instance of the .. class::`MPI` class.
 
 Accepted arguments
 -----------------------------

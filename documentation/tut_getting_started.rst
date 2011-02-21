@@ -3,33 +3,47 @@ Getting started with pupyMPI
 
 .. _getting-started: 
 
-pupyMPI is a pure python MPI implementation for educational use. This document
-does not in any way try to explain general MPI concepts, but it merely a reference
-manual to pupyMPI. 
+pupyMPI is a pure python MPI implementation of MPI 1.3 with some added features.
+This document is not a manual of general MPI concepts byt rather a reference
+manual for pupyMPI.
 
 Required software and versions
 -------------------------------------------------------------------------------
-pupyMPI requires python version 2.6 or later, due to some process management
-tool in the subprocess module. It's not tested with python 3. 
+pupyMPI requires Python version 2.6 or later, due to some process management
+tool in the subprocess module. It has not been tested with Python 3. 
     
-You should ensure pupyMPI is in your ``PYTHONPATH``, which can be done like::
-    
-    export PYTHONPATH=/path/to/pupympi/:$PYTHONPATH
+You will also need to have ssh installed as it is used when starting remote
+processes. For convenience it is recommended to have keybased SSH login working
+so that you do not need to type in a password for every MPI process you start.
+
+You can check that ssh works locally by doing ::
+
+    ssh localhost
+
+This should give you a shell on your own machine which you can of course just
+exit from again.
 
 Some installations do not have Python 2.6 as the global default Python installation. 
-You can verify this by doing this after the command line::
+You can verify that you have the right version with::
     
-    ssh localhost python -V
+    python -V
 
-In case it is not, find the path to Python 2.6 and remember it::
+In case you see something else than 2.6.x or 2.7.x, find the path to Python 2.6
+and remember it, eg.::
     
     which python2.6
      
-You will need to tell pupyMPI where to find Python2.6, and you'll do this by adding the 
-parameter ``--remote-python=path_to_python2.6`` to ``mpirun.py``
+You will now need to tell pupyMPI where to find Python 2.6 when you run stuff,
+and you'll do this by adding the parameter ``--remote-python=path_to_python2.6``
+after ``mpirun.py``
 
 You also need SSH access to one or more hosts.  This may just be *localhost*, as long as you're just testing. 
-SSH must have been set up to allow direct access (see http://linuxproblem.org/art_9.html). 
+SSH must have been set up to allow direct access (see http://linuxproblem.org/art_9.html).
+
+The way to tell pypuMPI where to spawn remote processes is via the ``hostfile``.
+A sample version of a hostfile is included in pupyMPI under the name ``sample_hostfile``.
+As long as you wish all your stuff to run on localhost you can just ignore having a proper hostfile.
+This is because pupyMPI by default will try to place all pupyMPI instances on localhost if no hostfile is found.
 
 
 Differing conventions
@@ -39,7 +53,7 @@ differs from a C/FORTRAN implementation in several different regards.
 The most important are:
 
 * No data types - anything goes (there is a size limit to individual messages, however)
-* Buffering / memory storage / garbage collection. No bsend etc
+* Buffering / memory storage / garbage collection. No bsend etc.
 * Object model. You call ``request.wait()`` instead for something like ``MPI_Wait(request)``. 
 * 1 or 0 replaced with True and False
 * NULL handles replaced with None
@@ -59,15 +73,14 @@ Create a file called pupympi_test1.py and add the following code to it::
          print message
      mpi.finalize()
      
-From the command line, run ``mpirun -c 2 pupympi_test1.py``.You should receive the message: "Hello World!"
+From the command line, run ``mpirun.py -c 2 pupympi_test1.py``.You should receive the message: "Hello World!"
 If you did not you might have run into one of these problems:
 
  * **pupyMPI complains about a Python version problem** You probably need to be explicit about your Python, as mentioned above. You'll also probably have to kill stuck Python processes by ``killall python`` (or ``killall Python``)
- * **Command not found** Make sure pupyMPI is in your ``PYTHONPATH``. It should be installed as an egg or module. It is also possible to start pupyMPI by cd'ing to the root directory and try this instead ``PYTHONPATH=. bin/mpirun -c 2 /path/to/pupympi_test1.py``
  * **SSH password prompt** Ensure password-less access
  * **No message appears and your script hangs** ctrl-c, kill all Python processes and use the ``-d`` parameter in addition to the others. You will get a metric ton of output. 
  
-The above test example introduce the ``MPI_COMM_WORLD`` communicator holding all the
+The above test example introduces the ``MPI_COMM_WORLD`` communicator holding all the
 started processes.
 
 .. note:: If you run the above script with more than 2 participants, the script will hang. This is due to the participants with higher rank than 1. These will try to receive a message from rank 0, but such a message is never sent.
