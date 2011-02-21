@@ -25,7 +25,7 @@ It is intended to be read-only (except for DEFAULT_LOGDIR) and changing anything
 import os
 
 #### PUBLIC VALUES BELOW ####
-PUPYVERSION = "0.8.1" # TODO: Make this automatically updated from hg tag (use the tag hook)
+PUPYVERSION = "0.9.0" # TODO: Make this automatically updated from hg tag (use the tag hook)
 DEFAULT_LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/user_logs/"
 
 # Predefined tags
