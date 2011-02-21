@@ -147,7 +147,8 @@ def communicate_startup(no_procs, ssocket, resume_state=None):
         # Add the connection by the rank.
         conn_idx[rank] = sender_conn
 
-        all_procs.append( message[:3] ) # add (rank,host,port, sec_comp) for process to the listing
+        # FIXME: Is this right?
+        all_procs.append( message[:4] ) # add (rank,host,port, unix_socket_filepath, sec_comp) for process to the listing
         handle_procs.append( message )
 
     # Send all the data to all the connections, closing each connection afterwards
