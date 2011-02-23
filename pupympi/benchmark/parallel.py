@@ -1,266 +1,101 @@
-#Sequential code for the eScience assignment in clustercomputing.
-#Heat equation -- Successive over-relaxation (SOR)
-#Version 1.1 October 12. 2009 - tested with Python 2.6.2 and Psyco 1.6
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+parallel.py - collection of parallel tests inspired by Intel MPI Benchmark (IMB)
+"""
 
-#Requires the python PyLab library:
-#http://www.scipy.org/PyLab
+import comm_info as ci
 
-#Uses python JIT compiler Psyco
-#http://psyco.sourceforge.net/
+meta_has_meta = True
+meta_processes_required = 4
+meta_enlist_all = True
+meta_schedule = {
+    0: 1000,
+    1: 1000,
+    2: 1000,
+    4: 1000,
+    8: 1000,
+    16: 1000,
+    32: 1000,
+    64: 1000,
+    128: 1000,
+    256: 1000,
+    512: 1000,
+    1024: 1000,
+    2048: 1000,
+    4096: 1000,
+    8192: 1000,
+    16384: 1000,
+    32768: 1000,
+    65536: 640,
+    131072: 320,
+    262144: 160,
+    524288: 80,
+    1048576: 40,
+    2097152: 20,
+    4194304: 10
+}
 
-import timer #Timer class - replaces standard time
-import sorgraphics #Graphics class - visualizing the heat equation
-import pylab as pl #Scientific module
-from mpi import MPI # MPI module
-from math import floor
-try:
-  # JIT compiler - not critical for correctness
-  # NB. only avaliable for 32-bit architectures
-  import psyco
-  psyco.full()
-  #print 'Psyco installed!'
-except:
-  pass
-  #print 'No psyco installed - this will be slow!!!'
+def test_Sendrecv(size, max_iterations):
+    def get_srcdest_chained():
+        dest   = (ci.rank + 1) % ci.num_procs
+        source = (ci.rank + ci.num_procs-1) % ci.num_procs
+        return (source, dest)
 
-#This solves the system of partial differential equations
-#Parameter is
-#  data - the problem instance matrix with temperatures
+    def Sendrecv(s_tag, r_tag, source, dest, data, max_iterations):        
+        for _ in xrange(max_iterations):
+            ci.communicator.sendrecv(data, dest, s_tag, source, r_tag)
+    # end of test
 
-update_freq = 10
-useGraphics = 0
+    (s_tag, r_tag) = ci.get_tags_single()
+    data = ci.data[0:size]
+    ci.synchronize_processes()
 
-def solve(comm, data, rboffset):
-  global update_freq, epsilon, wholeproblem
+    (source, dest) = get_srcdest_chained()        
+    t1 = ci.clock_function()
+    
+    # do magic
+    Sendrecv(s_tag, r_tag, source, dest, data, max_iterations)
+    
+    t2 = ci.clock_function()
+    time = (t2 - t1)
 
-  rank = comm.rank()
-  wsize = comm.size()
+    return time
 
-  BLACK_ROW_TAG = 50
-  RED_ROW_TAG = 51
-  DELTA_TAG = 52
-  GRAPHICS_DATA_TAG = 53
+def test_Exchange(size, max_iterations):
+    def get_leftright_chained():
+        if ci.rank < ci.num_procs-1:
+            right = ci.rank+1
+        if ci.rank > 0:
+            left = ci.rank-1
 
-  y0 = 0
+        if ci.rank == ci.num_procs-1:
+            right = 0
+        if  ci.rank == 0:
+            left = ci.num_procs-1 
+            
+        return (left, right)
+            
+    def Exchange(s_tag, r_tag, left, right, data, max_iterations):        
+        for _ in xrange(max_iterations):
+            ci.communicator.isend(data, right, s_tag)
+            ci.communicator.isend(data, left, s_tag)
+            ci.communicator.recv(left, r_tag)
+            ci.communicator.recv(right, r_tag)
 
-  h=len(data)
-  w=len(data[0])-1
-  
-  if rank == 0: # Do not update first row
-    y0 = 1
-    rboffset = not rboffset # Also, begin at different offset ;-)
-  
-  if rank == wsize - 1: # Do not update last row
-    h -= 1
+    # end of test
+    (s_tag, r_tag) = ci.get_tags_single()
+    data = ci.data[0:size]
+    ci.synchronize_processes()
 
-  #print "[%d] Solve for x0=%d y0=%d h=%d w=%d" % (rank, 1+rboffset, y0, h, w)
+    (left, right) = get_leftright_chained()        
 
-  # Send initial black points
-  if 0 < rank:
-    tx1 = comm.isend(data[0], rank-1, BLACK_ROW_TAG)
-  if wsize - 1 > rank:
-    tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
+    t1 = ci.clock_function()
 
-  delta=epsilon+1.
-  cnt=update_freq-1
-  while(delta>epsilon):
-    delta=0.
-    cnt=cnt+1
-    x0 = 1+rboffset
+    # do magic
+    Exchange(s_tag, r_tag, left, right, data, max_iterations)
 
-    # Update graphics (rank 0 only!) {{{
-    # XXX This is horribly inefficient. Don't use this for anything else than debugging!
-    if cnt==update_freq and useGraphics:
-      cnt=0
-      if 0==rank:
-          for y in range(0,len(data)):
-            wholeproblem[y] = data[y]
+    t2 = ci.clock_function()
+    time = (t2 - t1)
 
-          for n in range(1,comm.size()):
-            ndata = comm.recv(n, GRAPHICS_DATA_TAG)
-            for ny in range(0,len(ndata)):
-              y += 1
-              wholeproblem[y] = ndata[ny]
-
-          g.update(wholeproblem)
-      else:
-          comm.isend(data, 0, GRAPHICS_DATA_TAG)
-    # }}}
-
-    # Receive black points
-    if rank == 0:
-        top_row = data[0]
-    else:
-        rx1 = comm.irecv(rank-1, BLACK_ROW_TAG)
-
-    if rank == wsize - 1:
-        btm_row = data[-1]
-    else:
-        rx2 = comm.irecv(rank+1, BLACK_ROW_TAG)
-
-    # Update red points
-    for y in range(y0+1,h-1):
-      for x in range(x0,w,2):
-        old=data[y,x]
-        data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
-        delta+=abs(old-data[y,x])
-      if x0 == 1:
-        x0 = 2
-      else:
-        x0 = 1
-
-    # Complete receive of black points
-    if 0 < rank:
-        top_row = rx1.wait()
-    if rank < wsize-1:
-        btm_row = rx2.wait()
-
-    # Update last and first red row
-    y = h-1
-    for x in range(x0,w,2):
-      old=data[y0,x]
-      data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
-      delta += abs(old-data[y0,x])
-    for x in range(2-int(rboffset),w,2):
-      old=data[y,x]
-      data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
-      delta += abs(old-data[y,x])
-
-    # Send/receive red points
-    if 0 < rank:
-      tx1 = comm.isend(data[0], rank-1, RED_ROW_TAG)
-      rx1 = comm.irecv(rank-1, RED_ROW_TAG)
-    else:
-      top_row = data[0]
-    if wsize - 1 > rank:
-      tx2 = comm.isend(data[-1], rank+1, RED_ROW_TAG)
-      rx2 = comm.irecv(rank+1, RED_ROW_TAG)
-    else:
-      btm_row = data[-1]
-
-    # Switch x0 to opposite of initial
-    x0 = 1+(not rboffset)
-
-    # Update black points
-    for y in range(y0+1,h-1):
-      for x in range(x0,w,2):
-        old=data[y,x]
-        data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
-        delta+=abs(old-data[y,x])
-      if x0 == 1:
-        x0 = 2
-      else:
-        x0 = 1
-
-    # Complete receive of red points
-    if 0 < rank:
-        top_row = rx1.wait()
-    if rank < wsize-1:
-        btm_row = rx2.wait()
-
-    # Update last and first black row
-    y = h-1
-    for x in range(x0,w,2):
-      old=data[y0,x]
-      data[y0,x]=.2*(data[y0,x]+top_row[x]+data[y0+1,x]+data[y0,x-1]+data[y0,x+1])
-      delta += abs(old-data[y0,x])
-    for x in range(1+(rboffset),w,2):
-      old=data[y,x]
-      data[y,x]=.2*(data[y,x]+data[y-1,x]+btm_row[x]+data[y,x-1]+data[y,x+1])
-      delta += abs(old-data[y,x])
-
-    # Send black points
-    if 0 < rank:
-      tx1 = comm.isend(data[0], rank-1, BLACK_ROW_TAG)
-    if rank < wsize - 1:
-      tx2 = comm.isend(data[-1], rank+1, BLACK_ROW_TAG)
-
-    # reduceall epsilon
-    owndelta = delta
-    delta = comm.allreduce(delta, sum)
-
-  # Receive "leftover" black points and discard
-  if rank != 0:
-      comm.recv(rank-1, BLACK_ROW_TAG)
-  if rank != wsize - 1:
-      comm.recv(rank+1, BLACK_ROW_TAG)
-
-
-def setup(comm, xsize, ysize, useGraphics):
-    global update_freq, epsilon, wholeproblem
-    rank = comm.rank()
-    wsize = comm.size()
-
-    ymin = floor(rank * ysize / wsize)
-    ymax = floor((rank + 1) * ysize / wsize)
-    epsilon=.1*(xsize-1)*(ysize-1)
-
-    problem=pl.zeros((ymax-ymin,xsize),dtype=pl.float32)
-
-    problem[:,:1]=-273.15 #Left
-    problem[:,-1:]=-273.15 #Right
-
-    if rank == 0:
-        if useGraphics:
-            wholeproblem=pl.zeros((ysize,xsize),dtype=pl.float32)
-        problem[0,1:-1]=40. #Top
-
-    if rank == wsize - 1:
-        problem[-1]=-273.15 #Bottom
-
-
-    #print "My rank is %d - xsize:%d ysize:%d useGraphics:%d" % (rank, xsize, ymax-ymin, useGraphics)
-    #print "My slice is (xmin,ymin,xmax,ymax) = (%d,%d,%d,%d)" % (0, floor(rank * ysize / wsize), -1, floor((rank + 1) * ysize / wsize))
-
-    rboffset = (int(ymin % 2) == 1)
-
-    return (problem, rboffset)
-
-
-if __name__ == "__main__":
-    #Default problem size
-    xsize=500
-    ysize=500
-    useGraphics=False
-    i=0
-
-    for opt in pl.sys.argv:
-        if opt == "--":
-            i = 1
-        elif i > 0 and not opt.startswith("-"):
-            if i == 1:
-                xsize = int(opt)
-            if i == 2:
-                ysize = int(opt)
-            if i == 3:
-                useGraphics = int(opt)
-            if i > 3:
-                print("Parameters <x-size> <y-size> <use graphics>")
-                pl.sys.exit(-1)
-            i+=1
-
-    mpi = MPI()
-    comm = mpi.MPI_COMM_WORLD
-    rank = comm.rank()
-
-    (problem, rboffset) = setup(comm, xsize, ysize, useGraphics)
-
-    if 0==rank and useGraphics:
-      g=sorgraphics.GraphicsScreen(xsize,ysize)
-
-    timer=timer.StopWatch()
-    timer.Start()
-
-    print "solving with rb offset %d" % (rboffset)
-
-    #Start solving the heat equation
-    solve(comm, problem, rboffset)
-
-    mpi.finalize()
-
-    timer.Stop()
-    print "Solved the successive over-relaxation in %s" % (timer.timeString())
-
-    if 0==rank and useGraphics:
-      timer.Sleep(5)
-
+    return time
