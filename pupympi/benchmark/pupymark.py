@@ -248,7 +248,7 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
         else: # participates.
             for function in dir(module):
                 if function.startswith("test_"):
-                    if fixed_test is not None and not function.lower().endswith(fixed_test):
+                    if fixed_test is not None and not function.lower().endswith("_"+fixed_test):
                         ci.log( "Skipping %s" % function)
                         continue
                         
