@@ -71,7 +71,7 @@ class SocketPool(object):
                 Logger().debug("Creating local socket to %s" % connection_info)
                 client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 client_socket.connect( connection_info )
-
+                self._add(rank, client_socket, force_persistent)
                 newly_created = True
 
             elif connection_type == "tcp":
