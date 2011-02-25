@@ -52,7 +52,7 @@ def ssh(host, arguments, process_io, logdir, rank):
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
         try:
             #target = open(constants.DEFAULT_LOGDIR+"mpi.rank%s.log" % rank, "w")
-            target = open(logdir+"mpi.rank%s.log" % rank, "w")
+            target = open(os.path.join(logdir,"mpi.rank%s.log" % rank), "w")
             io_target_list.append(target)
         except:
             raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % options.logdir)

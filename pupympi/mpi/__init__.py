@@ -171,7 +171,7 @@ class MPI(Thread):
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger            
-            logger = Logger(options.logdir+"remotelog", "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            logger = Logger(os.path.join(options.logdir,"remotelog"), "proc-%d" % options.rank, options.debug, options.verbosity, True)
             
             # TODO: Refactor below to put i/o logs in system logdir (options.logdir)
             #       but remember to check relative path etc.
@@ -639,13 +639,13 @@ class MPI(Thread):
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
-            pupyprof.dump_stats(self.logdir+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            pupyprof.dump_stats(os.path.join(self.logdir,'prof.rank%s.log' % self.MPI_COMM_WORLD.rank()))
             Logger().debug("Writing profiling traces to %s" % self.logdir)
             
         if self._yappi_enabled:
             yappi.stop()
 
-            filename = self.logdir+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            filename = os.path.join(self.logdir,'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank())
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
