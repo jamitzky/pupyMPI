@@ -69,10 +69,11 @@ def parse_options(start_mode):
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
 
-    # FIXME: What is this? I can see its used at all.
+    # FIXME: The unbuffered parameter is added and propagated later regardless of this parameter
     parser_debug_group.add_option('-u', '--unbuffered', dest='buffer', action='store_true', help='Try not to buffer')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
-    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
+    parser_debug_group.add_option('-l', '--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR, help='Which directory the system should log to. Defaults to %default(.log). System logging includes traces from yappi or pupyprof and benchmark results')
+    #parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
     parser.add_option_group( parser_debug_group )
 
     # Add advanced options
@@ -83,6 +84,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser_adv_group.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action='store_true', help="Do not initialize a socket connection between all pairs of processes. If not a second chance socket pool algorithm will be used. See also --socket-pool-size")
     parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=20, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
+    # TODO These --process-io parameters should be looked over again. We might not have the full variety anymore
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
@@ -261,8 +263,8 @@ if  __name__ == "__main__":
         # Set the number of ranks on the options object so the startup can continue.
         options.np = len(resume_handle['procs'])
 
-    # Start the logger
-    logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
+    # Start the system logger
+    logger = Logger(options.logdir+"mpi", "mpirun", options.debug, options.verbosity, options.quiet)
 
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method)
@@ -282,16 +284,19 @@ if  __name__ == "__main__":
     # Make sure we have a full path
     if not executeable.startswith("/"):
         executeable = os.path.join( os.getcwd(), executeable)
-
+    
+    # TODO: The below turns all our remote python processes into unbuffered ones via the -u switch
+    #       We should revisit the motivation for this or at least ensure that no performance penalty is incurred
+    
     # Mimic our cli call structure also for remotely started processes
-
-    global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
+    global_run_options = [options.remote_python, "-u", executeable,
+            "--mpirun-conn-host=%s" % mpi_run_hostname,
             "--mpirun-conn-port=%d" % mpi_run_port,
             "--size=%d" % options.np,
             "--socket-pool-size=%d" % options.socket_pool_size,
             "--verbosity=%d" % options.verbosity,
             "--process-io=%s" % options.process_io,
-            "--log-file=%s" % options.logfile,
+            "--logdir=%s" % options.logdir,
             "--start-type=%s" % start_type,
             "--settings=%s" % options.settings
     ]
@@ -329,7 +334,7 @@ if  __name__ == "__main__":
         run_options.extend( user_options )
 
         # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.process_io, rank)
+        p = remote_start(host, run_options, options.process_io, options.logdir, rank)
         process_list.append(p)
 
     """

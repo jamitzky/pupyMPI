@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = 0.8 # It bumps the version or else it gets the hose again!
+__version__ = 0.9 # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random
+import sys, hashlib, random, os
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
@@ -166,34 +166,45 @@ class MPI(Thread):
 
         options = self.parse_options()
         
+        # TODO: See if logger initialisations below here shouldn't be refactored into one
+        
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
-            # Initialise the logger
+            # Initialise the logger            
+            logger = Logger(options.logdir+"remotelog", "proc-%d" % options.rank, options.debug, options.verbosity, True)
             
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            # TODO: Refactor below to put i/o logs in system logdir (options.logdir)
+            #       but remember to check relative path etc.
             filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
-
-            import os
-            if not os.path.isdir(constants.DEFAULT_LOGDIR):
-                os.mkdir(constants.DEFAULT_LOGDIR)
+            #if not os.path.isdir(constants.DEFAULT_LOGDIR):
+            #    os.mkdir(constants.DEFAULT_LOGDIR)
 
             logger.debug("Opening file for I/O: %s" % filename)
             try:
                 output = open(filename, "w")
             except:
-                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+                raise MPIException("File for I/O not writeable - check that this path exists and is writeable:\n%s" % filename)
 
             sys.stdout = output
             sys.stderr = output
         elif options.process_io == "none":
             # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            logger = Logger(options.logdir+"mpi", "proc-%d" % options.rank, options.debug, options.verbosity, True)
             logger.debug("Closing stdout")
             sys.stdout = None
         else:
             # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
+            logger = Logger(options.logdir+"mpi", "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+            
+        # TODO: Put this info under settings when they start to work properly
+        #       Also we should check that the path here is accessible and valid
+        # if filepath starts with something else than / it is a relative path and we assume it relative to pupympi dir
+        if not options.logdir.startswith('/'):
+            _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.logdir = os.path.join(_BASE,options.logdir)
+        else:
+            self.logdir = options.logdir
+            
         # Parse and save settings. 
         self.generate_settings(options.settings)
 
@@ -309,7 +320,7 @@ class MPI(Thread):
         parser.add_option('--verbosity', type='int')
         parser.add_option('--debug', action='store_true')
         parser.add_option('--quiet', action='store_true')
-        parser.add_option('--log-file', dest='logfile', default="mpi")
+        parser.add_option('--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR)
         parser.add_option('--network-type', dest='network_type')
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
@@ -628,17 +639,18 @@ class MPI(Thread):
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
-            pupyprof.dump_stats(constants.DEFAULT_LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
-
+            pupyprof.dump_stats(self.logdir+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            Logger().debug("Writing profiling traces to %s" % self.logdir)
+            
         if self._yappi_enabled:
             yappi.stop()
 
-            filename = constants.DEFAULT_LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            filename = self.logdir+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
             except:
-                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+                raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % filename)
 
             stats = yappi.get_stats(self._yappi_sorttype)
 

@@ -28,6 +28,7 @@ Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
 import time
 import datetime
 import sys
+import os
 import platform
 
 from mpi import MPI
@@ -69,7 +70,7 @@ def pmap(limit=32):
 
 # Main functions
 
-def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**32):
+def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     
@@ -297,9 +298,9 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
         
         filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
-            f = open(constants.DEFAULT_LOGDIR+filename, "w")
+            f = open(logdir+filename, "w")
         except:            
-            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % logdir)
         
         
         # Show detailed test parameters in header for better overview
@@ -397,11 +398,28 @@ def main(argv=None):
         if a.startswith('--rank=') or a.startswith('--size='):
             continue
         
-        # Just chop off needles prefix for other args
+        # Location of the files are obvious from where the files are located :)
+        # But we need to remember where to store them
+        if a.startswith('-l '):
+            logdir = a[len('-l '):]
+            continue        
+        if a.startswith('-l'):
+            logdir = a[len('-l'):]
+            continue        
+        if a.startswith('--logdir='):
+            logdir = a[len('--logdir='):]
+            continue
+            
+        # Just chop off needless prefix for other args
         filtered_args.append(a[len('--'):])
-        
-    testrunner(filtered_args, module, test, limit)
     
-
+    # logdir need to be an absolute path
+    if not logdir.startswith('/'):
+        _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        logdir = os.path.join(_BASE,logdir)
+    
+    testrunner(filtered_args, logdir, module, test, limit)
+    
+# FIXME: Would we ever run as script? otherwise this is silly
 if __name__ == "__main__":
     main()

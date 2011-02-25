@@ -36,7 +36,7 @@ global process_list, io_target_list
 process_list = []
 io_target_list = []
 
-def ssh(host, arguments, process_io, rank):
+def ssh(host, arguments, process_io, logdir, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
 
@@ -51,10 +51,11 @@ def ssh(host, arguments, process_io, rank):
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
         try:
-            target = open(constants.DEFAULT_LOGDIR+"mpi.rank%s.log" % rank, "w")
+            #target = open(constants.DEFAULT_LOGDIR+"mpi.rank%s.log" % rank, "w")
+            target = open(logdir+"mpi.rank%s.log" % rank, "w")
             io_target_list.append(target)
         except:
-            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % options.logdir)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
 
@@ -64,7 +65,7 @@ def ssh(host, arguments, process_io, rank):
     return p
 
 def popen(host, arguments, process_io, rank):
-    """ Process starter using subprocess. No loadbalancing yet. Process_io is ignored"""
+    """ Process starter using subprocess. No loadbalancing yet. Process_io and logdir is ignored"""
     if _islocal(host):
         p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)
