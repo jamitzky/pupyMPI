@@ -58,9 +58,8 @@ def parse_options(start_mode):
     usage = 'usage: %prog [options] arg'
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
 
-    if start_mode == "normal":
-        parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
-
+    parser.add_option('-c', '--np', dest='np', default=None, type='int', help='The number of processes to start.')
+    
     parser.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
 
     # Add logging and debugging options
@@ -102,7 +101,7 @@ def parse_options(start_mode):
         if options.debug and options.quiet:
             parser.error("options --debug and -quiet are mutually exclusive")
 
-        if start_mode == "normal" and options.np is None:
+        if (start_mode == "normal" and options.np is None):
             parser.error("You need to specify the number of processes to start with -c or --np.")
 
         if args is None or len(args) == 0:

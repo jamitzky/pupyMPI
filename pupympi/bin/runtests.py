@@ -102,8 +102,6 @@ class RunTest(Thread):
         #output( "Launching(%i) %s: " % (number, self.cmd), newline=False)        
         sys.stdout.write("Launching(%i) %s: " % (number, self.cmd))
         sys.stdout.flush()
-        # DEBUG
-        print "CMD:%s" % self.cmd
         self.process = subprocess.Popen(self.cmd.split())
         self.killed = False
         self.time_to_get_result_or_die = int(test_meta_data["max_runtime"]) if "max_runtime" in test_meta_data else TEST_MAX_RUNTIME
