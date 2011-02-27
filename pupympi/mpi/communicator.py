@@ -117,31 +117,38 @@ class Communicator:
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
-
-        if group.rank() == -1:
-            return constants.MPI_COMM_NULL
-
+                
         new_comm = self._comm_create_local(group)
         return new_comm
 
-    ceiling = sys.maxint
     def _comm_create_local(self, group):
         """
-        local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth.
+        Local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth.
+        
+        Even though this is local only, id ranges are separated and globally unique
         """
         execute_system_commands(self.mpi)
+        
+        # Check that ids are available
         if self.ceiling <= 2:
-            raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
-        # set up some easily understandable vars (can be optimized later)
+            raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")        
+                
         old_comm_id = self.id
         old_comm_ceiling = self.ceiling
-
+        
+        # Spawned communicator gets upper half of id range
         new_comm_ceiling = old_comm_ceiling
-        new_comm_id = ((new_comm_ceiling-old_comm_id)/2)+old_comm_id
+        new_comm_id = ((new_comm_ceiling-old_comm_id)//2)+old_comm_id
+        # Parent communicator lowers ceiling accordingly
         self.ceiling = new_comm_id
-        newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
-        newcomm.ceiling = new_comm_ceiling
-        return newcomm
+        
+        # The actual communicator is only created and returned to those who are included in it
+        if group.rank() == -1:
+            return constants.MPI_COMM_NULL
+        else:
+            newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
+            newcomm.ceiling = new_comm_ceiling
+            return newcomm
 
     def comm_free(self):
         """

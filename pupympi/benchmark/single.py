@@ -6,10 +6,9 @@ single.py - collection of single/point2point tests inspired by Intel MPI Benchma
 
 import comm_info as ci
 
-meta_has_meta = True
 meta_processes_required = 2
 meta_enlist_all = False
-meta_result_configuration = "single"
+
 
 meta_schedule = {
     0: 1000,
