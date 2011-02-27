@@ -263,7 +263,7 @@ if  __name__ == "__main__":
         options.np = len(resume_handle['procs'])
 
     # Start the system logger
-    logger = Logger(options.logdir+"mpi", "mpirun", options.debug, options.verbosity, options.quiet)
+    logger = Logger(os.path.join(options.logdir,"mpi"), "mpirun", options.debug, options.verbosity, options.quiet)
 
     # Map processes/ranks to hosts/CPUs
     mappedHosts = map_hostfile(parse_hostfile(options.hostfile), options.np, options.hostmap_schedule_method)
