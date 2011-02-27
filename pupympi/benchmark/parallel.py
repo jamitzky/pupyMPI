@@ -6,9 +6,9 @@ parallel.py - collection of parallel tests inspired by Intel MPI Benchmark (IMB)
 
 import comm_info as ci
 
-meta_has_meta = True
 meta_processes_required = 4
 meta_enlist_all = True
+
 meta_schedule = {
     0: 1000,
     1: 1000,
@@ -63,6 +63,7 @@ def test_Sendrecv(size, max_iterations):
     return time
 
 def test_Exchange(size, max_iterations):
+  
     def get_leftright_chained():
         if ci.rank < ci.num_procs-1:
             right = ci.rank+1
@@ -87,7 +88,6 @@ def test_Exchange(size, max_iterations):
     (s_tag, r_tag) = ci.get_tags_single()
     data = ci.data[0:size]
     ci.synchronize_processes()
-
     (left, right) = get_leftright_chained()        
 
     t1 = ci.clock_function()

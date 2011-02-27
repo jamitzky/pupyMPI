@@ -6,10 +6,9 @@ nonsynthetic.py - collection of nonsynthetic tests
 
 import comm_info as ci
 
-meta_has_meta = True
 meta_processes_required = 1
 meta_enlist_all = True
-meta_result_configuration = "special"
+
 meta_schedule = {
     50: 10,
     100: 10,

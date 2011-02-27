@@ -81,6 +81,8 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
     starttime = time.time()
     
     modules = [single, parallel, collective, special, nonsynthetic]
+    #DEBUG
+    #modules = [special, nonsynthetic, single, parallel, collective]
     resultlist = {}
 
     mpi = MPI()
@@ -100,26 +102,6 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
             for test in tests:
                 if fixed_test is None or fixed_test == test:
                     testsToRun += 1
-
-    #
-    #if fixed_test:        
-    #    # Run through all modules to make sure that a test of specified name exists
-    #    for module in modules:
-    #        for function in dir(module):
-    #            if function.startswith("test_"):
-    #                if function == "test_"+fixed_test:
-    #                    testsToRun += 1
-    #    fixed = fixed_test
-    #elif fixed_module:
-    #    for module in modules:
-    #        # Count only tests in the desired module
-    #        if module.__name__ == fixed_module:
-    #            for function in dir(module):
-    #                if function.startswith("test_"):
-    #                    testsToRun += 1
-    #    fixed = fixed_module
-    #else:
-    #    pass
     
     valid_tests = True
     if testsToRun < 1:
@@ -139,6 +121,7 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
+        
         for size in sizekeys:
             if limit >= 0: # for positive limits we stop at first size over the limit
                 if size > limit:
@@ -148,7 +131,7 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                     continue
                 
             total = test(size, module.meta_schedule[size])
-
+            
             if total is None:
                 # Tests returning None are not meant to be run
                 # (eg. Barrier for different datasizes does not make sense)
@@ -196,21 +179,18 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         ci.select_source = True 
         ci.select_tag = True         
         
-        # TODO: Check on actual required meta tags not the meta meta... my eyes! the abstractions!!!
-        if not hasattr(module, "meta_has_meta"):
-            raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
-
         if ci.w_num_procs < module.meta_processes_required:
             raise Exception("Not enough processes active to invoke module %s" % module.__name__)
         
+        # Check if the benchmark requires only a specific number of participants
         if module.meta_enlist_all:
             active_processes = ci.w_num_procs #enlist everybody active.
         else:
             active_processes = module.meta_processes_required
-            
+        
         new_group = mpi.MPI_COMM_WORLD.group().incl(range(active_processes))
-        ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
-
+        ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
+        
         if ci.communicator is not None:
             if limit > 0:
                 testdataSize = min(limit, max(module.meta_schedule))
@@ -254,12 +234,8 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                         continue
                         
                     f = getattr(module, function)
-
-                    if hasattr(module, "run_benchmark"):
-                        result = module.run_benchmark(f)
-                    else:
-                        result = run_benchmark(module, f)
-                    resultlist[function] = result
+                    resultlist[function] = run_benchmark(module,f)
+            
             mpi.MPI_COMM_WORLD.barrier() # join the barrier holding non-participants
 
     mpi.finalize()
