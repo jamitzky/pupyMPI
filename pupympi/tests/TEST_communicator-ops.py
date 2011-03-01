@@ -7,7 +7,6 @@
 
 from mpi import MPI
 from mpi import constants
-from sys import stderr
 
 mpi = MPI()
 
