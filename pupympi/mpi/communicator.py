@@ -107,8 +107,8 @@ class Communicator:
         do not belong to the new group.
 
         .. note::
-            This call is internally implemented either locally, in which case only 32 new communicators
-            can be created across the lifespan of your MPI application, or collective with no (realistic) limit on
+            This call is internally implemented either locally, in which case a maximum of 32 new
+            can be derived from a single communicator, or collective with no (realistic) limit on
             the amount of created communicators but is significantly slower.
 
         """
@@ -123,7 +123,9 @@ class Communicator:
 
     def _comm_create_local(self, group):
         """
-        Local only implementation. Can only handle log2(sys.maxint)-1 (ie 31 or 32) communicator creation depth/breadth.
+        Local only implementation. Can only handle log2(sys.maxint)-1 communicator creation depth/breadth.
+        This means that on a typical 32-bit platform only 31 new communicators can be derived from world.
+        From each of these one can in turn derive 30 communicators, and so on.
         
         Even though this is local only, id ranges are separated and globally unique
         """
