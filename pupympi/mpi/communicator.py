@@ -130,24 +130,24 @@ class Communicator:
         execute_system_commands(self.mpi)
         
         # Check that ids are available
-        if self.ceiling <= 2:
+        if self.id_ceiling <= 2:
             raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")        
                 
         old_comm_id = self.id
-        old_comm_ceiling = self.ceiling
+        old_comm_ceiling = self.id_ceiling
         
         # Spawned communicator gets upper half of id range
         new_comm_ceiling = old_comm_ceiling
         new_comm_id = ((new_comm_ceiling-old_comm_id)//2)+old_comm_id
         # Parent communicator lowers ceiling accordingly
-        self.ceiling = new_comm_id
+        self.id_ceiling = new_comm_id
         
         # The actual communicator is only created and returned to those who are included in it
         if group.rank() == -1:
             return constants.MPI_COMM_NULL
         else:
             newcomm = Communicator(self.mpi, group.rank(), group.size(), self.network, group, new_comm_id, name = "new_comm %s" % new_comm_id, comm_root = self.MPI_COMM_WORLD)
-            newcomm.ceiling = new_comm_ceiling
+            newcomm.id_ceiling = new_comm_ceiling
             return newcomm
 
     def comm_free(self):
