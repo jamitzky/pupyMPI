@@ -75,7 +75,7 @@ class SocketPool(object):
                 newly_created = True
 
             elif connection_type == "tcp":
-                Logger().debug("Creating TCP socket to %s" % connection_info)
+                Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
                 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
                 client_socket.connect( connection_info )
