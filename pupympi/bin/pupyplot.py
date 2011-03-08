@@ -412,11 +412,8 @@ class DataGather(object): # {{{1
         """
         self.csv_files = []
         for fp in folder_prefixes:
-            self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.coll.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.para.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.sor.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.accept.[0-9]*procs*"))
+            self.csv_files.extend(glob.glob(fp+ "pupymark.*.[0-9]*procs*"))
+        print "\n".join(self.csv_files)
     # }}}2
     def _parse(self, value_method="avg"): # {{{2
         """
@@ -429,7 +426,7 @@ class DataGather(object): # {{{1
         data = {}
 
         # Regular match to find the tags
-        tag_procs_re = re.compile("(.*/)?(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile("(.*/)?(?P<tag>\w+)-benchmark_output.*\.(?P<testtitle>\w+)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -495,7 +492,6 @@ class DataGather(object): # {{{1
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
-                continue
                 if not match:
                     print "Found problem with filename", filename
 
@@ -889,7 +885,7 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_file(), self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_path(), self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
