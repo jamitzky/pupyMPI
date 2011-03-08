@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = 0.8 # It bumps the version or else it gets the hose again!
+__version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
 import sys, hashlib, random
 from optparse import OptionParser, OptionGroup
@@ -841,9 +841,9 @@ class MPI(Thread):
 
     def get_version(self):
         """
-        Return the version number of the pupyMPI installation.
+        Return the version number (as a string) of the pupyMPI installation.
         """
-        execute_system_commands(self.mpi)
+        execute_system_commands(self)
         return __version__
 
     def _version_check(self):
