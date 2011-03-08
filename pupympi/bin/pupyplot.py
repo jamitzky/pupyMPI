@@ -413,7 +413,6 @@ class DataGather(object): # {{{1
         self.csv_files = []
         for fp in folder_prefixes:
             self.csv_files.extend(glob.glob(fp+ "pupymark.*.[0-9]*procs*"))
-        print "\n".join(self.csv_files)
     # }}}2
     def _parse(self, value_method="avg"): # {{{2
         """
@@ -684,11 +683,16 @@ class GNUPlot(object): # {{{1
         else:
             raw_labels = axis_data
 
+        # FIXME::
+
         # 4) Format the data.
         formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'traffic' : self.format_traffic }[format_type]
         used_strs = []
         formatted_labels = []
         for label in raw_labels:
+            if label == 0 and scale_type == "log":
+                continue
+
             fmt = formatter(label)
             if fmt in used_strs:
                 continue
@@ -807,7 +811,6 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set tics out'
         self.write_extra(gnu_fp, self.extra)
 
-
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 
@@ -895,6 +898,7 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set tics out'
         self.write_extra(gnu_fp, self.extra)
 
+        remove_x_zero = self.x_axis_type == "log"
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 
