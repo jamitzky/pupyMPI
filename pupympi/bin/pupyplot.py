@@ -429,7 +429,7 @@ class DataGather(object): # {{{1
         data = {}
 
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile("(.*/)?(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -495,13 +495,12 @@ class DataGather(object): # {{{1
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
-                print match.groups()
                 continue
                 if not match:
                     print "Found problem with filename", filename
 
                 # We override the <<procs>> here. Maybe we should not
-                tag, _,procs = match.groups()
+                _, tag, _,procs = match.groups()
 
                 self._add_tag(tag)
 
