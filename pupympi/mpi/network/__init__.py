@@ -102,29 +102,35 @@ class Network(object):
             self.t_out.start()
             self.t_out.type = "out"
             self.t_in.type = "in"
-
-        # Create the main receieve socket
+        
+        if self.options.unixsockets:
+            # Create a unix socket for communicating with other ranks
+            # on the same host.
+            from tempfile import NamedTemporaryFile
+            unix_socket_filename = NamedTemporaryFile().name
+            uxs = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            uxs.bind(unix_socket_filename)
+            uxs.listen(options.size-1)
+            self.unix_socket_filename = unix_socket_filename
+            
+            self.t_in.add_in_socket(uxs) # Put unix receive sockets on incoming list
+            self.t_in.unix_socket = uxs # Set unix receive socket for comparison in _handle_readlist
+        else:
+            # These values are convenient dummies (just so we don't have to check for self.options.unixsockets everywhere)
+            self.unix_socket_filename = ""
+            self.t_in.unix_socket = None
+        
+        # Create the main receive socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
         self.hostname = hostname
         server_socket.listen(options.size-1)
 
-        # Create a unix socket for communicating with other ranks
-        # on the same host.
-        from tempfile import NamedTemporaryFile
-        unix_socket_filename = NamedTemporaryFile().name
-        uxs = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        uxs.bind(unix_socket_filename)
-        uxs.listen(options.size-1)
-        self.unix_socket_filename = unix_socket_filename
-
-        # Put main receieve sockets on incoming list
+        # Put main receive socket on incoming list
         self.t_in.add_in_socket(server_socket)
-        self.t_in.add_in_socket(uxs)
 
         # Set main receive socket for comparison in _handle_readlist
         self.t_in.main_receive_socket = server_socket
-        self.t_in.unix_socket = uxs
 
         # Do the initial handshaking with the other processes
         self._handshake(options.mpi_conn_host, int(options.mpi_conn_port), int(options.rank))
@@ -196,7 +202,7 @@ class Network(object):
 
             # Check if this rank lives on the same host as we do. If so use the
             # unix socket instead of the TCP information.
-            if host == self.hostname:
+            if host == self.hostname and self.options.unixsockets:
                 connection_info = unx_filename
                 connection_type = "local"
             else:

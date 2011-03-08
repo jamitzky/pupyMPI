@@ -193,7 +193,7 @@ class MPI(Thread):
         else:
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
+            
         # Parse and save settings. 
         self.generate_settings(options.settings)
 
@@ -316,6 +316,7 @@ class MPI(Thread):
         parser.add_option('--single-communication-thread', dest='single_communication_thread')
         parser.add_option('--process-io', dest='process_io')
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
+        parser.add_option('--disable-unixsockets', dest='unixsockets', default=True, action='store_false')
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
