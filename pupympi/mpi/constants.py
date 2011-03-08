@@ -25,7 +25,7 @@ It is intended to be read-only (except for DEFAULT_LOGDIR) and changing anything
 import os
 
 #### PUBLIC VALUES BELOW ####
-PUPYVERSION = "0.9.1" # TODO: Make this automatically updated from hg tag (use the tag hook)
+PUPYVERSION = "0.9.2" # TODO: Make this automatically updated from hg tag (use the tag hook)
 
 # Check if we are in the MiG system where outputfiles can best be retrieved by placing them in MIG_JOBDIR
 if not os.getenv('MIG_JOBDIR'): # This env variable exists only on MiG
