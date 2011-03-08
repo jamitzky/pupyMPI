@@ -791,8 +791,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -880,8 +880,8 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
