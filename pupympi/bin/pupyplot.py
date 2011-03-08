@@ -33,6 +33,14 @@ def avg(l):
     else:
         return sum(l)/float(len(l))
 
+def get_font_path():
+    import sys
+
+    if sys.platform.find("linux") != -1:
+        return '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb'
+    else:
+        return '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb'
+
 def format_tag(tag):
     try:
         int(tag)
@@ -487,6 +495,8 @@ class DataGather(object): # {{{1
 
                 # Find the tags from the filename
                 match = tag_procs_re.match(filename)
+                print match.groups()
+                continue
                 if not match:
                     print "Found problem with filename", filename
 
@@ -752,7 +762,7 @@ class LinePlot(GNUPlot): # {{{1
         except ValueError:
             print "Cant find max and min, so there is probably no data"
             return
-        
+
         # Basic data for all the files.
         filename = "%s_line_%s_%s" % (self.prefix, self.title_help, self.test_name)
 
@@ -791,8 +801,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_path(), self.plot_width, self.plot_height)
+
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -853,7 +863,7 @@ class ScatterPlot(GNUPlot): # {{{1
     def plot(self): # {{{2
         if not self.data:
             return
-        
+
         self.find_max_and_min()
 
         # Basic data for all the files.
@@ -880,8 +890,7 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_file(), self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
