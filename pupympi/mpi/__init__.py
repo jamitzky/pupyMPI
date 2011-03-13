@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = 0.8 # It bumps the version or else it gets the hose again!
+__version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
 import sys, hashlib, random
 from optparse import OptionParser, OptionGroup
@@ -193,7 +193,7 @@ class MPI(Thread):
         else:
             # Initialise the logger
             logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-
+            
         # Parse and save settings. 
         self.generate_settings(options.settings)
 
@@ -316,6 +316,7 @@ class MPI(Thread):
         parser.add_option('--single-communication-thread', dest='single_communication_thread')
         parser.add_option('--process-io', dest='process_io')
         parser.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action="store_true")
+        parser.add_option('--disable-unixsockets', dest='unixsockets', default=True, action='store_false')
         parser.add_option('--socket-pool-size', type='int', dest='socket_pool_size')
         parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False)
         parser.add_option('--yappi', dest='yappi', action="store_true", default=False)
@@ -840,9 +841,9 @@ class MPI(Thread):
 
     def get_version(self):
         """
-        Return the version number of the pupyMPI installation.
+        Return the version number (as a string) of the pupyMPI installation.
         """
-        execute_system_commands(self.mpi)
+        execute_system_commands(self)
         return __version__
 
     def _version_check(self):
