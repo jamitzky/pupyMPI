@@ -69,6 +69,7 @@ def parse_options(start_mode):
     parser_hf_group.add_option('--host-file-scheduler', dest='hostmap_scheduler', default='round_robin', 
         help="The mapper from available hosts to (host, rank) pairs. Builtin options are (round_robin, greedy). Defaults to %default. It is also possible to specify a custom mapper in the format for X.Y where X is the Python module to import (hence it must be in the path) and Y is the actual function to use. See the manual for how to write you own mappers.")
     parser_hf_group.add_option('--host-file-sections', dest='hostfile_sections', help='A comma seperated list with the sections in the hostfile to use. This acts as a filter, so if not given all sections in the hostfile will be used. See the manual for more information about the hostfile format and possibilities.')
+    parser_hf_group.add_option('--host-file-disable-overmapping', dest='disable_overmapping', default=False, action="store_true", help="Disable overmapping of processes to CPUs. This means that the system will not start if the hostfile does not provide sufficient hosts to contain the system.")
 
     parser.add_option_group(parser_hf_group)
 
@@ -278,11 +279,11 @@ if  __name__ == "__main__":
     logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
 
     # Map processes/ranks to hosts/CPUs
-    # FIXME: This should be rewritten to allow the user to select method
-    # FIXME: How does the user disallow overmapping.
-    hostfilemapper = hostfile.mappers.find_mapper()
+    hostfilemapper = hostfile.mappers.find_mapper(options.hostmap_scheduler)
     
-    mappedHosts = hostfilemapper(hostfile.parse_hostfile(options.hostfile), options.np)
+    # FIXME: Disable some sections.
+    parsed_hosts, cpus, max_cpus = hostfile.parse_hostfile(options.hostfile)
+    mappedHosts = hostfilemapper(parsed_hosts, cpus, max_cpus, options.np, overmapping=not options.disable_overmapping)
 
     s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
     s.listen(5)

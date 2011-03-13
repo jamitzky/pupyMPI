@@ -40,3 +40,26 @@ def round_robin(hosts, total_cpu, max_cpu, np=1, overmapping=True):
                 break
             
     return mapped_hosts
+
+def find_mapper(module_or_func):
+    mod = __import__("mpi.lib.hostfile.mappers", fromlist="mpi.lib.hostfile")
+    print type(mod), dir(mod)
+    print mod.__name__
+    mapper = getattr(mod, module_or_func, None)
+    
+    if not mapper:    
+        # Try to import the module. 
+        if module_or_func.find(".") == -1:
+            raise Exception("Cant import a custom hostmapper. Maybe you supplied something in a bad format")
+        
+        try:
+            split = module_or_func.split(".")
+            mod = __import__(split[:-1])
+            func = split[-1]
+            mapper = getatr(mod, func, None)
+        except Exception, e:
+            print "Cant import the custom module. The exception raised is", e
+    
+    if mapper and callable(mapper):
+        return mapper
+
