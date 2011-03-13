@@ -1,0 +1,24 @@
+# =============================================================
+# pupyMark - pupyMPI benchmarking
+# 
+# test:barrier limit:4MB processes:16
+# 
+# start: Wed, 09 Mar 2011 11:57:53 +0000 
+# end: Wed, 09 Mar 2011 11:57:57 +0000 
+# elapsed (wall clock): 0:00:03.700148
+# 
+# parameters for mpirun:
+#	host=klynge port=19815
+#	socket-pool-size=20 verbosity=1
+#	process-io=direct log-file=mpi
+#	start-type=normal settings=None
+# 
+# pupyMPI version: 0.9.1
+# platform: Linux-2.6.28-19-server-x86_64-with-Ubuntu-9.04-jaunty (64bit)
+# CPython version:2.6.2
+# =============================================================
+
+
+datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun
+0,100,0.361633,3616.823554,3613.569736,3619.441986,0.000000,16,test_Barrier,2011-03-09_11-57-57
+
