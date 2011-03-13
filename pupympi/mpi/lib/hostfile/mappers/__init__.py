@@ -1,8 +1,10 @@
+from mpi.logger import Logger
 
 class HostfileMapException(Exception): pass
 
 def generate_localhost_data(hosts, np):
     if not hosts:
+        Logger().warning("No hostfile. Overmapping on localhost. Unless you are developing right now, this might not be what you want.")
         return [("localhost", i) for i in range(np)]
 
 def round_robin(hosts, total_cpu, max_cpu, np=1, overmapping=True):
@@ -13,6 +15,8 @@ def round_robin(hosts, total_cpu, max_cpu, np=1, overmapping=True):
         # Overmapping.
         if not overmapping or np > max_cpu:
             raise HostfileMapException("Number of processes exceeds the maximum allowed CPUs")
+        
+        Logger().warning("Not enough hosts. Overmapping in effect. ")
         
     mapped_hosts = []
     host_count = {}
@@ -43,8 +47,6 @@ def round_robin(hosts, total_cpu, max_cpu, np=1, overmapping=True):
 
 def find_mapper(module_or_func):
     mod = __import__("mpi.lib.hostfile.mappers", fromlist="mpi.lib.hostfile")
-    print type(mod), dir(mod)
-    print mod.__name__
     mapper = getattr(mod, module_or_func, None)
     
     if not mapper:    
@@ -58,7 +60,7 @@ def find_mapper(module_or_func):
             func = split[-1]
             mapper = getatr(mod, func, None)
         except Exception, e:
-            print "Cant import the custom module. The exception raised is", e
+            Logger().warn("Cant import the custom module. The exception raised is %s" % e)
     
     if mapper and callable(mapper):
         return mapper
