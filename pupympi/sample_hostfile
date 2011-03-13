@@ -1,0 +1,29 @@
+# This is the default hostfile. Lines beginning with a
+# a pound sign (#) or a semi colon (;) is a commend.
+
+[Defaults]
+# This section contains default values useable in the host definition below. We
+# assume that most of your host will have the same config so this will have you
+# a bunch of lines.
+cpu=1
+max_cpu=16
+
+[LocalHost]
+# Settings for localhost that will limit us to 20 nodes. Use the
+# BigLocalHost if you want to hurt your machine.
+cpu: 1
+max_cpu: 20
+
+[DIKUCluster]
+cpu: 1
+max_cpu: 8
+nodes = n0, n1, n2, n3, n4, n5, n6, n7
+
+[PlayStation]
+nodes = ps1, ps2, ps3, ps4, ps5, ps6, ps7, ps8
+
+[ActiveNodes]
+# This section must always be there. It will define which
+# sections to inspect above and use the nodes mentioned
+# there. 
+# active = DIKUCluster, PlayStation
