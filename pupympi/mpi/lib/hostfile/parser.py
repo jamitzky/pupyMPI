@@ -2,7 +2,7 @@ import ConfigParser
 import copy
 from mpi.logger import Logger
 
-def parse_hostfile(filepath="hostfile"):
+def parse_hostfile(filepath="hostfile", limit_to=None):
     config = ConfigParser.SafeConfigParser()
     config.read(filepath)
     
@@ -33,6 +33,11 @@ def parse_hostfile(filepath="hostfile"):
             sections = active_sections
         except ConfigParser.NoOptionError:
             pass
+        
+    if limit_to:
+        for s in sections:
+            if s not in limit_to:
+                sections.remove(s)
         
     defaults = {'cpu' : 0, 'max_cpu' : 0}
     if "Defaults" in config.sections():

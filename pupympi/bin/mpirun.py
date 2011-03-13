@@ -281,8 +281,11 @@ if  __name__ == "__main__":
     # Map processes/ranks to hosts/CPUs
     hostfilemapper = hostfile.mappers.find_mapper(options.hostmap_scheduler)
     
-    # FIXME: Disable some sections.
-    parsed_hosts, cpus, max_cpus = hostfile.parse_hostfile(options.hostfile)
+    limit_to = []
+    if options.hostfile_sections:
+        limit_to = [s.strip() for s in options.hostfile_sections.split(",")]
+        
+    parsed_hosts, cpus, max_cpus = hostfile.parse_hostfile(options.hostfile,limit_to=limit_to)
     mappedHosts = hostfilemapper(parsed_hosts, cpus, max_cpus, options.np, overmapping=not options.disable_overmapping)
 
     s, mpi_run_hostname, mpi_run_port = create_random_socket() # Find an available socket
