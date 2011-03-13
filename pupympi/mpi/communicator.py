@@ -1647,26 +1647,21 @@ class Communicator:
 
     def Wtime(self):
         """
-        returns a floating-point number of seconds, representing elapsed wall-clock
-        time since some time in the past.
-
-        .. note::
-            *Deviation* MPI 1.1 states that "The 'time in the past' is guaranteed not to change during the life of the process. ".
-            pupyMPI makes no such guarantee, however, it can only happen if the system clock is changed during a run.
+        Returns the wall clock time this rank has been active. This time is
+        not syncronized between the ranks. 
         """
         execute_system_commands(self.mpi)
-
-        return time.time()
+        return time.time() - self.mpi.startup_timestamp
 
     def Wtick(self):
         """
-        returns the resolution of wtime() in seconds. That is, it returns,
-        as a double precision value, the number of seconds between successive clock ticks. For
-        example, if the clock is implemented by the hardware as a counter that is incremented
-        every millisecond, the value returned by wtick() should be 10 to the power of -3.
+        Return the **measured** resolution of the Wtime() call. This is not
+        to be taken super strict. The Wtime() call is a Python floating point
+        but not all systems will actually provide any such resolution. 
         """
         execute_system_commands(self.mpi)
-        return 1.0
+        s = str(self.mpi.startup_timestamp)
+        return 1.0/10**(int(len(s)-s.find("."))-1)
 
     ################################################################################################################
     # LOCAL OPERATIONS
