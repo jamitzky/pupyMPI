@@ -13,6 +13,7 @@ max_cpu=16
 # BigLocalHost if you want to hurt your machine.
 cpu: 1
 max_cpu: 20
+nodes = localhost
 
 [DIKUCluster]
 cpu: 1
@@ -27,3 +28,4 @@ nodes = ps1, ps2, ps3, ps4, ps5, ps6, ps7, ps8
 # sections to inspect above and use the nodes mentioned
 # there. 
 # active = DIKUCluster, PlayStation
+active = LocalHost

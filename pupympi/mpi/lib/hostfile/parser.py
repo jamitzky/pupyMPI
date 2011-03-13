@@ -38,7 +38,7 @@ def parse_hostfile(filepath="hostfile"):
     if "Defaults" in config.sections():
         # Fetch the default keys. 
         for key in defaults:
-            defaults[key] = config.get("Defaults", key)
+            defaults[key] = config.getint("Defaults", key)
                   
     # We are now ready to parse the remaining sections
     for section in sections:
@@ -54,7 +54,7 @@ def parse_hostfile(filepath="hostfile"):
             s["host"] = node    
             for key in defaults:
                 try:
-                    s[key] = config.get(section, key)
+                    s[key] = config.getint(section, key)
                 except ConfigParser.NoOptionError:
                     pass
                 
