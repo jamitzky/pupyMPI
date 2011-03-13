@@ -68,14 +68,14 @@ class SocketPool(object):
 
         if not client_socket: # If we didn't find one, create one
             if connection_type == "local":
-                Logger().debug("Creating local socket to %s" % connection_info)
+                #Logger().debug("Creating local socket to %s" % connection_info)
                 client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 client_socket.connect( connection_info )
                 self._add(rank, client_socket, force_persistent)
                 newly_created = True
 
             elif connection_type == "tcp":
-                Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
+                #Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
                 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
                 client_socket.connect( connection_info )

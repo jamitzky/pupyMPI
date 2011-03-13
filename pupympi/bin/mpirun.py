@@ -86,6 +86,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--hostmap-schedule-method', dest='hostmap_schedule_method', default='rr', help="How to distribute the started processes on the available hosts. Options are: rr (round-robin). Defaults to %default")
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
+    parser_adv_group.add_option('--disable-unixsockets', dest='unixsockets', default=True, action='store_false', help="Switch to turn off the optimization using unix sockets instead of tcp for intra-node communication")
     parser_adv_group.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
     parser_adv_group.add_option('--yappi', dest='yappi', action='store_true', help="Whether to enable profiling with Yappi. Defaults to off.")
     parser_adv_group.add_option('--yappi-sorttype', dest='yappi_sorttype', help="Sort type to use with yappi. One of: name (function name), ncall (call count), ttotal (total time), tsub (total time minus subcalls), tavg (total average time)")
@@ -303,17 +304,20 @@ if  __name__ == "__main__":
     if options.disable_full_network_startup:
         global_run_options.append('--disable-full-network-startup')
 
+    if not options.unixsockets:
+        global_run_options.append('--disable-unixsockets')
+
     if options.enable_profiling:
         global_run_options.append('--enable-profiling')
 
     if options.yappi:
         global_run_options.append('--yappi')
 
-    if options.disable_utilities:
-        global_run_options.append('--disable-utilities')
-
     if options.yappi_sorttype:
         global_run_options.append('--yappi-sorttype=%s' % options.yappi_sorttype)
+
+    if options.disable_utilities:
+        global_run_options.append('--disable-utilities')
 
     for flag in ("quiet", "debug"):
         value = getattr(options, flag, None)
