@@ -59,7 +59,7 @@ class RunTest(Thread):
     #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     # With dynamic socket pool
-    cmd = "bin/mpirun.py --disable-utilities --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
+    cmd = "bin/mpirun.py --disable-utilities --disable-full-network-startup SOCKET_POOL_SIZE X_FORWARD --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
     def __init__(self, test, number, primary_log, options, test_meta_data):
@@ -82,6 +82,12 @@ class RunTest(Thread):
         else:
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
             #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
+
+        # If X forwarding is specified in meta description we add appropriate parameter
+        if "x-forward" in test_meta_data:
+            self.cmd = self.cmd.replace("X_FORWARD", "--x-forward")
+        else:
+            self.cmd = self.cmd.replace("X_FORWARD", "")
 
         # Adds testswitches if used
         if options.socket_poll_method:

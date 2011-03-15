@@ -36,14 +36,15 @@ global process_list, io_target_list
 process_list = []
 io_target_list = []
 
-def ssh(host, arguments, process_io, rank):
+def ssh(host, arguments, x_forward, process_io, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
 
     # We join the sys.path here to allow user modifications to PYTHONPATH to take effect remotelyy
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
-    sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
-    #logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
+    sshexec_str = "ssh %s%s \"PYTHONPATH=%s %s\"" % (("-XY " if x_forward else ""), host, python_path, ' '.join(arguments) )
+    if rank == 0:
+        logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
 
     if process_io in ['none', 'direct', 'remotefile']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
         target = None
