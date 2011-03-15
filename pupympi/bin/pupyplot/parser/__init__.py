@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
+import csv
 
 class Parser(object):
     """
@@ -36,10 +37,10 @@ class Parser(object):
         self.data = []
         
     def parse_file(self, tag, filepath):
-        reader = csv.reader(open(filename))
+        reader = csv.reader(open(filepath, 'r'))
         
         for row in reader:
-            row = map(lambda x: x.strip(), l)
+            row = map(lambda x: x.strip(), row)
             
             if self.row_is_header(row): continue
         
@@ -55,14 +56,15 @@ class Parser(object):
             except Exception, e:
                 print "Found exception", e 
                 
-        reader.close()
-        
     def from_extract_data(self, row):
         # Unpack data
         datasize = row[0]
-        time_p_it = row[3]
+        iteration_time = row[3]
         throughput = 0
-        run_type = ""
+        runtype  = ""
+        time_min = 0
+        time_max = 0
+        
         if len(row) == 10:
             # new format
             time_min = float(row[4])
@@ -72,28 +74,27 @@ class Parser(object):
             except:
                 throughput = 0
 
-            run_type = row[8].replace("test_","")
-
             # The number of procs seems inconsistant.
             procs = row[7]
         elif len(row) == 8:
             # old format. Wasting memory due to lack of coding stills by CB
-            time_min = float(time_p_it)
-            time_max = float(time_p_it)
+            time_min = float(iteration_time)
+            time_max = float(iteration_time)
 
             throughput = float(row[4])
-            run_type = row[6].replace("test_","")
 
             # The number of procs seems inconsistant.
             procs = row[5]
         elif len(row) == 7:
             throughput = float(row[4])
-            run_type = row[5].replace("test_","")
 
         else:
             print "WARNING: Found a row with a strange number of rows:", len(row)
             print "\t", ",".join(row)
             return None
+        
+        # Post fix data
+        runtype = runtype.replace("test_","")
             
         return datasize, iteration_time, throughput, runtype, time_min, time_max
             
@@ -105,7 +106,7 @@ class Parser(object):
         here in the function.
         """
         # A header does not start with a number
-        return not row[0].isdigit()
+        return len(row) < 2 or not row[0].isdigit()
     
     def row_is_comment(self, row):
         return row[0].startswith("#")
