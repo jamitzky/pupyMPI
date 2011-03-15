@@ -28,6 +28,7 @@ sys.path.append(binpath)
 from mpi import constants
 from pupyplot.parser.handle import Handle
 from pupyplot.parser import Parser
+from pupyplot.lib import tagmapper
 
 def parse_args():
     from optparse import OptionParser, OptionGroup
@@ -63,6 +64,9 @@ if __name__ == "__main__":
         csv_files = glob.glob(folder+ "pupymark.*.[0-9]*procs*")
         for csv_file in csv_files:
             parser.parse_file(tag, csv_file)
+            
+    # Write the tags to a tagmapper
+    tagmapper.write_tag_file(parse_folders, output_file)
         
     # Insert the parsed data in the handle
     handle.dataobj.extend(parser.data)
