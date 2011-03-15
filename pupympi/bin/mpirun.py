@@ -98,6 +98,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser_adv_group.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action='store_true', help="Do not initialize a socket connection between all pairs of processes. If not a second chance socket pool algorithm will be used. See also --socket-pool-size")
     parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=20, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
+    parser_adv_group.add_option('--x-forward', dest='x_forward', default=False, action='store_true', help='Turn on X forwarding. Used when you need a pupyMPI process to use X, eg. for graphical output. Defaults to %default')    
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
     parser_adv_group.add_option('--disable-unixsockets', dest='unixsockets', default=True, action='store_false', help="Switch to turn off the optimization using unix sockets instead of tcp for intra-node communication")
@@ -305,7 +306,6 @@ if  __name__ == "__main__":
         executeable = os.path.join( os.getcwd(), executeable)
 
     # Mimic our cli call structure also for remotely started processes
-
     global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
             "--mpirun-conn-port=%d" % mpi_run_port,
             "--size=%d" % options.np,
@@ -353,7 +353,7 @@ if  __name__ == "__main__":
         run_options.extend( user_options )
 
         # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.process_io, rank)
+        p = remote_start(host, run_options, options.x_forward, options.process_io, rank )
         process_list.append(p)
 
     """
