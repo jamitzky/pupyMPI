@@ -33,6 +33,8 @@ from mpi.network.utils import pickle, robust_send, prepare_message
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
 
+import time
+
 try:
     import yappi
 except ImportError:
@@ -95,6 +97,9 @@ class MPI(Thread):
         """
 
         self.name = "MPI" # Thread name
+        
+        # Startup time. Used in Wtime() implementation.
+        self.startup_timestamp = time.time()
 
         # Event for handling thread packing.
         self.packing = threading.Event()
