@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os
+import sys, os, glob
 
 pupyplotpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 binpath = os.path.dirname(os.path.abspath(pupyplotpath))
@@ -26,6 +26,8 @@ sys.path.append(pupyplotpath)
 sys.path.append(binpath)
 
 from mpi import constants
+from pupyplot.parser.handle import Handle
+from pupyplot.parser import Parser
 
 def parse_args():
     from optparse import OptionParser, OptionGroup
@@ -47,20 +49,22 @@ def parse_args():
 if __name__ == "__main__":
     update, output_file, parse_folders = parse_args()
     
-    from pupyplot.parser.handle import Handle
-    from pupyplot.parser import Parser
-    
     # Try to remove the file unless we are allowed to update it
     if not update:
         if os.path.isfile(output_file):
             os.unlink(output_file)
 
     handle = Handle(output_file)
+    parser = Parser()
     
-    # Parse data
-    parsed_data = range(10)
-    
+    # Find all the CSV files and parse them.
+    for folder in parse_folders:
+        tag = folder
+        csv_files = glob.glob(folder+ "pupymark.*.[0-9]*procs*")
+        for csv_file in csv_files:
+            parser.parse_file(tag, csv_file)
+        
     # Insert the parsed data in the handle
-    handle.dataobj.extend(parsed_data)
+    handle.dataobj.extend(parser.data)
     
     handle.save()
