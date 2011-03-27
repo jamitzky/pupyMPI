@@ -23,15 +23,12 @@ def write_tag_file(tags, filename):
     A simple way to write a filemapper file
     based on a tag list and basic file name.
     """
-    filename += ".tagmapper"
-    
     writer = csv.writer(open(filename, "wb"), 'tags')
     
     for tag in tags:
         writer.writerow( (tag, tag))
             
 def get_tag_mapping(filename):
-    filename += ".tagmapper"
     mapping = {}
     reader = csv.reader(open(filename, "r"), 'tags')
     for row in reader:

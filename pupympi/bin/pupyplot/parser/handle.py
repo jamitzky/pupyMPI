@@ -53,7 +53,7 @@ classea have their own individual responsability:
     example we continue:
 
         da = DataAggregator()
-        agg = da.aggregate(times, functions=max)
+        agg = da.aggregate(times, max)
 
         # data layout
         [1, 2, 4, 8, 16, 32]     # contents from nodes (not changed)
@@ -67,6 +67,7 @@ except ImportError:
     import pickle
 
 from os import path
+from pupyplot.lib.aggregate import find_function
 
 class Handle(object):
     """
@@ -86,9 +87,24 @@ class Handle(object):
         pickle.dump(self.dataobj, open(self.filename, "w"), pickle.HIGHEST_PROTOCOL)
 
     def reload(self):
-        if path.isfile(self.filename):
+        if Handle.valid_handle_file(self.filename):
             self.dataobj = pickle.load(open(self.filename, "r"))
+            
+    def getdata(self):
+        return self.dataobj
 
+    @classmethod
+    def valid_handle_file(cls, filename):
+        if path.isfile(filename):
+            try:
+                pickle.load(open(filename, "r"))
+                return True
+            except Exception, e:
+                print e
+                pass
+            
+        return False
+    
 class DataSupplier(object):
     """
     This class can suply the parsed data in a way that is suitable
@@ -106,9 +122,8 @@ class DataSupplier(object):
     This class will not aggregate the data as there is a seperate
     class called :ref:`DataAggregator` for this.
     """
-    def __init__(self, data, mapping):
+    def __init__(self, data):
         self.data = data
-        self.mapping = mapping
         
         # Internal list to keep the tests.
         self.tests = self._find_test_names()
@@ -131,7 +146,7 @@ class DataSupplier(object):
         return filtered_data
     
     def _get_pos(self, label):
-        labels = ["tag", "runtype", "datasize", "iteration_time", "throughput", "time_min", "time_max", ]
+        labels = ["tag", "runtype", "datasize", "avg_time", "throughput", "min_time", "max_time", ]
         for i in range(len(labels)):
             if label == labels[i]:
                 return i
@@ -141,12 +156,37 @@ class DataSupplier(object):
             raise Exception("No test called %s" % testname)
 
         filtered_data = self.get_raw_test_data(testname)
-      
+        
+        # Run the filters on the data
+        for func in filters:
+            filtered_data = filter(func, filtered_data)
+
+        # Find the position of each data label. This is used to         
         x_pos = self._get_pos(xdata)
         y_pos = self._get_pos(ydata)
+        # extract the data later.
+                
+        # A structure to keep the filtered data. This will not 
+        # be returned direcly.
+        data = {}
+        for data_item in filtered_data:
+            x_data = data_item[x_pos]
+            y_data = data_item[y_pos]
+            
+            if x_data not in data:
+                data[x_data] = []
+            
+            data[x_data].append(y_data)
+            
+        keys = data.keys()
+        keys.sort()
         
+        values = []
+        for k in keys:
+            values.append(data[k])
         
-
+        return keys, values
+        
 class DataAggregator(object):
     """
     This class contains a simple getdata function that
@@ -156,8 +196,10 @@ class DataAggregator(object):
 
     The default aggregator is the identify function,
     """
-    def getdata(self, aggregators=lambda x: [x]):
-        pass
-
-
-
+    def __init__(self, data):
+        self.data = data
+    
+    def getdata(self, aggregator):
+        aggregator = find_function(aggregator)
+                
+        return [aggregator(datum) for datum in self.data]
