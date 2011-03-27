@@ -28,6 +28,8 @@ sys.path.append(pupyplotpath)
 sys.path.append(binpath)
 
 from mpi import constants
+from pupyplot.parser.handle import Handle
+from pupyplot.lib.aggregate import AGGR_USER_CHOICES
 
 # Define a function for building a simple parser useable in multiple
 # scripts.
@@ -36,12 +38,11 @@ from mpi import constants
 #    print "got value", value
 
 def plot_parser():
-    DATA_CHOICES = ['datasize', 'totaltime', 'avgtime', 'mintime', 'maxtime', 'throughput']
+    DATA_CHOICES = ['datasize', 'totaltime', 'avg_time', 'min_time', 'max_time', 'throughput']
     DATA_FILTERS = ['zero', ]
-    DATA_AGGR = ['min', 'max', 'avg', 'sum']
     COLOR_SCHEMES = []
 
-    usage = """usage: %prog [options]"""
+    usage = """usage: %prog [options] datafile"""
 
     parser = OptionParser(usage=usage, version="pupyplot version %s" % (constants.PUPYVERSION))
 
@@ -58,7 +59,7 @@ def plot_parser():
 
     # The most import
     parser.add_option('--x-data', default='datasize', choices=DATA_CHOICES, dest='x_data', help='Which data to plot on the x axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES))
-    parser.add_option('--y-data', default='avgtime', choices=DATA_CHOICES, dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES))
+    parser.add_option('--y-data', default='avg_time', choices=DATA_CHOICES, dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES))
 
     format_group = OptionGroup(parser, "Formatting", "Basic formatting options. These allow you to control a number of elements in the final plot. These options will not change the plot in any other ways than layout and should therefore not be primary concern. ")
 
@@ -69,7 +70,6 @@ def plot_parser():
     # FIXME: Not used
     format_group.add_option("--x-label-rotate", type=int, dest="x_label_rotate", default=45, help="The number of degress to rotate the label on the x-axis ")
 
-    # FIXME: Not used
     format_group.add_option("--tag-mapper", dest='tag_mapper', default=None, help='The file containing the tag mapping. This is useful when you do not wish to keep the default names for data series. The readdata.py script will create such a file so it is simple to replace unwanted names. The script will try to find the file from the handle file name so normally you should not supply anything.' )
 
     parser.add_option_group(format_group)
@@ -89,7 +89,7 @@ def plot_parser():
     data_group = OptionGroup(parser, "Data handling", "Control all the data controls. Through these it is possible to filter the data, average the data with different functions etc. ")
     data_group.add_option('--x-data-filter', default=[], action='append', dest='x_data_filter', choices=DATA_FILTERS, help='Filter the data plotable on the x axis. Possible choices are ' + ','.join(DATA_FILTERS) + '. Defaults to %default. See the next parameter for a more detailed description')
     data_group.add_option('--y-data-filter', default=[], action='append', dest='y_data_filter', choices=DATA_FILTERS, help='Filters the data plotable on the y axis. Same choices and default variables as on the x axis. It it possible to specify this options multiple times thereby adding multiple filters. These will be executed in the same order as supplied on the command line.')
-    data_group.add_option('--y-data-aggregate', default='min', dest='y_data_aggr', choices=DATA_AGGR, help='Aggregates the y data according to some function. Default is %default. Choices are ' + ','.join(DATA_AGGR))
+    data_group.add_option('--y-data-aggregate', default='min', dest='y_data_aggr', choices=AGGR_USER_CHOICES, help='Aggregates the y data according to some function. Default is %default. Choices are ' + ','.join(AGGR_USER_CHOICES))
     parser.add_option_group(data_group)
     groups['data'] = data_group
 
@@ -116,9 +116,23 @@ def parse(parser):
     """
     options, args = parser.parse_args()
 
+    # Look for a different tag mapper.
+    if len(args) != 1:
+        parser.error("No data file supplied!")
+        
+    handle_file = args[0]
+    if not Handle.valid_handle_file(handle_file):
+        parser.error("Invalid data file")
+
     # Check that the supplied tag mapper is actually a file
     if options.tag_mapper and not os.path.isfile(options.tag_mapper):
         parser.error("No such tag mapper file: %s" % options.tag_mapper)
+    
+    if not options.tag_mapper:
+        # Look for a default tag mapper
+        potential_mapper = handle_file + ".tagmapper"
+        if os.path.isfile(potential_mapper):    
+            options.tag_mapper = potential_mapper
 
     # Setup a logger based on the arguments about. This might seem stupid
     # as it is not returned from the call, but as the Logger is a singleton

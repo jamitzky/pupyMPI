@@ -29,13 +29,41 @@ from mpi import constants
 from mpi.logger import Logger
 
 from pupyplot.lib.cmdargs import plot_parser, parse
+from pupyplot.lib.tagmapper import get_tag_mapping
+from pupyplot.parser.handle import Handle, DataSupplier, DataAggregator
 
 if __name__ == "__main__":
     # Receive the parser and groups so we can add further elements 
     # if we want
     parser, groups = plot_parser()
     
-    # Parse it. This will setup loggin and other things.    
+    # Parse it. This will setup logging and other things.    
     options, args = parse(parser)
     
     Logger().debug("Command line arguments parsed.")
+    
+    # Object creation, used to keep, filter, aggregate, validate data.
+    handle = Handle(args[0])
+    
+    tag_mapper = {}
+    if options.tag_mapper:
+        tag_mapper = get_tag_mapping(options.tag_mapper)
+    
+    # Create a DataSupplier object from the data. This is used
+    # to extract and filter the data.
+    ds = DataSupplier(handle.getdata())
+    
+    # It should be possible to limit the tests to one single test. how should
+    # this be one. 
+    all_tests = ds.get_tests()
+    for testname in all_tests:
+        xdata, ydata = ds.getdata(testname, options.x_data, options.y_data, filters=[])
+        
+        da = DataAggregator(ydata)
+        ydata = da.getdata(options.y_data_aggr)
+        
+        print "Final data for test", testname
+        print xdata
+        print "-"*70
+        print ydata
+        print "\n\n\n"
