@@ -67,10 +67,10 @@ class Parser(object):
         
         if len(row) == 10:
             # new format
-            time_min = float(row[4])
-            time_max = float(row[5])
+            time_min = row[4]
+            time_max = row[5]
             try:
-                throughput = float(row[6])
+                throughput = row[6]
             except:
                 throughput = 0
 
@@ -78,15 +78,15 @@ class Parser(object):
             procs = row[7]
         elif len(row) == 8:
             # old format. Wasting memory due to lack of coding stills by CB
-            time_min = float(iteration_time)
-            time_max = float(iteration_time)
+            time_min = iteration_time
+            time_max = iteration_time
 
-            throughput = float(row[4])
+            throughput = row[4]
 
             # The number of procs seems inconsistant.
             procs = row[5]
         elif len(row) == 7:
-            throughput = float(row[4])
+            throughput = row[4]
 
         else:
             print "WARNING: Found a row with a strange number of rows:", len(row)
@@ -96,9 +96,8 @@ class Parser(object):
         # Post fix data
         runtype = runtype.replace("test_","")
             
-        return datasize, iteration_time, throughput, runtype, time_min, time_max
+        return int(datasize), float(iteration_time), float(throughput), runtype, float(time_min), float(time_max)
             
-
     def row_is_header(self, row):
         """
         Test if a row is considered a header row. The caller
