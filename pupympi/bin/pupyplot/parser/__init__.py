@@ -51,7 +51,7 @@ class Parser(object):
             # and it is messy to handle this logic here.
             try:
                 datasize, iteration_time, throughput, runtype, time_min, time_max = self.from_extract_data(row)
-                data_item = tag, datasize, iteration_time, throughput, runtype, time_min, time_max
+                data_item = tag, runtype, datasize, iteration_time, throughput, time_min, time_max
                 self.data.append(data_item)      
             except Exception, e:
                 print "Found exception", e 
