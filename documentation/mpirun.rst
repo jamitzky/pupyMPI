@@ -17,7 +17,7 @@ environment by importing and creating a new instance of the .. class::`MPI` clas
 
 Accepted arguments
 -----------------------------
-The ``mpirun`` script accepts a lot of argument of different importance. A call
+The ``mpirun`` script accepts a lot of arguments of different importance. A call
 to the script with the ``-h`` flag will show all the available options::
 
     > bin/mpirun.py -h
@@ -135,7 +135,9 @@ You can even pass arguments that are elsewhere reserved by the mpirun.py
 program like ``-c``. We recommend you don't handle argument parsing yourself. Look
 into the getopt or optparse module in python.
 
-Distributing the started processes onto several machines
+.. _using_the_hostfile:
+
+Using the hostfile to distribute processes
 --------------------------------------------------------------
 Frederik should write something about how the hostfile works.
 
