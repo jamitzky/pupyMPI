@@ -99,26 +99,6 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
             for test in tests:
                 if fixed_test is None or fixed_test == test:
                     testsToRun += 1
-
-    #
-    #if fixed_test:        
-    #    # Run through all modules to make sure that a test of specified name exists
-    #    for module in modules:
-    #        for function in dir(module):
-    #            if function.startswith("test_"):
-    #                if function == "test_"+fixed_test:
-    #                    testsToRun += 1
-    #    fixed = fixed_test
-    #elif fixed_module:
-    #    for module in modules:
-    #        # Count only tests in the desired module
-    #        if module.__name__ == fixed_module:
-    #            for function in dir(module):
-    #                if function.startswith("test_"):
-    #                    testsToRun += 1
-    #    fixed = fixed_module
-    #else:
-    #    pass
     
     valid_tests = True
     if testsToRun < 1:
@@ -163,7 +143,11 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
 
                 per_it = total / module.meta_schedule[size]
                 # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
-                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
+                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024)
+                # for non-synthetic tests the mbytes/sec metric does not make sense
+                if module.__name__ == "nonsynthetic":
+                    mbytessec = -42
+                
                 ci.log("%10d %13d %13.2f %13.2f %13.2f %13.2f %13.5f" %  (\
                 size, \
                 module.meta_schedule[size], \
