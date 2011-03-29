@@ -67,7 +67,7 @@ if __name__ == "__main__":
             
     # Write the tags to a tagmapper
     tagmapper.write_tag_file(parse_folders, output_file)
-        
+
     # Insert the parsed data in the handle
     handle.dataobj.extend(parser.data)
     
