@@ -31,6 +31,7 @@ from mpi.logger import Logger
 from pupyplot.lib.cmdargs import plot_parser, parse
 from pupyplot.lib.tagmapper import get_tag_mapping
 from pupyplot.parser.handle import Handle, DataSupplier, DataAggregator
+from pupyplot.gnuplot import LinePlot
 
 if __name__ == "__main__":
     # Receive the parser and groups so we can add further elements 
@@ -57,13 +58,35 @@ if __name__ == "__main__":
     # this be one. 
     all_tests = ds.get_tests()
     for testname in all_tests:
-        xdata, ydata = ds.getdata(testname, options.x_data, options.y_data, filters=[])
+        if testname != "Reduce":
+            continue # debug
         
-        da = DataAggregator(ydata)
-        ydata = da.getdata(options.y_data_aggr)
+        lp = LinePlot(testname, title=testname, xlabel=options.x_data, ylabel=options.y_data, keep_temp_files=True)
         
-        print "Final data for test", testname
-        print xdata
-        print "-"*70
-        print ydata
-        print "\n\n\n"
+        tags = ds.get_tags()
+        plot_strs = []
+        i = 0
+        for tag in tags:
+            # Extract the data from the data store.
+            xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
+            
+            # Aggregate the data. 
+            da = DataAggregator(ydata)
+            ydata = da.getdata(options.y_data_aggr)
+            
+            # Write a datafile
+            datafile = lp.write_datafile("data%d" % i, xdata, ydata)
+            
+            # Write the plot commands. 
+            plot_strs.append("'%s' with linespoints title 'plot %d'" % (datafile, i))
+            
+            # Increment a general counter
+            i += 1
+            
+        # Write the plot command to the handle.
+        print >> lp.handle, "plot " + ", ".join(plot_strs)
+        
+        lp.plot()
+        lp.close()
+            
+        

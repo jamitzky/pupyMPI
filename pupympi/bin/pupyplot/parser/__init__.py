@@ -14,7 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
-import csv
+import csv, re
+
+PROCS_RE = re.compile(".*(\d)procs.*")
 
 class Parser(object):
     """
@@ -39,6 +41,10 @@ class Parser(object):
     def parse_file(self, tag, filepath):
         reader = csv.reader(open(filepath, 'r'))
         
+        # Find the number of procs from the filename. 
+        match = PROCS_RE.match(filepath)
+        nodes = match.groups()[0]
+        
         for row in reader:
             row = map(lambda x: x.strip(), row)
             
@@ -50,15 +56,16 @@ class Parser(object):
             # as the data formats we support differ a lot
             # and it is messy to handle this logic here.
             try:
-                datasize, iteration_time, throughput, runtype, time_min, time_max = self.from_extract_data(row)
-                data_item = tag, runtype, datasize, iteration_time, throughput, time_min, time_max
+                datasize, total_time, iteration_time, throughput, runtype, time_min, time_max = self.from_extract_data(row)
+                data_item = tag, runtype, datasize, total_time, iteration_time, throughput, time_min, time_max, nodes
                 self.data.append(data_item)      
             except Exception, e:
-                print "Found exception", e 
+                print "Found exception", e
                 
     def from_extract_data(self, row):
         # Unpack data
         datasize = row[0]
+        total_time = row[2]
         iteration_time = row[3]
         throughput = 0
         runtype  = ""
@@ -74,18 +81,16 @@ class Parser(object):
             except:
                 throughput = 0
 
-            # The number of procs seems inconsistant.
-            procs = row[7]
+            runtype = row[8]
         elif len(row) == 8:
             # old format. Wasting memory due to lack of coding stills by CB
             time_min = iteration_time
             time_max = iteration_time
 
             throughput = row[4]
-
-            # The number of procs seems inconsistant.
-            procs = row[5]
+            runtype = row[6]
         elif len(row) == 7:
+            runtype = row[5]
             throughput = row[4]
 
         else:
@@ -96,7 +101,7 @@ class Parser(object):
         # Post fix data
         runtype = runtype.replace("test_","")
             
-        return int(datasize), float(iteration_time), float(throughput), runtype, float(time_min), float(time_max)
+        return int(datasize), float(total_time), float(iteration_time), float(throughput), runtype, float(time_min), float(time_max)
             
     def row_is_header(self, row):
         """

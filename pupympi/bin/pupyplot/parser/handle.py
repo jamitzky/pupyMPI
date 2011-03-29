@@ -146,17 +146,25 @@ class DataSupplier(object):
         return filtered_data
     
     def _get_pos(self, label):
-        labels = ["tag", "runtype", "datasize", "avg_time", "throughput", "min_time", "max_time", ]
-        for i in range(len(labels)):
-            if label == labels[i]:
-                return i
-              
-    def getdata(self, testname, xdata, ydata, filters=[]):
+        labels = ["tag", "runtype", "datasize", "total_time", "iteration_time", "throughput", "min_time", "max_time", "nodes"]
+        return labels.index(label)
+    
+    def get_tags(self):
+        return list(set([d[0] for d in self.data]))
+    
+    def getdata(self, testname, tag, xdata, ydata, filters=[]):
         if testname not in self.tests:
             raise Exception("No test called %s" % testname)
 
         filtered_data = self.get_raw_test_data(testname)
-        
+
+        if tag:
+            f_data = []
+            for item in filtered_data:
+                if item[0] == tag:
+                    f_data.append(item)
+            filtered_data = f_data
+            
         # Run the filters on the data
         for func in filters:
             filtered_data = filter(func, filtered_data)
