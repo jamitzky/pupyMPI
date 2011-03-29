@@ -33,9 +33,17 @@ from pupyplot.lib.aggregate import AGGR_USER_CHOICES
 
 # Define a function for building a simple parser useable in multiple
 # scripts.
-
+DATA_CHOICES = {
+                'datasize' : 'Data size',
+                'total_time'  :'Total time',
+                'avg_time'  : 'Average time',
+                'min_time' : 'Minimum time',
+                'max_time' : 'Maximum time',
+                'throughput' :'Throughput',
+                'nodes' : 'Number of participants',
+} 
+ 
 def plot_parser():
-    DATA_CHOICES = ['datasize', 'total_time', 'avg_time', 'min_time', 'max_time', 'throughput', 'nodes'] # NODES__
     DATA_FILTERS = ['zero', ]
     COLOR_SCHEMES = []
 
@@ -55,8 +63,8 @@ def plot_parser():
     parser.add_option("-l", "--log-file", dest="logfile", help="The location of the logfile. If the file exists the contents will be overwritten without prompting. If the file does not exists the file will be created if possible. ")
 
     # The most import
-    parser.add_option('--x-data', default='datasize', choices=DATA_CHOICES, dest='x_data', help='Which data to plot on the x axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES))
-    parser.add_option('--y-data', default='avg_time', choices=DATA_CHOICES, dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES))
+    parser.add_option('--x-data', default='datasize', choices=DATA_CHOICES.keys(), dest='x_data', help='Which data to plot on the x axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
+    parser.add_option('--y-data', default='avg_time', choices=DATA_CHOICES.keys(), dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
 
     format_group = OptionGroup(parser, "Formatting", "Basic formatting options. These allow you to control a number of elements in the final plot. These options will not change the plot in any other ways than layout and should therefore not be primary concern. ")
 
