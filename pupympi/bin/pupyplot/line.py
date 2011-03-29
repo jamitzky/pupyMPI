@@ -50,7 +50,6 @@ if __name__ == "__main__":
     if options.tag_mapper:
         tag_mapper = get_tag_mapping(options.tag_mapper)
     
-    # Create a DataSupplier object from the data. This is used
     # to extract and filter the data.
     ds = DataSupplier(handle.getdata())
     
@@ -64,8 +63,6 @@ if __name__ == "__main__":
         lp = LinePlot(testname, title=testname, xlabel=options.x_data, ylabel=options.y_data, keep_temp_files=True)
         
         tags = ds.get_tags()
-        plot_strs = []
-        i = 0
         for tag in tags:
             # Extract the data from the data store.
             xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
@@ -74,19 +71,8 @@ if __name__ == "__main__":
             da = DataAggregator(ydata)
             ydata = da.getdata(options.y_data_aggr)
             
-            # Write a datafile
-            datafile = lp.write_datafile("data%d" % i, xdata, ydata)
-            
-            # Write the plot commands. 
-            plot_strs.append("'%s' with linespoints title 'plot %d'" % (datafile, i))
-            
-            # Increment a general counter
-            i += 1
-            
-        # Write the plot command to the handle.
-        print >> lp.handle, "plot " + ", ".join(plot_strs)
-        
+            title = tag_mapper.get(tag, tag)
+            lp.add_serie(xdata, ydata, title=title)
+                    
         lp.plot()
         lp.close()
-            
-        
