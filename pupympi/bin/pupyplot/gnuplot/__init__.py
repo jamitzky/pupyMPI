@@ -112,4 +112,23 @@ class LinePlot(GNUPlot):
     def __init__(self, *args, **kwargs):
         super(LinePlot, self).__init__(*args, **kwargs)
         
-    
+        self.series = []
+        
+    def add_serie(self, xdata, ydata, title='Plot title'):
+        i = len(self.series)
+        
+        # Write a data file
+        datafile = self.write_datafile("data%d" % i, xdata, ydata)
+        self.series.append((title, datafile))
+
+    def plot(self):
+        # Write data to the .gnu file before we continue the plot.
+        plot_strs = []
+        for serie in self.series:
+            title, datafile = serie 
+            plot_strs.append("'%s' with linespoints title '%s'" % (datafile, title))
+             
+        print >> self.handle, "plot " + ", ".join(plot_strs)    
+        
+        # Call the super plot.
+        super(LinePlot, self).plot()
