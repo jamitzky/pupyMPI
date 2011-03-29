@@ -34,11 +34,8 @@ from pupyplot.lib.aggregate import AGGR_USER_CHOICES
 # Define a function for building a simple parser useable in multiple
 # scripts.
 
-#def store_int(option, opt, value, parser, *args, **kwargs):
-#    print "got value", value
-
 def plot_parser():
-    DATA_CHOICES = ['datasize', 'totaltime', 'avg_time', 'min_time', 'max_time', 'throughput']
+    DATA_CHOICES = ['datasize', 'total_time', 'avg_time', 'min_time', 'max_time', 'throughput', 'nodes'] # NODES__
     DATA_FILTERS = ['zero', ]
     COLOR_SCHEMES = []
 
