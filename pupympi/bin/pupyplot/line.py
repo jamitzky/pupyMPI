@@ -60,7 +60,12 @@ if __name__ == "__main__":
         if testname != "Reduce":
             continue # debug
         
-        lp = LinePlot(testname, title=testname, xlabel=options.x_data, ylabel=options.y_data, keep_temp_files=True)
+        # Write nice labels
+        from pupyplot.lib.cmdargs import DATA_CHOICES
+        xlabel = DATA_CHOICES[options.x_data]
+        ylabel = DATA_CHOICES[options.y_data]
+        
+        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True)
         
         tags = ds.get_tags()
         for tag in tags:
