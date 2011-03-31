@@ -42,9 +42,14 @@ class DisseminationAllGather(BaseCollectiveRequest):
         self.recv_from = (self.rank - (2**self.i)) % self.size
 
         self.communicator._isend(self.data_list, send_to, constants.TAG_ALLGATHER)
+        # DEBUG
+        Logger().debug("rank:%i -> %i" % (self.rank, send_to))
+
 
     def accept_msg(self, rank, data):
         if self._finished.is_set() or rank != self.recv_from:
+            # DEBUG
+            Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%i" % (self._finished.is_set(), rank, self.recv_from))
             return False
 
         if self.phase == "normal":
