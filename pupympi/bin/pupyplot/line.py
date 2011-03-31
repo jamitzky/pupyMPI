@@ -65,7 +65,7 @@ if __name__ == "__main__":
         xlabel = DATA_CHOICES[options.x_data]
         ylabel = DATA_CHOICES[options.y_data]
         
-        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True)
+        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type)
         
         tags = ds.get_tags()
         for tag in tags:

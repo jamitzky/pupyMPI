@@ -146,7 +146,7 @@ class DataSupplier(object):
         return filtered_data
     
     def _get_pos(self, label):
-        labels = ["tag", "runtype", "datasize", "total_time", "iteration_time", "throughput", "min_time", "max_time", "nodes"]
+        labels = ["tag", "runtype", "datasize", "total_time", "avg_time", "throughput", "min_time", "max_time", "nodes"]
         return labels.index(label)
     
     def get_tags(self):
@@ -157,7 +157,7 @@ class DataSupplier(object):
             raise Exception("No test called %s" % testname)
 
         filtered_data = self.get_raw_test_data(testname)
-
+        
         if tag:
             f_data = []
             for item in filtered_data:
