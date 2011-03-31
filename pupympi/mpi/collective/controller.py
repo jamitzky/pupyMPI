@@ -45,7 +45,7 @@ class Controller(object):
             req_class_list = self.cls_mapping[tag]
         except:
             Logger().warning("Unable to find collective list in the cls_mapping for tag %s" % tag)
-
+        
         for req_class in req_class_list:
             obj = req_class.accept(self.communicator, self.communicator.mpi.settings, self.cache, *args, **kwargs)
             if obj:
@@ -59,6 +59,8 @@ class Controller(object):
                     # Signal
                     self.mpi.unstarted_collective_requests_has_work.set()
                     self.mpi.has_work_event.set()
+                    # DEBUG
+                    #Logger().debug("adding and signalled allgather req obj")
 
                 return obj
 
