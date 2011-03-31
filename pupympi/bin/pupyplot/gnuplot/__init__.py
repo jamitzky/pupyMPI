@@ -29,7 +29,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
     
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", keep_temp_files=False):
         """
         ``base_filename`` 
              The filename without extension used through this plot. The output file 
@@ -64,6 +64,12 @@ class GNUPlot(object):
         print >> self.handle, 'set xtic nomirror rotate by %d' % xtic_rotate
         print >> self.handle, 'set key %s' % key
         
+        if axis_x_type == 'log':
+            print >> self.handle, 'set log x'
+
+        if axis_y_type == 'log':
+            print >> self.handle, 'set log y'
+        
         if tics_out:
             print >> self.handle, 'set tics out'
 
@@ -95,7 +101,7 @@ class GNUPlot(object):
             raise Exception('Data not in the same length. This is not bad.')
         
         for i in range(len(xdata)):
-            print >> fh, "%s    %s" % (xdata[0], ydata[0])
+            print >> fh, "%s    %s" % (xdata[i], ydata[i])
                 
         fh.close()
         return filepath
@@ -128,7 +134,7 @@ class LinePlot(GNUPlot):
             title, datafile = serie 
             plot_strs.append("'%s' with linespoints title '%s'" % (datafile, title))
              
-        print >> self.handle, "plot " + ", ".join(plot_strs)    
+        print >> self.handle, "plot " + ", ".join(plot_strs)
         
         # Call the super plot.
         super(LinePlot, self).plot()
