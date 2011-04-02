@@ -494,7 +494,7 @@ class MPI(Thread):
 
                     if not match:
                         # DEBUG
-                        #Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
+                        Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
                         new_data_list.append( item )
 
                 self.received_collective_data = new_data_list
@@ -563,43 +563,23 @@ class MPI(Thread):
             self.has_work_event.wait()
             self.has_work_event.clear()
 
-            # Schedule unstarted requests (outbound requests)
-            # TRW
-            #if self.unstarted_requests_has_work.is_set():
-            #    with self.unstarted_requests_lock:
-            #        for request in self.unstarted_requests:
-            #            #Logger().warning("Show some request!: %s" % request)
-            #            self.network.t_out.add_out_request(request)
-            #
-            #        self.unstarted_requests = []
-            #        self.unstarted_requests_has_work.clear()
-
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
-                #Logger().debug("raw_data_has_work is set")
                 with self.raw_data_lock:
                     with self.received_data_lock:
-                        #Logger().debug("Raw data - got both locks")
                         for element in self.raw_data_queue:
                             (rank, tag, ack, comm_id, raw_data) = element
                             data = pickle.loads(raw_data)
 
-                            if tag in constants.COLLECTIVE_TAGS:
-                                # DEBUG
-                                #Logger().debug("Raw data - collective request - rank:%i, tag:%s" % (rank, tag))
-                                
+                            if tag in constants.COLLECTIVE_TAGS:                                
                                 # This is part of a collective request, so it
                                 # should be added on a seperate queue and
                                 # matched later.
                                 with self.received_collective_data_lock:
-                                    # DEBUG
-                                    Logger().debug("Raw data - collective request - rank:%i, tag:%s" % (rank, tag))
                                     self.received_collective_data.append((rank, tag, ack, comm_id, data) )
                                     self.pending_collective_requests_has_work.set()
 
                             else:
-                                # DEBUG
-                                #Logger().debug("Raw data - normal request (rank:%i, tag:%s ack:%s comm_id:%s data:%s" % (rank, tag, ack, comm_id, data))
                                 # Normal request. Will be handled by the normal
                                 # received data queue.
                                 self.received_data.append( (rank, tag, ack, comm_id, data) )
@@ -619,15 +599,8 @@ class MPI(Thread):
                         self.unstarted_collective_requests = []
                 self.pending_collective_requests_has_work.set()
 
-            # DEBUG
             if self.pending_collective_requests_has_work.is_set():
-                # DEBUG
-                Logger().debug("pending collectives has work")
                 self.match_collective_pending()
-            #DEBUG
-            else:
-                # DEBUG
-                Logger().debug("pending collectives NOT set")
 
             # Pending requests are receive requests they may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
@@ -644,19 +617,6 @@ class MPI(Thread):
                         self.pending_requests.remove(request)
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
-
-
-        # The main loop is now done. We flush all the messages so there are not any outbound messages
-        # stuck in the pipline.
-        # TRW
-        #with self.unstarted_requests_lock:
-        #    for request in self.unstarted_requests:
-        #        self.network.t_out.add_out_request(request)
-        #    self.unstarted_requests = []
-        #    self.unstarted_requests_has_work.clear()
-        
-        # DEBUG
-        Logger().debug("--flushing queues")
         
         # TODO: Remove this when TRW is in effect again
         self.queues_flushed.set()
