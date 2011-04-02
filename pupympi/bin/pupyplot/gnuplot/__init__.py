@@ -17,7 +17,7 @@
 
 # HACKING! Making it possible to import everything from this module
 from pupyplot.gnuplot.color import *
-from pupyplot.gnuplot.tics import *
+from pupyplot.gnuplot import tics
 from pupyplot.gnuplot.fonts import Default as FONT_DEFAULT
 
 import os, subprocess
@@ -29,7 +29,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
     
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_y_format='time', axis_x_format="datasize", axis_x_type="lin", axis_y_type="lin", keep_temp_files=False):
         """
         ``base_filename`` 
              The filename without extension used through this plot. The output file 
@@ -50,6 +50,10 @@ class GNUPlot(object):
         file_path, file_handle = self.create_temp_file(self.base_filename, ".gnu")
         self.handle = file_handle
         self.handle_filepath = file_path
+        
+        # Set the formatter elements
+        self.axis_x_format = axis_x_format
+        self.axis_y_format = axis_y_format
         
         # Find the default font and use that if there is no font.
         if not font:
@@ -119,15 +123,25 @@ class LinePlot(GNUPlot):
         super(LinePlot, self).__init__(*args, **kwargs)
         
         self.series = []
+        self.xdata = None
         
     def add_serie(self, xdata, ydata, title='Plot title'):
         i = len(self.series)
+        self.xdata = xdata
         
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
         self.series.append((title, datafile))
-
+        
+    def tics(self):
+        formatter = getattr(tics, self.axis_x_format, None)
+        if formatter:
+            xtics = formatter(self.xdata)
+            print >> self.handle, "set xtics (%s)" % xtics
+    
     def plot(self):
+        self.tics()
+        
         # Write data to the .gnu file before we continue the plot.
         plot_strs = []
         for serie in self.series:
