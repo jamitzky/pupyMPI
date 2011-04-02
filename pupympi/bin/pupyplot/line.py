@@ -65,9 +65,10 @@ if __name__ == "__main__":
         xlabel = DATA_CHOICES[options.x_data]
         ylabel = DATA_CHOICES[options.y_data]
         
+        tags = ds.get_tags()
+        
         lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type)
         
-        tags = ds.get_tags()
         for tag in tags:
             # Extract the data from the data store.
             xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
