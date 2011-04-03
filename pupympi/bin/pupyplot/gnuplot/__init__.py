@@ -29,7 +29,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
     
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_y_format='time', axis_x_format="datasize", axis_x_type="lin", axis_y_type="lin", keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', keep_temp_files=False):
         """
         ``base_filename`` 
              The filename without extension used through this plot. The output file 
@@ -124,10 +124,12 @@ class LinePlot(GNUPlot):
         
         self.series = []
         self.xdata = None
+        self.ydata = None
         
     def add_serie(self, xdata, ydata, title='Plot title'):
         i = len(self.series)
         self.xdata = xdata
+        self.ydata = ydata
         
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
@@ -138,6 +140,11 @@ class LinePlot(GNUPlot):
         if formatter:
             xtics = formatter(self.xdata)
             print >> self.handle, "set xtics (%s)" % xtics
+
+        formatter = getattr(tics, self.axis_y_format, None)
+        if formatter:
+            ytics = formatter(self.ydata)
+            print >> self.handle, "set ytics (%s)" % ytics
     
     def plot(self):
         self.tics()

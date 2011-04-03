@@ -33,6 +33,17 @@ from pupyplot.lib.tagmapper import get_tag_mapping
 from pupyplot.parser.handle import Handle, DataSupplier, DataAggregator
 from pupyplot.gnuplot import LinePlot
 
+# This is more generic than a simple line plot. It should be moved. 
+FORMAT_CHOICES = {
+    'datasize' : 'datasize',
+    'total_time'  :'time',
+    'avg_time'  : 'time',
+    'min_time' : 'time',
+    'max_time' : 'time',
+    'throughput' :'throughput',
+    'nodes' : 'number',
+}
+
 if __name__ == "__main__":
     # Receive the parser and groups so we can add further elements 
     # if we want
@@ -65,9 +76,13 @@ if __name__ == "__main__":
         xlabel = DATA_CHOICES[options.x_data]
         ylabel = DATA_CHOICES[options.y_data]
         
+        # Format the axis. 
+        axis_x_format = FORMAT_CHOICES[options.x_data]
+        axis_y_format = FORMAT_CHOICES[options.y_data]
+        
         tags = ds.get_tags()
         
-        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type)
+        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
         
         for tag in tags:
             # Extract the data from the data store.
