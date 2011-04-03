@@ -34,14 +34,15 @@ from pupyplot.lib.aggregate import AGGR_USER_CHOICES
 # Define a function for building a simple parser useable in multiple
 # scripts.
 DATA_CHOICES = {
-                'datasize' : 'Data size',
-                'total_time'  :'Total time',
-                'avg_time'  : 'Average time',
-                'min_time' : 'Minimum time',
-                'max_time' : 'Maximum time',
-                'throughput' :'Throughput',
-                'nodes' : 'Number of participants',
-} 
+    'datasize' : 'Data size',
+    'total_time'  :'Total time',
+    'avg_time'  : 'Average time',
+    'min_time' : 'Minimum time',
+    'max_time' : 'Maximum time',
+    'throughput' :'Throughput',
+    'nodes' : 'Number of participants',
+}
+
  
 def plot_parser():
     DATA_FILTERS = ['zero', ]
