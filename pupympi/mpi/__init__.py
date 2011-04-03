@@ -487,14 +487,14 @@ class MPI(Thread):
                                 Logger().warning("A collective request is behaving strangely. Received none from accept_msg. request is: %s" % request)
                             if match:
                                 # DEBUG
-                                Logger().debug("match FOUND for - rank:%i, tag:%i" % (rank,tag))
+                                #Logger().debug("match FOUND for - rank:%i, tag:%i" % (rank,tag))
                                 if request.test():
                                     prune = True
                                 break
 
                     if not match:
                         # DEBUG
-                        Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
+                        #Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
                         new_data_list.append( item )
 
                 self.received_collective_data = new_data_list
