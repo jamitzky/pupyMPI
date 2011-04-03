@@ -28,49 +28,32 @@ class DisseminationAllGather(BaseCollectiveRequest):
         # - indexed by the iteration in which the communication is to occur
         self.send_to = []
         self.recv_from = []
+        self.send_ranges = [] # list of tuples of (range start, range end) where start may be larger than end, in the wrap-around case
         for i in xrange(self.iterations):
             self.send_to.append( (2**i+self.rank) % self.size )
             self.recv_from.append( (self.rank - (2**i)) % self.size )
+            start = (self.rank - (2**i) + 1) % self.size
+            self.send_ranges.append( (start,self.rank) )
         
-        # TODO: Fill in gap too
         # Filling gap
-        if self.gap_size:            
+        if self.gap_size:
             # Calculate rank for receive and send (own rank offset by half of next power of two)
-            self.send_to.append( (self.rank + 2**self.iterations) % self.size )
+            gap_send_to = (self.rank + 2**self.iterations) % self.size
+            
+            self.send_to.append( gap_send_to )
             self.recv_from.append( (self.rank - 2**self.iterations) % self.size )
             
-            
-            # TODO: Reinstate below to limit the size of the gap transmission to what is actually missing
-            ## Get missing gap
-            #gap_start = self.send_to+1
-            #gap = data_list[gap_start:gap_start+gap_size]
-            ## Check if the gap wraps around
-            #gap_wrap = gap_size - len(gap)
-            #if gap_wrap:
-            #    gap = gap+data_list[0:gap_wrap]
-            #    
-            ## Exchange gaps
-            #r_handle = self.communicator.irecv(recv_from, self.tag)
-            #s_handle = self.communicator.isend(gap, send_to, self.tag)
-            #res = self.communicator.waitall([r_handle,s_handle])
-            #
-            ## Fill out gap
-            #my_gap_start = self.rank+1
-            #received = res[0]
-            #j = 0
-            #for gdx in range(my_gap_start,my_gap_start+gap_size):
-            #    idx = gdx % size
-            #    gap_item = received[j]
-            #    data_list[idx] = gap_item
-            #    j += 1
+            gap_start = (gap_send_to + 1) % self.size
+            gap_end = (gap_start + self.gap_size) % self.size
+            self.send_ranges.append( (gap_start, gap_end) )
+            # DEBUG
+            #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
                 
         # Start by sending the message for iteration 0
         self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
         
         # Mark send communication as done for iteration 0
         self.send_to[0] = None
-        # DEBUG
-        #Logger().debug("rank:%i started rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
     
 
     @classmethod
@@ -119,11 +102,18 @@ class DisseminationAllGather(BaseCollectiveRequest):
             if i > iteration: # We should send only up to the iteration after the one found to have been completed
                 break
             elif r != None:
+                # Slice out the data that needs to be sent
+                (start,end) = self.send_ranges[i]
+                if end < start:
+                    slice = self.data_list[:end+1] + [None]*(start-end-1) + self.data_list[start:]
+                else:
+                    slice = [None]*start + self.data_list[start:end+1] + [None]*(self.size - (end+1))
+
                 # DEBUG
-                #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, self.data_list))
-                self.communicator._isend(self.data_list, r, constants.TAG_ALLGATHER)
-                self.send_to[i] = None
+                #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
                 
+                self.communicator._isend(slice, r, constants.TAG_ALLGATHER)
+                self.send_to[i] = None
                 
         # Check if we are done
         #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
