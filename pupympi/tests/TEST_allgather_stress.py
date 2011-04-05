@@ -40,6 +40,7 @@ evens_comm = world.comm_create(evens)
 odds_comm = world.comm_create(odds)
 lower_comm = world.comm_create(lower)
 
+
 # post requests
 if evens.rank() != -1:
     evens_handle_1 = evens_comm.iallgather((rank,rank))
@@ -53,6 +54,7 @@ if lower.rank() != -1:
     lower_handle_1 = lower_comm.iallgather((rank,rank))
     lower_handle_2 = lower_comm.iallgather((rank*3,rank*3))
     lower_handle_3 = lower_comm.iallgather((rank,rank,rank))
+
 
 # wait in different order    
 if lower.rank() != -1:
