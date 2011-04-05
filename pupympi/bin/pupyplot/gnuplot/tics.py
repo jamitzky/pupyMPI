@@ -23,21 +23,15 @@ import math
 
 __all__ = ('datasize', 'scale', 'time', 'throughput', 'number', )
 
-def _spread(points, no):
-    points.sort()
+def _spread(p_min, p_max, no):
+    skip = (p_max - p_min) / float(no)
+    p = p_min
+    final_points = [p_min]
     
-    length = max(points) - min(points)
-    skip = length / float(no)
-    
-    last_added = points.pop(0)
-    final_points = [last_added]
-    
-    for point in points:
-        diff = point - last_added
-        if diff > skip:
-            last_added = point
-            final_points.append(point)
-    
+    for _ in range(no-1):
+        p += skip
+        final_points.append(p)
+        
     return final_points
 
 def _format_datasize(bytecount, decimals=2):
@@ -52,7 +46,7 @@ def _format_datasize(bytecount, decimals=2):
     return fmt_str % (bytecount, "B")
 
 def _format_throughput(bytecount):
-    return self.format_size(bytecount, decimals=1)+"/s"
+    return _format_datasize(bytecount, decimals=2)+"/s"
 
 def _format_scale(scale): # {{{2
     return "%.0f" % scale
@@ -69,39 +63,67 @@ def _format_time(usecs): # {{{2
                 usecs = usecs / border_list[i-1][0]
             return "%.0f%s" % (usecs, bl[1])
 
-def _ensure_tic_space(data_points, axis_type, fit_points):
+def _ensure_tic_space(points, axis_type, fit_points, discrete):
     """
     A helper function removing tics if we figure there is not
     enough room for them.
+    
+    ..note:: The discrete parameter is not used. 
     """
-    if axis_type == 'lin':
-        data_points = _spread(data_points, fit_points)
-    
-    # FIXME: What to do with the log graphs?
-    
-    return data_points
-    
-def _simple_formatter(data_points, formatter, axis_type, fit_points):    
-    data_points = _ensure_tic_space(data_points, axis_type, fit_points)
+    def generate_bump_points(start, bump, end):
+        points = [start]
         
+        while start < end:
+            start += bump
+            points.append(start)
+            
+        return points
+    
+    p_min = min(points)
+    p_max = max(points)
+    
+    if True:
+        log_base = 32 # 10 in case of normal numbers. 
+        extender = 32
+    else:
+        log_base = 10
+        extender = 4
+        
+    if axis_type == 'lin':
+        skip_size = p_max - p_min
+        skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
+        print "bump", skip_bump
+        
+        points = generate_bump_points(p_min, skip_bump, p_max)
+        
+        while len(points) > fit_points:
+             points = points[::2]
+        
+        return points
+        
+    else:
+        pass
+        
+def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):    
+    data_points = _ensure_tic_space(points, axis_type, fit_points, discrete)
     # Return a list with the data points formatted.
     tics = []
     for item in data_points:
         label = formatter(item)
         tics.append("'%s' %d" % (label, item))
-    return ', '.join(tics)    
+    return ', '.join(tics)
     
-def scale(data_points, axis_type="lin", fit_points=20):
-    return _simple_formatter(data_points, _format_scale, axis_type, fit_points)
+def scale(points, axis_type="lin", fit_points=20):
+    return _simple_formatter(points, _format_scale, axis_type, fit_points)
 
-def datasize(data_points, axis_type="lin", fit_points=20):
-    return _simple_formatter(data_points, _format_datasize, axis_type, fit_points)
+def datasize(points, axis_type="lin", fit_points=20):
+    return _simple_formatter(points, _format_datasize, axis_type, fit_points, discrete=True)
 
-def time(data_points, axis_type="lin", fit_points=20):
-    return _simple_formatter(data_points, _format_time, axis_type, fit_points)
+def time(points, axis_type="lin", fit_points=20):
+    return _simple_formatter(points, _format_time, axis_type, fit_points)
 
-def throughput(data_points, axis_type="lin", fit_points=20):
-    return _simple_formatter(data_points, _format_throughput, axis_type, fit_points)
+def throughput(points, axis_type="lin", fit_points=20):
+    return _simple_formatter(points, _format_throughput, axis_type, fit_points)
 
-def throughput(data_points, axis_type="lin", fit_points=20):
-    return _simple_formatter(data_points, _format_number, axis_type, fit_points)
+def number(points, axis_type="lin", fit_points=20):
+    return _simple_formatter(points, _format_number, axis_type, fit_points, discrete=True)
