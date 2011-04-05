@@ -94,14 +94,19 @@ def _ensure_tic_space(points, axis_type, fit_points, discrete):
         skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
         
         points = generate_bump_points(p_min, skip_bump, p_max)
-        
-        while len(points) > fit_points:
-             points = points[::2]
-        
-        return points
-        
-    else:
+    elif axis_type == 'log':
         pass
+    
+        # Remove 0
+        try:
+            points.remove(0)
+        except:
+            pass
+        
+    while len(points) > fit_points:
+         points = points[::2]
+    
+    return points
         
 def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):    
     data_points = _ensure_tic_space(points, axis_type, fit_points, discrete)

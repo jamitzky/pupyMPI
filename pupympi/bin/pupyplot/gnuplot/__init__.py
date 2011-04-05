@@ -89,6 +89,9 @@ class GNUPlot(object):
         if axis_y_type == 'log':
             print >> self.handle, 'set log y'
         
+        self.axis_x_type = axis_x_type
+        self.axis_y_type = axis_y_type
+        
         if tics_out:
             print >> self.handle, 'set tics out'
             
@@ -134,7 +137,14 @@ class GNUPlot(object):
             raise Exception('Data not in the same length. This is not bad.')
         
         for i in range(len(xdata)):
-            print >> fh, "%s    %s" % (xdata[i], ydata[i])
+            x = xdata[i]
+            y = ydata[i]
+            
+            # Filter 0-data if we have log scales
+            if (x == 0 and self.axis_x_type == 'log') or (y == 0 and self.axis_y_type == 'log'):
+                continue
+            
+            print >> fh, "%s    %s" % (x, y)
                 
         fh.close()
         return filepath
@@ -181,7 +191,7 @@ class LinePlot(GNUPlot):
         
         formatter = getattr(tics, self.axis_x_format, None)
         if formatter:
-            xtics = formatter(xdata, fit_points=x_points)
+            xtics = formatter(xdata, fit_points=x_points, axis_type=self.axis_x_type)
             print >> self.handle, "set xtics (%s)" % xtics
 
         formatter = getattr(tics, self.axis_y_format, None)
@@ -189,7 +199,7 @@ class LinePlot(GNUPlot):
             # Calculate the proper number of fit points.
             y_points = int(float(self.height) / self.width * x_points)
             
-            ytics = formatter(ydata, fit_points=y_points)
+            ytics = formatter(ydata, fit_points=y_points, axis_type=self.axis_y_type)
             print >> self.handle, "set ytics (%s)" % ytics
     
     def plot(self):
