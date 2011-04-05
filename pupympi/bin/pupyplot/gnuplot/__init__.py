@@ -140,11 +140,20 @@ class GNUPlot(object):
             x = xdata[i]
             y = ydata[i]
             
-            # Filter 0-data if we have log scales
-            if (x == 0 and self.axis_x_type == 'log') or (y == 0 and self.axis_y_type == 'log'):
-                continue
-            
-            print >> fh, "%s    %s" % (x, y)
+            # Check for list to make this function as generic as possible. 
+            if not hasattr(x, "__iter__"):
+                x = [x]
+                
+            if not hasattr(y, "__iter__"):
+                y = [y]
+                
+            for xi in x:
+                for yi in y:
+                    # Filter 0-data if we have log scales
+                    if (xi == 0 and self.axis_x_type == 'log') or (yi == 0 and self.axis_y_type == 'log'):
+                        continue
+                    
+                    print >> fh, "%s    %s" % (xi, yi)
                 
         fh.close()
         return filepath
@@ -157,20 +166,21 @@ class GNUPlot(object):
             for filepath in self.temp_files:
                 os.unlink(filepath)
 
-class LinePlot(GNUPlot):
-    def __init__(self, *args, **kwargs):
-        super(LinePlot, self).__init__(*args, **kwargs)
-        
-        self.series = []
-        
-        self.combined_x_data = []
-        self.combined_y_data = []
-        
     def add_serie(self, xdata, ydata, title='Plot title'):
         i = len(self.series)
         
-        self.combined_x_data.extend(xdata)
-        self.combined_y_data.extend(ydata)
+        def flatten(alist):
+            l = []
+            
+            for item in alist:
+                if hasattr(item, "__iter__"):
+                    l.extend(flatten(item))
+                else:
+                    l.append(item)
+            return l
+        
+        self.combined_x_data.extend(flatten(xdata))
+        self.combined_y_data.extend(flatten(ydata))
         
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
@@ -202,6 +212,16 @@ class LinePlot(GNUPlot):
             ytics = formatter(ydata, fit_points=y_points, axis_type=self.axis_y_type)
             print >> self.handle, "set ytics (%s)" % ytics
     
+
+class LinePlot(GNUPlot):
+    def __init__(self, *args, **kwargs):
+        super(LinePlot, self).__init__(*args, **kwargs)
+        
+        self.series = []
+        
+        self.combined_x_data = []
+        self.combined_y_data = []
+        
     def plot(self):
         self.tics()
         
@@ -215,3 +235,26 @@ class LinePlot(GNUPlot):
         
         # Call the super plot.
         super(LinePlot, self).plot()
+        
+class ScatterPlot(GNUPlot):
+    def __init__(self, *args, **kwargs):
+        super(ScatterPlot, self).__init__(*args, **kwargs)
+        
+        self.series = []
+        
+        self.combined_x_data = []
+        self.combined_y_data = []
+        
+    def plot(self):
+        self.tics()
+        
+        # Write data to the .gnu file before we continue the plot.
+        plot_strs = []
+        for serie in self.series:
+            title, datafile = serie 
+            plot_strs.append("'%s' pointtype %d title '%s'" % (datafile, self.get_next_pointtype(), title))
+             
+        print >> self.handle, "plot " + ", ".join(plot_strs)
+        
+        # Call the super plot.
+        super(ScatterPlot, self).plot()
