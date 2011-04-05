@@ -114,7 +114,7 @@ def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):
     tics = []
     for item in data_points:
         label = formatter(item)
-        tics.append("'%s' %d" % (label, item))
+        tics.append("'%s' %s" % (label, item))
     return ', '.join(tics)
     
 def scale(points, axis_type="lin", fit_points=20):
