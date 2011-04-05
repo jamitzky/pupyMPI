@@ -136,7 +136,7 @@ CMD_ABORT = 1
 # Used to check if an instance is still alive
 CMD_PING = 3
 
-# Used ot pack a running instance into a file.
+# Used to pack a running instance into a file.
 CMD_MIGRATE_PACK = 4 # Pack the entire system.
 
 # Used to inspect registers.
