@@ -101,7 +101,7 @@ def plot_parser():
 
     # Extending your plot
     extending_group = OptionGroup(parser, 'Extending the plots', 'Options allowing you to extend the generated plots beyond the somewhat limited possibilites of the plot script')
-    extending_group.add_option('--keep-temp-file', action='store_true', default=False, help='Do not delete the generated files. This will allow you to edit the .dat and .gnu files and customize your plot this way')
+    extending_group.add_option('--keep-temp-files', dest='keep_temp', action='store_true', default=False, help='Do not delete the generated files. This will allow you to edit the .dat and .gnu files and customize your plot this way')
     extending_group.add_option('--extra-plot-lines', action='append', default=[], help='Insert extra plot lines. This means that it is possible to insert a guideline by entering log(x) or x*2')
     parser.add_option_group(extending_group)
     groups['extending'] = extending_group

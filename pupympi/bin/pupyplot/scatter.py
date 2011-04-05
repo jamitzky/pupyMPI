@@ -79,7 +79,7 @@ if __name__ == "__main__":
         
         tags = ds.get_tags()
         
-        sp = ScatterPlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=True, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
+        sp = ScatterPlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
         
         for tag in tags:
             # Extract the data from the data store.
