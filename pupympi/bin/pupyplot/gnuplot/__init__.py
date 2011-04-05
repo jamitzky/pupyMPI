@@ -41,6 +41,9 @@ class GNUPlot(object):
         """
         self.plot_cmd_args = []
         
+        # Point types
+        self.pointtypes = 0
+        
         self.height = height
         self.width = width
         
@@ -78,6 +81,7 @@ class GNUPlot(object):
         print >> self.handle, 'set ylabel "%s"' % ylabel
         print >> self.handle, 'set xtic nomirror rotate by %d' % xtic_rotate
         print >> self.handle, 'set key %s' % key
+        print >> self.handle, 'set pointsize 1.5'
         
         if axis_x_type == 'log':
             print >> self.handle, 'set log x'
@@ -87,7 +91,18 @@ class GNUPlot(object):
         
         if tics_out:
             print >> self.handle, 'set tics out'
-
+            
+    def get_next_pointtype(self):
+        """Helper function for finding the point types. They are not sorted!!"""
+        reached = self.pointtypes
+        types = [0, 4, 5, 6, 7, 3, 2, 1]
+        self.pointtypes += 1
+        
+        try:
+            return types[reached]
+        except:
+            return reached
+        
     def create_temp_file(self, file_part, extension=".dat"):
         """
         Create a temporary file, add a prefix and extension
@@ -184,7 +199,7 @@ class LinePlot(GNUPlot):
         plot_strs = []
         for serie in self.series:
             title, datafile = serie 
-            plot_strs.append("'%s' with linespoints title '%s'" % (datafile, title))
+            plot_strs.append("'%s' with linespoints pointtype %d title '%s'" % (datafile, self.get_next_pointtype(), title))
              
         print >> self.handle, "plot " + ", ".join(plot_strs)
         

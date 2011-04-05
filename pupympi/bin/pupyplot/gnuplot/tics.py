@@ -92,7 +92,6 @@ def _ensure_tic_space(points, axis_type, fit_points, discrete):
     if axis_type == 'lin':
         skip_size = p_max - p_min
         skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
-        print "bump", skip_bump
         
         points = generate_bump_points(p_min, skip_bump, p_max)
         
