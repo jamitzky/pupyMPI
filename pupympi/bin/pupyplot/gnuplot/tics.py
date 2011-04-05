@@ -49,7 +49,7 @@ def _format_throughput(bytecount):
     return _format_datasize(bytecount, decimals=2)+"/s"
 
 def _format_scale(scale): # {{{2
-    return "%.0f" % scale
+    return "%.2f" % scale
 
 def _format_number(number):
     return "%d" % int(number)

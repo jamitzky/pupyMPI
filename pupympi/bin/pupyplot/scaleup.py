@@ -49,6 +49,8 @@ if __name__ == "__main__":
     # if we want
     parser, groups = plot_parser()
     
+    # Extend the parser to let users input which tag should be the baseline tag. 
+    
     # Parse it. This will setup logging and other things.    
     options, args = parse(parser)
     
@@ -68,20 +70,25 @@ if __name__ == "__main__":
     # this be one. 
     all_tests = ds.get_tests()
     for testname in all_tests:
+        if testname != 'Reduce':
+            continue
         
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
         xlabel = DATA_CHOICES[options.x_data]
-        ylabel = DATA_CHOICES[options.y_data]
+        ylabel = "Speedup" # Always
         
         # Format the axis. 
         axis_x_format = FORMAT_CHOICES[options.x_data]
-        axis_y_format = FORMAT_CHOICES[options.y_data]
+        axis_y_format = "scale" # Always. 
         
         tags = ds.get_tags()
+        tags.sort()
         
+        base_tag = tags[0]
+        base_x_data, base_y_data = None, None
+
         lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
-        
         for tag in tags:
             # Extract the data from the data store.
             xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
@@ -90,8 +97,21 @@ if __name__ == "__main__":
             da = DataAggregator(ydata)
             ydata = da.getdata(options.y_data_aggr)
             
-            title = tag_mapper.get(tag, tag)
-            lp.add_serie(xdata, ydata, title=title)
-                    
+            if tag == base_tag:
+                base_x_data, base_y_data = xdata, ydata
+                ydata_plot = [1 for _ in ydata]
+                title = tag_mapper.get(tag, tag) + " (baseline)"
+            else:            # Calculate the speedup data
+                ydata_plot = []
+                for i in range(len(ydata)):
+                    t = float(ydata[i])
+                    n = float(base_y_data[i])
+                    speedup = t/n
+                    ydata_plot.append(speedup)
+                    title = tag_mapper.get(tag, tag)
+            
+            
+            lp.add_serie(xdata, ydata_plot, title=title)
+        
         lp.plot()
         lp.close()

@@ -124,12 +124,12 @@ class GNUPlot(object):
         return file_part, fh
     
     def plot(self):
-        args = ["gnuplot", ]
-        args.extend(self.plot_cmd_args)
-        args.append(self.handle_filepath)
+        args = ["gnuplot", self.handle_filepath]
+        #args.extend(self.plot_cmd_args)
+        #args.append(self.handle_filepath)
+        #print args
+        retcode = subprocess.call(args)
         
-        subprocess.Popen(args).wait()
-            
     def write_datafile(self, part, xdata, ydata):
         filepath, fh = self.create_temp_file(part)
         
