@@ -29,7 +29,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
     
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
         """
         ``base_filename`` 
              The filename without extension used through this plot. The output file 
@@ -39,6 +39,11 @@ class GNUPlot(object):
              The datafiles will use the <base_filename> as a prefix and will use
              the .dat suffix.
         """
+        self.plot_cmd_args = []
+        
+        self.height = height
+        self.width = width
+        
         # Save the user supplied arguments
         self.base_filename = base_filename
         self.keep_temp_file = keep_temp_files
@@ -58,9 +63,15 @@ class GNUPlot(object):
         # Find the default font and use that if there is no font.
         if not font:
             font = FONT_DEFAULT()
-        
+            
+        if colors:
+            color_str = "color"
+        else:
+            color_str = "monochrome"
+            self.plot_cmd_args.append("-mono")
+            
         # Write the basics
-        print >> self.handle, "set term postscript eps enhanced color font '%s' fontfile '%s' 24 size %d,%d" % (font.name, font.path, width, height)
+        print >> self.handle, "set term postscript eps enhanced %s font '%s' fontfile '%s' 24 size %d,%d" % (color_str, font.name, font.path, width, height)
         print >> self.handle, 'set output "%s.eps"' % base_filename
         print >> self.handle, 'set title "%s"' % title
         print >> self.handle, 'set xlabel "%s"' % xlabel
@@ -95,8 +106,11 @@ class GNUPlot(object):
         return file_part, fh
     
     def plot(self):
-        args = ["gnuplot", self.handle_filepath]
-        subprocess.Popen(args)
+        args = ["gnuplot", ]
+        args.extend(self.plot_cmd_args)
+        args.append(self.handle_filepath)
+        
+        subprocess.Popen(args).wait()
             
     def write_datafile(self, part, xdata, ydata):
         filepath, fh = self.create_temp_file(part)
@@ -123,27 +137,44 @@ class LinePlot(GNUPlot):
         super(LinePlot, self).__init__(*args, **kwargs)
         
         self.series = []
-        self.xdata = None
-        self.ydata = None
+        
+        self.combined_x_data = []
+        self.combined_y_data = []
         
     def add_serie(self, xdata, ydata, title='Plot title'):
         i = len(self.series)
-        self.xdata = xdata
-        self.ydata = ydata
+        
+        self.combined_x_data.extend(xdata)
+        self.combined_y_data.extend(ydata)
         
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
         self.series.append((title, datafile))
         
     def tics(self):
+        def null_filter(tic_list):
+            final = []
+            for tic in tic_list:
+                if tic is not None:
+                    final.append(tic)
+                    
+            return final
+        
+        x_points = 20 # This could be "lifted" into a cmd line argument.
+        xdata = null_filter(self.combined_x_data)
+        ydata = null_filter(self.combined_y_data)
+        
         formatter = getattr(tics, self.axis_x_format, None)
         if formatter:
-            xtics = formatter(self.xdata)
+            xtics = formatter(xdata, fit_points=x_points)
             print >> self.handle, "set xtics (%s)" % xtics
 
         formatter = getattr(tics, self.axis_y_format, None)
         if formatter:
-            ytics = formatter(self.ydata)
+            # Calculate the proper number of fit points.
+            y_points = int(float(self.height) / self.width * x_points)
+            
+            ytics = formatter(ydata, fit_points=y_points)
             print >> self.handle, "set ytics (%s)" % ytics
     
     def plot(self):

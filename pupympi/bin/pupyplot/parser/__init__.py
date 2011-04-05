@@ -57,6 +57,7 @@ class Parser(object):
             # and it is messy to handle this logic here.
             try:
                 datasize, total_time, iteration_time, throughput, runtype, time_min, time_max = self.from_extract_data(row)
+                throughput = throughput*1024*1024
                 data_item = tag, runtype, datasize, total_time, iteration_time, throughput, time_min, time_max, nodes
                 self.data.append(data_item)      
             except Exception, e:
