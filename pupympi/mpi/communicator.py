@@ -683,10 +683,7 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._send(content, destination, tag)
-
-    def _send(self, content, destination, tag = constants.MPI_TAG_ANY):
-        return self._isend(content, destination, tag).wait()
+        return self._isend(content, destination, tag).wait()        
 
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
@@ -713,10 +710,10 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._recv(source, tag)
-
-    def _recv(self, source, tag = constants.MPI_TAG_ANY):
         return self._irecv(source, tag).wait()
+
+    #def _recv(self, source, tag = constants.MPI_TAG_ANY):
+    #    return self._irecv(source, tag).wait()
 
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
@@ -775,7 +772,7 @@ class Communicator:
             recvhandle = self._irecv(source, recvtag)
 
         if dest is not None:
-            self._send(senddata, dest, sendtag)
+            self._isend(senddata, dest, sendtag).wait()
 
         if source is not None:
             return recvhandle.wait()
