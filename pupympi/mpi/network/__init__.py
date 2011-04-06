@@ -297,12 +297,9 @@ class BaseCommunicationHandler(threading.Thread):
         """
         Put a requested out operation (eg. send) on the out list
         """
-        
-        # FIXME: All this jiggling of and with request data should be done in the request object instead of here
+
         # Create the proper data structure and pickle the data
         request.prepare_send()
-        #request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
-        #                               tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
 
         # Find a socket and port of recipient process
         connection_info = self.network.all_procs[request.global_rank]['connection_info']
