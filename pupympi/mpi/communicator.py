@@ -336,6 +336,8 @@ class Communicator:
 
         return handle
 
+    # TODO: This is now just a needless indirection used twice in this module and once from mpi.__init__
+    #       unless we want to do weird things here we should reduce complexity and call directly on the network thread
     # Add an outbound request to the queue
     def _add_unstarted_request(self, request):
         self.network.t_out.add_out_request(request)
@@ -527,9 +529,7 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
-        # Add the request to the MPI layer unstarted requests queue. We
-        # signal the condition variable to wake the MPI thread and have
-        # it handle the request start.
+        # Add the send request but wait on the recv handle
         self._add_unstarted_request(dummyhandle)
         return handle
 
