@@ -297,20 +297,19 @@ class BaseCommunicationHandler(threading.Thread):
         """
         Put a requested out operation (eg. send) on the out list
         """
-
-        # Find the global rank of recipient process
-        global_rank = request.communicator.group().members[request.participant]['global_rank']
+        
+        # FIXME: All this jiggling of and with request data should be done in the request object instead of here
+        # Create the proper data structure and pickle the data
+        request.prepare_send()
+        #request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
+        #                               tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
 
         # Find a socket and port of recipient process
-        connection_info = self.network.all_procs[global_rank]['connection_info']
-        connection_type = self.network.all_procs[global_rank]['connection_type']
-
-        # Create the proper data structure and pickle the data
-        request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
-                                       tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
+        connection_info = self.network.all_procs[request.global_rank]['connection_info']
+        connection_type = self.network.all_procs[request.global_rank]['connection_type']
 
         # TODO: This call should be extended to allow asking for a persistent connection
-        client_socket, newly_created = self.socket_pool.get_socket(global_rank, connection_info, connection_type)
+        client_socket, newly_created = self.socket_pool.get_socket(request.global_rank, connection_info, connection_type)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
             self.network.t_in.add_in_socket(client_socket)

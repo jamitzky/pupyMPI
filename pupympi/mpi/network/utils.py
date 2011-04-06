@@ -103,6 +103,20 @@ def get_raw_message(client_socket, bytecount=4096):
 
 
 def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_pickled=False):
+    """
+    Internal function to
+    - serialize payload if needed
+    - measure payload
+    - construct and append header
+    
+    The header format has following fields:
+    length of payload
+    rank of sender
+    system cmd
+    mpi or system tag
+    acknowledge needed
+    communicator id    
+    """
     if is_pickled:
         pickled_data = data
     else:
