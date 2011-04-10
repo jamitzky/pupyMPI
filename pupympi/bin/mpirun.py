@@ -351,7 +351,7 @@ if  __name__ == "__main__":
         run_options.extend( user_options )
 
         # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.x_forward, options.process_io, rank )
+        p = remote_start(host, run_options, options.x_forward, options.process_io, options.logdir, rank )
         process_list.append(p)
 
     """
