@@ -11,4 +11,4 @@ pupyMPI documentation
     Using custom operations in collective operations <tut_operations>
     Working with NumPy <tut_numpy>
     Reference manual <api>
-    Changes in pupyMPI <changelog>
+   Changes in pupyMPI <changelog>

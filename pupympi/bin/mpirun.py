@@ -61,12 +61,12 @@ def parse_options(start_mode):
     if start_mode == "normal":
         parser.add_option('-c', '--np', dest='np', type='int', help='The number of processes to start.')
 
-    # Hostfile information grouped together. 
+    # Hostfile information grouped together.
     parser_hf_group = OptionGroup(parser, "Hostfile",
             "Settings relating to mapping the starting processes to hosts. This is very important if you want optimal performance from your cluster. Optimal mapping will ensure that proper intra connects are used whenever possible and that slower nodes in the cluster will get mapped to fewer ranks.")
 
     parser_hf_group.add_option('--host-file', dest='hostfile', default="hostfile", help='Path to the host file defining all the available machines the processes should be started on. If not given, all processes will be started on localhost')
-    parser_hf_group.add_option('--host-file-scheduler', dest='hostmap_scheduler', default='round_robin', 
+    parser_hf_group.add_option('--host-file-scheduler', dest='hostmap_scheduler', default='round_robin',
         help="The mapper from available hosts to (host, rank) pairs. Builtin options are (round_robin, greedy). Defaults to %default. It is also possible to specify a custom mapper in the format for X.Y where X is the Python module to import (hence it must be in the path) and Y is the actual function to use. See the manual for how to write you own mappers.")
     parser_hf_group.add_option('--host-file-sections', dest='hostfile_sections', help='A comma seperated list with the sections in the hostfile to use. This acts as a filter, so if not given all sections in the hostfile will be used. See the manual for more information about the hostfile format and possibilities.')
     parser_hf_group.add_option('--host-file-disable-overmapping', dest='disable_overmapping', default=False, action="store_true", help="Disable overmapping of processes to CPUs. This means that the system will not start if the hostfile does not provide sufficient hosts to contain the system.")
@@ -79,12 +79,10 @@ def parse_options(start_mode):
     parser_debug_group.add_option('-v', '--verbosity', dest='verbosity', type='int', default=1, help='How much information should be logged and printed to the screen. Should be an integer between 1 and 3, defaults to %default.')
     parser_debug_group.add_option('-d', '--debug', dest='debug', action='store_true', help='Give you a lot of input')
 
-    # FIXME: What is this? I can see its used at all.
-    parser_debug_group.add_option('-u', '--unbuffered', dest='buffer', action='store_true', help='Try not to buffer')
     parser_debug_group.add_option('-q', '--quiet', dest='quiet', action='store_true', help='Give you no input')
-    parser_debug_group.add_option('-l', '--log-file', dest='logfile', default="mpi", help='Which logfile the system should log to. Defaults to %default(.log)')
+    parser_debug_group.add_option('-l', '--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR, help='Which directory the system should log to. Defaults to %default(.log). System logging includes traces from yappi or pupyprof and benchmark results')
     parser.add_option_group( parser_debug_group )
-    
+
     parser_utils_group = OptionGroup(parser, "Utilities", "Settings for handling utilities. See the manual for a description or bin/utils/ for the actual utilities.")
     parser_utils_group.add_option('--cmd-handle', dest='cmd_handle', help="Path to where mpirun.py should place the run handle file (for utility usage). ")
     parser_utils_group.add_option('--disable-utilities', dest='disable_utilities', action='store_true', default=False)
@@ -98,6 +96,7 @@ def parse_options(start_mode):
     parser_adv_group.add_option('--single-communication-thread', dest='single_communication_thread', action='store_true', help="Use this if you don't want MPI to start two different threads for communication handling. This will limit the number of threads to 3 instead of 4.")
     parser_adv_group.add_option('--disable-full-network-startup', dest='disable_full_network_startup', action='store_true', help="Do not initialize a socket connection between all pairs of processes. If not a second chance socket pool algorithm will be used. See also --socket-pool-size")
     parser_adv_group.add_option('--socket-pool-size', dest='socket_pool_size', type='int', default=20, help="Sets the size of the socket pool. Only used it you supply --disable-full-network-startup. Defaults to %default")
+    parser_adv_group.add_option('--x-forward', dest='x_forward', default=False, action='store_true', help='Turn on X forwarding. Used when you need a pupyMPI process to use X, eg. for graphical output. Defaults to %default')
     parser_adv_group.add_option('--process-io', dest='process_io', default="direct", help='How to forward I/O (stdout, stderr) from remote process. Options are: none, direct, asyncdirect, localfile or remotefile. Defaults to %default')
     parser_adv_group.add_option('--enable-profiling', dest='enable_profiling', action='store_true', help="Whether to enable profiling of MPI scripts. Profiling data are stored in ./logs/pupympi.profiling.rank<rank>. Defaults to off.")
     parser_adv_group.add_option('--disable-unixsockets', dest='unixsockets', default=True, action='store_false', help="Switch to turn off the optimization using unix sockets instead of tcp for intra-node communication")
@@ -276,15 +275,15 @@ if  __name__ == "__main__":
         options.np = len(resume_handle['procs'])
 
     # Start the logger
-    logger = Logger(options.logfile, "mpirun", options.debug, options.verbosity, options.quiet)
+    logger = Logger(os.path.join(options.logdir,"mpi"), "mpirun", options.debug, options.verbosity, options.quiet)
 
     # Map processes/ranks to hosts/CPUs
     hostfilemapper = hostfile.mappers.find_mapper(options.hostmap_scheduler)
-    
+
     limit_to = []
     if options.hostfile_sections:
         limit_to = [s.strip() for s in options.hostfile_sections.split(",")]
-        
+
     parsed_hosts, cpus, max_cpus = hostfile.parse_hostfile(options.hostfile,limit_to=limit_to)
     mappedHosts = hostfilemapper(parsed_hosts, cpus, max_cpus, options.np, overmapping=not options.disable_overmapping)
 
@@ -305,14 +304,13 @@ if  __name__ == "__main__":
         executeable = os.path.join( os.getcwd(), executeable)
 
     # Mimic our cli call structure also for remotely started processes
-
     global_run_options = [options.remote_python, "-u", executeable, "--mpirun-conn-host=%s" % mpi_run_hostname,
             "--mpirun-conn-port=%d" % mpi_run_port,
             "--size=%d" % options.np,
             "--socket-pool-size=%d" % options.socket_pool_size,
             "--verbosity=%d" % options.verbosity,
             "--process-io=%s" % options.process_io,
-            "--log-file=%s" % options.logfile,
+            "--logdir=%s" % options.logdir,
             "--start-type=%s" % start_type,
             "--settings=%s" % options.settings
     ]
@@ -353,7 +351,7 @@ if  __name__ == "__main__":
         run_options.extend( user_options )
 
         # Now start the process and keep track of it
-        p = remote_start(host, run_options, options.process_io, rank)
+        p = remote_start(host, run_options, options.x_forward, options.process_io, options.logdir, rank )
         process_list.append(p)
 
     """

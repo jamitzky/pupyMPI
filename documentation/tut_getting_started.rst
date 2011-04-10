@@ -1,49 +1,78 @@
+.. _getting-started: 
+
 Getting started with pupyMPI
 =================================================================================
 
-.. _getting-started: 
-
 pupyMPI is a pure python MPI implementation of MPI 1.3 with some added features.
-This document is not a manual of general MPI concepts byt rather a reference
+This document is not a manual of general MPI concepts but rather a reference
 manual for pupyMPI.
 
-Required software and versions
--------------------------------------------------------------------------------
-pupyMPI requires Python version 2.6 or later, due to some process management
-tool in the subprocess module. It has not been tested with Python 3. 
-    
-You will also need to have ssh installed as it is used when starting remote
-processes. For convenience it is recommended to have keybased SSH login working
-so that you do not need to type in a password for every MPI process you start.
+In the following we assume that you are familiar with the basic
+concepts of MPI. If you are not, there are lots of excellent introductions out
+there: 
+http://www.google.com/search?q=introduction+to+mpi
 
-You can check that ssh works locally by doing ::
+We also assume that you have not previously used pupyMPI so we will start from
+scratch. If you know you have the required stuff installed and your pupyMPI
+installation is working you can skip to the section :ref:`your_first_pupympi_program`.
+
+With that out of our way - let's get this party started.
+
+.. _requirements_for_pupympi:
+
+Requirements for pupyMPI
+-------------------------------------------------------------------------------
+pupyMPI requires
+
+* Python (version 2.6 or 2.7)
+* SSH
+* Linux or Mac OSX
+
+pupyMPI uses SSH to start processes on remote hosts so you will need to have
+SSH installed. For your own sanity you should have passwordless access or you will
+be very busy typing passwords for each MPI process you start up.
+
+When you are just developing or testing you can of course run everything on
+*localhost*. But eventually you will want network access to one or more hosts
+where you can spawn and run your MPI processes. The way you tell pupyMPI where
+to spawn remote processes is via the ``hostfile``. You can read more about it here
+:ref:`using_the_hostfile` but just ignore it for now since
+pupyMPI defaults to localhost if it does not find a proper hostfile.
+
+You can check that SSH is installed and works (locally) with::
 
     ssh localhost
 
+
 This should give you a shell on your own machine which you can of course just
-exit from again.
+exit from again. Note that if you are asked for a password in the terminal you
+have yet to setup proper passwordless access (see http://linuxproblem.org/art_9.html).
+
+When you want to run pupyMPI on other hosts (remote machines) you should ensure
+that you have the same access, ie. try::
+    
+    ssh SOME_REMOTE_HOST
 
 Some installations do not have Python 2.6 as the global default Python installation. 
-You can verify that you have the right version with::
-    
-    python -V
+This is perfectly fine as long as there is a Python 2.6 available via the command
+``python2.6``
 
-In case you see something else than 2.6.x or 2.7.x, find the path to Python 2.6
-and remember it, eg.::
-    
-    which python2.6
-     
-You will now need to tell pupyMPI where to find Python 2.6 when you run stuff,
-and you'll do this by adding the parameter ``--remote-python=path_to_python2.6``
-after ``mpirun.py``
+So if you test with::
 
-You also need SSH access to one or more hosts.  This may just be *localhost*, as long as you're just testing. 
-SSH must have been set up to allow direct access (see http://linuxproblem.org/art_9.html).
+    python2.6 -V
 
-The way to tell pypuMPI where to spawn remote processes is via the ``hostfile``.
-A sample version of a hostfile is included in pupyMPI under the name ``sample_hostfile``.
-As long as you wish all your stuff to run on localhost you can just ignore having a proper hostfile.
-This is because pupyMPI by default will try to place all pupyMPI instances on localhost if no hostfile is found.
+And you get the output ``Python 2.6.x`` your Python installation should be fine.
+
+pupyMPI assumes that your local filesystem is mirrored on the host you ssh into.
+This is the case when using localhost and on most cluster front-ends.
+
+In the case where the python interpreter is somewhere else - eg. you run pupyMPI from
+a host where Python 2.6 is at ``/usr/bin/python`` but on the remote nodes Python
+2.6 is at ``/usr/local/bin/python2.6`` - you will have to tell pupyMPI the path to
+the remote python to use. This is done by adding the parameter ``--remote-python=PATH_TO_PYTHON``
+eg.::
+
+    mpirun.py -c 4 --remote-python=/usr/local/bin/python2.6 hello_world.py
 
 
 Differing conventions
@@ -58,82 +87,60 @@ The most important are:
 * 1 or 0 replaced with True and False
 * NULL handles replaced with None
 * Local function changes: check the documentation and make no assumptions!
- 
+
+.. _your_first_pupympi_program:
+
 Your first pupyMPI program
 -------------------------------------------------------------------------------
-Create a file called pupympi_test1.py and add the following code to it::
-     
-     from mpi import MPI
-     mpi = MPI()
+The minimal pupyMPI program only needs three obligatory lines of code::
 
-     if mpi.MPI_COMM_WORLD.rank() == 0:
-         mpi.MPI_COMM_WORLD.send("Hello World!", 1)
-     else:
-         message = mpi.MPI_COMM_WORLD.recv(0)
-         print message
-     mpi.finalize()
-     
-From the command line, run ``mpirun.py -c 2 pupympi_test1.py``.You should receive the message: "Hello World!"
-If you did not you might have run into one of these problems:
-
- * **pupyMPI complains about a Python version problem** You probably need to be explicit about your Python, as mentioned above. You'll also probably have to kill stuck Python processes by ``killall python`` (or ``killall Python``)
- * **SSH password prompt** Ensure password-less access
- * **No message appears and your script hangs** ctrl-c, kill all Python processes and use the ``-d`` parameter in addition to the others. You will get a metric ton of output. 
- 
-The above test example introduces the ``MPI_COMM_WORLD`` communicator holding all the
-started processes.
-
-.. note:: If you run the above script with more than 2 participants, the script will hang. This is due to the participants with higher rank than 1. These will try to receive a message from rank 0, but such a message is never sent.
-
-Filtering messages with tags
--------------------------------------------------------------------------------
-Unlike the previous example it's possible to filter which type of message you
-want to receive based on a tag. A very simple example::
+    from mpi import MPI # import the pupyMPI library
+    mpi = MPI() # initialize pupyMPI
     
-     from mpi import MPI
-     from mpi.constants import MPI_SOURCE_ANY
-     mpi = MPI()
-     world = mpi.MPI_COMM_WORLD
-     rank = world.rank()
-     
-     
-     RECEIVER = 2
-     if rank == 0:
-         TAG = 1
-         world.send("Hello World from 0!", RECEIVER, tag=TAG)
-     elif rank == 1:
-         TAG = 2
-         world.send("Hello World from 1!", RECEIVER, tag=TAG)
-     elif rank == 2:
-         FIRST_TAG = 1
-         SECOND_TAG = 2
-         msg1 = world.recv(MPI_SOURCE_ANY, tag=FIRST_TAG)
-         msg2 = world.recv(MPI_SOURCE_ANY, tag=SECOND_TAG)
-         
-         print msg1
-         print msg2
-     else:
-        # disregard other processes
-        pass
-        
-     mpi.finalize()
-     
-The above example will always print the message from rank 0 before the one
-from rank 1. The first :func:`recv <mpi.communicator.Communicator.recv>` 
-call will accept messages from any rank, but only with the correct tag. This
-is a very usefull way to group data and let different subsystems handle it. 
+    # If you want your program to do something, do it here.
+    
+    mpi.finalize() # shut down pupyMPI nicely
 
-.. _tagrules:
+But programs that do nothing are not much fun, so instead create a file called
+``pupympi_test1.py`` and add the following code to it::
 
-Rules for tags
+    from mpi import MPI
+    mpi = MPI()
+    
+    world = mpi.MPI_COMM_WORLD
+    
+    rank = world.rank()
+    
+    message = "Hello world, from rank:%i" % rank
+    
+    if rank == 0:
+        res = world.recv(1)
+        print res    
+    elif rank == 1:
+        world.send(message,0)   
+    
+    mpi.finalize()
+
+From the command line, run ``mpirun.py -c 2 pupympi_test1.py``.You should receive the message: "Hello world, from rank:1".
+
+If you did not you have one or more problems - see :ref:`troubleshooting_pupympi`.
+You may also have to kill stuck Python processes with eg. ``killall python2.6``
+ 
+The test example introduces a few central concepts:
+ * the default communicator ``MPI_COMM_WORLD`` which always has all the started processes.
+ * ranking
+ * sending and receiving
+ 
+You can read more about it all.
+
+.. _troubleshooting_pupympi:
+
+Troubleshooting pupyMPI
 -------------------------------------------------------------------------------
+If your first pupyMPI program does not work you may have one or more symptoms:
 
-When you specify tags they should all be possitive integers. The internal
-MPI system use negative integers as tags so they are in principle allowed,
-but the behaviour of the system if you mix negative tags with anythin else than
-the normal :func:`recv <mpi.communicator.Communicator.recv>` and :func:`send <mpi.communicator.Communicator.send>`
-is undefined. 
-
-There exist a special tag called :func:`MPI_TAG_ANY <mpi.constants.MPI_TAG_ANY>` that will
-match any other tag. 
+ * **pupyMPI complains about a Python version problem** You probably need to be explicit about your remote Python, as mentioned in :ref:`requirements_for_pupympi` above.
+ * **SSH password prompt** Ensure password-less access as mentioned in :ref:`requirements_for_pupympi` above.
+ * **No message appears and your script hangs** abort with ``Ctrl+c``, kill any remaining Python processes with ``killall python2.6`` and try againg with the debug ``-d`` parameter added. You will get a metric ton of output.
+ 
 

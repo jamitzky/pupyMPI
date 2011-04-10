@@ -13,3 +13,6 @@ syntax: glob
 .DS_Store
 *.log
 *.orig
+
+pupyprof/build/*
+documentation/_build/*

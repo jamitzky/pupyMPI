@@ -11,55 +11,60 @@ barrier to start with and a gather to sum up results.
 import math, random, sys, time
 from mpi import MPI
 
-num_in = 0
-total = 0
 
-# MPI setup
-mpi = MPI()
-comm = mpi.MPI_COMM_WORLD
-rank = comm.rank()
-size = comm.size()
-
-comm.barrier()
-
-# regular setup
-if ( len(sys.argv) != 2 ):
-    print "Usage: " + sys.argv[0] + " sample_number"
-    mpi.finalize()
-    sys.exit(0)
+def approximate(rank,iterations):
+    num_in = 0
     
-max_cmdline = int(sys.argv[1]) 
-max = max_cmdline / size
+    # algorithm
+    # Seed with rank to get deterministic results that are not using the same random.uniform-space for multiple processes
+    random.seed(rank) 
+    for i in xrange(iterations):
+        x = random.uniform(0,1)
+        y = random.uniform(0,1)
+        if x*x + y*y <= 1:
+            num_in += 1
+        
+    return num_in
 
-t1 = time.time()
 
-# algorithm
-random.seed(42) # for benchmarking we seed to get predictable randomness... the best kind
-for i in xrange(max):
-    x = random.uniform(0,1)
-    y = random.uniform(0,1)
-    if x*x + y*y <= 1:
-        num_in += 1
-    total += 1
+if __name__ == "__main__":
+    # MPI setup
+    mpi = MPI()
+    comm = mpi.MPI_COMM_WORLD
+    rank = comm.rank()
+    size = comm.size()
+    
+    # regular setup
+    if ( len(sys.argv) != 2 ):
+        print "Usage: " + sys.argv[0] + " sample_number"
+        mpi.finalize()
+        sys.exit(0)
+    
+    iterations = int(sys.argv[1])
+    local_iterations = iterations / size
+    
+    t1 = time.time()
 
-# distribute
+    # Run algo
+    hits = approximate(rank,local_iterations)
 
-total = max_cmdline
-print "Rank %s: total is %s, num_in is %s, time %s" % (rank, total, num_in, time.time()-t1)
-num_in_list = comm.gather(num_in)
+    # distribute    
+    global_hits = comm.reduce(hits,sum)
+    
+    print "Rank %s: hits: %s, iterations:%i, time %s" % (rank, global_hits, iterations, time.time()-t1)
 
-# rank 0 gathers and displays
-if rank == 0:
-    summed_num_in = sum(num_in_list)
-    ratio = float(summed_num_in) / float(total)
-    my_pi = 4 * ratio
+    # rank 0 gathers and displays
+    if rank == 0:
+        ratio = float(global_hits) / float(iterations)
+        approximate_pi = 4 * ratio
+    
+        print "Within circle: " + str(iterations)
+        print "Total hits: " + str(global_hits)
+        print "Ratio: " + str(ratio)
+        print "Python's Internal Pi: " + str(math.pi)
+        print "*** Approx. Pi: " + str(approximate_pi) + " ***"
+        print "Discrepancy: " + str(math.pi - approximate_pi)
+        print "Internal time: " + str(time.time() - t1)
 
-    print "Within circle: " + str(summed_num_in)
-    print "Total: " + str(total)
-    print "Ratio: " + str(ratio)
-    print "Python's Internal Pi: " + str(math.pi)
-    print "*** Approx. Pi: " + str(my_pi) + " ***"
-    print "Discrepancy: " + str(math.pi - my_pi)
-    print "Internal time: " + str(time.time() - t1)
+    mpi.finalize()
 
-mpi.finalize()
