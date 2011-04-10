@@ -17,7 +17,7 @@
 #
 __version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random
+import sys, hashlib, random, os
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
@@ -97,7 +97,7 @@ class MPI(Thread):
         """
 
         self.name = "MPI" # Thread name
-        
+
         # Startup time. Used in Wtime() implementation.
         self.startup_timestamp = time.time()
 
@@ -159,28 +159,27 @@ class MPI(Thread):
         self.received_collective_data_lock = threading.Lock()
         self.received_collective_data = []
         self.pending_collective_requests_has_work = threading.Event()
-        
+
         # The settings module. This will be handle proper by the
-        # function ``generate_settings``. 
+        # function ``generate_settings``.
         self.settings = None
         self.config_callbacks = []
-        
+
         # Append callbacks
         from mpi.settings import standard_callbacks
         self.config_callbacks.extend(standard_callbacks)
 
         options = self.parse_options()
-        
+
+        # TODO: See if logger initialisations below here shouldn't be refactored into one
+
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
-            
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+
+            logger = Logger(os.path.join(options.logdir,"remotelog"), "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
 
-            import os
-            if not os.path.isdir(constants.DEFAULT_LOGDIR):
-                os.mkdir(constants.DEFAULT_LOGDIR)
 
             logger.debug("Opening file for I/O: %s" % filename)
             try:
@@ -192,20 +191,29 @@ class MPI(Thread):
             sys.stderr = output
         elif options.process_io == "none":
             # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, True)
+            logger = Logger(options.logdir+"mpi", "proc-%d" % options.rank, options.debug, options.verbosity, True)
             logger.debug("Closing stdout")
             sys.stdout = None
         else:
             # Initialise the logger
-            logger = Logger(options.logfile, "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
-            
-        # Parse and save settings. 
+            logger = Logger(options.logdir+"mpi", "proc-%d" % options.rank, options.debug, options.verbosity, options.quiet)
+
+        # TODO: Put this info under settings when they start to work properly
+        #       Also we should check that the path here is accessible and valid
+        # if filepath starts with something else than / it is a relative path and we assume it relative to pupympi dir
+        if not options.logdir.startswith('/'):
+            _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.logdir = os.path.join(_BASE,options.logdir)
+        else:
+            self.logdir = options.logdir
+
+        # Parse and save settings.
         self.generate_settings(options.settings)
 
         # Attributes for the security component.
         self.disable_utilities = options.disable_utilities
         self.security_component = None
-        
+
         # First check for required Python version
         self._version_check()
 
@@ -314,7 +322,7 @@ class MPI(Thread):
         parser.add_option('--verbosity', type='int')
         parser.add_option('--debug', action='store_true')
         parser.add_option('--quiet', action='store_true')
-        parser.add_option('--log-file', dest='logfile', default="mpi")
+        parser.add_option('--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR)
         parser.add_option('--network-type', dest='network_type')
         parser.add_option('--mpirun-conn-port', dest='mpi_conn_port')
         parser.add_option('--mpirun-conn-host', dest='mpi_conn_host')
@@ -334,7 +342,7 @@ class MPI(Thread):
         # _ is args
         options, _ = parser.parse_args()
         return options
-    
+
     def generate_settings(self, settings):
         # We first import our normal settings packed with the mpi environment. These
         # will make a good base for all the functionality here. If the user supplies
@@ -352,14 +360,14 @@ class MPI(Thread):
                 try:
                     mod = __import__(module)
                     self.settings.__dict__.update(mod.__dict__)
-                    
+
                 except ImportError:
                     #Logger().debug("Can not import a settings module by the name of %s" % module)
                     pass
                 except Exception, e:
                     Logger().error("Something very wrong happened with your settings module:", e)
-                    
-                    
+
+
     def resume_packed_state(self):
         from mpi import dill
         obj = dill.loads(self.resume_state)
@@ -475,7 +483,7 @@ class MPI(Thread):
                         # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
                             match = request.accept_msg(rank, data)
-                            
+
                             # Debug only. Should go away (maybe)
                             if match is None:
                                 Logger().warning("A collective request is behaving stragely. Received none from accept_msg. request is: %s" % request)
@@ -634,12 +642,13 @@ class MPI(Thread):
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
-            pupyprof.dump_stats(constants.DEFAULT_LOGDIR+'prof.rank%s.log' % self.MPI_COMM_WORLD.rank())
+            pupyprof.dump_stats(os.path.join(self.logdir,'prof.rank%s.log' % self.MPI_COMM_WORLD.rank()))
+            Logger().debug("Writing profiling traces to %s" % self.logdir)
 
         if self._yappi_enabled:
             yappi.stop()
 
-            filename = constants.DEFAULT_LOGDIR+'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank()
+            filename = os.path.join(self.logdir,'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank())
             Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
@@ -711,7 +720,7 @@ class MPI(Thread):
 
         # We have tried to signal every process so we can "safely" exit.
         sys.exit(1)
-        
+
     def set_configuration(self, config_data):
         """
         Change - if possible - the configuration parameters. The function
@@ -722,13 +731,13 @@ class MPI(Thread):
         for set_name in config_data:
             set_value = config_data[set_name]
             res[set_name] = self._set_config(set_name, set_value)
-        
+
         # Debug. Print all the stuff
         for attr in dir(self.settings):
             print "attr:", attr, getattr(self.settings, attr)
-        
+
         return res
-    
+
     def _set_config(self, name, value):
         """
         An internal function for setting configurations elements. This is not
@@ -737,32 +746,32 @@ class MPI(Thread):
         """
         # First check. Check if the setting is defined in our settings
         # module. If not, the settings simply does not exists.
-        val = None 
+        val = None
         try:
             val = getattr(self.settings, name)
         except AttributeError:
             return (False, "No such setting!")
-        
+
         # Try to type case
         try:
             value = type(val)(value)
         except ValueError:
             return (False, "Can not cast this setting into the required value. Required value is %s" % type(val))
-            
+
         # Check if there are any callbacks for this setting
         callbacks = self.config_callbacks
         valid = True
         if callbacks:
             valid = all([c(name) for c in callbacks])
-             
+
         if not valid:
             return (False, "Access to this configuration is restricted")
-        
+
         # ALL is okay and we change the setting.
         setattr(self.settings, name, value)
-        
+
         return (True, "Changed!")
-                
+
     def handle_system_message(self, rank, command, raw_data, connection):
         """
         Handle a system message. We define a list of read only commands and all
@@ -846,9 +855,9 @@ class MPI(Thread):
 
     def get_version(self):
         """
-        Return the version number (as a string) of the pupyMPI installation.
+        Return the version number of the pupyMPI installation.
         """
-        execute_system_commands(self)
+        execute_system_commands(self.mpi)
         return __version__
 
     def _version_check(self):

@@ -7,7 +7,6 @@ from mpi.collective.operations import MPI_max
 
 import comm_info as ci
 
-meta_has_meta = True
 meta_requires_data_ranks_adjunct = False
 meta_processes_required = 4
 meta_enlist_all = True

@@ -36,14 +36,15 @@ global process_list, io_target_list
 process_list = []
 io_target_list = []
 
-def ssh(host, arguments, process_io, rank):
+def ssh(host, arguments, x_forward, process_io, logdir, rank):
     """Process starter using ssh through subprocess. No loadbalancing yet."""
     logger = Logger()
 
     # We join the sys.path here to allow user modifications to PYTHONPATH to take effect remotelyy
     python_path = os.path.dirname(os.path.abspath(__file__)) + "/../" + ":" + ":".join(sys.path)
-    sshexec_str = "ssh %s \"PYTHONPATH=%s %s\"" % (host, python_path, ' '.join(arguments) )
-    #logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
+    sshexec_str = "ssh %s%s \"PYTHONPATH=%s %s\"" % (("-XY " if x_forward else ""), host, python_path, ' '.join(arguments) )
+    #if rank == 0:
+    #    logger.debug("Starting remote process: %s with process_io type %s" % (sshexec_str, process_io))
 
     if process_io in ['none', 'direct', 'remotefile']: # network is closed for i/o, nothing displayed or written on mpirun side. If remote_file, a file is created on the remote process machine only.
         target = None
@@ -51,10 +52,10 @@ def ssh(host, arguments, process_io, rank):
         target = subprocess.PIPE
     elif process_io == 'localfile': # writes to a file on the mpirun machine only
         try:
-            target = open(constants.DEFAULT_LOGDIR+"mpi.rank%s.log" % rank, "w")
+            target = open(os.path.join(logdir,"mpi.rank%s.log" % rank), "w")
             io_target_list.append(target)
         except:
-            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+            raise MPIException("Local directory not writeable - check that this path exists and is writeable:\n%s" % options.logdir)
     else:
         raise MPIException("Unsupported I/O type: '%s'" % process_io)
 
@@ -64,7 +65,7 @@ def ssh(host, arguments, process_io, rank):
     return p
 
 def popen(host, arguments, process_io, rank):
-    """ Process starter using subprocess. No loadbalancing yet. Process_io is ignored"""
+    """ Process starter using subprocess. No loadbalancing yet. Process_io and logdir is ignored"""
     if _islocal(host):
         p = subprocess.Popen(arguments, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process_list.append(p)

@@ -27,11 +27,7 @@ import os
 #### PUBLIC VALUES BELOW ####
 PUPYVERSION = "0.9.2" # TODO: Make this automatically updated from hg tag (use the tag hook)
 
-# Check if we are in the MiG system where outputfiles can best be retrieved by placing them in MIG_JOBDIR
-if not os.getenv('MIG_JOBDIR'): # This env variable exists only on MiG
-    DEFAULT_LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/user_logs/"
-else:
-    DEFAULT_LOGDIR = os.getenv('MIG_JOBDIR')+"/" # We assume the trailing /
+DEFAULT_LOGDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/user_logs/"
 
 # Predefined tags
 MPI_TAG_ANY = -1 # public, this and below

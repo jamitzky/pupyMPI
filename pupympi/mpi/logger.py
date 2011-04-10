@@ -41,11 +41,17 @@ class Logger:
         verbosity_conversion = [logging.ERROR,logging.WARNING,logging.INFO,logging.DEBUG]        
         level = verbosity_conversion[ verbosity ]
         
-        # Decide where to put and what to call the logfile 
-        _BASE = os.path.dirname(os.path.abspath(__file__))
-        _LOG_BASE = os.path.join(_BASE, '..', '%s.log')
-        filepath = _LOG_BASE % os.path.basename(filename)
+        # Decide where to put and what to call the logfile
         
+        # if filepath starts with something else than / it is a relative path and we assume it relative to pupympi dir
+        if not filename.startswith('/'):
+            _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            filepath = os.path.join(_BASE, filename+'.log')
+        else:
+            filepath = filename+'.log'
+        # TODO:
+        # We should check that the path here is accessible and valid
+
         formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s', '%Y-%m-%d %H:%M:%S')
         try:            
             filelog = logging.FileHandler(filepath)            

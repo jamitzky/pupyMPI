@@ -28,6 +28,7 @@ Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
 import time
 import datetime
 import sys
+import os
 import platform
 
 from mpi import MPI
@@ -69,7 +70,7 @@ def pmap(limit=32):
 
 # Main functions
 
-def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**32):
+def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
     
@@ -80,6 +81,8 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
     starttime = time.time()
     
     modules = [single, parallel, collective, special, nonsynthetic]
+    #DEBUG
+    #modules = [special, nonsynthetic, single, parallel, collective]
     resultlist = {}
 
     mpi = MPI()
@@ -99,26 +102,6 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
             for test in tests:
                 if fixed_test is None or fixed_test == test:
                     testsToRun += 1
-
-    #
-    #if fixed_test:        
-    #    # Run through all modules to make sure that a test of specified name exists
-    #    for module in modules:
-    #        for function in dir(module):
-    #            if function.startswith("test_"):
-    #                if function == "test_"+fixed_test:
-    #                    testsToRun += 1
-    #    fixed = fixed_test
-    #elif fixed_module:
-    #    for module in modules:
-    #        # Count only tests in the desired module
-    #        if module.__name__ == fixed_module:
-    #            for function in dir(module):
-    #                if function.startswith("test_"):
-    #                    testsToRun += 1
-    #    fixed = fixed_module
-    #else:
-    #    pass
     
     valid_tests = True
     if testsToRun < 1:
@@ -138,6 +121,7 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
         
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
+        
         for size in sizekeys:
             if limit >= 0: # for positive limits we stop at first size over the limit
                 if size > limit:
@@ -147,7 +131,7 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
                     continue
                 
             total = test(size, module.meta_schedule[size])
-
+            
             if total is None:
                 # Tests returning None are not meant to be run
                 # (eg. Barrier for different datasizes does not make sense)
@@ -163,7 +147,11 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
 
                 per_it = total / module.meta_schedule[size]
                 # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
-                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
+                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024)
+                # for non-synthetic tests the mbytes/sec metric does not make sense
+                if module.__name__ == "nonsynthetic":
+                    mbytessec = -42
+                
                 ci.log("%10d %13d %13.2f %13.2f %13.2f %13.2f %13.5f" %  (\
                 size, \
                 module.meta_schedule[size], \
@@ -195,21 +183,18 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
         ci.select_source = True 
         ci.select_tag = True         
         
-        # TODO: Check on actual required meta tags not the meta meta... my eyes! the abstractions!!!
-        if not hasattr(module, "meta_has_meta"):
-            raise Exception("Module %s must have metadata present, otherwise you'll get a race condition and other errors." % module.__name__)
-
         if ci.w_num_procs < module.meta_processes_required:
             raise Exception("Not enough processes active to invoke module %s" % module.__name__)
         
+        # Check if the benchmark requires only a specific number of participants
         if module.meta_enlist_all:
             active_processes = ci.w_num_procs #enlist everybody active.
         else:
             active_processes = module.meta_processes_required
-            
+        
         new_group = mpi.MPI_COMM_WORLD.group().incl(range(active_processes))
-        ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)                
-
+        ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
+        
         if ci.communicator is not None:
             if limit > 0:
                 testdataSize = min(limit, max(module.meta_schedule))
@@ -253,12 +238,8 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
                         continue
                         
                     f = getattr(module, function)
-
-                    if hasattr(module, "run_benchmark"):
-                        result = module.run_benchmark(f)
-                    else:
-                        result = run_benchmark(module, f)
-                    resultlist[function] = result
+                    resultlist[function] = run_benchmark(module,f)
+            
             mpi.MPI_COMM_WORLD.barrier() # join the barrier holding non-participants
 
     mpi.finalize()
@@ -297,9 +278,9 @@ def testrunner(filtered_args,fixed_module = None, fixed_test = None, limit = 2**
         
         filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
-            f = open(constants.DEFAULT_LOGDIR+filename, "w")
+            f = open(logdir+filename, "w")
         except:            
-            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % constants.DEFAULT_LOGDIR)
+            raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % logdir)
         
         
         # Show detailed test parameters in header for better overview
@@ -397,11 +378,28 @@ def main(argv=None):
         if a.startswith('--rank=') or a.startswith('--size='):
             continue
         
-        # Just chop off needles prefix for other args
+        # Location of the files are obvious from where the files are located :)
+        # But we need to remember where to store them
+        if a.startswith('-l '):
+            logdir = a[len('-l '):]
+            continue        
+        if a.startswith('-l'):
+            logdir = a[len('-l'):]
+            continue        
+        if a.startswith('--logdir='):
+            logdir = a[len('--logdir='):]
+            continue
+            
+        # Just chop off needless prefix for other args
         filtered_args.append(a[len('--'):])
-        
-    testrunner(filtered_args, module, test, limit)
     
-
+    # logdir need to be an absolute path
+    if not logdir.startswith('/'):
+        _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        logdir = os.path.join(_BASE,logdir)
+    
+    testrunner(filtered_args, logdir, module, test, limit)
+    
+# FIXME: Would we ever run as script? otherwise this is silly
 if __name__ == "__main__":
     main()

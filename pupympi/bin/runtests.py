@@ -41,12 +41,14 @@ mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
+from mpi import constants
+
 # settings
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
 TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take, if not otherwise specified
 
 # Color effects
-NORMAL = '\033[0m' 
+NORMAL = '\033[0m'
 BRIGHT = '\033[1m'
 DIM = '\033[2m' # Doesn't work on mac
 FAIL_RED = '\033[31m'
@@ -54,25 +56,21 @@ FAIL_RED = '\033[31m'
 
 path = os.path.dirname(os.path.abspath(__file__))
 class RunTest(Thread):
-    
-    ### DEFAULTS USED DURING THE RUNTEST ###
-    #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
-    #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
-    # With dynamic socket pool
-    cmd = "bin/mpirun.py --disable-utilities --disable-full-network-startup SOCKET_POOL_SIZE --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
-    #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
-    def __init__(self, test, number, primary_log, options, test_meta_data):
+    ### DEFAULTS USED DURING THE RUNTEST ###
+    # With dynamic socket pool
+    cmd = "bin/mpirun.py --disable-utilities  --logdir=LOGDIR --disable-full-network-startup SOCKET_POOL_SIZE X_FORWARD --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY tests/TEST_NAME"
+
+    def __init__(self, test, number, logdir, options, test_meta_data):
         Thread.__init__(self)
         self.test = test
         self.meta = test_meta_data
-        self.primary_log = primary_log
         self.processes = test_meta_data.get("minprocesses", options.np)
         self.expectedresult = int(test_meta_data.get("expectedresult", 0))
         self.cmd = self.cmd.replace("PROCESSES_REQUIRED", str(self.processes))
         self.cmd = self.cmd.replace("LOG_VERBOSITY", str(options.verbosity))
-        self.cmd = self.cmd.replace("PRIMARY_LOG", primary_log)
-        self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
+        self.cmd = self.cmd.replace("LOGDIR", logdir)
+        #self.cmd = self.cmd.replace("TEST_TRUNC_NAME", test[test.find("_")+1:test.rfind(".")])
         self.cmd = self.cmd.replace("TEST_NAME", test)
         self.cmd = self.cmd.replace("STARTUP_METHOD", options.startup_method)
 
@@ -83,6 +81,12 @@ class RunTest(Thread):
             self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "")
             #self.cmd = self.cmd.replace("SOCKET_POOL_SIZE", "--socket-pool-size 20")
 
+        # If X forwarding is specified in meta description we add appropriate parameter
+        if "x-forward" in test_meta_data:
+            self.cmd = self.cmd.replace("X_FORWARD", "--x-forward")
+        else:
+            self.cmd = self.cmd.replace("X_FORWARD", "")
+
         # Adds testswitches if used
         if options.socket_poll_method:
             self.cmd += " --socket-poll-method=" + options.socket_poll_method
@@ -90,7 +94,7 @@ class RunTest(Thread):
         if "userargs" in test_meta_data:
             self.cmd += " -- " + test_meta_data['userargs']
 
-        #output( "Launching(%i) %s: " % (number, self.cmd), newline=False)        
+        #output( "Launching(%i) %s: " % (number, self.cmd), newline=False)
         sys.stdout.write("Launching(%i) %s: " % (number, self.cmd))
         sys.stdout.flush()
         self.process = subprocess.Popen(self.cmd.split())
@@ -144,7 +148,7 @@ def format_output(threads):
             return NORMAL+FAIL_RED+"Timed Out"+NORMAL
         else:
             return NORMAL+FAIL_RED+("FAIL: %s" % ret)+NORMAL
-    
+
     testcounter = 1
     total_time = 0
 
@@ -158,7 +162,7 @@ def format_output(threads):
         else:
             marking = NORMAL
             filler = ' '
-        
+
         str = marking+"%3i %-51s\t%4s\t%s\t%s" % (testcounter,
                                                 thread.test.ljust(51,filler),
                                                 round(thread.executiontime, 1),
@@ -166,7 +170,7 @@ def format_output(threads):
                                                 _status_str(thread.returncode, thread.expectedresult))
         print(str)
         testcounter += 1
-        total_time += thread.executiontime       
+        total_time += thread.executiontime
 
     print( NORMAL+"\nTotal execution time: %ss" % (round(total_time, 1)))
 
@@ -212,7 +216,7 @@ def run_tests(test_files, options):
     # non-breaking tests may appear to break when in fact the cause is another
     # test running at the same time
     for test in test_files:
-        t = RunTest(test, testcounter, logfile_prefix, options, get_test_data(test))
+        t = RunTest(test, testcounter, options.logdir, options, get_test_data(test))
         threadlist.append(t)
         t.start()
         t.join()
@@ -233,6 +237,7 @@ def main():
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
     parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
+    parser.add_option('-l', '--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR, help='Which directory the system should log to. Defaults to %default(.log). ')
 
     parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from. Negative values leave out tests from the end as with slicing.')
 
