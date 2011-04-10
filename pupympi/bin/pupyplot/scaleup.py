@@ -110,7 +110,6 @@ if __name__ == "__main__":
                     ydata_plot.append(speedup)
                     title = tag_mapper.get(tag, tag)
             
-            
             lp.add_serie(xdata, ydata_plot, title=title)
         
         lp.plot()
