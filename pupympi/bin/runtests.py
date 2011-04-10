@@ -41,6 +41,8 @@ mpirunpath  = os.path.dirname(os.path.abspath(__file__)) # Path to mpirun.py
 mpipath,rest = os.path.split(mpirunpath) # separate out the bin dir (dir above is the target)
 sys.path.append(mpipath) # Set PYTHONPATH
 
+from mpi import constants
+
 # settings
 TEST_EXECUTION_TIME_GRANULARITY = 0.2 # sleep time between checking if process is dead (also determines gran. of execution time, obviously)
 TEST_MAX_RUNTIME = 15 # max time in seconds that one single test may take, if not otherwise specified
@@ -56,17 +58,13 @@ path = os.path.dirname(os.path.abspath(__file__))
 class RunTest(Thread):
 
     ### DEFAULTS USED DURING THE RUNTEST ###
-    #cmd = "bin/mpirun.py --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
-    #cmd = "bin/mpirun.py --single-communication-thread --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
     # With dynamic socket pool
     cmd = "bin/mpirun.py --disable-utilities  --logdir=LOGDIR --disable-full-network-startup SOCKET_POOL_SIZE X_FORWARD --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY tests/TEST_NAME"
-    #cmd = "bin/mpirun.py --single-communication-thread --disable-full-network-startup --process-io=localfile -q -c PROCESSES_REQUIRED --startup-method=STARTUP_METHOD -v LOG_VERBOSITY -l PRIMARY_LOG_TEST_TRUNC_NAME tests/TEST_NAME"
 
     def __init__(self, test, number, logdir, options, test_meta_data):
         Thread.__init__(self)
         self.test = test
         self.meta = test_meta_data
-        self.primary_log = primary_log
         self.processes = test_meta_data.get("minprocesses", options.np)
         self.expectedresult = int(test_meta_data.get("expectedresult", 0))
         self.cmd = self.cmd.replace("PROCESSES_REQUIRED", str(self.processes))
@@ -239,6 +237,7 @@ def main():
     parser.add_option('--startup-method', dest='startup_method', default="ssh", metavar='method', help='How the processes should be started. Choose between ssh and popen. Defaults to ssh')
     parser.add_option('--remote-python', dest='remote_python', default="python", metavar='method', help='Path to the python executable on the remote side')
     parser.add_option('--socket-poll-method', dest='socket_poll_method', default=False, help="Specify which socket polling method to use. Available methods are epoll (Linux only), kqueue (*BSD only), poll (most UNIX variants) and select (all operating systems). Default behaviour is to attempt to use either epoll or kqueue depending on the platform, then fall back to poll and finally select.")
+    parser.add_option('-l', '--logdir', dest='logdir', default=constants.DEFAULT_LOGDIR, help='Which directory the system should log to. Defaults to %default(.log). ')
 
     parser.add_option('-r', '--runtests-from', dest='skipto', type='int', default=0, help='What number test (alphabetically sorted) to start testing from. Negative values leave out tests from the end as with slicing.')
 
