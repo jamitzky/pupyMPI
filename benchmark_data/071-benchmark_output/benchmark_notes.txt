@@ -1,6 +1,0 @@
-These benchmark runs were done with version 0.7.1 of pupyMPI
-(up to at least commit 1194)
-======================================
-
-Changes from 0.6 are the use of epoll and poll
-Changes from 0.7.0 is handling writelist only when outgoing requests exist
