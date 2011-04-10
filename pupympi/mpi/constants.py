@@ -136,3 +136,4 @@ CMD_CONN_CLOSE = 6      # used to close a TCP connection
 CMD_CONFIG = 7          # Used to change settings at runtime.
 
 # Commands over 100 are used to indicate unpickled datatypes
+CMD_RAWTYPE = 100

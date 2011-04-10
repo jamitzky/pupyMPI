@@ -359,7 +359,7 @@ class BaseCommunicationHandler(threading.Thread):
                 conn = read_socket
 
             try:
-                rank, msg_command, tag, ack, comm_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
+                rank, msg_type, tag, ack, comm_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
             except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -375,17 +375,18 @@ class BaseCommunicationHandler(threading.Thread):
             # Now that we know the rank of sender we can add the socket to the pool
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
-
-            if msg_command == constants.CMD_USER:
+            
+            # FIXME: Rewrite below condition - hint let all user stuff be >100
+            if msg_type in (constants.CMD_USER, constants.CMD_RAWTYPE):
                 try:
                     with self.network.mpi.raw_data_lock:
-                        self.network.mpi.raw_data_queue.append( (rank, tag, ack, comm_id, raw_data))
+                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, raw_data))
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
                 except AttributeError, e:
                     pass
                 except Exception, e:
-                    Logger().error("Strange error - Failed grabbing raw_data_lock!")
+                    Logger().error("Strange error - Failed grabbing raw_data_lock! error:%s" % e)                    
             else:
                 self.network.mpi.handle_system_message(rank, msg_command, raw_data, conn)
 
@@ -462,7 +463,7 @@ class BaseCommunicationHandler(threading.Thread):
                 # but also on the cluster it halves the time required for the single module!
                 # And furthermore increases max transferrate by 25% to about 40MB/s!
                 # Also it seems to improve the speed of high computation-to-communication like
-                # in the Monte Carlo Pi application where 20% speed has been observed
+                # in the Monte Carlo Pi application where 20% speed increase has been observed
                 time.sleep(0.00001)
 
         elif self.type == "in":
@@ -472,8 +473,8 @@ class BaseCommunicationHandler(threading.Thread):
                 (in_list, _, _) = self.select_in()
 
                 #DEBUG
-                if not in_list:
-                    emptyreads += 1
+                #if not in_list:
+                #    emptyreads += 1
 
                 self._handle_readlist(in_list)
                 time.sleep(0.00001)
@@ -484,8 +485,8 @@ class BaseCommunicationHandler(threading.Thread):
                 if self.outbound_requests > 0:
                     (_, out_list, _) = self.select_out()
                     #DEBUG
-                    if not out_list:
-                        emptywrites += 1
+                    #if not out_list:
+                    #    emptywrites += 1
                     self._handle_writelist(out_list)
 
                 time.sleep(0.00001)

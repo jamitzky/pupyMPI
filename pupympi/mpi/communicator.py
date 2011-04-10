@@ -341,21 +341,6 @@ class Communicator:
     # Add an outbound request to the queue
     def _add_unstarted_request(self, request):
         self.network.t_out.add_out_request(request)
-        
-        # TRW        
-        #with self.mpi.unstarted_requests_lock:
-        #    self.mpi.unstarted_requests.append(request)
-        #    self.mpi.unstarted_requests_has_work.set()
-        #    self.mpi.has_work_event.set()
-
-            #if self.unstarted_requests_has_work.is_set():
-            #    with self.unstarted_requests_lock:
-            #        for request in self.unstarted_requests:
-            #            #Logger().warning("Show some request!: %s" % request)
-            #            self.network.t_out.add_out_request(request)
-            #
-            #        self.unstarted_requests = []
-            #        self.unstarted_requests_has_work.clear()
 
     # Add a request for communication with self
     def _send_to_self(self, request):

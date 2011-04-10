@@ -120,7 +120,16 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     if is_pickled:
         pickled_data = data
     else:
-        pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        # DEBUG
+        #Logger().debug("prepare... - type:%s data:%s" % (type(data),data) )
+        if isinstance(data,list) and isinstance(data[0],int):
+            Logger().debug("prepare - type:%s data:%s" % (type(data),data) )
+            pickled_data = bytearray(data)
+            cmd = constants.CMD_RAWTYPE # signal bytearray
+        else:
+            pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+            
+        #pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
 
     lpd = len(pickled_data)
 
