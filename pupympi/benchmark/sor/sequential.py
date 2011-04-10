@@ -27,22 +27,32 @@ def solve(data):
   global update_freq
   h=len(data)-1
   w=len(data[0])-1
+  #epsilon=.01*h*w
   epsilon=.1*h*w
   print "Epsilon is ", epsilon
   delta=epsilon+1.
   cnt=update_freq-1
+  iteration = 0
   while(delta>epsilon):
     delta=0.
-    cnt=cnt+1
-    if cnt==update_freq:
-      if useGraphics:
-        g.update(data)
-      cnt=0
+
     for y in range(1,h):
       for x in range(1,w):
         old=data[y,x]
         data[y,x]=.2*(data[y,x]+data[y-1,x]+data[y+1,x]+data[y,x-1]+data[y,x+1])
         delta+=abs(old-data[y,x])
+
+    cnt=cnt+1
+    if cnt==update_freq:
+      if useGraphics:
+        #print "type:%s subtype:%s" % (type(data), type(data[0][0]))
+        #print "snip:%s" % data[0]
+        g.update(data)
+      cnt=0
+      print "epsilon:%f, delta:%f, iteration:%i" % (epsilon,delta,iteration)
+    
+    iteration += 1
+
     
 
 #Default problem size
@@ -80,4 +90,4 @@ timer.Stop()
 print "Solved the successive over-relaxation in %s" % (timer.timeString())
 
 if useGraphics:
-  timer.Sleep(5)
+  dummy = raw_input("enter to clear canvas")

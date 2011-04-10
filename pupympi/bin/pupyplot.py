@@ -33,6 +33,14 @@ def avg(l):
     else:
         return sum(l)/float(len(l))
 
+def get_font_path():
+    import sys
+
+    if sys.platform.find("linux") != -1:
+        return '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb'
+    else:
+        return '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb'
+
 def format_tag(tag):
     try:
         int(tag)
@@ -404,11 +412,7 @@ class DataGather(object): # {{{1
         """
         self.csv_files = []
         for fp in folder_prefixes:
-            self.csv_files.extend(glob.glob(fp+ "pupymark.sing.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.coll.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.para.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.sor.[0-9]*procs*"))
-            self.csv_files.extend(glob.glob(fp+ "pupymark.accept.[0-9]*procs*"))
+            self.csv_files.extend(glob.glob(fp+ "pupymark.*.[0-9]*procs*"))
     # }}}2
     def _parse(self, value_method="avg"): # {{{2
         """
@@ -421,7 +425,7 @@ class DataGather(object): # {{{1
         data = {}
 
         # Regular match to find the tags
-        tag_procs_re = re.compile(".*/benchmark_data/(?P<tag>\w+)-benchmark_output.*\.(sing|coll|para|sor|accept)\.(?P<procs>\d+).*")
+        tag_procs_re = re.compile("(.*/)?(?P<tag>\w+)-benchmark_output.*\.(?P<testtitle>\w+)\.(?P<procs>\d+).*")
 
         for filename in self.csv_files:
             reader = csv.reader(open(filename))
@@ -491,7 +495,7 @@ class DataGather(object): # {{{1
                     print "Found problem with filename", filename
 
                 # We override the <<procs>> here. Maybe we should not
-                tag, _,procs = match.groups()
+                _, tag, _,procs = match.groups()
 
                 self._add_tag(tag)
 
@@ -679,11 +683,16 @@ class GNUPlot(object): # {{{1
         else:
             raw_labels = axis_data
 
+        # FIXME::
+
         # 4) Format the data.
         formatter = { 'size' : self.format_size, 'time' : self.format_time, 'scale' : self.format_scale, 'traffic' : self.format_traffic }[format_type]
         used_strs = []
         formatted_labels = []
         for label in raw_labels:
+            if label == 0 and scale_type == "log":
+                continue
+
             fmt = formatter(label)
             if fmt in used_strs:
                 continue
@@ -752,7 +761,7 @@ class LinePlot(GNUPlot): # {{{1
         except ValueError:
             print "Cant find max and min, so there is probably no data"
             return
-        
+
         # Basic data for all the files.
         filename = "%s_line_%s_%s" % (self.prefix, self.title_help, self.test_name)
 
@@ -791,8 +800,8 @@ class LinePlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_path(), self.plot_width, self.plot_height)
+
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -801,7 +810,6 @@ class LinePlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set key top left'
         print >> gnu_fp, 'set tics out'
         self.write_extra(gnu_fp, self.extra)
-
 
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
@@ -853,7 +861,7 @@ class ScatterPlot(GNUPlot): # {{{1
     def plot(self): # {{{2
         if not self.data:
             return
-        
+
         self.find_max_and_min()
 
         # Basic data for all the files.
@@ -880,8 +888,7 @@ class ScatterPlot(GNUPlot): # {{{1
         title = "Plot for %s" % self.test_name
         gnu_fp = open(self.output_folder + "/" + filename + ".gnu", "w")
 
-        #print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/share/texmf-texlive/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
-        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '/usr/local/texlive/2009/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb' 24 size %d,%d" % (self.plot_width, self.plot_height)
+        print >> gnu_fp, "set term postscript eps enhanced color font 'Palatino' fontfile '%s' 24 size %d,%d" % (get_font_path(), self.plot_width, self.plot_height)
         print >> gnu_fp, 'set output "%s.eps"' % filename
         print >> gnu_fp, 'set title "%s"' % title
         print >> gnu_fp, 'set xlabel "Data size"'
@@ -891,6 +898,7 @@ class ScatterPlot(GNUPlot): # {{{1
         print >> gnu_fp, 'set tics out'
         self.write_extra(gnu_fp, self.extra)
 
+        remove_x_zero = self.x_axis_type == "log"
         print >> gnu_fp, 'set xtics (%s)' % ", ".join(self.format_tics(axis_data=self.x_data, axis_size=self.plot_width, format_type="size"))
         print >> gnu_fp, 'set ytics (%s)' % ", ".join(self.format_tics(axis_max=self.y_max, format_type=self.y_type, scale_type=self.y_axis_type))
 

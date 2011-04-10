@@ -51,7 +51,7 @@ class SocketPool(object):
 
         self.sockets_lock = threading.Lock() # Hold this lock before fiddling with the class data
 
-    def get_socket(self, rank, socket_host, socket_port, force_persistent=False):
+    def get_socket(self, rank, connection_info, connection_type, force_persistent=False):
         """
         Returns a socket to the specific rank. Consider this function
         a black box that will cache your connections when it is
@@ -59,30 +59,31 @@ class SocketPool(object):
         """
         with self.sockets_lock:
             client_socket = self._get_socket_for_rank(rank) # Try to find an existing socket connection
-            
+
         newly_created = False
-        
+
         # It's not valid to not have a socket and a readonly pool
         if rank >= 0 and self.readonly and not client_socket:
             raise Exception("SocketPool is read only and we're trying to fetch a non-existing socket for rank %d" % rank)
 
         if not client_socket: # If we didn't find one, create one
-            receiver = (socket_host, socket_port)
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Enable TCP_NODELAY to improve performance of sending one-off packets by
-            # immediately acknowledging received packages instead of trying to
-            # piggyback the ACK on the next outgoing packet (Nagle's algorithm)
-            # XXX: If you remove this, remember to do so in utils as well.
-            client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1) # Testing with Nagle off
+            if connection_type == "local":
+                #Logger().debug("Creating local socket to %s" % connection_info)
+                client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                client_socket.connect( connection_info )
+                self._add(rank, client_socket, force_persistent)
+                newly_created = True
 
-            client_socket.connect( receiver )
+            elif connection_type == "tcp":
+                #Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
+                client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+                client_socket.connect( connection_info )
 
-            # Add the new socket to the list
-            self._add(rank, client_socket, force_persistent)
+                # Add the new socket to the list
+                self._add(rank, client_socket, force_persistent)
+                newly_created = True
 
-            newly_created = True
-
-        #Logger().debug("SocketPool.get_socket (read-only:%s): Created (%s) socket connection for rank %d: %s" % (self.readonly,newly_created, rank, client_socket))
         return client_socket, newly_created
 
     def add_accepted_socket(self, socket_connection, global_rank):
@@ -117,9 +118,9 @@ class SocketPool(object):
         """
         Finds the first element that already had its second chance and
         remove it from the lis
-        
+
         NOTE: Caller makes sure the sockets_lock is held
-        
+
         NOTE:
         We don't explicitly close the socket once removed. Or remove it from the
         socket_to_request dict.
@@ -164,7 +165,7 @@ class SocketPool(object):
         """
         if not client_socket:
             client_socket = self._get_socket_for_rank(rank)
-        
+
         self.sockets.remove(client_socket)
         del self.metainfo[client_socket]
 

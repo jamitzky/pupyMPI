@@ -102,14 +102,31 @@ class Network(object):
             self.t_out.start()
             self.t_out.type = "out"
             self.t_in.type = "in"
-
-        # Create the main receieve socket
+        
+        if self.options.unixsockets:
+            # Create a unix socket for communicating with other ranks
+            # on the same host.
+            from tempfile import NamedTemporaryFile
+            unix_socket_filename = NamedTemporaryFile().name
+            uxs = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            uxs.bind(unix_socket_filename)
+            uxs.listen(options.size-1)
+            self.unix_socket_filename = unix_socket_filename
+            
+            self.t_in.add_in_socket(uxs) # Put unix receive sockets on incoming list
+            self.t_in.unix_socket = uxs # Set unix receive socket for comparison in _handle_readlist
+        else:
+            # These values are convenient dummies (just so we don't have to check for self.options.unixsockets everywhere)
+            self.unix_socket_filename = ""
+            self.t_in.unix_socket = None
+        
+        # Create the main receive socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
         self.hostname = hostname
-        server_socket.listen(5)
+        server_socket.listen(options.size-1)
 
-        # Put main receieve socket on incoming list
+        # Put main receive socket on incoming list
         self.t_in.add_in_socket(server_socket)
 
         # Set main receive socket for comparison in _handle_readlist
@@ -157,7 +174,7 @@ class Network(object):
         avail = syscommands.availablity()
 
         # Packing the data
-        data = (self.hostname, self.port, internal_rank, sec_comp, avail)
+        data = (self.hostname, self.port, self.unix_socket_filename, internal_rank, sec_comp, avail)
 
         # Connection to the mpirun processs
         s_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -181,8 +198,17 @@ class Network(object):
 
         self.all_procs = {}
 
-        for (host, port, global_rank) in all_procs:
-            self.all_procs[global_rank] = {'host' : host, 'port' : port, 'global_rank' : global_rank}
+        for (host, port, unx_filename, global_rank) in all_procs:
+
+            # Check if this rank lives on the same host as we do. If so use the
+            # unix socket instead of the TCP information.
+            if host == self.hostname and self.options.unixsockets:
+                connection_info = unx_filename
+                connection_type = "local"
+            else:
+                connection_info = (host, port)
+                connection_type = "tcp"
+            self.all_procs[global_rank] = {'connection_info' : connection_info, 'connection_type' : connection_type, 'global_rank' : global_rank}
 
     def start_full_network(self):
         # We make a full network startup by receiving from all with lower ranks and
@@ -276,15 +302,15 @@ class BaseCommunicationHandler(threading.Thread):
         global_rank = request.communicator.group().members[request.participant]['global_rank']
 
         # Find a socket and port of recipient process
-        host = self.network.all_procs[global_rank]['host']
-        port = self.network.all_procs[global_rank]['port']
+        connection_info = self.network.all_procs[global_rank]['connection_info']
+        connection_type = self.network.all_procs[global_rank]['connection_type']
 
         # Create the proper data structure and pickle the data
         request.data = prepare_message(request.data, request.communicator.rank(), cmd=request.cmd,
                                        tag=request.tag, ack=request.acknowledge, comm_id=request.communicator.id, is_pickled=request.is_pickled)
 
         # TODO: This call should be extended to allow asking for a persistent connection
-        client_socket, newly_created = self.socket_pool.get_socket(global_rank, host, port)
+        client_socket, newly_created = self.socket_pool.get_socket(global_rank, connection_info, connection_type)
         # If the connection is a new connection it is added to the socket lists of the respective thread(s)
         if newly_created:
             self.network.t_in.add_in_socket(client_socket)
@@ -318,7 +344,7 @@ class BaseCommunicationHandler(threading.Thread):
         for read_socket in readlist:
             add_to_pool = False
 
-            if read_socket == self.main_receive_socket:
+            if read_socket in (self.main_receive_socket, self.unix_socket):
                 try:
                     # _ is sender_address
                     (conn, _) = read_socket.accept()

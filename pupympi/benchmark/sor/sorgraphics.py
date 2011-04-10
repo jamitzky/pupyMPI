@@ -23,8 +23,8 @@ class GraphicsScreen:
     pl.ion()
 
   def update(self, data):
-    blue=pl.less(data,0.)
-    red=~blue
+    blue=pl.less(data,0.) # Fill in True where less than 0.0
+    red=~blue # Reverse of the above
     #Blue
     self.image[...,2][blue]=pl.minimum(pl.absolute(pl.divide(data[blue],255.)),1.)
     #Red -- Max 40C, so we increase the intensity of the red color 6 times

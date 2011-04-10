@@ -147,7 +147,11 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
 
                 per_it = total / module.meta_schedule[size]
                 # Bytes/second is iterations*iterationsize/totaltime which divided by 1024*1024 is in megabytes
-                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024) 
+                mbytessec = ((1.0 / total) * (module.meta_schedule[size] * size)) / (1024*1024)
+                # for non-synthetic tests the mbytes/sec metric does not make sense
+                if module.__name__ == "nonsynthetic":
+                    mbytessec = -42
+                
                 ci.log("%10d %13d %13.2f %13.2f %13.2f %13.2f %13.5f" %  (\
                 size, \
                 module.meta_schedule[size], \
