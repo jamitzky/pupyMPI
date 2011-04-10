@@ -27,11 +27,11 @@ def _spread(p_min, p_max, no):
     skip = (p_max - p_min) / float(no)
     p = p_min
     final_points = [p_min]
-    
+
     for _ in range(no-1):
         p += skip
         final_points.append(p)
-        
+
     return final_points
 
 def _format_datasize(bytecount, decimals=2):
@@ -67,48 +67,48 @@ def _ensure_tic_space(points, axis_type, fit_points, discrete):
     """
     A helper function removing tics if we figure there is not
     enough room for them.
-    
-    ..note:: The discrete parameter is not used. 
+
+    ..note:: The discrete parameter is not used.
     """
     def generate_bump_points(start, bump, end):
         points = [start]
-        
+
         while start < end:
             start += bump
             points.append(start)
-            
+
         return points
-    
+
     p_min = min(points)
     p_max = max(points)
-    
+
     if True:
-        log_base = 32 # 10 in case of normal numbers. 
+        log_base = 32 # 10 in case of normal numbers.
         extender = 32
     else:
         log_base = 10
         extender = 4
-        
+
     if axis_type == 'lin':
         skip_size = p_max - p_min
         skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
-        
+
         points = generate_bump_points(p_min, skip_bump, p_max)
     elif axis_type == 'log':
         pass
-    
+
         # Remove 0
         try:
             points.remove(0)
         except:
             pass
-        
+
     while len(points) > fit_points:
          points = points[::2]
-    
+
     return points
-        
-def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):    
+
+def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):
     data_points = _ensure_tic_space(points, axis_type, fit_points, discrete)
     # Return a list with the data points formatted.
     tics = []
@@ -116,7 +116,7 @@ def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):
         label = formatter(item)
         tics.append("'%s' %s" % (label, item))
     return ', '.join(tics)
-    
+
 def scale(points, axis_type="lin", fit_points=20):
     return _simple_formatter(points, _format_scale, axis_type, fit_points)
 
@@ -131,3 +131,10 @@ def throughput(points, axis_type="lin", fit_points=20):
 
 def number(points, axis_type="lin", fit_points=20):
     return _simple_formatter(points, _format_number, axis_type, fit_points, discrete=True)
+
+
+## Testing below
+
+if __name__ == "__main__":
+    print "Testing tics"
+
