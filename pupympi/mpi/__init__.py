@@ -109,9 +109,10 @@ class MPI(Thread):
         # The events are for signalling change in data structures
 
         # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
-        self.unstarted_requests = []
-        self.unstarted_requests_lock = threading.Lock()
-        self.unstarted_requests_has_work = threading.Event()
+        # TRW
+        #self.unstarted_requests = []
+        #self.unstarted_requests_lock = threading.Lock()
+        #self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
@@ -399,7 +400,8 @@ class MPI(Thread):
         # The MPI state contains a list of request objects. There can not be a
         # lock object, so only the request state if present now. We restore it
         # with a helper function.
-        self.unstarted_requests = [ Request.from_state(state, self) for state in self.unstarted_requests ]
+        # TRW
+        #self.unstarted_requests = [ Request.from_state(state, self) for state in self.unstarted_requests ]
         self.pending_requests = [ Request.from_state(state, self) for state in self.pending_requests ]
 
         # FIXME: Setup the communicator and groups.
@@ -479,20 +481,28 @@ class MPI(Thread):
 
                     # Match with a request.
                     match = False
+                    # DEBUG
+                    #Logger().debug("mcp - pending_collective_requests:%i" % len(self.pending_collective_requests) )
                     for request in self.pending_collective_requests:
+                        # DEBUG
+                        #Logger().debug("trying to match")
                         # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
                             match = request.accept_msg(rank, data)
 
                             # Debug only. Should go away (maybe)
                             if match is None:
-                                Logger().warning("A collective request is behaving stragely. Received none from accept_msg. request is: %s" % request)
+                                Logger().warning("A collective request is behaving strangely. Received none from accept_msg. request is: %s" % request)
                             if match:
+                                # DEBUG
+                                #Logger().debug("match FOUND for - rank:%i, tag:%i" % (rank,tag))
                                 if request.test():
                                     prune = True
                                 break
 
                     if not match:
+                        # DEBUG
+                        #Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
                         new_data_list.append( item )
 
                 self.received_collective_data = new_data_list
@@ -561,27 +571,15 @@ class MPI(Thread):
             self.has_work_event.wait()
             self.has_work_event.clear()
 
-            # Schedule unstarted requests (outbound requests)
-            if self.unstarted_requests_has_work.is_set():
-                with self.unstarted_requests_lock:
-                    for request in self.unstarted_requests:
-                        #Logger().warning("Show some request!: %s" % request)
-                        self.network.t_out.add_out_request(request)
-
-                    self.unstarted_requests = []
-                    self.unstarted_requests_has_work.clear()
-
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
-                #Logger().debug("raw_data_has_work is set")
                 with self.raw_data_lock:
                     with self.received_data_lock:
-                        #Logger().debug("got both locks")
                         for element in self.raw_data_queue:
                             (rank, tag, ack, comm_id, raw_data) = element
                             data = pickle.loads(raw_data)
 
-                            if tag in constants.COLLECTIVE_TAGS:
+                            if tag in constants.COLLECTIVE_TAGS:                                
                                 # This is part of a collective request, so it
                                 # should be added on a seperate queue and
                                 # matched later.
@@ -590,7 +588,7 @@ class MPI(Thread):
                                     self.pending_collective_requests_has_work.set()
 
                             else:
-                                # Normal reqeust. Will be handled by the normal
+                                # Normal request. Will be handled by the normal
                                 # received data queue.
                                 self.received_data.append( (rank, tag, ack, comm_id, data) )
                                 self.pending_requests_has_work.set()
@@ -612,7 +610,7 @@ class MPI(Thread):
             if self.pending_collective_requests_has_work.is_set():
                 self.match_collective_pending()
 
-            # Pending requests are receive requests the may have a matching recv posted (actual message recieved)
+            # Pending requests are receive requests they may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
                 with self.pending_requests_lock:
                     removal = [] # Remember succesfully matched requests so we can remove them
@@ -627,16 +625,8 @@ class MPI(Thread):
                         self.pending_requests.remove(request)
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
-
-
-        # The main loop is now done. We flush all the messages so there are not any outbound messages
-        # stuck in the pipline.
-        with self.unstarted_requests_lock:
-            for request in self.unstarted_requests:
-                self.network.t_out.add_out_request(request)
-            self.unstarted_requests = []
-            self.unstarted_requests_has_work.clear()
-
+        
+        # TODO: Remove this when TRW is in effect again
         self.queues_flushed.set()
 
         # Start built-in profiling facility
@@ -665,6 +655,9 @@ class MPI(Thread):
 
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
+            
+        # DEBUG
+        #Logger().debug("done running and flushing")
 
     def get_state(self):
         """
@@ -674,7 +667,8 @@ class MPI(Thread):
         user_module = sys.argv[0].split("/")[-1].replace(".py","")
 
         return {
-            'unstarted_requests' : [r.get_state() for r in self.unstarted_requests],
+            # TRW
+            #'unstarted_requests' : [r.get_state() for r in self.unstarted_requests],
             'pending_requests' : [r.get_state() for r in self.pending_requests],
             'raw_data_queue' : self.raw_data_queue,
             'received_data' : self.received_data,
