@@ -576,8 +576,13 @@ class MPI(Thread):
                 with self.raw_data_lock:
                     with self.received_data_lock:
                         for element in self.raw_data_queue:
-                            (rank, tag, ack, comm_id, raw_data) = element
-                            data = pickle.loads(raw_data)
+                            (rank, msg_type, tag, ack, comm_id, raw_data) = element
+                            
+                            # DEBUG
+                            if msg_type == constants.CMD_RAWTYPE:
+                                data = list(bytearray(raw_data))
+                            else:
+                                data = pickle.loads(raw_data)
 
                             if tag in constants.COLLECTIVE_TAGS:                                
                                 # This is part of a collective request, so it
