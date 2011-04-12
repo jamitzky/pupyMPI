@@ -21,6 +21,7 @@ import sys, hashlib, random, os
 from optparse import OptionParser, OptionGroup
 import threading, getopt, time
 from threading import Thread
+import numpy
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -29,6 +30,7 @@ from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
+import mpi.network.utils as utils
 
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
@@ -578,9 +580,27 @@ class MPI(Thread):
                         for element in self.raw_data_queue:
                             (rank, msg_type, tag, ack, comm_id, raw_data) = element
                             
-                            # DEBUG
-                            if msg_type == constants.CMD_RAWTYPE:
-                                data = list(bytearray(raw_data))
+                            # Non-pickled data is recognized via msg_type
+                            if msg_type > constants.CMD_RAWTYPE:
+                                # Multidimensional arrays have the number of shapebytes hiding in the upper decimals
+                                shapelen = msg_type / 1000
+                                # typeint occupies the lower decimals
+                                typeint = msg_type % 1000
+                                if shapelen:
+                                    # Slice shapebytes out of msg
+                                    shapebytes = raw_data[:shapelen]
+                                    # Restore shape tuple
+                                    shape = tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
+                                    # Lookup the numpy type
+                                    t = utils.typeint_to_numpytype[typeint]
+                                    # Restore numpy array from the rest of the string
+                                    data = numpy.fromstring(raw_data[shapelen:],t).reshape(shape)
+                                
+                                else:
+                                    # Lookup the numpy type
+                                    t = utils.typeint_to_numpytype[msg_type]
+                                    # Restore numpy array
+                                    data = numpy.fromstring(raw_data,t)
                             else:
                                 data = pickle.loads(raw_data)
 
