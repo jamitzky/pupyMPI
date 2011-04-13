@@ -153,18 +153,34 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
             # Multidimensional array?
             if len(data.shape) > 1:
                 # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
-                byteshape = bytearray(numpy.array(data.shape))
+                byteshape = numpy.array(data.shape).tostring()
                 # Note how many bytes are shape bytes
-                shapelen = len(byteshape)                
+                shapelen = len(byteshape)
                 # Look up the correct type int
                 cmd = numpytype_to_typeint[data.dtype]
                 # Store shapelen in the upper decimals of the cmd
                 cmd = shapelen*1000 + cmd
                 # Convert data to bytearray with shape prepended
-                pickled_data = byteshape + bytearray(data)            
+                pickled_data = byteshape + data.tostring()
+                
+                # BELOW WORKS WITH NUMPY >= 1.5                
+                ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
+                #byteshape = bytearray(numpy.array(data.shape))
+                ## Note how many bytes are shape bytes
+                #shapelen = len(byteshape)                
+                ## Look up the correct type int
+                #cmd = numpytype_to_typeint[data.dtype]
+                ## Store shapelen in the upper decimals of the cmd
+                #cmd = shapelen*1000 + cmd
+                ## Convert data to bytearray with shape prepended
+                #pickled_data = byteshape + bytearray(data)            
             else:
                 Logger().debug("prepare - type:%s data:%s" % (type(data[0]),data) )
-                pickled_data = bytearray(data)                
+                
+                pickled_data = data.tostring()
+                
+                # BELOW WORKS WITH NUMPY >= 1.5                
+                #pickled_data = bytearray(data)                
                 # Look up the correct type int
                 cmd = numpytype_to_typeint[data.dtype]
         else:
