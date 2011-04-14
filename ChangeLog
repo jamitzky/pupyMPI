@@ -1,3 +1,8 @@
+Changes to version 0.9.3
+ * pupyplot.py has been rewritten to a number of smaller independent
+   utilities.
+ * Core code for sending messages moved to avoid the MPI thread. 
+
 Changes to version 0.9.2
  * Ranks on same host communicate through unix sockets. 
  * Support for Wtick and Wtime API functions.
