@@ -162,6 +162,13 @@ def numpyrunner(r = 100, testdata=numpydata):
                     for i in xrange(repetitions):
                         s = data.tostring()
                         l = numpy.fromstring(s,dtype=t)
+
+                with timing("%s methodcall+frombuffer reps:%i %s" % ('tostring', repetitions,desc),repetitions):
+                    # TODO: Include this in timing or not?
+                    t = data.dtype
+                    for i in xrange(repetitions):
+                        s = data.tostring()
+                        l = numpy.frombuffer(s,dtype=t)
             else:
                 print "syntax error!"
                 
@@ -169,6 +176,6 @@ def numpyrunner(r = 100, testdata=numpydata):
 
 # do it
 #plainrunner()
-numpyrunner(1000)
+numpyrunner(100)
 
 
