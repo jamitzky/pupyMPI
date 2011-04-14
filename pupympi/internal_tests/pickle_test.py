@@ -49,16 +49,29 @@ i2 = (sys.maxint, "a really big int")
 l1 = (range(10), "a small int list")
 l2 = (range(10000), "a large int list")
 
+small = 10
+medium = 500
+large = 10000
+
+na1 = (numpy.array(range(small), dtype='int64'), "a small(%i) numpy int64 array" % small)
+na2 = (numpy.array(range(medium), dtype='int64'), "a medium(%i) numpy int64 array" % medium)
+na3 = (numpy.array(range(medium),dtype='float64'), "a medium(%i) numpy float64 array" % medium)
+na4 = (numpy.array(range(large),dtype='int64'), "a large(%i) numpy int64 array" % large)
+na5 = (numpy.array(range(large),dtype='float64'), "a large(%i) numpy float64 array" % large)
+
 # classify objects
 smalldata = [i1, i2, l1]
 bigdata = [l2]
-# proper repetition factors
-small = 100
-big = 1
-# scale it
-smalldata = [(a,b,small) for (a,b) in smalldata]
-bigdata = [(a,b,big) for (a,b) in bigdata]
+numpydata = [na1,na2,na3,na4,na5]
 
+# proper repetition factors
+manyreps = 100
+fewreps = 1
+# scale it
+smalldata = [(a,b,manyreps) for (a,b) in smalldata]
+bigdata = [(a,b,fewreps) for (a,b) in bigdata]
+
+numpydata =  [(a,b,fewreps) for (a,b) in numpydata]
 
 @contextmanager
 def timing(printstr="time", repetitions=0, swallow_exception=True):
@@ -78,12 +91,15 @@ def timing(printstr="time", repetitions=0, swallow_exception=True):
             print "%s: %f sec." % (printstr, total_time)
 
 
-def runner(r = 100):
+def plainrunner(r = 100, testdata=smalldata+bigdata):
+    """
+    Works on all types
+    """
     # Serializers to try
     pickle_methods = [pickle, marshal, cPickle]
 
     for serializer in pickle_methods:
-        for data, desc, scale in smalldata+bigdata:
+        for data, desc, scale in testdata:
             repetitions = r * scale
             with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
                 for i in xrange(repetitions):
@@ -93,6 +109,66 @@ def runner(r = 100):
         print "-"*40
 
 
-runner()
+def numpyrunner(r = 100, testdata=numpydata):
+    """
+    Only works on types supporting bytearray and .tostring (ie. numpy arrays)
+    
+    NOTE: Made to run with numpy 1.5 where numpy arrays and bytearray are friends
+    """   
+    # Serializers to try along with call hint
+    serializer_methods =    [(pickle,'dumpload',),
+                            (cPickle,'dumpload'),
+                            (marshal,'dumpload'),
+                            ('tostring','methodcall'),
+                            ]
+    
+    # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
+    if numpy.__version__ >= '1.5':
+        serializer_methods.append( (bytearray,'funcall') )
+
+    for (serializer,syntax) in serializer_methods:
+        for data, desc, scale in testdata:
+            repetitions = r * scale
+            if syntax == 'dumpload':
+                with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                    for i in xrange(repetitions):
+                        s = serializer.dumps(data)
+                        l = serializer.loads(s)
+                        
+            elif syntax == 'funcall':
+                # The received data will be in the form of a string so we convert beforehand
+                s2 = str(serializer(data))
+                with timing("%s func+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                    # TODO: Include this in timing or not?
+                    t = data.dtype
+                    for i in xrange(repetitions):
+                        s = serializer(data)
+                        l = numpy.frombuffer(s2,dtype=t)
+
+                # The received data will be in the form of a string so we convert beforehand
+                s2 = str(serializer(data))
+                with timing("%s func+fromstring reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                    # TODO: Include this in timing or not?
+                    t = data.dtype
+                    for i in xrange(repetitions):
+                        s = serializer(data)
+                        l = numpy.fromstring(s2,dtype=t)
+            
+            # This case is a bit different
+            elif syntax == 'methodcall':
+                with timing("%s methodcall+fromstring reps:%i %s" % ('tostring', repetitions,desc),repetitions):
+                    # TODO: Include this in timing or not?
+                    t = data.dtype
+                    for i in xrange(repetitions):
+                        s = data.tostring()
+                        l = numpy.fromstring(s,dtype=t)
+            else:
+                print "syntax error!"
+                
+        print "-"*40
+
+# do it
+#plainrunner()
+numpyrunner(1000)
 
 
