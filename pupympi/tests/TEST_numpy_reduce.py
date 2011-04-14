@@ -4,6 +4,7 @@
 # meta-max_runtime: 25
 
 from mpi import MPI
+from mpi.collective.operations import MPI_sum
 mpi = MPI()
 
 try:
@@ -23,7 +24,18 @@ local_reduce_data = np.int_([rank,rank*2,rank*4])
 
 expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
 
-data = world.allreduce(local_reduce_data, sum)
+data = world.allreduce(local_reduce_data, MPI_sum)
+
+for i in range(3):
+    assert data[i] == expected_data[i]
+    
+    
+# New stuff
+local_reduce_data = np.array([rank,rank*2,rank*4])
+
+expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
+
+data = world.allreduce(local_reduce_data, MPI_sum)
 
 for i in range(3):
     assert data[i] == expected_data[i]
