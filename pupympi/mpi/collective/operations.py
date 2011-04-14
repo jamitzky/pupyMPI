@@ -27,6 +27,7 @@ It's very easy to write custom operations as described :ref:`here <operations-ap
 def MPI_sum(input_list):
     return sum(input_list)
 MPI_sum.partial_data = True
+MPI_sum.numpy_op = "sum"
 
 def MPI_prod(input_list):
     """
@@ -70,6 +71,7 @@ def MPI_max(input_list):
     #    return max(input_list)
     return max(input_list)
 MPI_max.partial_data = True
+MPI_max.numpy_op = "max"
 
 def MPI_min(input_list):
     """
@@ -77,6 +79,7 @@ def MPI_min(input_list):
     """
     return min(input_list)
 MPI_min.partial_data = True
+MPI_min.numpy_op = "min"
 
 def MPI_avg(input_list):
     """

@@ -8,6 +8,11 @@ from mpi.topology import tree
 
 import copy
 
+try:
+    import numpy
+except ImportError:
+    numpy = None
+
 
 def reduce_elementwise(sequences, operation):
     """
@@ -18,6 +23,13 @@ def reduce_elementwise(sequences, operation):
     """
     mapping and zipping like there's no tomorrow
     """
+    first = sequences[0]
+    numpy_op = getattr(operation, "numpy_op", None)
+    print first
+    if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
+        m = numpy.matrix(sequences)
+        return getattr(m, numpy_op)(0)
+    
     reduced_results = map(operation,zip(*sequences))
     
     # Restore the type of the sequence
