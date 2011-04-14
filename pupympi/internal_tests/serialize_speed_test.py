@@ -1,10 +1,9 @@
 """
-Helper program to measure the cost of serializing
+Helper program to measure the speed of serializing and unserializing
 
-Different serializers are timed and the size of the serialized output is reported
+Different serializers are timed with different datatypes
 """
 
-import random
 import time
 import sys
 from contextlib import contextmanager
@@ -15,23 +14,12 @@ import marshal
 
 import numpy
 
-numpy_formats = {
-    11 : {"type" : numpy.dtype('bool'), "bytesize" : 1, "description" : "Boolean (True or False) stored as a byte"},
-    13 : {"type" : numpy.dtype('int8'), "bytesize" : 1, "description" : "Byte (-128 to 127)" },
-    14 : {"type" : numpy.dtype('int16'), "bytesize" : 2, "description" : "Integer (-32768 to 32767)" },
-    15 : {"type" : numpy.dtype('int32'), "bytesize" : 4, "description" : "Integer (-2147483648 to 2147483647)" },
-    16 : {"type" : numpy.dtype('int64'), "bytesize" : 8, "description" : "Integer (9223372036854775808 to 9223372036854775807)" },
-    17 : {"type" : numpy.dtype('uint8'), "bytesize" : 1, "description" : "Unsigned integer (0 to 255)" },
-    18 : {"type" : numpy.dtype('uint16'), "bytesize" : 2, "description" : "Unsigned integer (0 to 65535)" },
-    19 : {"type" : numpy.dtype('uint32'), "bytesize" : 4, "description" : "Unsigned integer (0 to 4294967295)" },
-    20 : {"type" : numpy.dtype('uint64'), "bytesize" : 8, "description" : "Unsigned integer (0 to 18446744073709551615)" },
-    23 : {"type" : numpy.dtype('float32'), "bytesize" : 4, "description" : "Single precision float: sign bit, 8 bits exponent, 23 bits mantissa" },
-    24 : {"type" : numpy.dtype('float64'), "bytesize" : 8, "description" : "Double precision float: sign bit, 11 bits exponent, 52 bits mantissa" },
-    26 : {"type" : numpy.dtype('complex64'), "bytesize" : 8, "description" : "Complex number, represented by two 32-bit floats (real and imaginary components)" },
-    27 : {"type" : numpy.dtype('complex128'), "bytesize" : 16, "description" : "Complex number, represented by two 64-bit floats (real and imaginary components)" },
-    # 30 is bytearray
-    # 31 is ndarrays
-}
+
+
+# sequence sizes
+small = 10
+medium = 500
+large = 10000
 
 
 # Different objects to serialize
@@ -43,15 +31,17 @@ class A():
 d4 = ([A() for x in range(100)], "100 objects")
 
 # Test objects and nice descriptions
+
 i1 = (42, "a simple small int")
 i2 = (sys.maxint, "a really big int")
 
-l1 = (range(10), "a small int list")
-l2 = (range(10000), "a large int list")
+sl1 = (range(small), "a small(%i) int list" % small)
 
-small = 10
-medium = 500
-large = 10000
+ml1 = (range(medium), "a medium(%i) int list" % medium)
+ml2 = ([ i*1.0/3.0 for i in range(medium) ], "a medium(%i) float list" % medium)
+
+ll1 = (range(large), "a large(%i) int list" % large)
+ll2 = ([ i*1.0/3.0 for i in range(large) ], "a large(%i) float list" % large)
 
 na1 = (numpy.array(range(small), dtype='int64'), "a small(%i) numpy int64 array" % small)
 na2 = (numpy.array(range(medium), dtype='int64'), "a medium(%i) numpy int64 array" % medium)
@@ -60,8 +50,8 @@ na4 = (numpy.array(range(large),dtype='int64'), "a large(%i) numpy int64 array" 
 na5 = (numpy.array(range(large),dtype='float64'), "a large(%i) numpy float64 array" % large)
 
 # classify objects
-smalldata = [i1, i2, l1]
-bigdata = [l2]
+smalldata = [i1, i2, sl1, ml1, ml2]
+bigdata = [ll1, ll2]
 numpydata = [na1,na2,na3,na4,na5]
 
 # proper repetition factors
@@ -96,7 +86,7 @@ def plainrunner(r = 100, testdata=smalldata+bigdata):
     Works on all types
     """
     # Serializers to try
-    pickle_methods = [pickle, marshal, cPickle]
+    pickle_methods = [pickle, cPickle, marshal]
 
     for serializer in pickle_methods:
         for data, desc, scale in testdata:
@@ -113,7 +103,7 @@ def numpyrunner(r = 100, testdata=numpydata):
     """
     Only works on types supporting bytearray and .tostring (ie. numpy arrays)
     
-    NOTE: Made to run with numpy 1.5 where numpy arrays and bytearray are friends
+    NOTE: With numpy 1.5 where numpy arrays and bytearray are friends the bytearray method is tested also
     """   
     # Serializers to try along with call hint
     serializer_methods =    [(pickle,'dumpload',),
@@ -156,26 +146,27 @@ def numpyrunner(r = 100, testdata=numpydata):
             
             # This case is a bit different
             elif syntax == 'methodcall':
-                with timing("%s methodcall+fromstring reps:%i %s" % ('tostring', repetitions,desc),repetitions):
-                    # TODO: Include this in timing or not?
-                    t = data.dtype
-                    for i in xrange(repetitions):
-                        s = data.tostring()
-                        l = numpy.fromstring(s,dtype=t)
-
                 with timing("%s methodcall+frombuffer reps:%i %s" % ('tostring', repetitions,desc),repetitions):
                     # TODO: Include this in timing or not?
                     t = data.dtype
                     for i in xrange(repetitions):
                         s = data.tostring()
                         l = numpy.frombuffer(s,dtype=t)
+
+                with timing("%s methodcall+fromstring reps:%i %s" % ('tostring', repetitions,desc),repetitions):
+                    # TODO: Include this in timing or not?
+                    t = data.dtype
+                    for i in xrange(repetitions):
+                        s = data.tostring()
+                        l = numpy.fromstring(s,dtype=t)
+                        
             else:
                 print "syntax error!"
                 
         print "-"*40
 
 # do it
-#plainrunner()
-numpyrunner(100)
+plainrunner(100)
+#numpyrunner(100)
 
 
