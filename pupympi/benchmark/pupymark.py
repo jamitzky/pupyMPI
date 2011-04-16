@@ -3,17 +3,17 @@
 #
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
-# 
+#
 # pupyMPI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # pupyMPI is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -25,11 +25,7 @@ Usage: The benchmark runner is an MPI program albeit a complex one. Run it with
         mpirun and more than 4 processes unless you just want the single module
         (consisting only of point-to-point tests)
 """
-import time
-import datetime
-import sys
-import os
-import platform
+import time, datetime, sys, os, platform
 
 from mpi import MPI
 from mpi import constants
@@ -48,8 +44,8 @@ def pmap(limit=32):
     pregenerate nice formats for counting bytes
     dict is indexed [bytecount] = (exponent,normalized,longprefix,oneletterprefix)
     eg. {2048 : (11,2,"Kilo","K"), ... }
-    """    
-    prefixMap = {}    
+    """
+    prefixMap = {}
     for i in range(limit+1):
         pre = ""
         if i < 10:
@@ -63,8 +59,8 @@ def pmap(limit=32):
             pre = "Mega"
         elif i < 40:
             div = 1024**3
-            pre = "Giga"        
-        prefixMap[2**i] = (i,(2**i)/div,pre,pre[0:1])   
+            pre = "Giga"
+        prefixMap[2**i] = (i,(2**i)/div,pre,pre[0:1])
     return prefixMap
 
 
@@ -73,13 +69,13 @@ def pmap(limit=32):
 def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limit = 2**32):
     """
     Initializes MPI, the shared context object and runs the tests in sequential order.
-    
+
     The fixed_module parameter forces the benchmark to run just that one benchmark module (collection of tests)
     The fixed_test parameter forces the benchmark to run just that one test
     The limit parameter sets the upper bound on size of testdata
     """
     starttime = time.time()
-    
+
     modules = [single, parallel, collective, special, nonsynthetic]
     #DEBUG
     #modules = [special, nonsynthetic, single, parallel, collective]
@@ -87,11 +83,11 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
 
     mpi = MPI()
     root = mpi.MPI_COMM_WORLD.rank() == 0
-    
+
     # Gauge how many tests are to be run (to provide progression status during long tests)
     global testsToRun, testsDone
     testsDone = 0
-    testsToRun = 0    
+    testsToRun = 0
     for module in modules:
         # Only count in relevant module unless none has been specified
         if fixed_module is None or module.__name__ == fixed_module:
@@ -102,12 +98,12 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
             for test in tests:
                 if fixed_test is None or fixed_test == test:
                     testsToRun += 1
-    
+
     valid_tests = True
     if testsToRun < 1:
         print "No valid test or module specified"
         valid_tests = False
-    
+
     def run_benchmark(module, test):
         """Runs one specific benchmark in one specific module, and saves the timing results."""
         global testsDone
@@ -115,13 +111,13 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         results = []
 
         ci.log("%s processes participating - %s waiting in barrier" %( ci.num_procs, ci.w_num_procs - ci.num_procs ))
-        ci.log("%s - %s (test %i of %i)" % (module.__name__, test.__name__, testsDone, testsToRun)) 
-        ci.log("%10s %13s %13s %13s %13s %13s %13s" % ("#bytes", "#Repetitions", "total[sec]", "t_avg[usec]", "t_min[usec]", "t_max[usec]", "Mbytes/sec"))        
+        ci.log("%s - %s (test %i of %i)" % (module.__name__, test.__name__, testsDone, testsToRun))
+        ci.log("%10s %13s %13s %13s %13s %13s %13s" % ("#bytes", "#Repetitions", "total[sec]", "t_avg[usec]", "t_min[usec]", "t_max[usec]", "Mbytes/sec"))
         ci.log("----------------------------------------------------------------------------------------------")
-        
+
         sizekeys = module.meta_schedule.keys()
         sizekeys.sort()
-        
+
         for size in sizekeys:
             if limit >= 0: # for positive limits we stop at first size over the limit
                 if size > limit:
@@ -129,9 +125,9 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
             else: # for negative limits we ignore all sizes under the (abs) limit
                 if size < abs(limit):
                     continue
-                
+
             total = test(size, module.meta_schedule[size])
-            
+
             if total is None:
                 # Tests returning None are not meant to be run
                 # (eg. Barrier for different datasizes does not make sense)
@@ -151,7 +147,7 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 # for non-synthetic tests the mbytes/sec metric does not make sense
                 if module.__name__ == "nonsynthetic":
                     mbytessec = -42
-                
+
                 ci.log("%10d %13d %13.2f %13.2f %13.2f %13.2f %13.5f" %  (\
                 size, \
                 module.meta_schedule[size], \
@@ -160,59 +156,59 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 t_min, \
                 t_max,
                 mbytessec))
-                    
+
                 results.append((size, module.meta_schedule[size], total, t_avg, t_min, t_max, mbytessec, ci.num_procs))
-                
-        
+
+
         # Show accumulated results for fast estimation/comparison
         alltotal = 0.0
         iterationtime = 0.0
         for r in results:
             alltotal += r[2]
             iterationtime += r[3]
-            
+
         ci.log("----------------------------------------------------------------------------------------------")
         ci.log("(Accumulated) total[sec]: %12.2f %13.2f \n" % ( alltotal, iterationtime))
         return results
-        
-    def _set_up_environment(mpi, module):        
+
+    def _set_up_environment(mpi, module):
         """Sets up the environment for a given module, by loading meta data from the module itself, and applying it to the comm_info module."""
         ci.mpi = mpi
         ci.w_num_procs = mpi.MPI_COMM_WORLD.size()
-        
-        ci.select_source = True 
-        ci.select_tag = True         
-        
+
+        ci.select_source = True
+        ci.select_tag = True
+
         if ci.w_num_procs < module.meta_processes_required:
             raise Exception("Not enough processes active to invoke module %s" % module.__name__)
-        
+
         # Check if the benchmark requires only a specific number of participants
         if module.meta_enlist_all:
             active_processes = ci.w_num_procs #enlist everybody active.
         else:
             active_processes = module.meta_processes_required
-        
+
         new_group = mpi.MPI_COMM_WORLD.group().incl(range(active_processes))
         ci.communicator = mpi.MPI_COMM_WORLD.comm_create(new_group)
-        
+
         if ci.communicator is not None:
             if limit > 0:
                 testdataSize = min(limit, max(module.meta_schedule))
             else:
                 testdataSize = max(module.meta_schedule)
-            
+
             ci.data = ci.gen_testset(testdataSize)
-            ci.num_procs = ci.communicator.size() 
-            ci.rank = ci.communicator.rank() 
+            ci.num_procs = ci.communicator.size()
+            ci.rank = ci.communicator.rank()
         else:
             ci.num_procs = 0
             ci.rank = -1
         # end of set up environment subfunction
-    
+
     for module in modules:
         # Get only the functions of the module, slices away the "test_" prefix and lowercases
         tests = [ t[len("test_"):].lower() for t in dir(module) if t.startswith("test_") ]
-        
+
         # If a specific module is requested and this was not it, we move on
         if fixed_module is not None and module.__name__ != fixed_module:
             ci.log("Skipping module %s" % module.__name__)
@@ -221,13 +217,13 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         elif fixed_test is not None and fixed_test not in tests:
             ci.log("Skipping module %s" % module.__name__)
             continue
-        
+
         try:
             _set_up_environment(mpi, module)
         except Exception, e:
             print "Could not setup test environment for module %s. Error: %s" % (module.__name__,e)
             continue
-        
+
         if ci.rank == -1: # hold in barrier unless THIS process participates
             mpi.MPI_COMM_WORLD.barrier()
         else: # participates.
@@ -236,17 +232,17 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                     if fixed_test is not None and not function.lower().endswith("_"+fixed_test):
                         ci.log( "Skipping %s" % function)
                         continue
-                        
+
                     f = getattr(module, function)
                     resultlist[function] = run_benchmark(module,f)
-            
+
             mpi.MPI_COMM_WORLD.barrier() # join the barrier holding non-participants
 
     mpi.finalize()
-    
+
     # Output to .csv file
     if root and valid_tests:
-        
+
         sizekeys = [0]+[(2**i) for i in range(23)]
         # Find out what the practical limit was
         actual_limit = 0
@@ -255,15 +251,15 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 if size <= limit:
                     actual_limit = size
                     continue
-                else:                    
+                else:
                     break
-        else:            
+        else:
             actual_limit = max(sizekeys)
-        
+
         prefixMap = pmap()
         (c,n,lp,sp) = prefixMap[actual_limit]
         nicelimit = "%i%sB" % (n,sp)
-        
+
         if fixed_module is None:
             nicetype = fixed_test
         else:
@@ -273,23 +269,23 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         tdelta = endtime-starttime
         niceelapsed = datetime.timedelta(seconds=tdelta)
         niceend = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(endtime))
-        nicestart = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(starttime))            
+        nicestart = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime(starttime))
         tstamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(endtime))
-        
+
         filename = "pupymark."+nicetype+"."+str(ci.w_num_procs)+"procs."+nicelimit+"."+tstamp+".csv"
         try:
             f = open(logdir+filename, "w")
-        except:            
+        except:
             raise MPIException("Logging directory not writeable - check that this path exists and is writeable:\n%s" % logdir)
-        
-        
+
+
         # Show detailed test parameters in header for better overview
         testtype = "all tests"
         if fixed_test:
             testtype = "test:"+fixed_test
         if fixed_module:
             testtype = "module:"+fixed_module
-        
+
         # mpirun parameters - two and two
         mpirun_parameters = ""
         for i,p in enumerate(filtered_args):
@@ -297,11 +293,11 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 mpirun_parameters += "#\t"+p
             else:
                 mpirun_parameters += " "+p+"\n"
-            
-        
+
+
         header = "# =============================================================\n"
-        header += "# pupyMark - pupyMPI benchmarking\n"        
-        header += "# \n"        
+        header += "# pupyMark - pupyMPI benchmarking\n"
+        header += "# \n"
         header += "# %s limit:%s processes:%i\n" % (testtype,nicelimit,ci.w_num_procs)
         header += "# \n"
         header += "# start: %s \n" % nicestart
@@ -310,19 +306,19 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
         header += "# \n"
         header += "# parameters for mpirun:\n%s" % mpirun_parameters
         header += "# \n"
-        header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)        
+        header += "# pupyMPI version: %s\n" % (constants.PUPYVERSION)
         header += "# platform: %s (%s)\n" % (platform.platform(),platform.architecture()[0])
         header += "# %s version:%s\n" % (platform.python_implementation(),platform.python_version())
         header += "# =============================================================\n\n"
         f.write(header+"\n")
-        
+
         # Column headers for easier reading
         row = "datasize,repetitions,total time,avg time/repetition,min time/repetition,max time/repetition,Mbytes/second,nodes,name of test,timestamp of testrun"
         f.write(row+"\n")
 
         for testname in resultlist:
-            testresults = resultlist[testname]            
-            
+            testresults = resultlist[testname]
+
             for res in testresults:
                 # Data point
                 try:
@@ -334,10 +330,10 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 f.write(row+"\n")
             # Empty row for easier reading
             f.write("\n")
-            
+
         f.flush()
         f.close()
-        
+
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -345,15 +341,15 @@ class Usage(Exception):
 
 
 def main(argv=None):
-    
+
     module = None
     test = None
     limit = 2**32
-    
+
     for arg in sys.argv:
         if arg.startswith("--module="): # forces a specific test module (collection of tests)
             module = arg.split("=")[1].lower()
-        elif arg.startswith("--test="): # forces one specific test 
+        elif arg.startswith("--test="): # forces one specific test
             test = arg.split("=")[1].lower()
         elif arg.startswith("--limit="): # forces an upper limit on the test data size
             limit = int(arg.split("=")[1])
@@ -361,45 +357,45 @@ def main(argv=None):
             # DEBUG
             #print "unparsed arg",arg
             pass
-        
+
     # Filter sys.argv for the interesting mpirun parameters so we can record them with the benchmark run
     filtered_args = []
     for a in sys.argv[1:]:
         # when we reach pupymark parameters no more mpirun parameters are left
         if a == '--':
             break
-        
+
         # remove long prefix for easier reading
         if a.startswith('--mpirun-conn-'):
             filtered_args.append(a[len('--mpirun-conn-'):])
             continue
-        
+
         # Ignore those that we deduce from communicator
         if a.startswith('--rank=') or a.startswith('--size='):
             continue
-        
+
         # Location of the files are obvious from where the files are located :)
         # But we need to remember where to store them
         if a.startswith('-l '):
             logdir = a[len('-l '):]
-            continue        
+            continue
         if a.startswith('-l'):
             logdir = a[len('-l'):]
-            continue        
+            continue
         if a.startswith('--logdir='):
             logdir = a[len('--logdir='):]
             continue
-            
+
         # Just chop off needless prefix for other args
         filtered_args.append(a[len('--'):])
-    
+
     # logdir need to be an absolute path
     if not logdir.startswith('/'):
         _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         logdir = os.path.join(_BASE,logdir)
-    
+
     testrunner(filtered_args, logdir, module, test, limit)
-    
+
 # FIXME: Would we ever run as script? otherwise this is silly
 if __name__ == "__main__":
     main()
