@@ -24,11 +24,18 @@ def reduce_elementwise(sequences, operation):
     mapping and zipping like there's no tomorrow
     """
     first = sequences[0]
+    
+    print "-"*40
+    for s in sequences:
+        print "type: ", type(s)
+        print "len: ", len(s)
+    print "-"*40
+    
     numpy_op = getattr(operation, "numpy_op", None)
-    print first
+    
     if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
         m = numpy.matrix(sequences)
-        return getattr(m, numpy_op)(0)
+        return numpy.array(getattr(m, numpy_op)(0))
     
     reduced_results = map(operation,zip(*sequences))
     
@@ -60,7 +67,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.unpack = False # should we unpack a list to a simpler type (see next if)
         
         #if not getattr(data, "__iter__", False):
-        if not hasattr(data,"index"):
+        if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
             self.unpack = True
             
@@ -109,6 +116,7 @@ class TreeAllReduce(BaseCollectiveRequest):
                 
                 # reduce the data
                 if self.partial:
+                    print "type", type(self.received_data.values()[0]), self.received_data.values()[0]
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
                         
                     self.data = {self.rank : new_data}
