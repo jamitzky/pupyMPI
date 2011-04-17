@@ -192,7 +192,7 @@ class TreeReduce(BaseCollectiveRequest):
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):
-        if not hasattr(data,"index"):
+        if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
             self.unpack = True
 
