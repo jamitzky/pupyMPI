@@ -25,12 +25,6 @@ def reduce_elementwise(sequences, operation):
     """
     first = sequences[0]
     
-    print "-"*40
-    for s in sequences:
-        print "type: ", type(s)
-        print "len: ", len(s)
-    print "-"*40
-    
     numpy_op = getattr(operation, "numpy_op", None)
     
     if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
@@ -118,7 +112,6 @@ class TreeAllReduce(BaseCollectiveRequest):
                 
                 # reduce the data
                 if self.partial:
-                    print "type", type(self.received_data.values()[0]), self.received_data.values()[0]
                     new_data = reduce_elementwise(self.received_data.values(), self.operation)
                         
                     self.data = {self.rank : new_data}
