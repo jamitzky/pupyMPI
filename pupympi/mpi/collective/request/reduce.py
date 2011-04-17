@@ -35,9 +35,9 @@ def reduce_elementwise(sequences, operation):
     
     if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
         m = numpy.matrix(sequences)
-        return numpy.array(getattr(m, numpy_op)(0))
-    
-    reduced_results = map(operation,zip(*sequences))
+        reduced_results = getattr(m, numpy_op)(0)
+    else:    
+        reduced_results = map(operation,zip(*sequences))
     
     # Restore the type of the sequence
     if isinstance(sequences[0],str):    
@@ -46,6 +46,8 @@ def reduce_elementwise(sequences, operation):
         reduced_results = bytearray(reduced_results) # make byte list into bytearray
     if isinstance(sequences[0],tuple):
         reduced_results = tuple(reduced_results) # join
+    if isinstance(sequences[0],numpy.ndarray): # Get 1 dimensional numpy array from numpy matrix
+        reduced_results = reduced_results.A[0]
         
     return reduced_results
 
