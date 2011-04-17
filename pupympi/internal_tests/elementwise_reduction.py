@@ -111,6 +111,9 @@ def nummy(sequences, operation):
     res = m.min(0)
     print "type:%s type0:%s" % (type(res),type(res[0]))
     reduced_results = res.A[0]
+    
+    # This does not work since the matrix dimensions are preserved
+    #reduced_results = numpy.array(res)
     print "type:%s type0:%s" % (type(reduced_results),type(reduced_results[0]))
     return reduced_results
 
