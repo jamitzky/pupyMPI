@@ -25,7 +25,12 @@ def reduce_elementwise(sequences, operation):
     """
     first = sequences[0]
     numpy_op = getattr(operation, "numpy_op", None)
-    print first
+    
+    print "numpy", numpy
+    print "numpy op", numpy_op
+    print isinstance(first, numpy.ndarray)
+    print "first type",  first.dtype.kind 
+    
     if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
         m = numpy.matrix(sequences)
         return getattr(m, numpy_op)(0)

@@ -198,6 +198,7 @@ def testrunner(filtered_args,logdir,fixed_module = None, fixed_test = None, limi
                 testdataSize = max(module.meta_schedule)
 
             ci.data = ci.gen_testset(testdataSize)
+            ci.reduce_data = ci.gen_reduce_testset(testdataSize)
             ci.num_procs = ci.communicator.size()
             ci.rank = ci.communicator.rank()
         else:

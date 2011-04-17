@@ -35,7 +35,7 @@ select_source = False       # 0/1 for sender selection off/on
 
 clock_function = time.time # NEW: set this to communicator.Wtime() for MPI time, or time.time() for an alternative timer.
 data = None                 # NEW: Stores fixed data set
-
+reduce_data = None
 sndcnt, sdispl, reccnt, rdispl = (0,0,0,0)  # send and displacement for global ops NOTE: snd-, and reccnt not presently used.
 
 
@@ -63,6 +63,22 @@ def synchronize_processes():
     """docstring for barrier"""
     for _ in xrange(N_BARR):
         communicator.barrier()
+    
+def gen_reduce_testset(size):
+    import numpy
+    
+    # Sanity check. The size parameter is in bytes, and as we store
+    # 32 bit integers we should have at least 4 bytes and always a
+    # multipla of 4.
+    if size < 4:
+        return None
+    
+    array_length = size / 4
+
+    if array_length * 4 != size:
+        return None
+    
+    return numpy.array(xrange(array_length), dtype=numpy.int32)
     
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 def gen_testset(size):
