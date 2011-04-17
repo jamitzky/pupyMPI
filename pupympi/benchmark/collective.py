@@ -174,6 +174,9 @@ def test_Reduce(size, max_iterations):
     comm = ci.communicator
     num_procs = ci.num_procs
 
+    if size < 4:
+        return -42
+
     def Reduce(data, max_iterations):
         """docstring for Reduce"""
         current_root = 0
@@ -196,6 +199,10 @@ def test_Reduce(size, max_iterations):
 
 def test_Allreduce(size, max_iterations):
     comm = ci.communicator
+
+    if size < 4:
+        return -42
+    
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
