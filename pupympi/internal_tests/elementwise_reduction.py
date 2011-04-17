@@ -104,8 +104,15 @@ def zippy(sequences, operation):
     return reduced_results
 
 def nummy(sequences, operation):
+    print "type:%s type0:%s" % (type(sequences),type(sequences[0]))
     m = numpy.matrix(sequences)
-    return m.min(0)
+
+    #print "type:%s type0:%s" % (type(m),type(m[0]))
+    res = m.min(0)
+    print "type:%s type0:%s" % (type(res),type(res[0]))
+    reduced_results = res.A[0]
+    print "type:%s type0:%s" % (type(reduced_results),type(reduced_results[0]))
+    return reduced_results
 
 def mappy(sequences, operation):
     """
@@ -146,13 +153,13 @@ def numpy_generate_data(bytemultiplier,participants):
     The bytemultiplier scales op the 50 char base string to appropriate size
     Participants represent the number of sequences to reduce on
     """
-    baserange = numpy.array(range(10000))
+    baserange = numpy.array(range(10))
 
     wholeset = []
     for p in range(participants):
         from copy import copy
         rang = copy(baserange)
-        rang[p] = 1
+        rang[p] = -42
         wholeset.append(rang)
 
     return wholeset
@@ -169,11 +176,11 @@ def runner(version):
     #elif version == 4:
     #    res = mappy(testdata,MPI_min)
     elif version == 4:
-        res = nummy(testdata,MPI_min)
+        res = nummy(numpytestdata,MPI_min)
     else:
         print "no version..."
 
-    #print res
+    print res
 
 
 
@@ -184,10 +191,15 @@ if __name__=='__main__':
     participants = 4
     # Generate the data
     global testdata
+    global numpytestdata
     testdata = generate_data(bytemultiplier,participants)
-    testdata = numpy_generate_data(bytemultiplier,participants)
+    numpytestdata = numpy_generate_data(bytemultiplier,participants)
+    
+    testdata = numpytestdata
+    # DEBUG
+    #print numpytestdata
 
-    runs = 100
+    runs = 1
 
     from timeit import Timer
     t_simple = Timer("runner(0)", "from __main__ import runner")
