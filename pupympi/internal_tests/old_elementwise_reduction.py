@@ -2,42 +2,15 @@
 Testing various ways to apply an operation elementwise on a collection of sequences
 Sequences can be everything iterable
 """
-import string
-import copy
-import time
 import numpy
-from contextlib import contextmanager
 
 #from mpi.collective.operations import MPI_min
 
-# Auxillary timing function
-@contextmanager
-def timing(printstr="time", repetitions=0, swallow_exception=False):
-    start = time.time()
-    try:
-        yield
-    except Exception, e:
-        print "ERROR: " + str(e)
-        if not swallow_exception:
-            raise
-    finally:
-        total_time = time.time() - start
-        if repetitions > 0:
-            avg_time = total_time / repetitions
-            print "%s: %f / %f sec." % (printstr, total_time, avg_time)
-        else:
-            print "%s: %f sec." % (printstr, total_time)
-
-
-# Auxillary MPI operations
 def MPI_min(input_list):
     """
     Returns the minimum element in the list.
     """
     return min(input_list)
-
-
-# Elementwise reducers
 
 def simple(sequences, operation):
     """
@@ -135,10 +108,13 @@ def mammy(sequences, operation):
     mapping and zipping like there's no tomorrow,
     but with special treatment for numpy arrays using matrices
     """
-   
+    #print "type:%s type0:%s" % (type(sequences),type(sequences[0]))
+    
     if isinstance(sequences[0], numpy.ndarray):
         m = numpy.matrix(sequences)
+        #print "type:%s type0:%s" % (type(m),type(m[0]))
         res = m.min(0)
+        #print "type:%s type0:%s" % (type(res),type(res[0]))
         reduced_results = res.A[0]
     else:
         reduced_results = map(operation,zip(*sequences))
@@ -151,6 +127,7 @@ def mammy(sequences, operation):
     if isinstance(sequences[0],tuple):
         reduced_results = tuple(reduced_results) # join
 
+    #print "type:%s type0:%s" % (type(reduced_results),type(reduced_results[0]))
     return reduced_results
 
 def mammy2(sequences, operation):
@@ -158,8 +135,11 @@ def mammy2(sequences, operation):
     mapping and zipping like there's no tomorrow,
     but with special treatment for numpy arrays using matrices
     """
+    #print "type:%s type0:%s" % (type(sequences),type(sequences[0]))
     
     if isinstance(sequences[0], numpy.ndarray):
+        #print "type:%s type0:%s" % (type(m),type(m[0]))
+        #print "type:%s type0:%s" % (type(res),type(res[0]))
         reduced_results = numpy.matrix(sequences).min(0).A[0]
     else:
         reduced_results = map(operation,zip(*sequences))
@@ -172,6 +152,7 @@ def mammy2(sequences, operation):
         if isinstance(sequences[0],tuple):
             reduced_results = tuple(reduced_results) # join
 
+    #print "type:%s type0:%s" % (type(reduced_results),type(reduced_results[0]))
     return reduced_results
 
 def nummy(sequences, operation):
@@ -179,7 +160,10 @@ def nummy(sequences, operation):
     mapping and zipping like there's no tomorrow,
     but with special treatment for numpy arrays
     """
+    #print "type:%s type0:%s" % (type(sequences),type(sequences[0]))
     if isinstance(sequences[0], numpy.ndarray):
+        #print "type:%s type0:%s" % (type(m),type(m[0]))
+        #print "type:%s type0:%s" % (type(res),type(res[0]))
         reduced_results = numpy.minimum.reduce(sequences)
     else:
         reduced_results = map(operation,zip(*sequences))
@@ -192,6 +176,7 @@ def nummy(sequences, operation):
         if isinstance(sequences[0],tuple):
             reduced_results = tuple(reduced_results) # join
 
+    #print "type:%s type0:%s" % (type(reduced_results),type(reduced_results[0]))
     return reduced_results
 
 def mappy(sequences, operation):
@@ -211,42 +196,19 @@ def mappy(sequences, operation):
 
     return reduced_results
 
-def generate_data(size, participants, random=False, data_type=numpy.float64):
+def generate_data(bytemultiplier,participants):
     """
     Generate the dataset externally from measured functions so that impact is not measured
 
-    size number of elements of type data_type are generated for each participant
-    
-    each participants sequence is unique so that elementwise operations that compare
-    can't get off easily and correctness can be verified
-    
-    if random is applied the sequences are further randomized to avoid accidental caching effects
+    The bytemultiplier scales op the 50 char base string to appropriate size
+    Participants represent the number of sequences to reduce on
     """
-    if size < participants:
-        print "illegal parameters"
-        return None
-    
+    basestring = "yadunaxmefotimesniggaibeatwhereibeatnahmeanfoooool"
+
     wholeset = []
-    
-    interval = size/participants
-
-    if data_type == numpy.float64:
-        # ugly floats to use that precision
-        base = numpy.arange(0, interval, 1/3.0, dtype=numpy.float64,)
-        for p in xrange(participants):            
-            payload = copy.copy(base)
-            payload[p] = 42.0
-            wholeset.append(payload*participants)
-
-    elif data_type == str:
-        basestring = string.letters[:participants]
-        
-        
-        
-
-        for p in xrange(participants):
-            payload = basestring[:p]+'A'+basestring[p+1:]
-            wholeset.append(payload*bytemultiplier)
+    for p in range(participants):
+        payload = basestring[:p]+'A'+basestring[p+1:]
+        wholeset.append(payload*bytemultiplier)
 
     return wholeset
 
