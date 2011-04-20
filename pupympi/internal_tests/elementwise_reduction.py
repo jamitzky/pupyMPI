@@ -37,6 +37,14 @@ def MPI_min(input_list):
     return min(input_list)
 
 
+# Auxillary MPI operations
+def MPI_sum(input_list):
+    """
+    Returns the minimum element in the list.
+    """
+    return sum(input_list)
+
+
 # Elementwise reducers
 
 def simple(sequences, operation):
@@ -62,7 +70,7 @@ def simple(sequences, operation):
         reduced_results = bytearray(reduced_results) # make byte list into bytearray
     if isinstance(sequences[0],tuple):
         reduced_results = tuple(reduced_results) # join
-
+    
     return reduced_results
 
 def xsimple(sequences, operation):
@@ -211,140 +219,123 @@ def mappy(sequences, operation):
 
     return reduced_results
 
-def generate_data(size, participants, random=False, data_type=numpy.float64):
+def generate_data(size, participants, random=False, data_type=numpy.dtype('float64')):
     """
     Generate the dataset externally from measured functions so that impact is not measured
 
     size number of elements of type data_type are generated for each participant
     
-    each participants sequence is unique so that elementwise operations that compare
-    can't get off easily and correctness can be verified
+    each participants sequence is unique 
     
     if random is applied the sequences are further randomized to avoid accidental caching effects
+    otherwise so that elementwise operations that compare
+    can't get off easily and correctness can be verified
+
+    
+    ISSUES:
+    - no randomization yet
+    - only works for string and numpy types for now
     """
     if size < participants:
-        print "illegal parameters"
+        print "illegal parameters (size cannot be smaller than number of sequences)"
         return None
     
     wholeset = []
     
-    interval = size/participants
-
-    if data_type == numpy.float64:
-        # ugly floats to use that precision
-        base = numpy.arange(0, interval, 1/3.0, dtype=numpy.float64,)
-        for p in xrange(participants):            
-            payload = copy.copy(base)
-            payload[p] = 42.0
-            wholeset.append(payload*participants)
-
-    elif data_type == str:
-        basestring = string.letters[:participants]
-        
-        
-        
-
-        for p in xrange(participants):
-            payload = basestring[:p]+'A'+basestring[p+1:]
-            wholeset.append(payload*bytemultiplier)
-
-    return wholeset
-
-def numpy_generate_data(bytemultiplier,participants):
-    """
-    Generate the dataset externally from measured functions so that impact is not measured
-
-    The bytemultiplier scales op the 50 int base to appropriate size
-    Participants represent the number of sequences to reduce on
-    """
-    baserange = numpy.arange(50)
-    
-    #baserange = numpy.arange(50,dtype=numpy.float64)
-
-    wholeset = []
-    for p in range(participants):
-        from copy import copy
-        rang = copy(baserange)
-        rang[p] = -42
-        wholeset.append(rang)
-
-    return wholeset
-
-def runner(version):
-    if version == 0:
-       res = simple(testdata,MPI_min)
-    elif version == 1:
-        res = xsimple(testdata,MPI_min)
-    elif version == 2:
-        res = convoluted(testdata,MPI_min)
-    elif version == 3:
-        res = zippy(testdata,MPI_min)
-    #elif version == 4:
-    #    res = mappy(testdata,MPI_min)
-    elif version == 4:
-        res = mammy(testdata,MPI_min)
-    elif version == 5:
-        res = mammy2(testdata,MPI_min)
-    elif version == 6:
-        res = nummy(testdata,MPI_min)
+    # testdata repeats with a certain interval, if size is small relative to participants the interval is as long as the whole sequence
+    if size > participants**2:
+        interval = size/participants
     else:
-        print "no version..."
+        interval = size
     
-    # DEBUG
-    #print res
+    if data_type in (str,list,tuple):
+        basestring = string.lowercase
+        base = basestring
+        # Ensure base is at least as large as interval
+        while interval > len(base):
+            base += basestring
+        # Cut down to size
+        base = base[:interval]
+        
+        for p in xrange(participants):            
+            payload = base[:p]+'A'+base[p+1:] # Marker to distinguish sequences
+            wholeset.append(payload*(size/interval))
+        #print "interval:%i participants:%i sequence:%i " % (interval, participants, len(payload)*size/interval)
+        
+        if data_type == list:
+            wholeset = map(list,wholeset)
 
+        if data_type == tuple:
+            wholeset = map(tuple,wholeset)
+                
+        
+    elif isinstance(data_type,numpy.dtype):
+        # ugly floats to use that precision
+        #base = numpy.arange(0, interval, 1/3.0, dtype=numpy.float64,)
+        base = numpy.arange(interval, dtype=data_type)
+        for p in xrange(participants):
+            payload = copy.copy(base)
+            payload[p] = 42 # Marker to distinguish sequences
+            wholeset.append( numpy.tile(payload,size/interval) )
+        #print "interval:%i participants:%i sequence:%i " % (interval, participants, len(payload)*size/interval)
+        
+    else:
+        print "unknown type"
+        
+    return wholeset
 
-
-if __name__=='__main__':
-    # How big should the data payload be
-    bytemultiplier = 10
-    # Participants (how wide is the payload)
-    #participants = 2
-    #participants = 5
-    participants = 10       # Around 10 participants - nummy always wins
+def runner(version=None):
     
-    #participants = 20      # Around 20 participants - mammy can beat zippy
-    #participants = 40
-    # Generate the data
-    global testdata
-    testdata = generate_data(bytemultiplier,participants)
-    #testdata = numpy_generate_data(bytemultiplier,participants)
+    repetitions = 1000
+    repetitions = 1
     
-    # DEBUG
-    #print numpytestdata
+    participants = 4
 
-    runs = 1000
+    # Size definitions
+    small = 10
+    medium = 500
+    large = 4000
+    biglarge = 10000
     
+    # What sizes to test
+    sizes_to_test = [small,medium]
+    sizes_to_test = [small]
+    
+    
+    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, mammy2, nummy]
+    functions_to_test = [simple]
+    
+    types_to_test = [str, numpy.dtype('float64'), numpy.dtype('int32')]
+    types_to_test = [numpy.dtype('float64'), numpy.dtype('int32')]
+    types_to_test = [str, tuple, list]
+    types_to_test = [tuple, list]
+    
+    
+    operations_to_test = [max, min, all, any, sum]
+    operations_to_test = [min,max]
+    operations_to_test = [sum]
+    
+    
+    for size in sizes_to_test:
+        print "SIZE: %i" % size
+        
+        for t in types_to_test:
+            print "\t%i of type: %s" % (size,t)
+            
+            test_data = generate_data(size, participants, False, t)
+    
+            for func in functions_to_test:
+                for operation in operations_to_test:
+                    #s = "size:%i, func:%s, type:%s, operation:%s %i repetitions" % (size, func.func_name, t, operation, repetitions)
+                    s = "func:%s, operation:%s %i repetitions" % (func.func_name, operation, repetitions)
+                    #print s
+                    with timing(s, repetitions):
+                        for r in xrange(repetitions):
+                            
+                            res = func(test_data,operation)
+                            
+                    print "VALIDATA:"
+                    print res
 
-    from timeit import Timer
-    t_simple = Timer("runner(0)", "from __main__ import runner")
-    duration = t_simple.timeit(runs)
-    print "simple \t\t took %f seconds meaning %f per call" % (duration, duration/runs)
 
-    t_xsimple = Timer("runner(1)", "from __main__ import runner")
-    duration = t_xsimple.timeit(runs)
-    print "xsimple \t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_convoluted = Timer("runner(2)", "from __main__ import runner")
-    duration = t_convoluted.timeit(runs)
-    print "convoluted \t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_zippy = Timer("runner(3)", "from __main__ import runner")
-    duration = t_zippy.timeit(runs)
-    print "zippy \t\t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_mammy = Timer("runner(4)", "from __main__ import runner")
-    duration = t_mammy.timeit(runs)
-    print "mammy \t\t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_mammy2 = Timer("runner(5)", "from __main__ import runner")
-    duration = t_mammy2.timeit(runs)
-    print "mammy2 \t\t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    t_nummy = Timer("runner(6)", "from __main__ import runner")
-    duration = t_nummy.timeit(runs)
-    print "nummy \t\t took %f seconds meaning %f per call" % (duration, duration/runs)
-
-    #t_mappy = Timer("runner(4)", "from __main__ import runner")
-    #duration = t_mappy.timeit(runs)
-    #print "Test took %f seconds meaning %f per call" % (duration, duration/runs)
+runner()
