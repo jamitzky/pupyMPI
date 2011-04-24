@@ -145,6 +145,7 @@ def zippy(sequences, operation):
 
     return reduced_results
 
+
 def mammy(sequences, operation):
     """
     mapping and zipping like there's no tomorrow,
@@ -348,7 +349,7 @@ def validator(only_numpy=False):
 def runner():
         
     repetitions = 1000
-    repetitions = 1
+    #repetitions = 1
     
     participants = 4
 
@@ -359,24 +360,22 @@ def runner():
     biglarge = 10000
     
     # What sizes to test
-    sizes_to_test = [small,medium]
-    sizes_to_test = [small]
+    #sizes_to_test = [small,medium]
+    #sizes_to_test = [small]
+    sizes_to_test = [medium,large]
     
     
-    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
-    functions_to_test = [simple]
+    #functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
+    #functions_to_test = [simple]
+    functions_to_test = [zippy, mammy, nummy] # Fast ones only
+    #functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
     
-    types_to_test = [str, numpy.dtype('float64'), numpy.dtype('int32')]
-    types_to_test = [numpy.dtype('float64'), numpy.dtype('int32')]
-    types_to_test = [str, tuple, list]
-    types_to_test = [tuple, list]
+    #types_to_test = [str, numpy.dtype('float64'), numpy.dtype('int32')]
+    #types_to_test = [str, tuple, list]
+    types_to_test = [numpy.dtype('float64'), numpy.dtype('float32'), numpy.dtype('int64'), numpy.dtype('int32')]    
     
-    
-    operations_to_test = [max, min, all, any, sum]
-    operations_to_test = [min,max]
-    operations_to_test = [sum]
-    operations_to_test = [operations.MPI_sum, operations.MPI_max, operations.MPI_min]
-    operations_to_test = [operations.MPI_min]
+    #operations_to_test = [max, min, all, any, sum]
+    operations_to_test = [sum, operations.MPI_sum, max, operations.MPI_max, min, operations.MPI_min]
     
     
     for size in sizes_to_test:
@@ -397,13 +396,11 @@ def runner():
                             
                             res = func(test_data,operation)
                             
-                    print "VALIDATA:"
-                    print res
 
             
                 
 
-#validator(True) # Only numpy comatible
-validator(False)
+#validator(True) # Only numpy compatible
+#validator(False)
 
-#runner()
+runner()

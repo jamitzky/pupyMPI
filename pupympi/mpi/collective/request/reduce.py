@@ -20,29 +20,25 @@ def reduce_elementwise(sequences, operation):
     
     Sequences can be everything iterable
     """
-    """
-    mapping and zipping like there's no tomorrow
-    """
-    first = sequences[0]
+    # Check if a pupyMPI/numpy operation exists for this operation
+    numpy_op = getattr(operation, "numpy_op", None)
     
-    numpy_matrix_op = getattr(operation, "numpy_matrix_op", None)
-    
-    if numpy and numpy_matrix_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
-        m = numpy.matrix(sequences)
-        reduced_results = getattr(m, numpy_matrix_op)(0)        
-    else:    
+    # If it is a numpy array and an optimized operation exists we use it
+    if isinstance(sequences[0], numpy.ndarray) and numpy_op:        
+        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
+    else:
         reduced_results = map(operation,zip(*sequences))
-    
-    # Restore the type of the sequence
-    if isinstance(sequences[0],str):    
-        reduced_results = ''.join(reduced_results) # join char list into string
-    if isinstance(sequences[0],bytearray):
-        reduced_results = bytearray(reduced_results) # make byte list into bytearray
-    if isinstance(sequences[0],tuple):
-        reduced_results = tuple(reduced_results) # join
-    if isinstance(sequences[0],numpy.ndarray): # Get 1 dimensional numpy array from numpy matrix
-        reduced_results = reduced_results.A[0]
-        
+            
+        # Restore the type of the sequence
+        if isinstance(sequences[0],numpy.ndarray):
+            reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
+        if isinstance(sequences[0],str):
+            reduced_results = ''.join(reduced_results) # join char list into string
+        if isinstance(sequences[0],bytearray):
+            reduced_results = bytearray(reduced_results) # make byte list into bytearray
+        if isinstance(sequences[0],tuple):
+            reduced_results = tuple(reduced_results) # join
+
     return reduced_results
 
 class TreeAllReduce(BaseCollectiveRequest):
