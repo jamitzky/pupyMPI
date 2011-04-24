@@ -377,16 +377,20 @@ class BaseCommunicationHandler(threading.Thread):
                 self.network.socket_pool.add_accepted_socket(conn, rank)
             
             # FIXME: Rewrite below condition - hint let all user stuff be >100
-            if msg_type == constants.CMD_USER or msg_type > constants.CMD_RAWTYPE:
+            if msg_type >= constants.CMD_RAWTYPE:
                 try:
                     with self.network.mpi.raw_data_lock:
-                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, raw_data))
+                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
+                        # DEBUG
+                        #Logger().debug("Special treatment of :%s" % msg_type)
                 except AttributeError, e:
-                    pass
+                    Logger().error("Strange error:%s" % e)
+                    raise e
                 except Exception, e:
-                    Logger().error("Strange error - Failed grabbing raw_data_lock! error:%s" % e)                    
+                    Logger().error("Strange error - Failed grabbing raw_data_lock! error:%s" % e)
+                    raise e
             else:
                 self.network.mpi.handle_system_message(rank, msg_type, raw_data, conn)
 
