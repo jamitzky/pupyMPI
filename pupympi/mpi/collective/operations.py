@@ -15,6 +15,9 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+import numpy
+
 """
 Operations for collective requests. These will take a
 list and do something and return the result. There are
@@ -24,10 +27,23 @@ that will control the behaviour.
 It's very easy to write custom operations as described :ref:`here <operations-api-label>`
 """
 
-def MPI_sum(input_list):
-    return sum(input_list)
+def MPI_sum(input_list):    
+    """
+    Returns the (Python) sum of the elements in the list
+    
+    string: For strings we concatenate whereas the python sum function returns an error
+    
+    TODO:
+    float: Floats are summed with extended precision using math.fsum
+    other iterables: for eg. nested lists or tuples we concatenate
+    """
+    if type(input_list[0]) == str:
+        return ''.join(input_list)
+    
+    return sum(input_list)    
 MPI_sum.partial_data = True
-MPI_sum.numpy_op = "sum"
+MPI_sum.numpy_op = numpy.add.reduce
+MPI_sum.numpy_matrix_op = "sum"
 
 def MPI_prod(input_list):
     """
@@ -51,13 +67,11 @@ def MPI_prod(input_list):
     """
     p = 1
 
-    # The input list is a list of dictionaries. We're only interested in
-    # looking through the actual values.
-
     for e in input_list:
         p *= e
     return p
 MPI_prod.partial_data = True
+MPI_prod.numpy_op = numpy.multiply.reduce
 
 def MPI_max(input_list):
     """
@@ -71,7 +85,8 @@ def MPI_max(input_list):
     #    return max(input_list)
     return max(input_list)
 MPI_max.partial_data = True
-MPI_max.numpy_op = "max"
+MPI_max.numpy_op = numpy.maximum.reduce
+MPI_max.numpy_matrix_op = "max"
 
 def MPI_min(input_list):
     """
@@ -79,10 +94,15 @@ def MPI_min(input_list):
     """
     return min(input_list)
 MPI_min.partial_data = True
-MPI_min.numpy_op = "min"
+MPI_min.numpy_op = numpy.minimum.reduce
+MPI_min.numpy_matrix_op = "min"
 
 def MPI_avg(input_list):
     """
     Return the average of the elements
     """
     return sum(input_list)/len(input_list)
+    
+MPI_min.partial_data = False
+
+    
