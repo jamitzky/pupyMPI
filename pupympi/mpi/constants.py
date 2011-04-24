@@ -119,27 +119,17 @@ COLLECTIVE_TAGS = [TAG_BCAST, TAG_BARRIER, TAG_REDUCE, TAG_ALLREDUCE, TAG_ALLTOA
 
 JOB_INITIALIZING = -1
 
-# commands used for indicating is this is a system
-# message.
-CMD_USER = 0
-#CMD_SYSTEM = 2  # Number two is a dirty number and unused atm.
 
-# Utilities
+# The command field is used for discerning system commands
+CMD_USER = 0 # indicate that this is a user command (not a system command)
 
-# Used to abort a running instance.
-CMD_ABORT = 1
+# Utilities commands
+CMD_ABORT = 1           # Abort a running instance.
+CMD_PING = 3            # Check if an instance is still alive
+CMD_MIGRATE_PACK = 4    # Used to pack a running instance into a file
+CMD_READ_REGISTER = 5   # Used to inspect registers.
+CMD_CONN_CLOSE = 6      # used to close a TCP connection
+CMD_CONFIG = 7          # Used to change settings at runtime.
 
-# Used to check if an instance is still alive
-CMD_PING = 3
-
-# Used ot pack a running instance into a file.
-CMD_MIGRATE_PACK = 4 # Pack the entire system.
-
-# Used to inspect registers.
-CMD_READ_REGISTER = 5
-
-# used to close a TCP connection
-CMD_CONN_CLOSE = 6
-
-# Used to change settings at runtime.
-CMD_CONFIG = 7
+# Commands over 100 are used to indicate unpickled datatypes
+CMD_RAWTYPE = 100
