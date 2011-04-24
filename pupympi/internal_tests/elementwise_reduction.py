@@ -1,14 +1,29 @@
 """
 Testing various ways to apply an operation elementwise on a collection of sequences
 Sequences can be everything iterable
+
+ISSUES:
+Need validation mode
+Bool type is out for now
+The numpy average function is not used since it is not ufunc and also needs an axis argument or it will flatten sequences
+
+TESTING NOTES:
+sum vs. MPI_sum for types that sum can deal with
+sum vs. math.fsum? or just use numpy when summing floats?
+sum vs. max vs min vs. avg for relevant types
+
+
 """
+import sys
 import string
 import copy
 import time
+import math
 import numpy
 from contextlib import contextmanager
 
-#from mpi.collective.operations import MPI_min
+sys.path.append('..') # include parent dir in PYTHONPATH so we can import operations without further trickery
+from mpi.collective import operations
 
 # Auxillary timing function
 @contextmanager
@@ -27,22 +42,6 @@ def timing(printstr="time", repetitions=0, swallow_exception=False):
             print "%s: %f / %f sec." % (printstr, total_time, avg_time)
         else:
             print "%s: %f sec." % (printstr, total_time)
-
-
-# Auxillary MPI operations
-def MPI_min(input_list):
-    """
-    Returns the minimum element in the list.
-    """
-    return min(input_list)
-
-
-# Auxillary MPI operations
-def MPI_sum(input_list):
-    """
-    Returns the minimum element in the list.
-    """
-    return sum(input_list)
 
 
 # Elementwise reducers
@@ -64,6 +63,8 @@ def simple(sequences, operation):
         reduced_results.append(operation(temp_list))
 
     # Restore the type of the sequence
+    if isinstance(sequences[0],numpy.ndarray):
+        reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
@@ -91,6 +92,8 @@ def xsimple(sequences, operation):
         reduced_results.append(operation(temp_list))
 
     # Restore the type of the sequence
+    if isinstance(sequences[0],numpy.ndarray):
+        reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
@@ -111,6 +114,8 @@ def convoluted(sequences, operation):
     reduced_results = [ operation([ sequences[m][i] for m in xrange(no_seq) ]) for i in xrange(seq_len) ]
 
     # Restore the type of the sequence
+    if isinstance(sequences[0],numpy.ndarray):
+        reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
@@ -129,6 +134,8 @@ def zippy(sequences, operation):
     #print reduced_results
 
     # Restore the type of the sequence
+    if isinstance(sequences[0],numpy.ndarray):
+        reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
@@ -144,14 +151,23 @@ def mammy(sequences, operation):
     but with special treatment for numpy arrays using matrices
     """
    
-    if isinstance(sequences[0], numpy.ndarray):
+    numpy_matrix_op = getattr(operation, "numpy_matrix_op", None)
+
+    if isinstance(sequences[0], numpy.ndarray) and numpy_matrix_op:
+        # Find the proper matrix operation as defined in operations.py
+        # or hope that the built-in Python operation has a corresponding matrix operation with same name
+        # Make a matrix
         m = numpy.matrix(sequences)
-        res = m.min(0)
+        # Find the resultmatrix
+        res = getattr(m, numpy_matrix_op)(0)
+        # Get one-dimensional array from result matrix
         reduced_results = res.A[0]
     else:
         reduced_results = map(operation,zip(*sequences))
             
     # Restore the type of the sequence
+    if isinstance(sequences[0],numpy.ndarray):
+        reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
     if isinstance(sequences[0],str):
         reduced_results = ''.join(reduced_results) # join char list into string
     if isinstance(sequences[0],bytearray):
@@ -161,38 +177,22 @@ def mammy(sequences, operation):
 
     return reduced_results
 
-def mammy2(sequences, operation):
-    """
-    mapping and zipping like there's no tomorrow,
-    but with special treatment for numpy arrays using matrices
-    """
-    
-    if isinstance(sequences[0], numpy.ndarray):
-        reduced_results = numpy.matrix(sequences).min(0).A[0]
-    else:
-        reduced_results = map(operation,zip(*sequences))
-            
-        # Restore the type of the sequence
-        if isinstance(sequences[0],str):
-            reduced_results = ''.join(reduced_results) # join char list into string
-        if isinstance(sequences[0],bytearray):
-            reduced_results = bytearray(reduced_results) # make byte list into bytearray
-        if isinstance(sequences[0],tuple):
-            reduced_results = tuple(reduced_results) # join
-
-    return reduced_results
 
 def nummy(sequences, operation):
     """
     mapping and zipping like there's no tomorrow,
     but with special treatment for numpy arrays
     """
-    if isinstance(sequences[0], numpy.ndarray):
-        reduced_results = numpy.minimum.reduce(sequences)
+    numpy_op = getattr(operation, "numpy_op", None)
+    
+    if isinstance(sequences[0], numpy.ndarray) and numpy_op:        
+        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
     else:
         reduced_results = map(operation,zip(*sequences))
             
         # Restore the type of the sequence
+        if isinstance(sequences[0],numpy.ndarray):
+            reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
         if isinstance(sequences[0],str):
             reduced_results = ''.join(reduced_results) # join char list into string
         if isinstance(sequences[0],bytearray):
@@ -202,22 +202,22 @@ def nummy(sequences, operation):
 
     return reduced_results
 
-def mappy(sequences, operation):
-    """
-    NOTE: Mappy has been retired since it doesn't currently work
-    mapping and zipping like there's no tomorrow
-    """
-    reduced_results = map(operation,*sequences)
-
-    # Restore the type of the sequence
-    if isinstance(sequences[0],str):
-        reduced_results = ''.join(reduced_results) # join char list into string
-    if isinstance(sequences[0],bytearray):
-        reduced_results = bytearray(reduced_results) # make byte list into bytearray
-    if isinstance(sequences[0],tuple):
-        reduced_results = tuple(reduced_results) # join
-
-    return reduced_results
+#def mappy(sequences, operation):
+#    """
+#    NOTE: Mappy has been retired since it doesn't currently work
+#    mapping and zipping like there's no tomorrow
+#    """
+#    reduced_results = map(operation,*sequences)
+#
+#    # Restore the type of the sequence
+#    if isinstance(sequences[0],str):
+#        reduced_results = ''.join(reduced_results) # join char list into string
+#    if isinstance(sequences[0],bytearray):
+#        reduced_results = bytearray(reduced_results) # make byte list into bytearray
+#    if isinstance(sequences[0],tuple):
+#        reduced_results = tuple(reduced_results) # join
+#
+#    return reduced_results
 
 def generate_data(size, participants, random=False, data_type=numpy.dtype('float64')):
     """
@@ -267,8 +267,7 @@ def generate_data(size, participants, random=False, data_type=numpy.dtype('float
 
         if data_type == tuple:
             wholeset = map(tuple,wholeset)
-                
-        
+                    
     elif isinstance(data_type,numpy.dtype):
         # ugly floats to use that precision
         #base = numpy.arange(0, interval, 1/3.0, dtype=numpy.float64,)
@@ -280,12 +279,74 @@ def generate_data(size, participants, random=False, data_type=numpy.dtype('float
         #print "interval:%i participants:%i sequence:%i " % (interval, participants, len(payload)*size/interval)
         
     else:
-        print "unknown type"
+        print "Error: unknown type!"
         
     return wholeset
 
-def runner(version=None):
+
+def validator(only_numpy=False):
+    """
+    Test that all functions agree on results
+    """
+    size = 5
+    participants = 4
     
+    # Numpy types
+    ntypes = [numpy.dtype('float64'), numpy.dtype('float32'), numpy.dtype('int64'), numpy.dtype('int32'), numpy.dtype('uint16')]
+    
+    # Python types
+    ptypes = [str, list ,tuple] 
+
+    # String in-capable operations
+    nostring = [sum, all, any, operations.MPI_prod, operations.MPI_avg]
+    
+    # String capable operations
+    stringy = [operations.MPI_sum, operations.MPI_max, operations.MPI_min, max, min]
+    
+    # reducing functions
+    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
+    
+    if only_numpy:
+        # Without strings etc. - ie. only numpy types
+        types_to_test = ntypes
+        operations_to_test = nostring + stringy
+    else:
+        # With strings etc.
+        types_to_test = ntypes + ptypes
+        operations_to_test = stringy
+
+
+    for t in types_to_test:
+        test_data = generate_data(size,participants, False, t)
+        #print "TESTDATA:%s type:%s specified type:%s" % (test_data, type(test_data[0]),t)
+        #print "TESTDATA:%s type:%s specified type:%s" % (test_data, type(test_data[0][0]),t)
+
+        for operation in operations_to_test:
+            results = []
+            for func in functions_to_test:
+                res = func(test_data, operation)
+                results.append(res)
+                s = "result:%s - from func:%s, type:%s operation:%s" % (res, func.func_name, type(res), operation)
+                #print s
+                
+                # Validate that types match
+                try:
+                    assert str(res.dtype) == t
+                except AttributeError, e: # non-numpy types do not have dtype attribute
+                    assert type(res) == t
+                except AssertionError, e:
+                    print "Error: initial type:%s not equal to result type:%s" % (t, str(res.dtype))
+                    raise e
+                
+            # Validate that all elements of the list are the same
+            try:
+                assert numpy.array_equal(results[1:],results[:-1])
+            except AttributeError, e: # non-numpy types does not work with array_equal        
+                assert results.count(results[0]) == len(results)
+
+
+def runner():
+        
     repetitions = 1000
     repetitions = 1
     
@@ -302,7 +363,7 @@ def runner(version=None):
     sizes_to_test = [small]
     
     
-    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, mammy2, nummy]
+    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
     functions_to_test = [simple]
     
     types_to_test = [str, numpy.dtype('float64'), numpy.dtype('int32')]
@@ -314,6 +375,8 @@ def runner(version=None):
     operations_to_test = [max, min, all, any, sum]
     operations_to_test = [min,max]
     operations_to_test = [sum]
+    operations_to_test = [operations.MPI_sum, operations.MPI_max, operations.MPI_min]
+    operations_to_test = [operations.MPI_min]
     
     
     for size in sizes_to_test:
@@ -337,5 +400,10 @@ def runner(version=None):
                     print "VALIDATA:"
                     print res
 
+            
+                
 
-runner()
+#validator(True) # Only numpy comatible
+validator(False)
+
+#runner()

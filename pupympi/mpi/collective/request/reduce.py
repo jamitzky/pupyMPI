@@ -25,11 +25,11 @@ def reduce_elementwise(sequences, operation):
     """
     first = sequences[0]
     
-    numpy_op = getattr(operation, "numpy_op", None)
+    numpy_matrix_op = getattr(operation, "numpy_matrix_op", None)
     
-    if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
+    if numpy and numpy_matrix_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
         m = numpy.matrix(sequences)
-        reduced_results = getattr(m, numpy_op)(0)
+        reduced_results = getattr(m, numpy_matrix_op)(0)        
     else:    
         reduced_results = map(operation,zip(*sequences))
     
@@ -192,6 +192,8 @@ class TreeReduce(BaseCollectiveRequest):
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):
+        
+        # the attribute index is found on strings (which __iter__ is not) but excludes numpy arrays
         if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
             self.unpack = True
@@ -205,7 +207,8 @@ class TreeReduce(BaseCollectiveRequest):
         self.root = root
 
         self.operation = operation
-        if not getattr(self, "partial", None):
+        
+        if not hasattr(self, "partial"):
             self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
