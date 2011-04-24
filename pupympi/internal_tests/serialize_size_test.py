@@ -2,6 +2,7 @@
 Helper program to measure the size of serialized data
 
 Different serializers are timed with different datatypes
+Also the serialization and unserialization methods are validated by checking that data is the same
 """
 
 import sys
