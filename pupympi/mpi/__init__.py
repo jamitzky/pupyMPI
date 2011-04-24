@@ -592,16 +592,22 @@ class MPI(Thread):
                                     # Restore shape tuple
                                     shape = tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
                                     # Lookup the numpy type
-                                    t = utils.typeint_to_numpytype[typeint]
+                                    t = utils.typeint_to_type[typeint]
                                     # Restore numpy array from the rest of the string
                                     data = numpy.fromstring(raw_data[shapelen:],t).reshape(shape)
                                 
                                 else:
-                                    # Lookup the numpy type
-                                    t = utils.typeint_to_numpytype[msg_type]
-                                    # Restore numpy array
-                                    data = numpy.fromstring(raw_data,t)
+                                    # Numpy type or bytearray
+                                    if msg_type == constants.CMD_BYTEARRAY:
+                                        # plain old bytearray
+                                        data = bytearray(raw_data)
+                                    else:
+                                        # Lookup the numpy type
+                                        t = utils.typeint_to_type[msg_type]
+                                        # Restore numpy array
+                                        data = numpy.fromstring(raw_data,t)
                             else:
+                                # Both system messages and user pickled messages are unpickled here
                                 data = pickle.loads(raw_data)
 
                             if tag in constants.COLLECTIVE_TAGS:                                

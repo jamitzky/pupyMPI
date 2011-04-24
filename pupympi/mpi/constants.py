@@ -119,10 +119,6 @@ COLLECTIVE_TAGS = [TAG_BCAST, TAG_BARRIER, TAG_REDUCE, TAG_ALLREDUCE, TAG_ALLTOA
 
 JOB_INITIALIZING = -1
 
-
-# The command field is used for discerning system commands
-CMD_USER = 0 # indicate that this is a user command (not a system command)
-
 # Utilities commands
 CMD_ABORT = 1           # Abort a running instance.
 CMD_PING = 3            # Check if an instance is still alive
@@ -133,3 +129,10 @@ CMD_CONFIG = 7          # Used to change settings at runtime.
 
 # Commands over 100 are used to indicate unpickled datatypes
 CMD_RAWTYPE = 100
+
+# Exactly 100 is used for discerning pickled user messages
+# >= CMD_RAWTYPE for rawtypes and pickled user messages
+# > CMD_RAWTYPE for rawtypes
+CMD_USER = CMD_RAWTYPE # indicate that this is a user command (not a system command)
+
+CMD_BYTEARRAY = 301
