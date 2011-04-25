@@ -103,6 +103,7 @@ def MPI_avg(input_list):
     """
     return sum(input_list)/len(input_list)
     
-MPI_min.partial_data = False
+MPI_avg.partial_data = False
+MPI_avg.numpy_op = numpy.mean
 
     
