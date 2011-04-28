@@ -74,10 +74,11 @@ def gen_reduce_testset(size):
         return None
     
     array_length = size / 4
-
-    if array_length * 4 != size:
-        return None
-    
+        
+    # TODO:
+    # Rerun tests with floats
+    # Use floats since some numpy operations are faster on floats 
+    #return numpy.arange(array_length, dtype=numpy.float32)
     return numpy.array(xrange(array_length), dtype=numpy.int32)
     
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
