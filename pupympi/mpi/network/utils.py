@@ -17,6 +17,7 @@
 #
 import socket, struct
 import random
+import numpy
 
 from mpi.logger import Logger
 from mpi.exceptions import MPIException
@@ -102,12 +103,101 @@ def get_raw_message(client_socket, bytecount=4096):
     return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
 
 
+# ... just for later inspiration
+othertypes = {
+    # The bytearray type will have to be handled differently since an element has int type etc.
+    constants.CMD_BYTEARRAY : {"type" : bytearray, "bytesize" : 1, "description" : "raw bytearray" },
+}
+
+numpytypes = {
+    constants.CMD_RAWTYPE+101 : {"type" : numpy.dtype('bool'), "bytesize" : 1, "description" : "Boolean (True or False) stored as a byte"},
+    constants.CMD_RAWTYPE+102 : {"type" : numpy.dtype('int8'), "bytesize" : 1, "description" : "Byte (-128 to 127)" },
+    constants.CMD_RAWTYPE+103 : {"type" : numpy.dtype('int16'), "bytesize" : 2, "description" : "Integer (-32768 to 32767)" },
+    constants.CMD_RAWTYPE+104 : {"type" : numpy.dtype('int32'), "bytesize" : 4, "description" : "Integer (-2147483648 to 2147483647)" },
+    constants.CMD_RAWTYPE+105 : {"type" : numpy.dtype('int64'), "bytesize" : 8, "description" : "Integer (9223372036854775808 to 9223372036854775807)" },
+    constants.CMD_RAWTYPE+106 : {"type" : numpy.dtype('uint8'), "bytesize" : 1, "description" : "Unsigned integer (0 to 255)" },
+    constants.CMD_RAWTYPE+107 : {"type" : numpy.dtype('uint16'), "bytesize" : 2, "description" : "Unsigned integer (0 to 65535)" },
+    constants.CMD_RAWTYPE+108 : {"type" : numpy.dtype('uint32'), "bytesize" : 4, "description" : "Unsigned integer (0 to 4294967295)" },
+    constants.CMD_RAWTYPE+109 : {"type" : numpy.dtype('uint64'), "bytesize" : 8, "description" : "Unsigned integer (0 to 18446744073709551615)" },
+    constants.CMD_RAWTYPE+110 : {"type" : numpy.dtype('float32'), "bytesize" : 4, "description" : "Single precision float: sign bit, 8 bits exponent, 23 bits mantissa" },
+    constants.CMD_RAWTYPE+111 : {"type" : numpy.dtype('float64'), "bytesize" : 8, "description" : "Double precision float: sign bit, 11 bits exponent, 52 bits mantissa" },
+    constants.CMD_RAWTYPE+112 : {"type" : numpy.dtype('complex64'), "bytesize" : 8, "description" : "Complex number, represented by two 32-bit floats (real and imaginary components)" },
+    constants.CMD_RAWTYPE+113 : {"type" : numpy.dtype('complex128'), "bytesize" : 16, "description" : "Complex number, represented by two 64-bit floats (real and imaginary components)" },
+}
+
+# Mapping dicts
+#typeint_to_numpytype = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items() ] )
+#numpytype_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items() ] )
+
+typeint_to_type = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items()+othertypes.items() ] )
+type_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items()+othertypes.items() ] )
+
+
 def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_pickled=False):
+    """
+    Internal function to
+    - serialize payload if needed
+    - measure payload
+    - construct and append header
+    
+    The header format has following fields:
+    length of payload
+    rank of sender
+    system cmd
+    mpi or system tag
+    acknowledge needed
+    communicator id    
+    """
     if is_pickled:
         pickled_data = data
     else:
-        pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        # DEBUG
+        #Logger().debug("prepare... - type:%s data:%s" % (type(data),data) )
+        if isinstance(data,numpy.ndarray):
+            # Multidimensional array?
+            if len(data.shape) > 1:
+                # DEBUG
+                Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
 
+                # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
+                byteshape = numpy.array(data.shape).tostring()
+                # Note how many bytes are shape bytes
+                shapelen = len(byteshape)
+                # Look up the correct type int
+                cmd = type_to_typeint[data.dtype]
+                # Store shapelen in the upper decimals of the cmd
+                cmd = shapelen*1000 + cmd
+                # Convert data to bytearray with shape prepended
+                pickled_data = byteshape + data.tostring()
+                
+                # BELOW WORKS WITH NUMPY >= 1.5                
+                ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
+                #byteshape = bytearray(numpy.array(data.shape))
+                ## Note how many bytes are shape bytes
+                #shapelen = len(byteshape)                
+                ## Look up the correct type int
+                #cmd = numpytype_to_typeint[data.dtype]
+                ## Store shapelen in the upper decimals of the cmd
+                #cmd = shapelen*1000 + cmd
+                ## Convert data to bytearray with shape prepended
+                #pickled_data = byteshape + bytearray(data)            
+            else:
+                Logger().debug("prepare ONEDIM - type:%s" % (type(data[0])) )
+                
+                pickled_data = data.tostring()
+                
+                # BELOW WORKS WITH NUMPY >= 1.5                
+                #pickled_data = bytearray(data)                
+                # Look up the correct type int
+                cmd = type_to_typeint[data.dtype]
+        elif isinstance(data,bytearray):
+            
+            cmd = type_to_typeint[type(data)]
+            Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
+            pickled_data = data
+        else:
+            pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        
     lpd = len(pickled_data)
 
     header = struct.pack("llllll", lpd, rank, cmd, tag, ack, comm_id)

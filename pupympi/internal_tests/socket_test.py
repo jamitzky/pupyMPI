@@ -6,8 +6,9 @@ Testing socket performance
 This program is for testing raw speed of different ways of transferring data in
 and out of sockets in Python
 
-The premise is that a user has put the data into on of the Python data
-structures and needs it transferred back into the same type of datastructure.
+The premise is that a user has put the data into one of the Python data
+structures and needs it transferred over a socket to a different process
+and back into the same type of datastructure.
 
 
 datastructures:
