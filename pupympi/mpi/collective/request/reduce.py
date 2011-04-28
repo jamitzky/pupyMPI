@@ -20,29 +20,25 @@ def reduce_elementwise(sequences, operation):
     
     Sequences can be everything iterable
     """
-    """
-    mapping and zipping like there's no tomorrow
-    """
-    first = sequences[0]
-    
+    # Check if a pupyMPI/numpy operation exists for this operation
     numpy_op = getattr(operation, "numpy_op", None)
     
-    if numpy and numpy_op and isinstance(first, numpy.ndarray) and first.dtype.kind in ("i", "f"):
-        m = numpy.matrix(sequences)
-        reduced_results = getattr(m, numpy_op)(0)
-    else:    
+    # If it is a numpy array and an optimized operation exists we use it
+    if isinstance(sequences[0], numpy.ndarray) and numpy_op:        
+        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
+    else:
         reduced_results = map(operation,zip(*sequences))
-    
-    # Restore the type of the sequence
-    if isinstance(sequences[0],str):    
-        reduced_results = ''.join(reduced_results) # join char list into string
-    if isinstance(sequences[0],bytearray):
-        reduced_results = bytearray(reduced_results) # make byte list into bytearray
-    if isinstance(sequences[0],tuple):
-        reduced_results = tuple(reduced_results) # join
-    if isinstance(sequences[0],numpy.ndarray): # Get 1 dimensional numpy array from numpy matrix
-        reduced_results = reduced_results.A[0]
-        
+            
+        # Restore the type of the sequence
+        if isinstance(sequences[0],numpy.ndarray):
+            reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
+        if isinstance(sequences[0],str):
+            reduced_results = ''.join(reduced_results) # join char list into string
+        if isinstance(sequences[0],bytearray):
+            reduced_results = bytearray(reduced_results) # make byte list into bytearray
+        if isinstance(sequences[0],tuple):
+            reduced_results = tuple(reduced_results) # join
+
     return reduced_results
 
 class TreeAllReduce(BaseCollectiveRequest):
@@ -192,6 +188,8 @@ class TreeReduce(BaseCollectiveRequest):
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):
+        
+        # the attribute index is found on strings (which __iter__ is not) but excludes numpy arrays
         if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
             self.unpack = True
@@ -205,7 +203,8 @@ class TreeReduce(BaseCollectiveRequest):
         self.root = root
 
         self.operation = operation
-        if not getattr(self, "partial", None):
+        
+        if not hasattr(self, "partial"):
             self.partial = getattr(operation, "partial_data", False)
 
     def start(self):
