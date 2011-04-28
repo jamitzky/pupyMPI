@@ -66,10 +66,8 @@ if __name__ == "__main__":
 
     # It should be possible to limit the tests to one single test. how should
     # this be one.
-    all_tests = ds.get_tests()
+    all_tests = ds.get_tests(options.test_filter)
     for testname in all_tests:
-        if testname not in ("Allreduce", "Reduce", ):
-            continue
 
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
