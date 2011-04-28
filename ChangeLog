@@ -1,3 +1,7 @@
+Changes to version 0.9.4
+ * Allreduce and reduce performance gain due to new element wise reduction
+   (special focus on NumPy)
+
 Changes to version 0.9.3
  * pupyplot.py has been rewritten to a number of smaller independent
    utilities.
