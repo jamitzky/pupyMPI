@@ -96,6 +96,7 @@ def plot_parser():
     data_group.add_option('--x-data-filter', default=[], action='append', dest='x_data_filter', choices=DATA_FILTERS, help='Filter the data plotable on the x axis. Possible choices are ' + ','.join(DATA_FILTERS) + '. Defaults to %default. See the next parameter for a more detailed description')
     data_group.add_option('--y-data-filter', default=[], action='append', dest='y_data_filter', choices=DATA_FILTERS, help='Filters the data plotable on the y axis. Same choices and default variables as on the x axis. It it possible to specify this options multiple times thereby adding multiple filters. These will be executed in the same order as supplied on the command line.')
     data_group.add_option('--y-data-aggregate', default='min', dest='y_data_aggr', choices=AGGR_USER_CHOICES, help='Aggregates the y data according to some function. Default is %default. Choices are ' + ','.join(AGGR_USER_CHOICES))
+    data_group.add_option('--test-filter', default="", dest="test_filter", help="A comma sep list with the test the system should plot.")
     parser.add_option_group(data_group)
     groups['data'] = data_group
 
@@ -105,12 +106,6 @@ def plot_parser():
     extending_group.add_option('--extra-plot-lines', action='append', default=[], help='Insert extra plot lines. This means that it is possible to insert a guideline by entering log(x) or x*2')
     parser.add_option_group(extending_group)
     groups['extending'] = extending_group
-
-    # Adding colors
-    color_group = OptionGroup(parser, 'Colors', 'A quick way to select color schemes')
-    color_group.add_option('--color-scheme', dest='color_scheme', default=None, help='Select a color scheme. Options are: ' + ','.join(COLOR_SCHEMES))
-    parser.add_option_group(color_group)
-    groups['color'] = color_group
 
     return parser, groups
 
@@ -140,6 +135,9 @@ def parse(parser):
         if os.path.isfile(potential_mapper):    
             options.tag_mapper = potential_mapper
 
+    # Clean the filter test.
+    options.test_filter = filter(None, [s.strip().lower() for s in options.test_filter.split(",")])
+    
     # Setup a logger based on the arguments about. This might seem stupid
     # as it is not returned from the call, but as the Logger is a singleton
     # it is possible to do a simple Logger() call later.

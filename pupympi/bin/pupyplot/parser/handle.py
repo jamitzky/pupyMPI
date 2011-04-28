@@ -133,8 +133,16 @@ class DataSupplier(object):
         [all_tests.add(item[1]) for item in self.data]
         return list(all_tests)
     
-    def get_tests(self):
-        return self.tests
+    def get_tests(self, filters):
+        tests = []
+        for test in self.tests:
+            if filters:
+                if test.lower() not in filters:
+                    continue
+                
+            tests.append(test)
+            
+        return tests
     
     def get_raw_test_data(self, testname):
         filtered_data = []
