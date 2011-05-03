@@ -16,7 +16,7 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 import csv, re
 
-PROCS_RE = re.compile(".*(\d)procs.*")
+PROCS_RE = re.compile(".*\.([0-9]+)procs.*")
 
 class Parser(object):
     """
@@ -44,7 +44,7 @@ class Parser(object):
         # Find the number of procs from the filename.
         match = PROCS_RE.match(filepath)
         nodes = match.groups()[0]
-
+        
         for row in reader:
             row = map(lambda x: x.strip(), row)
 
