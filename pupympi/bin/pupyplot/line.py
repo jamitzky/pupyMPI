@@ -63,6 +63,7 @@ if __name__ == "__main__":
 
     # to extract and filter the data.
     ds = DataSupplier(handle.getdata())
+    ds.set_raw_filters(options.raw_filters)
 
     # It should be possible to limit the tests to one single test. how should
     # this be one.
