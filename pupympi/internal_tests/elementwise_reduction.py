@@ -367,10 +367,10 @@ def validator(only_numpy=False):
 
 def runner():
         
-    repetitions = 1000
+    repetitions = 100
     #repetitions = 1
     
-    participants = 4
+    participants = 3
 
     # Size definitions
     small = 10
@@ -380,8 +380,8 @@ def runner():
     
     # What sizes to test
     #sizes_to_test = [small,medium]
-    sizes_to_test = [small]
-    #sizes_to_test = [medium,large]
+    #sizes_to_test = [small]
+    sizes_to_test = [medium,large]
     
     
     #functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
@@ -395,7 +395,7 @@ def runner():
     
     #operations_to_test = [max, min, all, any, sum]
     operations_to_test = [sum, operations.MPI_sum, max, operations.MPI_max, min, operations.MPI_min, operations.MPI_avg]
-    operations_to_test = [sum, ]
+    operations_to_test = [sum, operations.MPI_sum, operations.MPI_avg, operations.MPI_min]
     
     for size in sizes_to_test:
         print "SIZE: %i" % size
@@ -419,7 +419,7 @@ def runner():
             
                 
 
-validator(True) # Only numpy compatible
+#validator(True) # Only numpy compatible
 #validator(False)
 
-#runner()
+runner()
