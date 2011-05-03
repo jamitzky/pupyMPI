@@ -130,11 +130,7 @@ def throughput(points, axis_type="lin", fit_points=20):
     return _simple_formatter(points, _format_throughput, axis_type, fit_points)
 
 def number(points, axis_type="lin", fit_points=20):
+    # Ensure we have only integers
+    points = list(set(map(int, points)))
+    
     return _simple_formatter(points, _format_number, axis_type, fit_points, discrete=True)
-
-
-## Testing below
-
-if __name__ == "__main__":
-    print "Testing tics"
-
