@@ -43,7 +43,7 @@ class Parser(object):
 
         # Find the number of procs from the filename.
         match = PROCS_RE.match(filepath)
-        nodes = match.groups()[0]
+        nodes = int(match.groups()[0])
         
         for row in reader:
             row = map(lambda x: x.strip(), row)
