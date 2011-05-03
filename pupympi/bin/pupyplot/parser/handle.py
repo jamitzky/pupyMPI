@@ -145,7 +145,6 @@ class DataSupplier(object):
             else:
                 pos_filters.append(f)
         
-        print neg_filters
         for test in self.tests:
             if pos_filters and test.lower() not in pos_filters:
                 continue
