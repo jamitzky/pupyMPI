@@ -123,6 +123,7 @@ class GNUPlot(object):
         return file_part, fh
 
     def plot(self):
+        self.handle.close()
         args = ["gnuplot", self.handle_filepath]
         #args.extend(self.plot_cmd_args)
         #args.append(self.handle_filepath)
@@ -161,9 +162,6 @@ class GNUPlot(object):
         """
         This method cleans up after temporary files (unless told otherwise)
         """
-        print "We are going to delete stuff"
-        print self.temp_files
-        
         if not self.keep_temp_file:
             for filepath in self.temp_files:
                 os.unlink(filepath)
