@@ -43,6 +43,8 @@ DATA_CHOICES = {
     'nodes' : 'Number of participants',
 }
 
+SERIES_CHOICES = DATA_CHOICES.keys()
+SERIES_CHOICES.append("none")
  
 def plot_parser():
     DATA_FILTERS = ['zero', ]
@@ -66,6 +68,7 @@ def plot_parser():
     # The most import
     parser.add_option('--x-data', default='datasize', choices=DATA_CHOICES.keys(), dest='x_data', help='Which data to plot on the x axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
     parser.add_option('--y-data', default='avg_time', choices=DATA_CHOICES.keys(), dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
+    parser.add_option('--series-column', default='nodes', choices=SERIES_CHOICES, dest='series_col', help='Which column should be used to seperate different series. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()) + " or none. If you supply 'none' there will only be one serie per tag")
 
     format_group = OptionGroup(parser, "Formatting", "Basic formatting options. These allow you to control a number of elements in the final plot. These options will not change the plot in any other ways than layout and should therefore not be primary concern. ")
 

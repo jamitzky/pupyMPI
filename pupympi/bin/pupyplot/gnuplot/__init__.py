@@ -199,6 +199,7 @@ class GNUPlot(object):
         ydata = null_filter(self.combined_y_data)
 
         formatter = getattr(tics, self.axis_x_format, None)
+        
         if formatter:
             xtics = formatter(xdata, fit_points=x_points, axis_type=self.axis_x_type)
             print >> self.handle, "set xtics (%s)" % xtics
