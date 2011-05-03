@@ -98,6 +98,7 @@ def plot_parser():
     data_group = OptionGroup(parser, "Data handling", "Control all the data controls. Through these it is possible to filter the data, average the data with different functions etc. ")
     data_group.add_option('--x-data-filter', default=[], action='append', dest='x_data_filter', choices=DATA_FILTERS, help='Filter the data plotable on the x axis. Possible choices are ' + ','.join(DATA_FILTERS) + '. Defaults to %default. See the next parameter for a more detailed description')
     data_group.add_option('--y-data-filter', default=[], action='append', dest='y_data_filter', choices=DATA_FILTERS, help='Filters the data plotable on the y axis. Same choices and default variables as on the x axis. It it possible to specify this options multiple times thereby adding multiple filters. These will be executed in the same order as supplied on the command line.')
+    data_group.add_option('--raw-filters', default='', dest='raw_filters', help='Enter a number of comma seperated raw filters to apply on the data. This can be in the form of VAR:VAR. For example you can include only the data with a node count of 4 by "--raw-filters=node:4')
     data_group.add_option('--y-data-aggregate', default='min', dest='y_data_aggr', choices=AGGR_USER_CHOICES, help='Aggregates the y data according to some function. Default is %default. Choices are ' + ','.join(AGGR_USER_CHOICES))
     data_group.add_option('--test-filter', default="", dest="test_filter", help="A comma sep list with the test the system should plot.")
     parser.add_option_group(data_group)
@@ -156,5 +157,16 @@ def parse(parser):
         verbosity = 2
 
     Logger(logfile, "pupyplot", options.debug, verbosity, not options.verbose)
+    
+    # Normalize the raw filters. 
+    raw_filters = []
+    for f in filter(None, [f.strip() for f in options.raw_filters.split(",")]):
+        # For now we only have one filter type (equal). We identify this by
+        # a simple string. Parser people would probably not like this
+        t = f.split(":")
+        if len(t) == 2:
+            raw_filters.append( (t[0], "EQ", t[1]))
+        
+    options.raw_filters = raw_filters
 
     return options, args

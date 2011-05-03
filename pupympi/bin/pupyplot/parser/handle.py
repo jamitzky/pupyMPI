@@ -156,6 +156,26 @@ class DataSupplier(object):
         labels = ["tag", "runtype", "datasize", "total_time", "avg_time", "throughput", "min_time", "max_time", "nodes"]
         return labels.index(label)
     
+    def set_raw_filters(self, filters):
+        # We filter the data right away
+        data = []
+        for datum in self.data:
+            app = True
+            for filter in filters:
+                data_val = str(datum[self._get_pos(filter[0])])
+                filter_val = filter[2]
+                
+                filter_op = filter[1]
+                
+                if filter_op == "EQ":
+                    if data_val != filter_val:
+                        app = False
+                        break
+            
+            if app:
+                data.append(datum)
+        self.data = data
+                
     def get_tags(self):
         return list(set([d[0] for d in self.data]))
 
