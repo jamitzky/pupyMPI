@@ -163,12 +163,11 @@ class DataSupplier(object):
             app = True
             for filter in filters:
                 data_val = str(datum[self._get_pos(filter[0])])
-                filter_val = filter[2]
-                
+                filter_vals = filter[2]
                 filter_op = filter[1]
                 
                 if filter_op == "EQ":
-                    if data_val != filter_val:
+                    if data_val not in  filter_vals:
                         app = False
                         break
             
