@@ -177,8 +177,10 @@ class DataSupplier(object):
         self.data = data
                 
     def get_tags(self):
-        return list(set([d[0] for d in self.data]))
-
+        tags = list(set([d[0] for d in self.data]))
+        tags.sort()
+        return tags
+    
     def get_nodes(self):
         return list(set([d[8] for d in self.data]))
     
