@@ -135,12 +135,26 @@ class DataSupplier(object):
     
     def get_tests(self, filters):
         tests = []
+
+        # Find the positive filters and the negative filters first
+        pos_filters = []
+        neg_filters = []
+        for f in filters:
+            if f.startswith(":"):
+                neg_filters.append(f[1:])
+            else:
+                pos_filters.append(f)
+        
+        print neg_filters
         for test in self.tests:
-            if filters:
-                if test.lower() not in filters:
-                    continue
-                
+            if pos_filters and test.lower() not in pos_filters:
+                continue
+        
+            if neg_filters and test.lower() in neg_filters:
+                continue
+                    
             tests.append(test)
+        
         return tests
     
     def get_raw_test_data(self, testname):
