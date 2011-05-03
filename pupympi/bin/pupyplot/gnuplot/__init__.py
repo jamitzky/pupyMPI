@@ -28,7 +28,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
 
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='top left', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='outside right', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
         """
         ``base_filename``
              The filename without extension used through this plot. The output file
