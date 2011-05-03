@@ -345,24 +345,11 @@ class Communicator:
 
         return handle
 
+    # TODO: This is now just a needless indirection used twice in this module and once from mpi.__init__
+    #       unless we want to do weird things here we should reduce complexity and call directly on the network thread
     # Add an outbound request to the queue
     def _add_unstarted_request(self, request):
         self.network.t_out.add_out_request(request)
-        
-        # TRW        
-        #with self.mpi.unstarted_requests_lock:
-        #    self.mpi.unstarted_requests.append(request)
-        #    self.mpi.unstarted_requests_has_work.set()
-        #    self.mpi.has_work_event.set()
-
-            #if self.unstarted_requests_has_work.is_set():
-            #    with self.unstarted_requests_lock:
-            #        for request in self.unstarted_requests:
-            #            #Logger().warning("Show some request!: %s" % request)
-            #            self.network.t_out.add_out_request(request)
-            #
-            #        self.unstarted_requests = []
-            #        self.unstarted_requests_has_work.clear()
 
     # Add a request for communication with self
     def _send_to_self(self, request):
@@ -536,9 +523,7 @@ class Communicator:
             self.mpi.pending_requests_has_work.set()
             self.mpi.has_work_event.set()
 
-        # Add the request to the MPI layer unstarted requests queue. We
-        # signal the condition variable to wake the MPI thread and have
-        # it handle the request start.
+        # Add the send request but wait on the recv handle
         self._add_unstarted_request(dummyhandle)
         return handle
 
@@ -692,10 +677,7 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._send(content, destination, tag)
-
-    def _send(self, content, destination, tag = constants.MPI_TAG_ANY):
-        return self._isend(content, destination, tag).wait()
+        return self._isend(content, destination, tag).wait()        
 
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
@@ -722,10 +704,10 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._recv(source, tag)
-
-    def _recv(self, source, tag = constants.MPI_TAG_ANY):
         return self._irecv(source, tag).wait()
+
+    #def _recv(self, source, tag = constants.MPI_TAG_ANY):
+    #    return self._irecv(source, tag).wait()
 
     def sendrecv(self, senddata, dest, sendtag, source, recvtag):
         """
@@ -784,7 +766,7 @@ class Communicator:
             recvhandle = self._irecv(source, recvtag)
 
         if dest is not None:
-            self._send(senddata, dest, sendtag)
+            self._isend(senddata, dest, sendtag).wait()
 
         if source is not None:
             return recvhandle.wait()

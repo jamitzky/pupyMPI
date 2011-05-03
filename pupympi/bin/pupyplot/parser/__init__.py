@@ -16,40 +16,40 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 import csv, re
 
-PROCS_RE = re.compile(".*(\d)procs.*")
+PROCS_RE = re.compile(".*\.([0-9]+)procs.*")
 
 class Parser(object):
     """
     Contains the actual parser more or less copied from the earlier version
     of pupyplot.py. The parser will accept a list of tupes where each tuple
     has the form of:
-    
+
         (tag, csv-filepath)
-        
+
     This means that all the tag regexps etc is not here. Neither is the actual
-    script for writing the parsed data to a handle. 
+    script for writing the parsed data to a handle.
     """
     def __init__(self):
         """
         Initialize the parser.
         """
-        
+
         # Contains all the parsed data. There is no easy way to filter
         # the data for tetst name etc.
         self.data = []
-        
+
     def parse_file(self, tag, filepath):
         reader = csv.reader(open(filepath, 'r'))
-        
-        # Find the number of procs from the filename. 
+
+        # Find the number of procs from the filename.
         match = PROCS_RE.match(filepath)
-        nodes = match.groups()[0]
+        nodes = int(match.groups()[0])
         
         for row in reader:
             row = map(lambda x: x.strip(), row)
-            
+
             if self.row_is_header(row): continue
-        
+
             if self.row_is_comment(row): continue
 
             # Fetch the data through a method. This is done
@@ -59,10 +59,21 @@ class Parser(object):
                 datasize, total_time, iteration_time, throughput, runtype, time_min, time_max = self.from_extract_data(row)
                 throughput = throughput*1024*1024
                 data_item = tag, runtype, datasize, total_time, iteration_time, throughput, time_min, time_max, nodes
-                self.data.append(data_item)      
+
+               #print ""
+               #print "datasize:".ljust(40), datasize
+               #print "total_time:".ljust(40), total_time
+               #print "iteration_time:".ljust(40), iteration_time
+               #print "throughput:".ljust(40), throughput
+               #print "runtype:".ljust(40), runtype
+               #print "time_min:".ljust(40), time_min
+               #print "time_max:".ljust(40), time_max
+               #print "nodes:".ljust(40), nodes
+
+                self.data.append(data_item)
             except Exception, e:
                 print "Found exception", e
-                
+
     def from_extract_data(self, row):
         # Unpack data
         datasize = row[0]
@@ -72,7 +83,7 @@ class Parser(object):
         runtype  = ""
         time_min = 0
         time_max = 0
-        
+
         if len(row) == 10:
             # new format
             time_min = row[4]
@@ -98,12 +109,12 @@ class Parser(object):
             print "WARNING: Found a row with a strange number of rows:", len(row)
             print "\t", ",".join(row)
             return None
-        
+
         # Post fix data
         runtype = runtype.replace("test_","")
-            
+
         return int(datasize), float(total_time), float(iteration_time), float(throughput), runtype, float(time_min), float(time_max)
-            
+
     def row_is_header(self, row):
         """
         Test if a row is considered a header row. The caller
@@ -112,6 +123,6 @@ class Parser(object):
         """
         # A header does not start with a number
         return len(row) < 2 or not row[0].isdigit()
-    
+
     def row_is_comment(self, row):
         return row[0].startswith("#")

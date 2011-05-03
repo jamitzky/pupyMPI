@@ -32,24 +32,24 @@ from pupyplot.lib import tagmapper
 
 def parse_args():
     from optparse import OptionParser, OptionGroup
-    
+
     usage = """usage: %prog [options] folder1 folder2 ... folderN handlefile
-    
+
         <<folder1>> to <<folderN>> should be folders containing benchmark
         data for comparison."""
-    
+
     parser = OptionParser(usage=usage, version="pupyMPI version %s" % (constants.PUPYVERSION))
     parser.add_option('--update-output', '-u', dest='update', action="store_true", default=False, help='Update the output file with new contents. Default will overwrite the file')
     options, args = parser.parse_args()
 
     if len(args) <= 1:
         parser.error("The script should be called with at leat two positional arguments. First the folders to parse and then the output file")
-    
+
     return options.update, args[-1], args[:-1]
 
 if __name__ == "__main__":
     update, output_file, parse_folders = parse_args()
-    
+
     # Try to remove the file unless we are allowed to update it
     if not update:
         if os.path.isfile(output_file):
@@ -57,18 +57,17 @@ if __name__ == "__main__":
 
     handle = Handle(output_file)
     parser = Parser()
-    
+
     # Find all the CSV files and parse them.
     for folder in parse_folders:
         tag = folder
         csv_files = glob.glob(folder+ "pupymark.*.[0-9]*procs*")
         for csv_file in csv_files:
             parser.parse_file(tag, csv_file)
-            
     # Write the tags to a tagmapper
     tagmapper.write_tag_file(parse_folders, output_file)
 
     # Insert the parsed data in the handle
     handle.dataobj.extend(parser.data)
-    
+
     handle.save()

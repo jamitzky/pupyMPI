@@ -17,8 +17,8 @@
 #
 from mpi.exceptions import MPIException
 from mpi.logger import Logger
-from mpi.network.utils import _nice_data
 from mpi import constants
+import mpi.network.utils as utils
 
 import threading
 
@@ -71,6 +71,8 @@ class Request(BaseRequest):
         self.data = data
 
         self.cmd = cmd
+        
+        self.global_rank = None # Global rank of recipient process is None for ingoing requests and None for out requests until the request is prepared
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -102,7 +104,15 @@ class Request(BaseRequest):
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, _nice_data(self.data) )
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, utils._nice_data(self.data) )
+
+    def prepare_send(self):
+        # Set global rank to allow the outbound thread to do its socket/rank lookup
+        self.global_rank = self.communicator.group().members[self.participant]['global_rank']
+
+        # Create the proper data structure and pickle the data
+        self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
+                                       tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_pickled=self.is_pickled)
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
