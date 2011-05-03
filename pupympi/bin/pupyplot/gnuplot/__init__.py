@@ -166,6 +166,10 @@ class GNUPlot(object):
                 os.unlink(filepath)
 
     def add_serie(self, xdata, ydata, title='Plot title'):
+        # We do not add series without data.
+        if len(xdata) == 0:
+            return
+        
         i = len(self.series)
 
         def flatten(alist):
