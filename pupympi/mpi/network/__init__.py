@@ -233,17 +233,17 @@ class Network(object):
         for handle in recv_handles:
             handle.wait()
 
-    def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
-        from mpi.request import Request
-        rl = []
-        message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        for recp in receivers:
-            request = Request("send", communicator, recp, tag, data=message)
-            request.is_pickled = True
-            self.t_out.add_out_request(request)
-            rl.append(request)
-
-        return rl
+    #def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
+    #    from mpi.request import Request
+    #    rl = []
+    #    message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
+    #    for recp in receivers:
+    #        request = Request("send", communicator, recp, tag, data=message)
+    #        request.is_pickled = True
+    #        self.t_out.add_out_request(request)
+    #        rl.append(request)
+    #
+    #    return rl
 
     def finalize(self):
         """
@@ -299,7 +299,7 @@ class BaseCommunicationHandler(threading.Thread):
         """
 
         # Create the proper data structure and pickle the data
-        request.prepare_send()
+        #request.prepare_send()
 
         # Find a socket and port of recipient process
         connection_info = self.network.all_procs[request.global_rank]['connection_info']
@@ -376,7 +376,7 @@ class BaseCommunicationHandler(threading.Thread):
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
             
-            # FIXME: Rewrite below condition - hint let all user stuff be >100
+            # user messages have a cmd field larger than CMD_RAWTYPE
             if msg_type >= constants.CMD_RAWTYPE:
                 try:
                     with self.network.mpi.raw_data_lock:
