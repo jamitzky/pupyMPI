@@ -82,7 +82,10 @@ class TreeAllReduce(BaseCollectiveRequest):
         # child, reduce the data, and send the result to the parent.
         if not self.children:
             # We dont wait for messages, we simply send our data to the parent.
-            self.data = {self.rank : self.data}
+            if not self.partial:
+                # On partial reduce we keep the data as is to ensure flexible serialization
+                # but otherwise we transmit it in a nice dict to ensure rank order
+                self.data = {self.rank : self.data}
             self.to_parent()
 
     def accept_msg(self, rank, data):
@@ -98,7 +101,12 @@ class TreeAllReduce(BaseCollectiveRequest):
             self.missing_children.remove(rank)
 
             # Add the data to the list of received data
-            self.received_data.update(data)
+            if self.partial:
+                # If partial reduce we didn't get a dict but just the reduced data
+                self.received_data[rank] = data
+            else:
+                self.received_data.update(data)
+
 
             # If the list of missing children i empty we have received from
             # every child and can reduce the data and send to the parent.
@@ -107,10 +115,8 @@ class TreeAllReduce(BaseCollectiveRequest):
                 self.received_data[self.rank] = self.data                
                 
                 # reduce the data
-                if self.partial:
-                    new_data = reduce_elementwise(self.received_data.values(), self.operation)
-                        
-                    self.data = {self.rank : new_data}
+                if self.partial:                        
+                    self.data = reduce_elementwise(self.received_data.values(), self.operation)
                 else:
                     self.data = self.received_data
 
@@ -133,7 +139,7 @@ class TreeAllReduce(BaseCollectiveRequest):
     def _get_data(self):
         val = None
         if self.partial:
-            val = self.data[self.root]
+            val = self.data
         else:
             keys = self.data.keys()
             keys.sort()
