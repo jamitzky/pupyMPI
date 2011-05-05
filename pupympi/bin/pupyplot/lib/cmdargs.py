@@ -142,6 +142,11 @@ def parse(parser):
     # Clean the filter test.
     options.test_filter = filter(None, [s.strip().lower() for s in options.test_filter.split(",")])
     
+    # Create a negative test case if we try to use datasize. This is not supported by barrier. 
+    if "datasize" in (options.x_data, options.y_data):
+        options.test_filter.append(":barrier")
+    
+    
     # Setup a logger based on the arguments about. This might seem stupid
     # as it is not returned from the call, but as the Logger is a singleton
     # it is possible to do a simple Logger() call later.
