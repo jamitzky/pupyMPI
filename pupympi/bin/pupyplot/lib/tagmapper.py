@@ -16,20 +16,34 @@
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
 import csv
+from os import path
 csv.register_dialect('tags', delimiter=':', quoting=csv.QUOTE_ALL)
 
 def write_tag_file(tags, filename):
     """
     A simple way to write a filemapper file
     based on a tag list and basic file name.
-    """
+    """    
     if not filename.endswith(".tagmapper"):
         filename += ".tagmapper"
     
+    alltags = {}
+    for tag in tags:
+        alltags[tag] = tag
+    
+    if path.exists(filename):
+        base = get_tag_mapping(filename)
+        
+        for k in base:
+            v = base[k]
+            alltags[k] = v
+            
     writer = csv.writer(open(filename, "wb"), 'tags')
     
-    for tag in tags:
-        writer.writerow( (tag, tag))
+    # Write the tags
+    for k in alltags:
+        v = alltags[k]
+        writer.writerow( (k, v))
             
 def get_tag_mapping(filename):
     mapping = {}

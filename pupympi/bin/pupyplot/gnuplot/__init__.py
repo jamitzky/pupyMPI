@@ -123,6 +123,7 @@ class GNUPlot(object):
         return file_part, fh
 
     def plot(self):
+        self.handle.close()
         args = ["gnuplot", self.handle_filepath]
         #args.extend(self.plot_cmd_args)
         #args.append(self.handle_filepath)
