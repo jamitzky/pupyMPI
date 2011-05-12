@@ -1332,8 +1332,9 @@ class Communicator:
     def _iscatter(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-
-        if self.comm_group.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        
+        # FIXME: This condition excludes strings which should preferable be scatterable
+        if self.comm_group.rank() == root and (not getattr(data,"__iter__",False) or (len(data) == 0) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         return self.collective_controller.get_request(constants.TAG_SCATTER, data=data, root=root)
