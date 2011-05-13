@@ -152,7 +152,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
         pickled_data = data
     else:
         # DEBUG
-        #Logger().debug("prepare... - type:%s data:%s" % (type(data),data) )
+        #Logger().debug("serializing !!! type:%s" % (type(data)) )
         if isinstance(data,numpy.ndarray):
             # Multidimensional array?
             if len(data.shape) > 1:
@@ -187,15 +187,16 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
                 pickled_data = data.tostring()
                 
                 # BELOW WORKS WITH NUMPY >= 1.5                
-                #pickled_data = bytearray(data)                
+                #pickled_data = bytearray(data)
+                
                 # Look up the correct type int
                 cmd = type_to_typeint[data.dtype]
-        elif isinstance(data,bytearray):
-            
+        elif isinstance(data,bytearray):            
             cmd = type_to_typeint[type(data)]
             Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
             pickled_data = data
         else:
+            #Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
             pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
         
     lpd = len(pickled_data)

@@ -284,14 +284,31 @@ class Communicator:
         message to several recipients without having the data pickled
         multiple times.
 
-        FIXME: The multiple-recipients way without picklign a lot of
+        FIXME: The multiple-recipients way without pickling a lot of
                data could maybe be done with the regular send as well?
         """
         if not getattr(receivers, "__iter__", False):
             receivers = [receivers]
+        
+        #import copy
+        #import pickle
+        # FIXME: Move this import somewhere pretty
+        from mpi.network.utils import prepare_message
 
-        return self.mpi.network._direct_send(self, message=message, receivers=receivers, tag=tag)
+        rl = []        
+        #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
+        message = prepare_message(message, self.rank(), tag=tag, cmd=constants.CMD_USER, ack=False, comm_id=self.id, is_pickled=False)
+        for recp in receivers:
+            request = Request("send", self, recp, tag, data=message)
+            request.is_prepared = True
+            #request.is_pickled= True
+            request.prepare_send()
+            self.network.t_out.add_out_request(request)
+            rl.append(request)
+            #Logger().debug("--appended direct send" )
 
+        return rl
+    
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
@@ -349,6 +366,9 @@ class Communicator:
     #       unless we want to do weird things here we should reduce complexity and call directly on the network thread
     # Add an outbound request to the queue
     def _add_unstarted_request(self, request):
+        # Create the proper data structure and pickle the data
+        request.prepare_send()
+        
         self.network.t_out.add_out_request(request)
 
     # Add a request for communication with self
@@ -1312,8 +1332,9 @@ class Communicator:
     def _iscatter(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-
-        if self.comm_group.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        
+        # FIXME: This condition excludes strings which should preferable be scatterable
+        if self.comm_group.rank() == root and (not getattr(data,"__iter__",False) or (len(data) == 0) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         return self.collective_controller.get_request(constants.TAG_SCATTER, data=data, root=root)
