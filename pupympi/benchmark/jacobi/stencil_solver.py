@@ -29,20 +29,23 @@ def stencil_solver(local,epsilon):
     counter = 0
     while epsilon<delta:
         if rank != 0:
-            local[:,0] = world.sendrecv(local[:,1], rank-1, MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
+            local[0,:] = world.sendrecv(local[1,:], rank-1, MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
+            #local[:,0] = world.sendrecv(local[:,1], rank-1, MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
         if rank != maxrank:
-            local[:,-1] = world.sendrecv(local[:,-2], rank+1, MPI_TAG_ANY, rank+1, MPI_TAG_ANY)
+            local[-1,:] = world.sendrecv(local[-2,:], rank+1, MPI_TAG_ANY, rank+1, MPI_TAG_ANY)
+
+        # DEBUG
+        #if rank == 0:
+        #    print "rank 0 iteration:%i delta:%s \n%s" % (counter, delta, local)
+
         work[:] = (cells+up+left+right+down)*0.2
         delta = world.allreduce(numpy.sum(numpy.abs(cells-work)), MPI_sum)
         cells[:] = work
 
         counter += 1
-        # DEBUG
-        #if rank == 0:
-        #    print "rank 0 delta:%s" % (delta)
         
     if rank == 0:
-        print "rank 0 done, in %i iterations (sample:%s)" % (counter, cells[10,34:42])
+        print "rank %i done, in %i iterations with final delta:%s (sample:%s)" % (rank, counter, delta, cells[10,34:42])
 
 # for realism one process initializes and distributes the global state
 if rank == 0:
