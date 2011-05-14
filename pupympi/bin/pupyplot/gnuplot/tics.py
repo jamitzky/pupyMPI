@@ -23,17 +23,6 @@ import math
 
 __all__ = ('datasize', 'scale', 'time', 'throughput', 'number', )
 
-def _spread(p_min, p_max, no):
-    skip = (p_max - p_min) / float(no)
-    p = p_min
-    final_points = [p_min]
-
-    for _ in range(no-1):
-        p += skip
-        final_points.append(p)
-
-    return final_points
-
 def _format_datasize(bytecount, decimals=2):
     if bytecount == 0:
         return "0 B"
@@ -62,51 +51,6 @@ def _format_time(usecs): # {{{2
             if i > 0:
                 usecs = usecs / border_list[i-1][0]
             return "%.0f%s" % (usecs, bl[1])
-
-def _ensure_tic_space(points, axis_type, fit_points, discrete):
-    """
-    A helper function removing tics if we figure there is not
-    enough room for them.
-
-    ..note:: The discrete parameter is not used.
-    """
-    def generate_bump_points(start, bump, end):
-        points = [start]
-
-        while start < end:
-            start += bump
-            points.append(start)
-
-        return points
-
-    p_min = min(points)
-    p_max = max(points)
-
-    if True:
-        log_base = 32 # 10 in case of normal numbers.
-        extender = 32
-    else:
-        log_base = 10
-        extender = 4
-
-    if axis_type == 'lin':
-        skip_size = p_max - p_min
-        skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
-
-        points = generate_bump_points(p_min, skip_bump, p_max)
-    elif axis_type == 'log':
-        pass
-
-        # Remove 0
-        try:
-            points.remove(0)
-        except:
-            pass
-
-    while len(points) > fit_points:
-         points = points[::2]
-
-    return points
 
 def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):
     data_points = _ensure_tic_space(points, axis_type, fit_points, discrete)
