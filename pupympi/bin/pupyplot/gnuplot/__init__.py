@@ -28,7 +28,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
 
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='outside right', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='inside right', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
         """
         ``base_filename``
              The filename without extension used through this plot. The output file
@@ -66,7 +66,7 @@ class GNUPlot(object):
         if not font:
             font = FONT_DEFAULT()
 
-        if colors:
+        if True or colors:
             color_str = "color"
         else:
             color_str = "monochrome"
@@ -170,7 +170,7 @@ class GNUPlot(object):
         # We do not add series without data.
         if len(xdata) == 0:
             return
-        
+
         i = len(self.series)
 
         def flatten(alist):
@@ -204,7 +204,7 @@ class GNUPlot(object):
         ydata = null_filter(self.combined_y_data)
 
         formatter = getattr(tics, self.axis_x_format, None)
-        
+
         if formatter:
             xtics = formatter(xdata, fit_points=x_points, axis_type=self.axis_x_type)
             print >> self.handle, "set xtics (%s)" % xtics

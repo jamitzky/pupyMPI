@@ -44,7 +44,7 @@ class Parser(object):
         # Find the number of procs from the filename.
         match = PROCS_RE.match(filepath)
         nodes = int(match.groups()[0])
-        
+
         for row in reader:
             row = map(lambda x: x.strip(), row)
 
@@ -110,10 +110,16 @@ class Parser(object):
             print "\t", ",".join(row)
             return None
 
+        # There are None values in throughput. Detect this can insert -1 instead
+        try:
+            throughput = float(throughput)
+        except ValueError:
+            throughput = -1.0
+
         # Post fix data
         runtype = runtype.replace("test_","")
 
-        return int(datasize), float(total_time), float(iteration_time), float(throughput), runtype, float(time_min), float(time_max)
+        return int(datasize), float(total_time), float(iteration_time), throughput, runtype, float(time_min), float(time_max)
 
     def row_is_header(self, row):
         """
