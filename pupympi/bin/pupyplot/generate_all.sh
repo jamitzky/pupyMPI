@@ -15,8 +15,12 @@ mkdir plots/datasize_time
 for n in 2 4 8 16 32
 do
 	mkdir plots/datasize_time/$n
-	python line.py --raw-filters=nodes:$n $1
-	mv *.eps plots/datasize_time/$n/
+	for t in "log" "lin"
+	do
+		mkdir plots/datasize_time/$n/$t
+		python line.py --axis-y-type=$t --raw-filters=nodes:$n $1
+		mv *.eps plots/datasize_time/$n/$t
+	done
 done
 
 # Generate plots wth x=nodes, y=time for selected data sizes
