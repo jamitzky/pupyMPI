@@ -235,9 +235,8 @@ class LinePlot(GNUPlot):
         abort = self.tics()
         
         if abort:
-            print "Aborting line plot. There are no data to plot"
-            return
-        
+            raise Exception()
+
         # Write data to the .gnu file before we continue the plot.
         plot_strs = []
         for serie in self.series:
