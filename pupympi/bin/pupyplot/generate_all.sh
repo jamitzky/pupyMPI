@@ -10,6 +10,7 @@ fi
 rm -rf plots
 mkdir plots
 
+
 echo "------------- Generating plots with datasize on x axis and time on y ------------"
 # Generate plots with x=datasize, y=time for all node counts
 mkdir plots/datasize_time
