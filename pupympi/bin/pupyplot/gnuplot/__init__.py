@@ -131,7 +131,6 @@ class GNUPlot(object):
 
     def write_datafile(self, part, xdata, ydata):
         filepath, fh = self.create_temp_file(part)
-
         if len(xdata) != len(ydata):
             raise Exception('Data not in the same length. This is not bad.')
 
@@ -233,9 +232,8 @@ class LinePlot(GNUPlot):
     def plot(self):
         
         abort = self.tics()
-        
-        if abort:
-            raise Exception()
+#        if abort:
+#            raise Exception()
 
         # Write data to the .gnu file before we continue the plot.
         plot_strs = []
