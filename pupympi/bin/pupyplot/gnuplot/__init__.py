@@ -200,7 +200,6 @@ class GNUPlot(object):
         self.combined_x_data.extend(flatten(xdata))
         self.combined_y_data.extend(flatten(ydata))
         
-        
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
         self.series.append((title, datafile))
