@@ -7,8 +7,6 @@ then
 	exit
 fi
 
-echo $1
-
 rm -rf plots
 mkdir plots
 
