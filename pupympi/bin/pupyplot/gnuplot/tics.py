@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-from math import floor, log10
+from math import floor, log10, log
 
 # The functions defined in the __all__ is the actual functions
 # for formatting tics. The others hare helpers functions prefixed
@@ -137,8 +137,30 @@ def time(points, axis_type="lin"):
     corrected_maxval = max(points)
     return tickers[axis_type](corrected_maxval).get_formatted_tics(unit=unit, recalc_func=recalc)
 
+def clean_datasize(bytecount, decimals=2):
+    if bytecount == 0:
+        return "0 B"
+    n = log(bytecount, 2)
+    border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
+    fmt_str = "%%.%df%%s" % decimals
+    for bl in border_list:
+        if n < bl[0]:
+            return fmt_str % (float(bytecount) / 2**(bl[0]-10), bl[1])
+    return fmt_str % (bytecount, "B")
 
-def datasize(points, axis_type="lin", unit="KB"):
+clean_throughput = lambda x: clean_datasize(x)+"/s"
+
+def format_raw_labels(points, formatter=lambda x: x):
+    try:
+        formatted_tics = ", ".join(["'%s' %s" % (formatter(t), t) for t in points    ])
+    except Exception, e:
+        print e
+    return formatted_tics
+
+def datasize(points, axis_type="lin", unit="KB", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points, formatter=clean_datasize)
+
     # Recalc the points from bytes to kilo bytes, so they are easier
     # to format. 
     points = [point/1024 for point in points]
@@ -146,10 +168,16 @@ def datasize(points, axis_type="lin", unit="KB"):
     
     return tickers[axis_type](maxval).get_formatted_tics(unit=unit, recalc_func=RECALC_KB)
 
-def throughput(points, axis_type="lin"):
+def throughput(points, axis_type="lin", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points, formatter=clean_throughput)
+
     return datasize(points, axis_type, unit="KB/s")
 
-def number(points, axis_type="lin"):
+def number(points, axis_type="lin", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points)
+    
     # We can only handle lin for now
     maxval = max(points)
     return tickers[axis_type](maxval).get_formatted_tics(unit="", recalc_func=RECALC_IDENTITY)

@@ -27,7 +27,7 @@ __all__ = ('GNUPlot', )
 
 class GNUPlot(object):
 
-    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='inside right', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False):
+    def __init__(self, base_filename="", title='', width=8, height=4, xlabel='', ylabel='', xtic_rotate=-45, tics_out=True, key='inside right', font=None, axis_x_type="lin", axis_y_type="lin", axis_x_format="datasize", axis_y_format='time', colors=False, keep_temp_files=False, x_use_raw_labels=False):
         """
         ``base_filename``
              The filename without extension used through this plot. The output file
@@ -60,6 +60,11 @@ class GNUPlot(object):
         # Set the formatter elements
         self.axis_x_format = axis_x_format
         self.axis_y_format = axis_y_format
+        
+        self.x_use_raw_labels = x_use_raw_labels
+
+        self.axis_x_type = axis_x_type
+        self.axis_y_type = axis_y_type
 
         # Find the default font and use that if there is no font.
         if not font:
@@ -181,9 +186,21 @@ class GNUPlot(object):
                     l.append(item)
             return l
 
+        # Remove zero values
+        strip = False
+        if self.axis_y_type == "log" and ydata[0] == 0:
+            strip = True
+        if self.axis_x_type == "log" and xdata[0] == 0:
+            strip = True
+            
+        if strip:
+            xdata.pop(0)
+            ydata.pop(0)
+
         self.combined_x_data.extend(flatten(xdata))
         self.combined_y_data.extend(flatten(ydata))
-
+        
+        
         # Write a data file
         datafile = self.write_datafile("data%d" % i, xdata, ydata)
         self.series.append((title, datafile))
@@ -208,7 +225,7 @@ class GNUPlot(object):
         
         formatter = getattr(tics, self.axis_x_format, None)
         if formatter:
-            xtics = formatter(xdata, axis_type=self.axis_x_type)
+            xtics = formatter(xdata, axis_type=self.axis_x_type, use_raw_labels=self.x_use_raw_labels)
             print >> self.handle, "set xtics (%s)" % xtics
             
         formatter = getattr(tics, self.axis_y_format, None)

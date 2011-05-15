@@ -16,17 +16,14 @@ mkdir plots/datasize_time
 for n in 2 4 8 16 32
 do
 	mkdir plots/datasize_time/$n
-	for t in "log" "lin"
-	do
-		mkdir plots/datasize_time/$n/$t
-		python line.py --axis-y-type=$t --test-filter=:pingping,:pingpong --raw-filters=nodes:$n $1
-	    if [ $? -eq 0 ]; then
-			mv *.eps plots/datasize_time/$n/$t
-		else
-			echo "Prolem with the following plot command"
-			echo "python line.py --axis-y-type=$t --raw-filters=nodes:$n $1"
-		fi
-	done
+	
+	mkdir plots/datasize_time/$n/log
+	python line.py --x-axis-use-data-points --axis-x-type=log --axis-y-type=log $e --test-filter=:pingping,:pingpong --raw-filters=nodes:$n $1
+	mv *.eps plots/datasize_time/$n/log
+
+	mkdir plots/datasize_time/$n/lin
+	python line.py --axis-y-type=lin $e --test-filter=:pingping,:pingpong --raw-filters=nodes:$n $1
+	mv *.eps plots/datasize_time/$n/lin
 done
 
 # Plot the ping pong and ping ping test
