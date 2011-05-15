@@ -67,6 +67,7 @@ if __name__ == "__main__":
 
     # It should be possible to limit the tests to one single test. how should
     # this be one.
+    rt = 0
     all_tests = ds.get_tests(options.test_filter)
     for testname in all_tests:
 
@@ -82,11 +83,11 @@ if __name__ == "__main__":
         tags = ds.get_tags()
         
         lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
-
+        
         for tag in tags:
             # Extract the data from the data store.
             series_list = ds.getdata(testname, tag, options.x_data, options.y_data, options.series_col, filters=[])
-            
+
             for s in series_list:
                 series_data, xdata, ydata = s
 
@@ -101,7 +102,6 @@ if __name__ == "__main__":
                     
                 lp.add_serie(xdata, ydata, title )
         
-        rt = 0
         try:
             lp.plot()
         except Exception, e:
@@ -112,5 +112,5 @@ if __name__ == "__main__":
         except:
             pass
         
-        import sys
-        sys.exit(rt)
+    import sys
+    sys.exit(rt)

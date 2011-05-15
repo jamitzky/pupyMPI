@@ -152,3 +152,4 @@ def throughput(points, axis_type="lin"):
 def number(points, axis_type="lin"):
     # We can only handle lin for now
     maxval = max(points)
+    return tickers[axis_type](corrected_maxval).get_formatted_tics(unit="", recalc_func=RECALC_IDENTITY)
