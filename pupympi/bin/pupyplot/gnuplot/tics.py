@@ -25,60 +25,11 @@ __all__ = ('datasize', 'scale', 'time', 'throughput', 'number', )
 
 RECALC_IDENTITY = lambda x: x
 RECALC_KB = lambda kb : kb*1024
-SEC_1 = 1000000000
-RECALC_SEC = lambda sec: sec*SEC_1
-MSEC_1 = 1000000
+MSEC_1 = 1000
 RECALC_MSEC = lambda sec: sec*MSEC_1
 
-
-def scale(points, axis_type="lin"):
-    return number(points, axis_type)
-
-def time(points, axis_type="lin"):
-    maxval = max(points)
-    
-    # Recalc the points from bytes to seconds, so they are easier
-    # to format. 
-    
-    if maxval < SEC_1:      # Use MS
-        points = [point/MSEC_1 for point in points]
-        unit = 'ms'
-        recalc = RECALC_MSEC
-    else:                   # Use S
-        points = [point/SEC_1 for point in points]
-        unit = 's'
-        recalc = RECALC_SEC
-    
-    corrected_maxval = max(points)
-    # We can only handle lin for now
-    if axis_type == "lin":
-        return LinTicker(corrected_maxval).get_formatted_tics(unit=unit, recalc_func=recalc)
-    else:
-        print "Warning: Time formatting does not support log axis yet."
-
-
-def datasize(points, axis_type="lin", unit="KB"):
-    # Recalc the points from bytes to kilo bytes, so they are easier
-    # to format. 
-    points = [point/1024 for point in points]
-    
-    # We can only handle lin for now
-    if axis_type == "lin":
-        maxval = max(points)
-        return LinTicker(maxval).get_formatted_tics(unit=unit, recalc_func=RECALC_KB)
-    else:
-        print "Warning: Datasize formatting does not support log axis yet."
-
-def throughput(points, axis_type="lin"):
-    return datasize(points, axis_type, unit="KB/s")
-
-def number(points, axis_type="lin"):
-    # We can only handle lin for now
-    if axis_type == "lin":
-        maxval = max(points)
-        return LinTicker(maxval).get_formatted_tics(unit=unit)
-    else:
-        print "Warning: Number formatting does not support log axis yet."
+SEC_1 = 1000*MSEC_1
+RECALC_SEC = lambda sec: sec*SEC_1
 
 class LinTicker(object):
     """
@@ -114,7 +65,7 @@ class LinTicker(object):
         tics.append(t/factor)
         self.tics = tics
     
-    def get_formatted_tics(self, unit="", recalc_func=RECALC_IDENTITY, gnuplot=True):
+    def get_formatted_tics(self, unit="", recalc_func=RECALC_IDENTITY, gnuplot=True, clean_precision=True):
         """
         Return a list two 2 tuples where the first tuple element
         is the real value and the second is the formatted value. The
@@ -128,19 +79,24 @@ class LinTicker(object):
         """
         # Go sure the formatted tics and find the value with most precision 
         # and use that for all the tics.
-        pres = 0
-        for tic in self.tics:
-            # Look for . notation
+        def find_precision(tic):
             st = str(tic)
             if st.find(".") != -1:
-                pres = max(pres, len(str(tic).split(".")[1]))
-            elif st.find("e"):
-                t = int(st.split("e-")[1])
-                pres = max(pres, t)
-
+                return len(str(tic).split(".")[1])
+            elif st.find("e") != -1:
+                return int(st.split("e-")[1])
+            return 0
+            
+        max_pres = max([find_precision(tic) for tic in self.tics])
+            
         formatted_tics = []
         for tic in self.tics:
             val = recalc_func(tic)
+
+            pres = find_precision(tic)
+            if clean_precision: 
+                pres = max_pres
+
             formatted = "%%.%df%s" % (pres, unit) % tic
             t = (formatted, val)
             formatted_tics.append(t)
@@ -154,7 +110,50 @@ class LogTicker(LinTicker):
         max_exp = int(floor(log10(maxval)))+1
         min_exp = max_exp - 10
         
-        self.tics = [10**x for x in range(min_exp, max_exp)]
+        self.tics = [10**x for x in range(min_exp+1, max_exp+1)]
+        
+    def get_formatted_tics(self, *args, **kwargs):
+        kwargs["clean_precision"] = False
+        return super(LogTicker, self).get_formatted_tics(*args, **kwargs)
+        
+tickers = {'lin' : LinTicker, 'log' : LogTicker}
+
+def scale(points, axis_type="lin"):
+    return number(points, axis_type)
+
+def time(points, axis_type="lin"):
+    maxval = max(points)
+    
+    # Recalc the points from bytes to seconds, so they are easier
+    # to format. 
+    print int(maxval)
+    print SEC_1
+    if maxval < SEC_1:      # Use MS
+        points = [point/MSEC_1 for point in points]
+        unit = 'ms'
+        recalc = RECALC_MSEC
+    else:                   # Use S
+        points = [point/SEC_1 for point in points]
+        unit = 's'
+        recalc = RECALC_SEC
+    
+    corrected_maxval = max(points)
+    return tickers[axis_type](corrected_maxval).get_formatted_tics(unit=unit, recalc_func=recalc)
+
+
+def datasize(points, axis_type="lin", unit="KB"):
+    # Recalc the points from bytes to kilo bytes, so they are easier
+    # to format. 
+    points = [point/1024 for point in points]
+    maxval = max(points)
+    
+    return tickers[axis_type](maxval).get_formatted_tics(unit=unit, recalc_func=RECALC_KB)
+def throughput(points, axis_type="lin"):
+    return datasize(points, axis_type, unit="KB/s")
+
+def number(points, axis_type="lin"):
+    # We can only handle lin for now
+    maxval = max(points)
 
 if __name__ == "__main__":
     print LogTicker(0.1).get_formatted_tics()
