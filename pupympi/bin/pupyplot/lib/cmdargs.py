@@ -71,14 +71,8 @@ def plot_parser():
     parser.add_option('--series-column', default='nodes', choices=SERIES_CHOICES, dest='series_col', help='Which column should be used to seperate different series. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()) + " or none. If you supply 'none' there will only be one serie per tag")
 
     format_group = OptionGroup(parser, "Formatting", "Basic formatting options. These allow you to control a number of elements in the final plot. These options will not change the plot in any other ways than layout and should therefore not be primary concern. ")
-
-    # FIXME: Not used
-    format_group.add_option("--font-file", dest="font_file", default=None, help="The location of the font file to use. Default will be to look for Palatino. This will only work on OS X and Ubuntu.")
-    format_group.add_option("--font-size", dest='font_size', default=10, help='The size of the font used. Defaults to %default (in pt). Changing this will change the font on all text in the plot. It is not possible to change the font only on label etc.')
-
-    # FIXME: Not used
-    format_group.add_option("--x-label-rotate", type=int, dest="x_label_rotate", default=45, help="The number of degress to rotate the label on the x-axis ")
-
+    
+    format_group.add_option("--x-axis-use-data-points", action="store_true", default=False, dest="x_axis_use_data_points")
     format_group.add_option("--tag-mapper", dest='tag_mapper', default=None, help='The file containing the tag mapping. This is useful when you do not wish to keep the default names for data series. The readdata.py script will create such a file so it is simple to replace unwanted names. The script will try to find the file from the handle file name so normally you should not supply anything.' )
 
     parser.add_option_group(format_group)
