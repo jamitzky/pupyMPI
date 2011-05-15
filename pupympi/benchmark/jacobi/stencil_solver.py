@@ -1,12 +1,9 @@
 import numpy, sys, time
 from mpi import MPI
 from mpi.collective.operations import MPI_sum
-from mpi.constants import MPI_TAG_ANY
 
 pupy = MPI()
-world = pupy.MPI_COMM_WORLD
-rank = world.rank()
-size = world.size()
+world, rank, size = pupy.initinfo
 
 def stencil_solver(local,epsilon):
     """
@@ -27,10 +24,9 @@ def stencil_solver(local,epsilon):
     counter = 0
     while epsilon<delta:
         if rank != 0:
-            local[0,:] = world.sendrecv(local[1,:], rank-1, \
-                                        MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
+            local[0,:] = world.sendrecv(local[1,:], dest=rank-1, source=rank-1)
         if rank != maxrank:
-            local[-1,:] = world.sendrecv(local[-2,:], rank+1, MPI_TAG_ANY, rank+1, MPI_TAG_ANY)
+            local[-1,:] = world.sendrecv(local[-2,:], dest=rank-1, source=rank-1)
         work[:] = (cells+up+left+right+down)*0.2
         delta = world.allreduce(numpy.sum(numpy.abs(cells-work)), MPI_sum)
         cells[:] = work

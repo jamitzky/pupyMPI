@@ -308,6 +308,8 @@ class MPI(Thread):
         # Make every node connect to each other if settings specify it
         if not options.disable_full_network_startup:
             self.network.start_full_network()
+            
+        self.initinfo = (self.MPI_COMM_WORLD, self.MPI_COMM_WORLD.rank(), self.MPI_COMM_WORLD.size())
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
@@ -317,6 +319,7 @@ class MPI(Thread):
 
         if self.resume and resumer:
             resumer(self)
+            
 
     def parse_options(self):
         parser = OptionParser()
