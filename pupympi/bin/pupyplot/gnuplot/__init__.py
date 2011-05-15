@@ -21,7 +21,6 @@ from pupyplot.gnuplot.fonts import Default as FONT_DEFAULT
 
 import os, subprocess
 
-
 # Choose to limit the available modules by defining an __all__
 
 __all__ = ('GNUPlot', )
@@ -199,25 +198,29 @@ class GNUPlot(object):
 
             return final
 
-        x_points = 20 # This could be "lifted" into a cmd line argument.
         xdata = null_filter(self.combined_x_data)
         ydata = null_filter(self.combined_y_data)
-
+        
+        if not self.combined_x_data or not self.combined_y_data:
+            return True # abort
+        
+        if max(xdata) == min(xdata): return True
+        if max(ydata) == min(ydata): return True
+        
         formatter = getattr(tics, self.axis_x_format, None)
 
         if formatter:
-            xtics = formatter(xdata, fit_points=x_points, axis_type=self.axis_x_type)
+            xtics = formatter(xdata, axis_type=self.axis_x_type)
             print >> self.handle, "set xtics (%s)" % xtics
 
         formatter = getattr(tics, self.axis_y_format, None)
         if formatter:
             # Calculate the proper number of fit points.
-            y_points = int(float(self.height) / self.width * x_points)
-
-            ytics = formatter(ydata, fit_points=y_points, axis_type=self.axis_y_type)
+            ytics = formatter(ydata, axis_type=self.axis_y_type)
             print >> self.handle, "set ytics (%s)" % ytics
 
-
+        return False # Do not abort
+    
 class LinePlot(GNUPlot):
     def __init__(self, *args, **kwargs):
         super(LinePlot, self).__init__(*args, **kwargs)
@@ -228,8 +231,13 @@ class LinePlot(GNUPlot):
         self.combined_y_data = []
 
     def plot(self):
-        self.tics()
-
+        
+        abort = self.tics()
+        
+        if abort:
+            print "Aborting line plot. There are no data to plot"
+            return
+        
         # Write data to the .gnu file before we continue the plot.
         plot_strs = []
         for serie in self.series:
