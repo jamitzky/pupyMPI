@@ -207,11 +207,10 @@ class GNUPlot(object):
         if max(ydata) == min(ydata): return True
         
         formatter = getattr(tics, self.axis_x_format, None)
-
         if formatter:
             xtics = formatter(xdata, axis_type=self.axis_x_type)
             print >> self.handle, "set xtics (%s)" % xtics
-
+            
         formatter = getattr(tics, self.axis_y_format, None)
         if formatter:
             # Calculate the proper number of fit points.
@@ -230,7 +229,6 @@ class LinePlot(GNUPlot):
         self.combined_y_data = []
 
     def plot(self):
-        
         abort = self.tics()
 #        if abort:
 #            raise Exception()

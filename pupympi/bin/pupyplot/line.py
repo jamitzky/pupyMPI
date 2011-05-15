@@ -87,19 +87,21 @@ if __name__ == "__main__":
         for tag in tags:
             # Extract the data from the data store.
             series_list = ds.getdata(testname, tag, options.x_data, options.y_data, options.series_col, filters=[])
-
+            
             for s in series_list:
                 series_data, xdata, ydata = s
 
                 # Aggregate the data.
                 da = DataAggregator(ydata)
                 ydata = da.getdata(options.y_data_aggr)
-    
+                
+                if not xdata or not ydata:
+                    continue
+                
                 title = tag_mapper.get(tag, tag)
                 
                 if options.series_col != 'none':
                     title += " (%s: %s)" % (options.series_col, series_data)
-                    
                 lp.add_serie(xdata, ydata, title )
         
         try:

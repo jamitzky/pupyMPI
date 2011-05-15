@@ -44,7 +44,7 @@ class LinTicker(object):
         while maxval < 10:
             maxval *= 10
             factor *= 10
-
+        
         # Find the possible skip by taking the interval length diving by the
         # number of skips (static to 10).
         interval_length = maxval / 10.0
@@ -53,7 +53,6 @@ class LinTicker(object):
         # manipulation without any sound reason.
         b = str(int(floor(interval_length)))
         length = int(b[0]) * 10**(len(b)-1)
-                    
         tics = []
         t = 0.0
         while t < maxval:
@@ -146,10 +145,11 @@ def datasize(points, axis_type="lin", unit="KB"):
     maxval = max(points)
     
     return tickers[axis_type](maxval).get_formatted_tics(unit=unit, recalc_func=RECALC_KB)
+
 def throughput(points, axis_type="lin"):
     return datasize(points, axis_type, unit="KB/s")
 
 def number(points, axis_type="lin"):
     # We can only handle lin for now
     maxval = max(points)
-    return tickers[axis_type](corrected_maxval).get_formatted_tics(unit="", recalc_func=RECALC_IDENTITY)
+    return tickers[axis_type](maxval).get_formatted_tics(unit="", recalc_func=RECALC_IDENTITY)

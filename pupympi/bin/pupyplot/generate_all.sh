@@ -36,16 +36,24 @@ do
 	for t in "log" "lin"
 	do
 		mkdir plots/nodes_time/$d/$t
-		python line.py --raw-filters=datasize:$d --axis-y-type=$t --x-data=nodes $1
+		python line.py --raw-filters=datasize:$d --test-filter=:barrier --axis-y-type=$t --series-column=none --x-data=nodes $1
 		if [ $? -eq 0 ]; then
 			mv *.eps plots/nodes_time/$d/$t
 		else
 			echo "Prolem with the following plot command"
-			echo "python line.py --raw-filters=datasize:$d --axis-y-type=$t --x-data=nodes $1"
+			echo "python line.py --raw-filters=datasize:$d --test-filter=:barrier --axis-y-type=$t --series-column=none --x-data=nodes $1"
 		
 		fi
 	done
 done	
+
+# Handle barrier manually.
+mkdir plots/nodes_time/barrier/
+for t in "log" "lin"
+	do
+		python line.py --test-filter=barrier --axis-y-type=$t --series-column=none --x-data=nodes $1
+		mv Barrier.eps plots/nodes_time/barrier/$t.eps
+	done
 
 # Clean up if there are anything left from the runs
 python cleanup.py
