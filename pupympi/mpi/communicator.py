@@ -729,7 +729,7 @@ class Communicator:
     #def _recv(self, source, tag = constants.MPI_TAG_ANY):
     #    return self._irecv(source, tag).wait()
 
-    def sendrecv(self, senddata, dest, sendtag, source, recvtag):
+    def sendrecv(self, senddata, dest, sendtag=constants.MPI_TAG_ANY, source=None, recvtag=constants.MPI_TAG_ANY):
         """
 
         The send-receive operation combine in one call the sending of a message
@@ -741,6 +741,8 @@ class Communicator:
         A message sent by a send-receive operation can be received by a regular
         receive operation or probed by a probe operation; a send-receive operation
         can receive a message sent by a regular send operation.
+    
+        **Default values**: If no ``source`` is defined it is defined same as the ``dest``.
 
         **Example usage**:
         The following code will send a token string between all messages. All
@@ -764,8 +766,8 @@ class Communicator:
 
             recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank),
                                                    dest,
-                                                   DUMMY_TAG,
                                                    source,
+                                                   DUMMY_TAG,
                                                    DUMMY_TAG)
             print "Rank %i got %s" % (rank,recvdata)
 
@@ -778,20 +780,13 @@ class Communicator:
 
         """
         execute_system_commands(self.mpi)
+        
+        if not source:
+            source = dest
 
-        if dest == source:
-            return senddata
-
-        if source is not None:
-            recvhandle = self._irecv(source, recvtag)
-
-        if dest is not None:
-            self._isend(senddata, dest, sendtag).wait()
-
-        if source is not None:
-            return recvhandle.wait()
-
-        return None
+        recvhandle = self._irecv(source, recvtag)
+        self._isend(senddata, dest, sendtag).wait()
+        return recvhandle.wait()
 
     def barrier(self):
         """
