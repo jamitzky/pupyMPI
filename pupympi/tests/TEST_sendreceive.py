@@ -21,20 +21,22 @@ dest   = (rank + 1) % size
 source = (rank - 1) % size
 
 recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank), dest, DUMMY_TAG, source, DUMMY_TAG)
-print "r:%i recvdata:%s" % (rank,recvdata)
+assert recvdata == content+" from "+str(source)
 
-# Testing up/down partitioning
+# Testing up/down synchronization
 lower = dest # lower neighbour has rank+1
 upper = source # upper neighbour has rank-1
 
 if rank != 0:
-    # Send up
+    # exchange up
     recvdata = mpi.MPI_COMM_WORLD.sendrecv("border of "+str(rank), upper, DUMMY_TAG, upper, DUMMY_TAG)
-    print "r:%i UP recvdata:%s" % (rank,recvdata)
+    assert recvdata == "border of "+str(upper)
+    #print "r:%i UP recvdata:%s" % (rank,recvdata)
 if rank != size-1:
-    # Send down
+    # exchange down
     recvdata = mpi.MPI_COMM_WORLD.sendrecv("border of "+str(rank), lower, DUMMY_TAG, lower, DUMMY_TAG)
-    print "r:%i DOWN recvdata:%s" % (rank,recvdata)
+    assert recvdata == "border of "+str(lower)
+    #print "r:%i DOWN recvdata:%s" % (rank,recvdata)
 
 # Close the sockets down nicely
 mpi.finalize()
