@@ -13,26 +13,28 @@ mpi = MPI()
 rank = mpi.MPI_COMM_WORLD.rank()
 size = mpi.MPI_COMM_WORLD.size()
 
-
 content = "conch"
 DUMMY_TAG = 1
-
-# Log stuff so progress is easier followed
-f = open(constants.DEFAULT_LOGDIR+"mpi.sendreceive.rank%s.log" % rank, "w")
-
 
 # Send up in chain, recv from lower (with usual wrap around)
 dest   = (rank + 1) % size
 source = (rank - 1) % size
 
 recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank), dest, DUMMY_TAG, source, DUMMY_TAG)
-f.write("Rank %s passing on %s \n" % (rank, recvdata) )
-f.flush()
+print "r:%i recvdata:%s" % (rank,recvdata)
 
+# Testing up/down partitioning
+lower = dest # lower neighbour has rank+1
+upper = source # upper neighbour has rank-1
 
-f.write("Done for rank %d\n" % rank)
-f.flush()
-f.close()
+if rank != 0:
+    # Send up
+    recvdata = mpi.MPI_COMM_WORLD.sendrecv("border of "+str(rank), upper, DUMMY_TAG, upper, DUMMY_TAG)
+    print "r:%i UP recvdata:%s" % (rank,recvdata)
+if rank != size-1:
+    # Send down
+    recvdata = mpi.MPI_COMM_WORLD.sendrecv("border of "+str(rank), lower, DUMMY_TAG, lower, DUMMY_TAG)
+    print "r:%i DOWN recvdata:%s" % (rank,recvdata)
 
 # Close the sockets down nicely
 mpi.finalize()

@@ -13,11 +13,9 @@ def stencil_solver(local,epsilon):
     The function receives a partial system-matrix including ghost rows in top and bottom
     """
     W, H = local.shape
-    W -= 2
-    H -= 2
     maxrank = size - 1
     
-    work = numpy.zeros((W,H)) # temp workspace
+    work = numpy.zeros((W-2,H-2)) # temp workspace
     
     cells = local[1:-1, 1:-1] # interior
     left  = local[1:-1, 0:-2]
@@ -29,19 +27,13 @@ def stencil_solver(local,epsilon):
     counter = 0
     while epsilon<delta:
         if rank != 0:
-            local[0,:] = world.sendrecv(local[1,:], rank-1, MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
-            #local[:,0] = world.sendrecv(local[:,1], rank-1, MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
+            local[0,:] = world.sendrecv(local[1,:], rank-1, \
+                                        MPI_TAG_ANY, rank-1, MPI_TAG_ANY)
         if rank != maxrank:
             local[-1,:] = world.sendrecv(local[-2,:], rank+1, MPI_TAG_ANY, rank+1, MPI_TAG_ANY)
-
-        # DEBUG
-        #if rank == 0:
-        #    print "rank 0 iteration:%i delta:%s \n%s" % (counter, delta, local)
-
         work[:] = (cells+up+left+right+down)*0.2
         delta = world.allreduce(numpy.sum(numpy.abs(cells-work)), MPI_sum)
         cells[:] = work
-
         counter += 1
         
     if rank == 0:
