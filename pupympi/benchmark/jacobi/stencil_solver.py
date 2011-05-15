@@ -24,9 +24,9 @@ def stencil_solver(local,epsilon):
     counter = 0
     while epsilon<delta:
         if rank != 0:
-            local[0,:] = world.sendrecv(local[1,:], dest=rank-1, source=rank-1)
+            local[0,:] = world.sendrecv(local[1,:], dest=rank-1)
         if rank != maxrank:
-            local[-1,:] = world.sendrecv(local[-2,:], dest=rank-1, source=rank-1)
+            local[-1,:] = world.sendrecv(local[-2,:], dest=rank-1)
         work[:] = (cells+up+left+right+down)*0.2
         delta = world.allreduce(numpy.sum(numpy.abs(cells-work)), MPI_sum)
         cells[:] = work
