@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
+from math import floor, log10
 
-    # The functions defined in the __all__ is the actual functions
+# The functions defined in the __all__ is the actual functions
 # for formatting tics. The others hare helpers functions prefixed
 # with _ and should not be used directly.
 
@@ -80,8 +80,6 @@ def number(points, axis_type="lin"):
     else:
         print "Warning: Number formatting does not support log axis yet."
 
-import math
-
 class LinTicker(object):
     """
     This class will generate tics for a linear axis without formatting the numbers. 
@@ -102,7 +100,7 @@ class LinTicker(object):
         
         # Blank out the numbers that are not the leading digit. This is done with string
         # manipulation without any sound reason.
-        b = str(int(math.floor(interval_length)))
+        b = str(int(floor(interval_length)))
         length = int(b[0]) * 10**(len(b)-1)
                     
         tics = []
@@ -132,8 +130,14 @@ class LinTicker(object):
         # and use that for all the tics.
         pres = 0
         for tic in self.tics:
-            pres = max(pres, len(str(tic).split(".")[1]))
-            
+            # Look for . notation
+            st = str(tic)
+            if st.find(".") != -1:
+                pres = max(pres, len(str(tic).split(".")[1]))
+            elif st.find("e"):
+                t = int(st.split("e-")[1])
+                pres = max(pres, t)
+
         formatted_tics = []
         for tic in self.tics:
             val = recalc_func(tic)
@@ -144,3 +148,14 @@ class LinTicker(object):
         if gnuplot:
             formatted_tics = ", ".join(["'%s' %s" % t for t in formatted_tics ])
         return formatted_tics
+    
+class LogTicker(LinTicker):
+    def __init__(self, maxval):
+        max_exp = int(floor(log10(maxval)))+1
+        min_exp = max_exp - 10
+        
+        self.tics = [10**x for x in range(min_exp, max_exp)]
+
+if __name__ == "__main__":
+    print LogTicker(0.1).get_formatted_tics()
+
