@@ -126,8 +126,6 @@ def time(points, axis_type="lin"):
     
     # Recalc the points from bytes to seconds, so they are easier
     # to format. 
-    print int(maxval)
-    print SEC_1
     if maxval < SEC_1:      # Use MS
         points = [point/MSEC_1 for point in points]
         unit = 'ms'
@@ -154,7 +152,3 @@ def throughput(points, axis_type="lin"):
 def number(points, axis_type="lin"):
     # We can only handle lin for now
     maxval = max(points)
-
-if __name__ == "__main__":
-    print LogTicker(0.1).get_formatted_tics()
-

@@ -100,6 +100,17 @@ if __name__ == "__main__":
                     title += " (%s: %s)" % (options.series_col, series_data)
                     
                 lp.add_serie(xdata, ydata, title )
-
-        lp.plot()
-        lp.close()
+        
+        rt = 0
+        try:
+            lp.plot()
+        except:
+            rt = 1
+        
+        try:
+            lp.close()
+        except:
+            pass
+        
+        import sys
+        sys.exit(rt)

@@ -19,7 +19,12 @@ do
 	do
 		mkdir plots/datasize_time/$n/$t
 		python line.py --axis-y-type=$t --raw-filters=nodes:$n $1
-		mv *.eps plots/datasize_time/$n/$t
+	    if [ $? -eq 0 ]; then
+			mv *.eps plots/datasize_time/$n/$t
+		else
+			echo "Prolem with the following plot command"
+			echo "python line.py --axis-y-type=$t --raw-filters=nodes:$n $1"
+		fi
 	done
 done
 
@@ -29,7 +34,12 @@ for d in 4 64 1024 2048 32768 2097152 4194304
 do
 	mkdir plots/nodes_time/$d
 	python line.py --raw-filters=datasize:$d $1
-	mv *.eps plots/nodes_time/$d
+	if [ $? -eq 0 ]; then
+		mv *.eps plots/nodes_time/$d
+	else
+		echo "Prolem with the following plot command"
+		echo "python line.py --axis-y-type=$t --raw-filters=nodes:$n $1"
+	fi
 done	
 
 # Clean up if there are anything left from the runs
