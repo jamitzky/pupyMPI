@@ -104,7 +104,7 @@ if __name__ == "__main__":
         rt = 0
         try:
             lp.plot()
-        except:
+        except Exception, e:
             rt = 1
         
         try:

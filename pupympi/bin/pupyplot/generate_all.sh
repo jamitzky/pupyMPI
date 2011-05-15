@@ -33,13 +33,18 @@ mkdir plots/nodes_time
 for d in 4 64 1024 2048 32768 2097152 4194304
 do
 	mkdir plots/nodes_time/$d
-	python line.py --raw-filters=datasize:$d $1
-	if [ $? -eq 0 ]; then
-		mv *.eps plots/nodes_time/$d
-	else
-		echo "Prolem with the following plot command"
-		echo "python line.py --axis-y-type=$t --raw-filters=nodes:$n $1"
-	fi
+	for t in "log" "lin"
+	do
+		mkdir plots/nodes_time/$d/$t
+		python line.py --raw-filters=datasize:$d --axis-y-type=$t --x-data=nodes $1
+		if [ $? -eq 0 ]; then
+			mv *.eps plots/nodes_time/$d/$t
+		else
+			echo "Prolem with the following plot command"
+			echo "python line.py --raw-filters=datasize:$d --axis-y-type=$t --x-data=nodes $1"
+		
+		fi
+	done
 done	
 
 # Clean up if there are anything left from the runs
