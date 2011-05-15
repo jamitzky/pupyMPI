@@ -781,7 +781,7 @@ class Communicator:
         """
         execute_system_commands(self.mpi)
         
-        if not source:
+        if source is None:
             source = dest
 
         recvhandle = self._irecv(source, recvtag)
