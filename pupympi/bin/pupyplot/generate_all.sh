@@ -10,6 +10,7 @@ fi
 rm -rf plots
 mkdir plots
 
+echo "------------- Generating plots with datasize on x axis and time on y ------------"
 # Generate plots with x=datasize, y=time for all node counts
 mkdir plots/datasize_time
 for n in 2 4 8 16 32
@@ -18,7 +19,7 @@ do
 	for t in "log" "lin"
 	do
 		mkdir plots/datasize_time/$n/$t
-		python line.py --axis-y-type=$t --raw-filters=nodes:$n $1
+		python line.py --axis-y-type=$t --test-filter=:pingping,:pingpong --raw-filters=nodes:$n $1
 	    if [ $? -eq 0 ]; then
 			mv *.eps plots/datasize_time/$n/$t
 		else
@@ -26,6 +27,15 @@ do
 			echo "python line.py --axis-y-type=$t --raw-filters=nodes:$n $1"
 		fi
 	done
+done
+
+# Plot the ping pong and ping ping test
+
+echo "------------- Generating plots with nodes on x axis and time on y ------------"
+for t in "log" "lin"
+do
+	python line.py --axis-y-type=$t --test-filter=pingping,pingpong --raw-filters=nodes:2 $1
+	mv *.eps plots/datasize_time/2/$t
 done
 
 # Generate plots wth x=nodes, y=time for selected data sizes
@@ -36,12 +46,12 @@ do
 	for t in "log" "lin"
 	do
 		mkdir plots/nodes_time/$d/$t
-		python line.py --raw-filters=datasize:$d --test-filter=:barrier --axis-y-type=$t --series-column=none --x-data=nodes $1
+		python line.py --raw-filters=datasize:$d --test-filter=:barrier,:pingping,:pingpong --axis-y-type=$t --series-column=none --x-data=nodes $1
 		if [ $? -eq 0 ]; then
 			mv *.eps plots/nodes_time/$d/$t
 		else
 			echo "Prolem with the following plot command"
-			echo "python line.py --raw-filters=datasize:$d --test-filter=:barrier --axis-y-type=$t --series-column=none --x-data=nodes $1"
+			echo "python line.py --raw-filters=datasize:$d --test-filter=:barrier,:pingping,:pingpong --axis-y-type=$t --series-column=none --x-data=nodes $1"
 		
 		fi
 	done
