@@ -8,7 +8,7 @@ from mpi.collective.operations import MPI_max
 import comm_info as ci
 
 meta_requires_data_ranks_adjunct = False
-meta_processes_required = 4
+meta_processes_required = 2
 meta_enlist_all = True
 
 meta_schedule = {
@@ -174,7 +174,7 @@ def test_Reduce(size, max_iterations):
     comm = ci.communicator
     num_procs = ci.num_procs
 
-    if size < 4:
+    if size < 2:
         return -42
 
     def Reduce(data, max_iterations):
@@ -200,9 +200,9 @@ def test_Reduce(size, max_iterations):
 def test_Allreduce(size, max_iterations):
     comm = ci.communicator
 
-    if size < 4:
+    if size < 2:
         return -42
-    
+
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
