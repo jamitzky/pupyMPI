@@ -35,5 +35,68 @@ class BenchmarkWriter(DictWriter):
     def write(self, *args, **kwargs):
         """Enable use to write the paramters in the method call instead of creating a dict. """
         self.writerow(kwargs)
+        
+class Benchmark(object):
+    def __init__(self, communicator=None):
+        self.communicator = communicator
+        self.testers = {}
+       
+    def get_tester(self, testname, procs=None):
+        if procs is None:
+            if self.communicator is not None:
+                procs = self.communicator.size()
+            else:
+                procs = 0
 
+        if procs not in self.testers:
+            self.testers[procs] = {}
 
+        create = testname not in self.testers[procs]
+        if create:
+            self.testers[procs][testname] = Test(testname)
+        
+        return self.testers[procs][testname], create
+    
+    def flush(self):
+        pass
+             
+class Test(object):
+    def __init__(self, testname):
+        self.name = testname
+        
+        # For timing
+        self.started_at = None
+        
+        self.times = []
+        
+    def start(self):
+        if self.started_at is not None:
+            raise Exception("Timer already started. Please remmeber to class end() when a run completes")
+        
+        self.started_at = time.time()
+        
+    def end(self):
+        time_diff = time.time() - self.started_at
+        self.times.append(time_diff)
+        
+        # Clear for another run
+        self.started_at = None
+        
+if __name__ == "__main__":
+    b = Benchmark()
+    
+    
+    for _ in range(10):
+        t, created = b.get_tester("allreduce", 3)
+        print "created", created
+        import random
+        import time
+        t.start()
+        r = random.randint(1, 5)
+        print "Sleeping for %d seconds" % r
+        time.sleep(r)
+        t.end()
+        
+        print t
+        print t.times
+        print len(t.times)
