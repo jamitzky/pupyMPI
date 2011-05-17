@@ -46,7 +46,7 @@ if rank != 0:
     #print "r:%i UP recvdata:%s" % (rank,recvdata)
 if rank != size-1:
     # exchange down
-    recvdata = mpi.MPI_COMM_WORLD.sendrecv("border of "+str(rank), lower)
+    recvdata = mpi.MPI_COMM_WORLD.sendrecv("2nd border of "+str(rank), lower)
     assert recvdata == "2nd border of "+str(lower)
     #print "r:%i DOWN recvdata:%s" % (rank,recvdata)
 
