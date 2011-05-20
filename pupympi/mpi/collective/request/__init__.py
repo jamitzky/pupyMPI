@@ -99,7 +99,7 @@ class FlatTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
@@ -119,7 +119,7 @@ class BinomialTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_binomial_%d" % root
             topology = cache.get(cache_idx, default=None)
@@ -140,7 +140,7 @@ class StaticFanoutTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
