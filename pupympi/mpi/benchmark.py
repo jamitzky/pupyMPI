@@ -1,4 +1,3 @@
-#
 # Copyright 2010 Rune Bromer, Asser Schroeder Femoe, Frederik Hantho and Jan Wiberg
 # This file is part of pupyMPI.
 #
@@ -14,6 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Benchmarking documentation
+
+"""
+
 from csv import DictWriter
 from datetime import datetime
 
@@ -41,7 +46,7 @@ class Benchmark(object):
         self.communicator = communicator
         self.testers = {}
        
-    def get_tester(self, testname, procs=None):
+    def get_tester(self, testname, procs=None, datasize=0):
         if procs is None:
             if self.communicator is not None:
                 procs = self.communicator.size()
@@ -50,24 +55,74 @@ class Benchmark(object):
 
         if procs not in self.testers:
             self.testers[procs] = {}
-
-        create = testname not in self.testers[procs]
+            
+        if datasize not in self.testers[procs]:
+            self.testers[procs][datasize] = {}
+            
+        create = testname not in self.testers[procs][datasize]
         if create:
-            self.testers[procs][testname] = Test(testname)
+            self.testers[procs][datasize][testname] = Test(testname, procs, datasize)
         
-        return self.testers[procs][testname], create
-    
-    def flush(self):
-        pass
-             
+        return self.testers[procs][datasize][testname], create
+
+    def flush(self):    
+        # Run through the gathered data sort it
+        for procs in self.testers:
+            tests = {}
+            for datasize in self.testers[procs]:
+                for testname in self.testers[procs][datasize]:
+                    if testname not in tests:
+                        tests[testname] = []
+                    
+                    # Append the data to the list making it easier to sort
+                    tests[testname].append(
+                        (datasize, self.testers[procs][datasize][testname])
+                    )
+
+            for testname in tests:
+                testlist = tests[testname]
+                
+                # Sort the test list according to the datasize. 
+                
+                filename = "pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
+                bw = BenchmarkWriter(open(filename.replace(" ", "_").replace(":", "-"), "w"))
+                for t in testlist:
+                    datasize, t_obj = t
+                    bw.writerow(t_obj.get_dict())
+                
 class Test(object):
-    def __init__(self, testname):
+    def __init__(self, testname, procs, datasize):
         self.name = testname
         
         # For timing
         self.started_at = None
-        
         self.times = []
+        
+        self.procs = procs
+        self.datasize = datasize
+        
+    def get_dict(self):
+        sum_time = sum(self.times) * 1000
+        min_time = min(self.times) * 1000
+        max_time = max(self.times) * 1000
+        avg_time = sum_time*1000 / len(self.times)
+        
+        throughput = -42
+        if self.datasize > 0:
+            throughput = self.datasize*1024*1024 / (avg_time/1000)
+        
+        return {
+            'datasize' : self.datasize,             # Bytes
+            'total_time' : sum_time,                # Mili seconds
+            'avg_time' : avg_time,                  # Micro seconds
+            'min_time' : min_time,                  # Micro seconds
+            'max_time' : max_time,                  # Micro seconds
+            'throughput' : throughput,              # MB / sec
+            'repetitions' : len(self.times),        # Int
+            "nodes" : self.procs,                   # Int
+            "testname" : self.name,                 # String
+            "timestamp" : datetime.now(),           # Timestamp
+        }
         
     def start(self):
         if self.started_at is not None:
@@ -85,18 +140,15 @@ class Test(object):
 if __name__ == "__main__":
     b = Benchmark()
     
-    
     for _ in range(10):
         t, created = b.get_tester("allreduce", 3)
         print "created", created
         import random
         import time
         t.start()
-        r = random.randint(1, 5)
-        print "Sleeping for %d seconds" % r
+        r = random.random()
+        print "Sleeping for %f seconds" % r
         time.sleep(r)
         t.end()
         
-        print t
-        print t.times
-        print len(t.times)
+    b.flush()
