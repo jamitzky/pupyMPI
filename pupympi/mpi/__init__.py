@@ -308,6 +308,8 @@ class MPI(Thread):
         # Make every node connect to each other if settings specify it
         if not options.disable_full_network_startup:
             self.network.start_full_network()
+            
+        self.initinfo = (self.MPI_COMM_WORLD, self.MPI_COMM_WORLD.rank(), self.MPI_COMM_WORLD.size())
 
         # Set a static attribute on the class so we know it is initialised.
         self.__class__._initialized = True
@@ -317,6 +319,7 @@ class MPI(Thread):
 
         if self.resume and resumer:
             resumer(self)
+            
 
     def parse_options(self):
         parser = OptionParser()
@@ -474,10 +477,14 @@ class MPI(Thread):
         the received data.
         """
         prune = False
+        #DEBUG
+        #Logger().debug("match_collective_pending: going in")
+
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
                 new_data_list = []
-
+                # DEBUG
+                #Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
                 for item in self.received_collective_data:
                     (rank, tag, ack, comm_id, data) = item
 
@@ -523,7 +530,7 @@ class MPI(Thread):
         list.
 
         The request is updated with the data if found and this
-        status update returned from the function so it's possible
+        status update returned from the function so it is possible
         to remove the item from the list.
         """
         match = False
@@ -547,13 +554,13 @@ class MPI(Thread):
                             match = True
                             # Outgoing synchronized communication requires acknowledgement
                             if acknowledge:
-                                Logger().debug("SSEND RECIEVED request: %s" % request)
+                                Logger().debug("SSEND RECEIVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
                                 # NOTE: Consider using an empty message string, to save (a little) resources
                                 self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
-                                Logger().debug("ACK RECIEVED request: %s" % request)
+                                Logger().debug("ACK RECEIVED request: %s" % request)
 
                             break # We can only find matching data for one request and we have
 
@@ -567,12 +574,16 @@ class MPI(Thread):
             yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():
+            #Logger().debug("--Gonna wait for work")
+            
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
-
+            
+            #Logger().debug("--No more wait for work")
+            
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
                 with self.raw_data_lock:
@@ -610,7 +621,7 @@ class MPI(Thread):
                                 # Both system messages and user pickled messages are unpickled here
                                 data = pickle.loads(raw_data)
 
-                            if tag in constants.COLLECTIVE_TAGS:                                
+                            if tag in constants.COLLECTIVE_TAGS:
                                 # This is part of a collective request, so it
                                 # should be added on a seperate queue and
                                 # matched later.
@@ -627,9 +638,12 @@ class MPI(Thread):
                     self.raw_data_has_work.clear()
 
             # Collective requests.
+            #Logger().debug("Collective requests has work???")
             if self.unstarted_collective_requests_has_work.is_set():
                 self.unstarted_collective_requests_has_work.clear()
                 with self.unstarted_collective_requests_lock:
+                    # DEBUG
+                    #Logger().debug("Collective requests has work %s" % self.unstarted_collective_requests)
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
@@ -639,7 +653,19 @@ class MPI(Thread):
                 self.pending_collective_requests_has_work.set()
 
             if self.pending_collective_requests_has_work.is_set():
+                # DEBUG
+                #Logger().debug("Trying to match collective pending")
+                
                 self.match_collective_pending()
+                # NOTE: Codus Rex made a boo-boo here since he neglected to clear the signal
+                # If the list is empty clear the signal
+                if not self.pending_collective_requests:
+                    self.pending_collective_requests_has_work.clear()
+                else:
+                    # NOTE: This solution is too harsh
+                    # Signal self that more is to come
+                    #self.has_work_event.set()
+                    pass
 
             # Pending requests are receive requests they may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
@@ -657,6 +683,7 @@ class MPI(Thread):
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
         
+
         # TODO: Remove this when TRW is in effect again
         self.queues_flushed.set()
 

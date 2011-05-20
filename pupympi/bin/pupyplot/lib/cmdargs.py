@@ -43,6 +43,8 @@ DATA_CHOICES = {
     'nodes' : 'Number of participants',
 }
 
+SERIES_CHOICES = DATA_CHOICES.keys()
+SERIES_CHOICES.append("none")
  
 def plot_parser():
     DATA_FILTERS = ['zero', ]
@@ -66,16 +68,11 @@ def plot_parser():
     # The most import
     parser.add_option('--x-data', default='datasize', choices=DATA_CHOICES.keys(), dest='x_data', help='Which data to plot on the x axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
     parser.add_option('--y-data', default='avg_time', choices=DATA_CHOICES.keys(), dest='y_data', help='Which data to plot on the y axis. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()))
+    parser.add_option('--series-column', default='nodes', choices=SERIES_CHOICES, dest='series_col', help='Which column should be used to seperate different series. Defaults to %default. Choices are: ' + ",".join(DATA_CHOICES.keys()) + " or none. If you supply 'none' there will only be one serie per tag")
 
     format_group = OptionGroup(parser, "Formatting", "Basic formatting options. These allow you to control a number of elements in the final plot. These options will not change the plot in any other ways than layout and should therefore not be primary concern. ")
-
-    # FIXME: Not used
-    format_group.add_option("--font-file", dest="font_file", default=None, help="The location of the font file to use. Default will be to look for Palatino. This will only work on OS X and Ubuntu.")
-    format_group.add_option("--font-size", dest='font_size', default=10, help='The size of the font used. Defaults to %default (in pt). Changing this will change the font on all text in the plot. It is not possible to change the font only on label etc.')
-
-    # FIXME: Not used
-    format_group.add_option("--x-label-rotate", type=int, dest="x_label_rotate", default=45, help="The number of degress to rotate the label on the x-axis ")
-
+    
+    format_group.add_option("--x-axis-use-data-points", action="store_true", default=False, dest="x_axis_use_data_points")
     format_group.add_option("--tag-mapper", dest='tag_mapper', default=None, help='The file containing the tag mapping. This is useful when you do not wish to keep the default names for data series. The readdata.py script will create such a file so it is simple to replace unwanted names. The script will try to find the file from the handle file name so normally you should not supply anything.' )
 
     parser.add_option_group(format_group)
@@ -95,7 +92,9 @@ def plot_parser():
     data_group = OptionGroup(parser, "Data handling", "Control all the data controls. Through these it is possible to filter the data, average the data with different functions etc. ")
     data_group.add_option('--x-data-filter', default=[], action='append', dest='x_data_filter', choices=DATA_FILTERS, help='Filter the data plotable on the x axis. Possible choices are ' + ','.join(DATA_FILTERS) + '. Defaults to %default. See the next parameter for a more detailed description')
     data_group.add_option('--y-data-filter', default=[], action='append', dest='y_data_filter', choices=DATA_FILTERS, help='Filters the data plotable on the y axis. Same choices and default variables as on the x axis. It it possible to specify this options multiple times thereby adding multiple filters. These will be executed in the same order as supplied on the command line.')
+    data_group.add_option('--raw-filters', default='', dest='raw_filters', help='Enter a number of semicolon seperated raw filters to apply on the data. This can be in the form of VAR:VAL1,VAL2. For example you can include only the data with a node count of 4 or 32 by "--raw-filters=node:4,32')
     data_group.add_option('--y-data-aggregate', default='min', dest='y_data_aggr', choices=AGGR_USER_CHOICES, help='Aggregates the y data according to some function. Default is %default. Choices are ' + ','.join(AGGR_USER_CHOICES))
+    data_group.add_option('--test-filter', default="", dest="test_filter", help="A comma sep list with the test the system should plot.")
     parser.add_option_group(data_group)
     groups['data'] = data_group
 
@@ -105,12 +104,6 @@ def plot_parser():
     extending_group.add_option('--extra-plot-lines', action='append', default=[], help='Insert extra plot lines. This means that it is possible to insert a guideline by entering log(x) or x*2')
     parser.add_option_group(extending_group)
     groups['extending'] = extending_group
-
-    # Adding colors
-    color_group = OptionGroup(parser, 'Colors', 'A quick way to select color schemes')
-    color_group.add_option('--color-scheme', dest='color_scheme', default=None, help='Select a color scheme. Options are: ' + ','.join(COLOR_SCHEMES))
-    parser.add_option_group(color_group)
-    groups['color'] = color_group
 
     return parser, groups
 
@@ -140,6 +133,13 @@ def parse(parser):
         if os.path.isfile(potential_mapper):    
             options.tag_mapper = potential_mapper
 
+    # Clean the filter test.
+    options.test_filter = filter(None, [s.strip().lower() for s in options.test_filter.split(",")])
+    
+    # Create a negative test case if we try to use datasize. This is not supported by barrier. 
+    if "datasize" in (options.x_data, options.y_data):
+        options.test_filter.append(":barrier")
+        
     # Setup a logger based on the arguments about. This might seem stupid
     # as it is not returned from the call, but as the Logger is a singleton
     # it is possible to do a simple Logger() call later.
@@ -155,5 +155,17 @@ def parse(parser):
         verbosity = 2
 
     Logger(logfile, "pupyplot", options.debug, verbosity, not options.verbose)
+    
+    # Normalize the raw filters. 
+    raw_filters = []
+    for f in filter(None, [f.strip() for f in options.raw_filters.split(";")]):
+        # For now we only have one filter type (equal). We identify this by
+        # a simple string. Parser people would probably not like this
+        t = f.split(":")
+        vals = filter(None, [f.strip() for f in t[1].split(",")])
+        if len(t) == 2:
+            raw_filters.append( (t[0], "EQ", vals))
+        
+    options.raw_filters = raw_filters
 
     return options, args

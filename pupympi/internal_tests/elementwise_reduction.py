@@ -186,8 +186,11 @@ def nummy(sequences, operation):
     """
     numpy_op = getattr(operation, "numpy_op", None)
     
-    if isinstance(sequences[0], numpy.ndarray) and numpy_op:        
-        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
+    if isinstance(sequences[0], numpy.ndarray) and numpy_op:
+        if numpy_op == numpy.mean:
+            reduced_results = numpy_op(sequences,0)
+        else:
+            reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
     else:
         reduced_results = map(operation,zip(*sequences))
             
@@ -306,10 +309,13 @@ def validator(only_numpy=False):
     
     # reducing functions
     functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
+    functions_to_test = [nummy,mammy]
+    functions_to_test = [mammy]
     
     if only_numpy:
         # Without strings etc. - ie. only numpy types
         types_to_test = ntypes
+        #operations_to_test = [operations.MPI_avg]
         operations_to_test = nostring + stringy
     else:
         # With strings etc.
@@ -319,7 +325,7 @@ def validator(only_numpy=False):
 
     for t in types_to_test:
         test_data = generate_data(size,participants, False, t)
-        #print "TESTDATA:%s type:%s specified type:%s" % (test_data, type(test_data[0]),t)
+        print "TESTDATA:%s type:%s specified type:%s" % (test_data, type(test_data[0]),t)
         #print "TESTDATA:%s type:%s specified type:%s" % (test_data, type(test_data[0][0]),t)
 
         for operation in operations_to_test:
@@ -328,7 +334,7 @@ def validator(only_numpy=False):
                 res = func(test_data, operation)
                 results.append(res)
                 s = "result:%s - from func:%s, type:%s operation:%s" % (res, func.func_name, type(res), operation)
-                #print s
+                print s
                 
                 # Validate that types match
                 try:
@@ -336,22 +342,35 @@ def validator(only_numpy=False):
                 except AttributeError, e: # non-numpy types do not have dtype attribute
                     assert type(res) == t
                 except AssertionError, e:
-                    print "Error: initial type:%s not equal to result type:%s" % (t, str(res.dtype))
-                    raise e
+                    # Avg operation goes from int to float and is specifically whitelisted here
+                    if operation == operations.MPI_avg:
+                        #print "Info: avg initial type:%s not equal to result type:%s" % (t, str(res.dtype))
+                        pass
+                    else:
+                        print "Error: initial type:%s not equal to result type:%s" % (t, str(res.dtype))
+                        raise e
                 
             # Validate that all elements of the list are the same
-            try:
-                assert numpy.array_equal(results[1:],results[:-1])
-            except AttributeError, e: # non-numpy types does not work with array_equal        
-                assert results.count(results[0]) == len(results)
-
+            if operation == operations.MPI_avg:
+                # Avg operation goes from int to float and is specifically whitelisted here
+                print 
+                pass
+            else:
+                try:
+                    assert numpy.array_equal(results[1:],results[:-1])
+                except AttributeError, e: # non-numpy types does not work with array_equal        
+                    assert results.count(results[0]) == len(results)
+                except AssertionError, e:
+                    print "Error: operation:%s function%s" % (operation, func)
+                    raise e
+    
 
 def runner():
         
-    repetitions = 1000
+    repetitions = 100
     #repetitions = 1
     
-    participants = 4
+    participants = 3
 
     # Size definitions
     small = 10
@@ -375,8 +394,8 @@ def runner():
     types_to_test = [numpy.dtype('float64'), numpy.dtype('float32'), numpy.dtype('int64'), numpy.dtype('int32')]    
     
     #operations_to_test = [max, min, all, any, sum]
-    operations_to_test = [sum, operations.MPI_sum, max, operations.MPI_max, min, operations.MPI_min]
-    
+    operations_to_test = [sum, operations.MPI_sum, max, operations.MPI_max, min, operations.MPI_min, operations.MPI_avg]
+    operations_to_test = [sum, operations.MPI_sum, operations.MPI_avg, operations.MPI_min]
     
     for size in sizes_to_test:
         print "SIZE: %i" % size
