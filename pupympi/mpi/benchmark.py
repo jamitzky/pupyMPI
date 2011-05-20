@@ -16,7 +16,6 @@
 
 """
 Benchmarking documentation
-
 """
 
 from csv import DictWriter
@@ -48,11 +47,22 @@ class BenchmarkWriter(DictWriter):
         self.writerow(kwargs)
         
 class Benchmark(object):
+    """
+    A minimal benchmarking utility working very well with pupyplot for plotting different tests and runs. The class is initialized with an optional communicator instance. If the communicator instance is present the :func:`get_tester` is able to default the number of processors. Use the :func:`flush` method when all the run has been timed and the data should be written to the disk.
+    
+    .. versionadded:: 0.9.5
+    """
     def __init__(self, communicator=None):
         self.communicator = communicator
         self.testers = {}
        
     def get_tester(self, testname, procs=None, datasize=0):
+        """
+        Creates and track a :class:`Test` instance with the given parameters. 
+        
+        .. note:: You should never create a `Test` instance directly but use this method as the class with be registered and written to the filesystem with :func:`flush`. 
+            
+        """
         if procs is None:
             if self.communicator is not None:
                 procs = self.communicator.size()
@@ -71,7 +81,16 @@ class Benchmark(object):
         
         return self.testers[procs][datasize][testname], create
 
-    def flush(self):    
+    def flush(self, folder=None):
+        """
+        Write the gathered data into several .csv files. The names for the format will include the test name and the number of involving processors. This is done accordingly to
+        pupymark which is the internal benchmarking suite for pupyMPI. The files will also include a timestamp of the benchmark. This means that two benchmarks will not overwrite
+        each others files unless the time and data is exactly the same which is very unlikely. 
+        
+        .. note:: The `folder` parameters is not used currently but saved for later expansion of the functionality. 
+        
+        .. note:: This method will not close any running times, so these will not be included in the flushed output. 
+        """
         # Run through the gathered data sort it
         for procs in self.testers:
             tests = {}
@@ -132,14 +151,40 @@ class Test(object):
         }
         
     def start(self):
+        """
+        Starts the timer for a new run. The time here only has effect when the :func:`stop`
+        is called. The timer uses simple calls to the builtin :func:`time.time` module and will inherit
+        the same accuracy. 
+        
+        Calling this method two times without calling :func:`stop` in between will
+        raise an Exception. If you do not wish to use the started timing use the :func:`discard`
+        method::
+        
+            bw = Benchmark()
+            tester = bw.get_tester( ... )
+            tester.start()
+            tester.stop() # First record
+            tester.start()
+            tester.start() # Raise Exception
+            
+        If you intent to plot the benchmarked data with pupyplot you don't need to think about stray data points. There are different utilities for handling and plotting this. 
+        """
         if self.started_at is not None:
             raise Exception("Timer already started. Please remmeber to class end() when a run completes")
         
         self.started_at = time.time()
         
-    def end(self):
+    def stop(self):
+        """
+        Stop the current timer and record the timing for later flushing. 
+        """
         time_diff = time.time() - self.started_at
         self.times.append(time_diff)
-        
+        self.discard()
+    
+    def discard(self):
+        """
+        Stop the current timer without recording the data. 
+        """
         # Clear for another run
         self.started_at = None
