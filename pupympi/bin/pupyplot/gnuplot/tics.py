@@ -15,29 +15,132 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
+from math import floor, log10, log
 
-    # The functions defined in the __all__ is the actual functions
+# The functions defined in the __all__ is the actual functions
 # for formatting tics. The others hare helpers functions prefixed
 # with _ and should not be used directly.
 
 __all__ = ('datasize', 'scale', 'time', 'throughput', 'number', )
 
-def _spread(p_min, p_max, no):
-    skip = (p_max - p_min) / float(no)
-    p = p_min
-    final_points = [p_min]
+RECALC_IDENTITY = lambda x: x
+RECALC_KB = lambda kb : kb*1024
+MSEC_1 = 1000
+RECALC_MSEC = lambda sec: sec*MSEC_1
 
-    for _ in range(no-1):
-        p += skip
-        final_points.append(p)
+SEC_1 = 1000*MSEC_1
+RECALC_SEC = lambda sec: sec*SEC_1
 
-    return final_points
+class LinTicker(object):
+    """
+    This class will generate tics for a linear axis without formatting the numbers. 
+    Use the ``get_formatted_tics`` if each tic should be formatted and returned in 
+    a list.
+    """
+    def __init__(self, maxval):
+        # The next step require numbers above 1, so while the number if below 1 we multiply
+        # with 10 and add this as a factor for reversal.        
+        factor = 1
+        while maxval < 10:
+            maxval *= 10
+            factor *= 10
+        
+        # Find the possible skip by taking the interval length diving by the
+        # number of skips (static to 10).
+        interval_length = maxval / 10.0
+        
+        # Blank out the numbers that are not the leading digit. This is done with string
+        # manipulation without any sound reason.
+        b = str(int(floor(interval_length)))
+        length = int(b[0]) * 10**(len(b)-1)
+        tics = []
+        t = 0.0
+        while t < maxval:
+            tics.append(t/factor)
+            t += length
+            
+        # Append a last one. This will go beyond the maxval, but this is a good thing
+        # as the plots will look ugly otherwise
+        tics.append(t/factor)
+        self.tics = tics
+    
+    def get_formatted_tics(self, unit="", recalc_func=RECALC_IDENTITY, gnuplot=True, clean_precision=True):
+        """
+        Return a list two 2 tuples where the first tuple element
+        is the real value and the second is the formatted value. The
+        unit parameter works as a simple string postfix after the
+        label have been selected. 
+        
+        The recalc function is used to convert from a formatted value
+        to the real value. For example if you need the real value in
+        bytes (for the actual plotting) but the data were given in MB, you
+        need to supply a function that multiplies the data with 1024**2.
+        """
+        # Go sure the formatted tics and find the value with most precision 
+        # and use that for all the tics.
+        def find_precision(tic):
+            st = str(tic)
+            if st.find(".") != -1:
+                return len(str(tic).split(".")[1])
+            elif st.find("e") != -1:
+                return int(st.split("e-")[1])
+            return 0
+            
+        max_pres = max([find_precision(tic) for tic in self.tics])
+            
+        formatted_tics = []
+        for tic in self.tics:
+            val = recalc_func(tic)
 
-def _format_datasize(bytecount, decimals=2):
+            pres = find_precision(tic)
+            if clean_precision: 
+                pres = max_pres
+
+            formatted = "%%.%df%s" % (pres, unit) % tic
+            t = (formatted, val)
+            formatted_tics.append(t)
+        
+        if gnuplot:
+            formatted_tics = ", ".join(["'%s' %s" % t for t in formatted_tics ])
+        return formatted_tics
+    
+class LogTicker(LinTicker):
+    def __init__(self, maxval):
+        max_exp = int(floor(log10(maxval)))+1
+        min_exp = max_exp - 10
+        
+        self.tics = [10**x for x in range(min_exp+1, max_exp+1)]
+        
+    def get_formatted_tics(self, *args, **kwargs):
+        kwargs["clean_precision"] = False
+        return super(LogTicker, self).get_formatted_tics(*args, **kwargs)
+        
+tickers = {'lin' : LinTicker, 'log' : LogTicker}
+
+def scale(points, axis_type="lin"):
+    return number(points, axis_type)
+
+def time(points, axis_type="lin"):
+    maxval = max(points)
+    
+    # Recalc the points from bytes to seconds, so they are easier
+    # to format. 
+    if maxval < SEC_1:      # Use MS
+        points = [point/MSEC_1 for point in points]
+        unit = 'ms'
+        recalc = RECALC_MSEC
+    else:                   # Use S
+        points = [point/SEC_1 for point in points]
+        unit = 's'
+        recalc = RECALC_SEC
+    
+    corrected_maxval = max(points)
+    return tickers[axis_type](corrected_maxval).get_formatted_tics(unit=unit, recalc_func=recalc)
+
+def clean_datasize(bytecount, decimals=2):
     if bytecount == 0:
         return "0 B"
-    n = math.log(bytecount, 2)
+    n = log(bytecount, 2)
     border_list = [ (10, "B"), (20, "KB"), (30, "MB"), (40, "GB"), (50, "TB") ]
     fmt_str = "%%.%df%%s" % decimals
     for bl in border_list:
@@ -45,96 +148,36 @@ def _format_datasize(bytecount, decimals=2):
             return fmt_str % (float(bytecount) / 2**(bl[0]-10), bl[1])
     return fmt_str % (bytecount, "B")
 
-def _format_throughput(bytecount):
-    return _format_datasize(bytecount, decimals=2)+"/s"
+clean_throughput = lambda x: clean_datasize(x)+"/s"
 
-def _format_scale(scale): # {{{2
-    return "%.2f" % scale
+def format_raw_labels(points, formatter=lambda x: x):
+    try:
+        formatted_tics = ", ".join(["'%s' %s" % (formatter(t), t) for t in points    ])
+    except Exception, e:
+        print e
+    return formatted_tics
 
-def _format_number(number):
-    return "%d" % int(number)
+def datasize(points, axis_type="lin", unit="KB", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points, formatter=clean_datasize)
 
-def _format_time(usecs): # {{{2
-    border_list = [ (1000, 'us'), (1000000, 'ms'), (1000000000, 's'),]
-    for i in range(len(border_list)):
-        bl = border_list[i]
-        if usecs < bl[0]:
-            if i > 0:
-                usecs = usecs / border_list[i-1][0]
-            return "%.0f%s" % (usecs, bl[1])
+    # Recalc the points from bytes to kilo bytes, so they are easier
+    # to format. 
+    points = [point/1024 for point in points]
+    maxval = max(points)
+    
+    return tickers[axis_type](maxval).get_formatted_tics(unit=unit, recalc_func=RECALC_KB)
 
-def _ensure_tic_space(points, axis_type, fit_points, discrete):
-    """
-    A helper function removing tics if we figure there is not
-    enough room for them.
+def throughput(points, axis_type="lin", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points, formatter=clean_throughput)
 
-    ..note:: The discrete parameter is not used.
-    """
-    def generate_bump_points(start, bump, end):
-        points = [start]
+    return datasize(points, axis_type, unit="KB/s")
 
-        while start < end:
-            start += bump
-            points.append(start)
-
-        return points
-
-    p_min = min(points)
-    p_max = max(points)
-
-    if True:
-        log_base = 32 # 10 in case of normal numbers.
-        extender = 32
-    else:
-        log_base = 10
-        extender = 4
-
-    if axis_type == 'lin':
-        skip_size = p_max - p_min
-        skip_bump = (log_base**(math.floor(math.log(skip_size, log_base))))/extender
-
-        points = generate_bump_points(p_min, skip_bump, p_max)
-    elif axis_type == 'log':
-        pass
-
-        # Remove 0
-        try:
-            points.remove(0)
-        except:
-            pass
-
-    while len(points) > fit_points:
-         points = points[::2]
-
-    return points
-
-def _simple_formatter(points, formatter, axis_type, fit_points, discrete=False):
-    data_points = _ensure_tic_space(points, axis_type, fit_points, discrete)
-    # Return a list with the data points formatted.
-    tics = []
-    for item in data_points:
-        label = formatter(item)
-        tics.append("'%s' %s" % (label, item))
-    return ', '.join(tics)
-
-def scale(points, axis_type="lin", fit_points=20):
-    return _simple_formatter(points, _format_scale, axis_type, fit_points)
-
-def datasize(points, axis_type="lin", fit_points=20):
-    return _simple_formatter(points, _format_datasize, axis_type, fit_points, discrete=True)
-
-def time(points, axis_type="lin", fit_points=20):
-    return _simple_formatter(points, _format_time, axis_type, fit_points)
-
-def throughput(points, axis_type="lin", fit_points=20):
-    return _simple_formatter(points, _format_throughput, axis_type, fit_points)
-
-def number(points, axis_type="lin", fit_points=20):
-    return _simple_formatter(points, _format_number, axis_type, fit_points, discrete=True)
-
-
-## Testing below
-
-if __name__ == "__main__":
-    print "Testing tics"
-
+def number(points, axis_type="lin", use_raw_labels=False):
+    if use_raw_labels:
+        return format_raw_labels(points)
+    
+    # We can only handle lin for now
+    maxval = max(points)
+    return tickers[axis_type](maxval).get_formatted_tics(unit="", recalc_func=RECALC_IDENTITY)

@@ -17,6 +17,8 @@
 
 import sys, copy, time
 
+import numpy
+
 from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
@@ -284,14 +286,31 @@ class Communicator:
         message to several recipients without having the data pickled
         multiple times.
 
-        FIXME: The multiple-recipients way without picklign a lot of
+        FIXME: The multiple-recipients way without pickling a lot of
                data could maybe be done with the regular send as well?
         """
         if not getattr(receivers, "__iter__", False):
             receivers = [receivers]
+        
+        #import copy
+        #import pickle
+        # FIXME: Move this import somewhere pretty
+        from mpi.network.utils import prepare_message
 
-        return self.mpi.network._direct_send(self, message=message, receivers=receivers, tag=tag)
+        rl = []        
+        #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
+        message = prepare_message(message, self.rank(), tag=tag, cmd=constants.CMD_USER, ack=False, comm_id=self.id, is_pickled=False)
+        for recp in receivers:
+            request = Request("send", self, recp, tag, data=message)
+            request.is_prepared = True
+            #request.is_pickled= True
+            request.prepare_send()
+            self.network.t_out.add_out_request(request)
+            rl.append(request)
+            #Logger().debug("--appended direct send" )
 
+        return rl
+    
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
@@ -349,6 +368,9 @@ class Communicator:
     #       unless we want to do weird things here we should reduce complexity and call directly on the network thread
     # Add an outbound request to the queue
     def _add_unstarted_request(self, request):
+        # Create the proper data structure and pickle the data
+        request.prepare_send()
+        
         self.network.t_out.add_out_request(request)
 
     # Add a request for communication with self
@@ -709,7 +731,7 @@ class Communicator:
     #def _recv(self, source, tag = constants.MPI_TAG_ANY):
     #    return self._irecv(source, tag).wait()
 
-    def sendrecv(self, senddata, dest, sendtag, source, recvtag):
+    def sendrecv(self, senddata, dest, sendtag=constants.MPI_TAG_ANY, source=None, recvtag=constants.MPI_TAG_ANY):
         """
 
         The send-receive operation combine in one call the sending of a message
@@ -721,6 +743,8 @@ class Communicator:
         A message sent by a send-receive operation can be received by a regular
         receive operation or probed by a probe operation; a send-receive operation
         can receive a message sent by a regular send operation.
+    
+        **Default values**: If no ``source`` is defined it is defined same as the ``dest``.
 
         **Example usage**:
         The following code will send a token string between all messages. All
@@ -744,8 +768,8 @@ class Communicator:
 
             recvdata = mpi.MPI_COMM_WORLD.sendrecv(content+" from "+str(rank),
                                                    dest,
-                                                   DUMMY_TAG,
                                                    source,
+                                                   DUMMY_TAG,
                                                    DUMMY_TAG)
             print "Rank %i got %s" % (rank,recvdata)
 
@@ -758,20 +782,13 @@ class Communicator:
 
         """
         execute_system_commands(self.mpi)
+        
+        if source is None:
+            source = dest
 
-        if dest == source:
-            return senddata
-
-        if source is not None:
-            recvhandle = self._irecv(source, recvtag)
-
-        if dest is not None:
-            self._isend(senddata, dest, sendtag).wait()
-
-        if source is not None:
-            return recvhandle.wait()
-
-        return None
+        recvhandle = self._irecv(source, recvtag)
+        self._isend(senddata, dest, sendtag).wait()
+        return recvhandle.wait()
 
     def barrier(self):
         """
@@ -1127,8 +1144,13 @@ class Communicator:
     def _igather(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-
+        
         return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
+        
+        #if isinstance(data,numpy.ndarray): # FIXME: This test should spot all pickless types
+        #    return self.collective_controller.get_request(constants.TAG_GATHERPL, data=data, root=root)            
+        #else:
+        #    return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
     def reduce(self, data, op, root=0):
         """
@@ -1312,8 +1334,9 @@ class Communicator:
     def _iscatter(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-
-        if self.comm_group.rank() == root and (not data or not getattr(data,"__iter__",False) or (len(data) % self.size() != 0)):
+        
+        # FIXME: This condition excludes strings which should preferable be scatterable
+        if self.comm_group.rank() == root and (not getattr(data,"__iter__",False) or (len(data) == 0) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
 
         return self.collective_controller.get_request(constants.TAG_SCATTER, data=data, root=root)

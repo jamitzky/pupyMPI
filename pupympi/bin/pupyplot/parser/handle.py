@@ -133,8 +133,28 @@ class DataSupplier(object):
         [all_tests.add(item[1]) for item in self.data]
         return list(all_tests)
     
-    def get_tests(self):
-        return self.tests
+    def get_tests(self, filters):
+        tests = []
+
+        # Find the positive filters and the negative filters first
+        pos_filters = []
+        neg_filters = []
+        for f in filters:
+            if f.startswith(":"):
+                neg_filters.append(f[1:])
+            else:
+                pos_filters.append(f)
+        
+        for test in self.tests:
+            if pos_filters and test.lower() not in pos_filters:
+                continue
+        
+            if neg_filters and test.lower() in neg_filters:
+                continue
+                    
+            tests.append(test)
+        
+        return tests
     
     def get_raw_test_data(self, testname):
         filtered_data = []
@@ -149,10 +169,34 @@ class DataSupplier(object):
         labels = ["tag", "runtype", "datasize", "total_time", "avg_time", "throughput", "min_time", "max_time", "nodes"]
         return labels.index(label)
     
+    def set_raw_filters(self, filters):
+        # We filter the data right away
+        data = []
+        for datum in self.data:
+            app = True
+            for filter in filters:
+                data_val = str(datum[self._get_pos(filter[0])])
+                filter_vals = filter[2]
+                filter_op = filter[1]
+                
+                if filter_op == "EQ":
+                    if data_val not in  filter_vals:
+                        app = False
+                        break
+            
+            if app:
+                data.append(datum)
+        self.data = data
+                
     def get_tags(self):
-        return list(set([d[0] for d in self.data]))
+        tags = list(set([d[0] for d in self.data]))
+        tags.sort()
+        return tags
     
-    def getdata(self, testname, tag, xdata, ydata, filters=[]):
+    def get_nodes(self):
+        return list(set([d[8] for d in self.data]))
+    
+    def getdata(self, testname, tag, xdata, ydata, series_col, filters=[]):
         if testname not in self.tests:
             raise Exception("No test called %s" % testname)
 
@@ -173,27 +217,42 @@ class DataSupplier(object):
         x_pos = self._get_pos(xdata)
         y_pos = self._get_pos(ydata)
         # extract the data later.
+
+        all_data = []
+        if series_col == "none":
+            series_filter = [None]
+        else:
+            series_filter = list(set([d[self._get_pos(series_col)] for d in self.data]))
+
+        series_filter.sort()
+
+        for serie_filter in series_filter:
+            # A structure to keep the filtered data. This will not 
+            # be returned direcly.
+            data = {}
+            for data_item in filtered_data:
+                # Test the filter.
+                if serie_filter is not None:
+                    if serie_filter != data_item[self._get_pos(series_col)]:
+                        continue
                 
-        # A structure to keep the filtered data. This will not 
-        # be returned direcly.
-        data = {}
-        for data_item in filtered_data:
-            x_data = data_item[x_pos]
-            y_data = data_item[y_pos]
+                x_data = data_item[x_pos]
+                y_data = data_item[y_pos]
+                
+                if x_data not in data:
+                    data[x_data] = []
+                
+                data[x_data].append(y_data)
+                
+            keys = data.keys()
+            keys.sort()
             
-            if x_data not in data:
-                data[x_data] = []
+            values = []
+            for k in keys:
+                values.append(data[k])
             
-            data[x_data].append(y_data)
-            
-        keys = data.keys()
-        keys.sort()
-        
-        values = []
-        for k in keys:
-            values.append(data[k])
-        
-        return keys, values
+            all_data.append( (serie_filter, keys, values))
+        return all_data
         
 class DataAggregator(object):
     """

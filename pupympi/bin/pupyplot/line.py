@@ -63,13 +63,13 @@ if __name__ == "__main__":
 
     # to extract and filter the data.
     ds = DataSupplier(handle.getdata())
+    ds.set_raw_filters(options.raw_filters)
 
     # It should be possible to limit the tests to one single test. how should
     # this be one.
-    all_tests = ds.get_tests()
+    rt = 0
+    all_tests = ds.get_tests(options.test_filter)
     for testname in all_tests:
-        if testname not in ("Allreduce", "Reduce", ):
-            continue
 
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
@@ -81,19 +81,38 @@ if __name__ == "__main__":
         axis_y_format = FORMAT_CHOICES[options.y_data]
 
         tags = ds.get_tags()
-
-        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
-
+        
+        lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format, x_use_raw_labels=options.x_axis_use_data_points)
+        
         for tag in tags:
             # Extract the data from the data store.
-            xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
+            series_list = ds.getdata(testname, tag, options.x_data, options.y_data, options.series_col, filters=[])
+            
+            for s in series_list:
+                series_data, xdata, ydata = s
 
-            # Aggregate the data.
-            da = DataAggregator(ydata)
-            ydata = da.getdata(options.y_data_aggr)
-
-            title = tag_mapper.get(tag, tag)
-            lp.add_serie(xdata, ydata, title=title)
-
-        lp.plot()
-        lp.close()
+                # Aggregate the data.
+                da = DataAggregator(ydata)
+                ydata = da.getdata(options.y_data_aggr)
+                
+                if not xdata or not ydata:
+                    continue
+                
+                title = tag_mapper.get(tag, tag)
+                
+                if options.series_col != 'none':
+                    title += " (%s: %s)" % (options.series_col, series_data)
+                lp.add_serie(xdata, ydata, title )
+        
+        try:
+            lp.plot()
+        except Exception, e:
+            rt = 1
+        
+        try:
+            lp.close()
+        except:
+            pass
+        
+    import sys
+    sys.exit(rt)

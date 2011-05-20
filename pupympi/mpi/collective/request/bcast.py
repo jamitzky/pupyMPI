@@ -40,6 +40,8 @@ class TreeBCast(BaseCollectiveRequest):
         if self.parent is None:
             # we're the root.. let us send the data to each child
             self.send_to_children()
+            # Mark that we are done with this request from a local perspective
+            self._finished.set()
 
     def accept_msg(self, rank, data):
         # Do not do anything if the request is completed.
@@ -47,15 +49,24 @@ class TreeBCast(BaseCollectiveRequest):
             return False
 
         if rank == self.parent:
-            self.data = data
-            self.send_to_children()
+            self.data = data            
+            # Pass it on to children if we have any
+            if self.children:
+                self.send_to_children()
+            # DEBUG
+            #Logger().debug("--accept_msg to:%i from:%i children:%s" % (self.rank, rank, self.children) )
+
+            # Mark that we are done with this request from a local perspective
+            self._finished.set()
             return True
 
         return False
 
     def send_to_children(self):
         self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BCAST)
-        self._finished.set()
+        # DEBUG
+        Logger().debug("--sent to %s" % self.children)
+        
 
     def _get_data(self):
         return self.data
@@ -73,7 +84,7 @@ class RingBCast(BaseCollectiveRequest):
     """
     Implementation of the bcast collective operations by traversing
     the communicators participants in a ring. This will introduce
-    more latance in the operations, but also result in less overhead
+    more latency in the operations, but also result in less overhead
     and lower memory footprint.
     """
     def __init__(self, communicator, data=None, root=0):

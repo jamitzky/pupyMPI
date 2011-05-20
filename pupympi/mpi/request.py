@@ -40,6 +40,8 @@ class BaseRequest(object):
         # Flag to keep track if the data is pickled. Some methods
         # will pickle directly.
         self.is_pickled = False
+        # Flag to signal that header has been appended (and data serialized)
+        self.is_prepared = False
 
         # Start an event for waiting on the request
         self._waitevent = threading.Event()
@@ -107,12 +109,19 @@ class Request(BaseRequest):
         return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, utils._nice_data(self.data) )
 
     def prepare_send(self):
+        """
+        Ready the payload of the request for sending
+        """
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
 
-        # Create the proper data structure and pickle the data
-        self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
-                                       tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_pickled=self.is_pickled)
+        if not self.is_prepared:
+            # Create the proper data structure and pickle the data
+            self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
+                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_pickled=self.is_pickled)
+        #DEBUG
+        else:
+            Logger().debug("Reusing already prepared message")
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
