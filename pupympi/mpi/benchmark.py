@@ -143,19 +143,3 @@ class Test(object):
         
         # Clear for another run
         self.started_at = None
-        
-if __name__ == "__main__":
-    b = Benchmark()
-    
-    for _ in range(10):
-        t, created = b.get_tester("allreduce", 3)
-        print "created", created
-        import random
-        import time
-        t.start()
-        r = random.random()
-        print "Sleeping for %f seconds" % r
-        time.sleep(r)
-        t.end()
-        
-    b.flush()
