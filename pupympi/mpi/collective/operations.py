@@ -102,7 +102,7 @@ def MPI_avg(input_list):
     Return the average of the elements
     """
     return sum(input_list)/len(input_list)
-    
-MPI_min.partial_data = False
-
+MPI_avg.partial_data = False
+# average (mean) is out for now since it flattens the array (delivers only a single scalar)  by default when averaging on multidimensional arrays
+# MPI_avg.numpy_op = numpy.mean
     
