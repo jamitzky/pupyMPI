@@ -37,6 +37,12 @@ class BenchmarkWriter(DictWriter):
         self.fieldnames = ["datasize" ,"repetitions", "total_time" ,"avg_time", "min_time", "max_time", "throughput", "nodes", "testname", "timestamp"]
         DictWriter.__init__(self, filehandle, self.fieldnames, extrasaction='ignore')
         
+        # Write a headerow
+        header = {}
+        for e in self.fieldnames:
+            header[e] = e
+        self.writerow(header)
+        
     def write(self, *args, **kwargs):
         """Enable use to write the paramters in the method call instead of creating a dict. """
         self.writerow(kwargs)
@@ -85,7 +91,8 @@ class Benchmark(object):
                 # Sort the test list according to the datasize. 
                 
                 filename = "pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
-                bw = BenchmarkWriter(open(filename.replace(" ", "_").replace(":", "-"), "w"))
+                fh = open(filename.replace(" ", "_").replace(":", "-"), "w")
+                bw = BenchmarkWriter(fh)
                 for t in testlist:
                     datasize, t_obj = t
                     bw.writerow(t_obj.get_dict())
