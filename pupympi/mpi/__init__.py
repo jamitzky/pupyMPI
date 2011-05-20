@@ -621,7 +621,7 @@ class MPI(Thread):
                                 # Both system messages and user pickled messages are unpickled here
                                 data = pickle.loads(raw_data)
 
-                            if tag in constants.COLLECTIVE_TAGS:                                
+                            if tag in constants.COLLECTIVE_TAGS:
                                 # This is part of a collective request, so it
                                 # should be added on a seperate queue and
                                 # matched later.

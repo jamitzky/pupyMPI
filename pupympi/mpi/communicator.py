@@ -17,6 +17,8 @@
 
 import sys, copy, time
 
+import numpy
+
 from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
@@ -1142,8 +1144,13 @@ class Communicator:
     def _igather(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-
+        
         return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
+        
+        #if isinstance(data,numpy.ndarray): # FIXME: This test should spot all pickless types
+        #    return self.collective_controller.get_request(constants.TAG_GATHERPL, data=data, root=root)            
+        #else:
+        #    return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
     def reduce(self, data, op, root=0):
         """
