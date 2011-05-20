@@ -120,53 +120,72 @@ def numpyrunner(r = 100, testdata=numpydata):
         for data, desc, scale in testdata:
             repetitions = r * scale
             if syntax == 'dumpload':
-                with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                    for i in xrange(repetitions):
-                        s = serializer.dumps(data)
-                        l = serializer.loads(s)
+                if type(data) == numpy.ndarray:
+                    with timing("%s dump+load+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                        # TODO: Include this in timing or not?
+                        t = data.dtype
+                        for i in xrange(repetitions):
+                            s = serializer.dumps(data)
+                            l = serializer.loads(s)
+                            n = numpy.frombuffer(l, dtype=t)
+                else:
+                    with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                        for i in xrange(repetitions):
+                            s = serializer.dumps(data)
+                            l = serializer.loads(s)
                         
             elif syntax == 'funcall':
                 # The received data will be in the form of a string so we convert beforehand
-                s2 = str(serializer(data))
-                with timing("%s func+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                    # TODO: Include this in timing or not?
-                    t = data.dtype
-                    for i in xrange(repetitions):
-                        s = serializer(data)
-                        l = numpy.frombuffer(s2,dtype=t)
+                if type(data) == numpy.ndarray:
+                    with timing("%s func+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                        # TODO: Include this in timing or not?
+                        t = data.dtype                            
+                        for i in xrange(repetitions):
+                            s = serializer(data)                        
+                            l = numpy.frombuffer(s,dtype=t)
+                elif isinstance(data, str):
+                    with timing("%s func+str reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):                                                
+                        # TODO: Include this in timing or not?
+                        t = type(data)
+                        for i in xrange(repetitions):
+                            try:
+                                s = serializer(data)
+                                l = t(s)                                
+                            except Exception, e:
+                                print data
+                                print e
+                                raise e
+                            #
+                            #pass
+                else:
+                    print "%s ignoring type %s" % (serializer.__name__, type(data))
+                    #print data
+                    #s = serializer(data)
+                    
 
-                # The received data will be in the form of a string so we convert beforehand
-                s2 = str(serializer(data))
-                with timing("%s func+fromstring reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                    # TODO: Include this in timing or not?
-                    t = data.dtype
-                    for i in xrange(repetitions):
-                        s = serializer(data)
-                        l = numpy.fromstring(s2,dtype=t)
-            
             # This case is a bit different
             elif syntax == 'methodcall':
-                with timing("%s methodcall+frombuffer reps:%i %s" % ('tostring', repetitions,desc),repetitions):
-                    # TODO: Include this in timing or not?
-                    t = data.dtype
-                    for i in xrange(repetitions):
-                        s = data.tostring()
-                        l = numpy.frombuffer(s,dtype=t)
+                if type(data) == numpy.ndarray:
+                    with timing("%s methodcall+frombuffer reps:%i %s" % ('tostring', repetitions,desc),repetitions):
+                        # TODO: Include this in timing or not?
+                        t = data.dtype
+                        for i in xrange(repetitions):
+                            s = data.tostring()
+                            l = numpy.frombuffer(s,dtype=t)
+                else:
+                    print "ignoring type:%s since it has no tostring method" % type(data)                    
 
-                with timing("%s methodcall+fromstring reps:%i %s" % ('tostring', repetitions,desc),repetitions):
-                    # TODO: Include this in timing or not?
-                    t = data.dtype
-                    for i in xrange(repetitions):
-                        s = data.tostring()
-                        l = numpy.fromstring(s,dtype=t)
-                        
             else:
                 print "syntax error!"
                 
         print "-"*40
 
 # do it
-plainrunner(100)
-#numpyrunner(100)
+#plainrunner(100)
+#plainrunner(1000, testdata=numpydata)
 
+numpyrunner(10)
+#numpyrunner(1000)
+#numpyrunner(100, testdata=smalldata+bigdata)
+#numpyrunner(100, testdata=numpydata)
 

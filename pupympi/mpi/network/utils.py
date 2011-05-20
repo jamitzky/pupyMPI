@@ -149,6 +149,8 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     communicator id    
     """
     if is_pickled:
+        # DEBUG
+        Logger().debug("using already pickled data! type:%s data:%s" % (type(data), data) )
         pickled_data = data
     else:
         # DEBUG

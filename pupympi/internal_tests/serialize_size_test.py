@@ -95,8 +95,11 @@ def runner(testdata=numpydata):
                     l = serializer.loads(s)  # unserialize to verify                
                 elif syntax == 'funcall':
                     s = serializer(data)  # serialize
-                    t = data.dtype
-                    l = numpy.frombuffer(s,dtype=t) # unserialize to verify
+                    try:
+                        t = data.dtype
+                        l = numpy.frombuffer(s,dtype=t) # unserialize to verify
+                    except Exception as e:                        
+                        l = str(s)
                 elif syntax == 'methodcall':
                         s = data.tostring() # serialize
                         t = data.dtype
@@ -125,7 +128,7 @@ def runner(testdata=numpydata):
 
 # do it
 #runner()
-runner(smalldata)
-#runner(smalldata+bigdata)
+#runner(smalldata)
+runner(smalldata+bigdata+numpydata)
 
 
