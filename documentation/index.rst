@@ -1,20 +1,29 @@
-********************************************
 pupyMPI documentation
-********************************************
+============================
 
-.. toctree::
-    :hidden:
-    
-    getting started <tut_getting_started>
-    running your program <mpirun>
-    Useful utilities <utils>
-    Using custom operations in collective operations <tut_operations>
-    Benchmarking your pupyMPI run <benchmarking>
-    Plotting benchmarked data <pupyplot>
-    Working with NumPy <tut_numpy>
-    Using non blocking collective operations <nbc>
-    Howto tag your messages <tut_tags>
-    Developing and extending pupyMPI <developer>
-    Reference manual <api>
-    Changes in pupyMPI <changelog>
+:Author:       Jan Wiberg, Frederik Hantho, Asser Schroeder Femoe & Rune Bromer
+:Web Site:     http://www.bitbucket.org/bromer/pupympi/
+:Organization: `DIKU <http://www.diku.dk>`_
+:Date:         |today|
+:Copyright:    This document has been placed in the public domain.
+
+.. include:: abstract.rst
+
+If you prefer there is also a PDF version avilable `for download
+<http://www.diku.dk/hjemmesider/studerende/bromer/pupympi/pupympi.pdf>`_.
+
+
+Contents
+========
+
+.. include:: toctree.rst
+
+
+.. Indices and tables
+.. ==================
+.. 
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
+
 
