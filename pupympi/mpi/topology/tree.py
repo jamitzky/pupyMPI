@@ -39,7 +39,7 @@ class Tree(object):
 
     def parent(self):
         """
-        Returning the rank of the parant, None if the rank is the root of the
+        Returning the rank of the parent, None if the rank is the root of the
         tree.
         """
         return self._parent
