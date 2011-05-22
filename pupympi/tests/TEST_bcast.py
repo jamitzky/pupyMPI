@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if broadcast works
+# meta-description: Test if broadcast works with simple types
 # meta-expectedresult: 0
 # meta-minprocesses: 11
 
@@ -13,7 +13,7 @@ rank = world.rank()
 size = world.size()
 
 BCAST_ROOT = 3
-BCAST_FIRST_MESSAGE = "Test message for rank %d" % BCAST_ROOT
+BCAST_FIRST_MESSAGE = "Test message from rank %d" % BCAST_ROOT
 
 messages = [BCAST_FIRST_MESSAGE, None, "", -1]
 

@@ -497,7 +497,7 @@ class MPI(Thread):
                         #Logger().debug("trying to match")
                         # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
-                            match = request.accept_msg(rank, raw_data)
+                            match = request.accept_msg(rank, raw_data, msg_type)
 
                             # Debug only. Should go away (maybe)
                             if match is None:
@@ -601,35 +601,7 @@ class MPI(Thread):
                                     self.pending_collective_requests_has_work.set()
 
                             else:
-                                if msg_type > constants.CMD_RAWTYPE:  # Non-pickled data is recognized via msg_type
-                                    # Multidimensional arrays have the number of shapebytes hiding in the upper decimals
-                                    shapelen = msg_type / 1000
-                                    # typeint occupies the lower decimals
-                                    typeint = msg_type % 1000
-                                    if shapelen:
-                                        # Slice shapebytes out of msg
-                                        shapebytes = raw_data[:shapelen]
-                                        # Restore shape tuple
-                                        shape = tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
-                                        # Lookup the numpy type
-                                        t = utils.typeint_to_type[typeint]
-                                        # Restore numpy array from the rest of the string
-                                        data = numpy.fromstring(raw_data[shapelen:],t).reshape(shape)
-                                    
-                                    else:
-                                        # Numpy type or bytearray
-                                        if msg_type == constants.CMD_BYTEARRAY:
-                                            # plain old bytearray
-                                            data = bytearray(raw_data)
-                                        else:
-                                            # Lookup the numpy type
-                                            t = utils.typeint_to_type[msg_type]
-                                            # Restore numpy array
-                                            data = numpy.fromstring(raw_data,t)
-                                else: # Regular pickled data
-                                    # Both system messages and user pickled messages are unpickled here
-                                    data = pickle.loads(raw_data)
-
+                                data = utils.deserialize_message(raw_data, msg_type)
                                 self.received_data.append( (rank, tag, ack, comm_id, data) )
                                 self.pending_requests_has_work.set()
                         self.raw_data_queue = []
