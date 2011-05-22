@@ -215,7 +215,7 @@ def deserialize_message(raw_data, msg_type):
     """
     Retrieve the original message from a payload given the message type
     """
-    Logger().debug("DESERIALIZING msgtype:%s" % msg_type)
+    #Logger().debug("DESERIALIZING msgtype:%s" % msg_type)
     
     # Non-pickled data is recognized via msg_type
     if msg_type > constants.CMD_RAWTYPE:

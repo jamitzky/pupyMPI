@@ -1,5 +1,6 @@
 from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
 from mpi import constants
+import mpi.network.utils as utils
 
 from mpi.logger import Logger
 
@@ -13,7 +14,7 @@ class TreeScatter(BaseCollectiveRequest):
     defined classes for examples.
 
     The functionality is also pretty simple. Each request looks at the parent
-    in the topology. If there is none, we must be the root, so we sends data
+    in the topology. If there is none, we must be the root, so we send data
     to each child. If - on the other hand - there is a parent, we wait for
     a message from that rank and send to our own children.
     """
@@ -44,13 +45,13 @@ class TreeScatter(BaseCollectiveRequest):
             # we're the root.. let us send the data to each child
             self.send_to_children()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
 
         if rank == self.parent:
-            self.data = data
+            self.data = utils.deserialize_message(raw_data, msg_type)
             self.send_to_children()
             return True
 
@@ -61,21 +62,19 @@ class TreeScatter(BaseCollectiveRequest):
             # Create new data. This will not include a lot of data copies
             # as we are only making references in the new list.
             data = [None] * self.size
+            data[child] = self.data[child]            
             desc = self.topology.descendants()
             for r in range(self.size):
                 if r == child or r in desc[child]:
                     data[r] = self.data[r]
-                else:
-                    data[r] = None
+            Logger().debug("children:%s desc:%s values:%s" % (self.children, desc, desc.values()) )
             self.communicator._isend(self.data, child, tag=constants.TAG_SCATTER)
-
-        # We only need our own data
-        self.data = self.data[self.rank]
 
         self._finished.set()
 
     def _get_data(self):
-        return self.data
+        # We only need our own data
+        return self.data[self.rank]
 
 class FlatTreeScatter(FlatTreeAccepter, TreeScatter): 
     pass
