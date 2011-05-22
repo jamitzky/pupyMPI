@@ -57,10 +57,6 @@ class TreeScatter(BaseCollectiveRequest):
         return False
 
     def send_to_children(self):
-        # FIXME: 
-        # Should we use the _direct send and filter later? Is the extra 
-        # overhead for sending larger messages smaller than the overhead
-        # of pickling the smaller data items? 
         for child in self.children:
             # Create new data. This will not include a lot of data copies
             # as we are only making references in the new list.

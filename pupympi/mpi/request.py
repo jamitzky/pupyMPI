@@ -60,7 +60,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None, cmd=constants.CMD_USER):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None, cmd=constants.CMD_USER, multi=False):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -71,6 +71,7 @@ class Request(BaseRequest):
         self.tag = tag
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data
+        self.multi = multi # Flag that data is a list of payloads
 
         self.cmd = cmd
         

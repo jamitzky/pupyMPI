@@ -279,27 +279,24 @@ class Communicator:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
 
-    def _direct_send(self, message, receivers=[], tag=constants.MPI_TAG_ANY):
+    def _direct_send(self, message, receivers=[], tag=constants.MPI_TAG_ANY, serialized=True):
         """
         A helper function for sending a message without passing the
-        message through the queues. It's possible to send the same
-        message to several recipients without having the data pickled
-        multiple times.
-
-        FIXME: The multiple-recipients way without pickling a lot of
-               data could maybe be done with the regular send as well?
+        message through the queues. The data is assumed to be properly serialized already.
+        
+        A list of request handles is returned, all of which needs to be waited on before
+        the entire send can be considered complete.
         """
+        # FIXME: This is a silly safety precaution, let's only call direct send with a list of receivers and drop this check
         if not getattr(receivers, "__iter__", False):
             receivers = [receivers]
         
-        #import copy
-        #import pickle
         # FIXME: Move this import somewhere pretty
         from mpi.network.utils import prepare_message
 
         rl = []        
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        message = prepare_message(message, self.rank(), tag=tag, cmd=constants.CMD_USER, ack=False, comm_id=self.id, is_pickled=False)
+        message = prepare_message(message, self.rank(), tag=tag, cmd=constants.CMD_USER, ack=False, comm_id=self.id, is_pickled=serialized)
         for recp in receivers:
             request = Request("send", self, recp, tag, data=message)
             request.is_prepared = True
