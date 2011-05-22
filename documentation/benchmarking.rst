@@ -182,6 +182,18 @@ be made cleaner and safer like this::
         # ... calculate something..
 
 
+Note that the above code will record the time no matter what happens. If you
+want to break the control flow without recording the running timer you need to
+call the discard function.::
+
+    bw_edge, _ = bw.get_tester("edge")
+    with bw_edge:
+        # ... calculate something..
+        # something bad happend here. We will return right away but
+        # discard the timing first.
+        bw_edge.discard()
+        return
+
 Packing your files for later plotting
 --------------------------------------
 The benchmarked files should be placed in a directory per code version. This
