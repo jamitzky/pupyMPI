@@ -146,7 +146,9 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     system cmd
     mpi or system tag
     acknowledge needed
-    communicator id    
+    communicator id
+    
+    FIXME: Change parameter name is_pickled to the more fitting is_serialized
     """
     if is_pickled:
         # DEBUG
@@ -198,7 +200,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
             Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
             pickled_data = data
         else:
-            #Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
+            Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
             pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
         
     lpd = len(pickled_data)

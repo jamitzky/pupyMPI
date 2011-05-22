@@ -38,18 +38,18 @@ class TreeBCast(BaseCollectiveRequest):
         self.children = topology.children()
 
         if self.parent is None:
-            # we're the root.. let us send the data to each child
-            self.send_to_children()
+            # we're the root.. let us send the data to each child 
+            self.send_to_children(False)
             # Mark that we are done with this request from a local perspective
             self._finished.set()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
 
         if rank == self.parent:
-            self.data = data            
+            self.data = raw_data
             # Pass it on to children if we have any
             if self.children:
                 self.send_to_children()
@@ -62,14 +62,24 @@ class TreeBCast(BaseCollectiveRequest):
 
         return False
 
-    def send_to_children(self):
-        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BCAST)
+    def send_to_children(self, transit=True):
+        """
+        Nice wrapper around the direct send call
+        
+        Transit flag means the sending node is just a transit node for data, ie. the data is already serialized
+        """
+        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BCAST, serialized=transit)
         # DEBUG
         Logger().debug("--sent to %s" % self.children)
         
 
-    def _get_data(self):
-        return self.data
+    def _get_data(self):        
+        # For root the data is not serialized
+        if self.parent is None:
+            return self.data
+        else:
+            import pickle
+            return pickle.loads(self.data)
 
 class FlatTreeBCast(FlatTreeAccepter, TreeBCast):
     pass
