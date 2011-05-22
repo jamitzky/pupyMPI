@@ -3,6 +3,10 @@
 Benchmarking your pupyMPI runs
 ===================================
 
+This page describes how to benchmark you pupyMPI programs. This layer might
+seem very lightweight and indeed it is. The power comes from the easy
+integration with :ref:`the plotting tool called pupyPlot <plot>`. 
+
 .. module:: mpi.benchmark
 .. autoclass:: Benchmark 
    :members: __init__, get_tester, flush
