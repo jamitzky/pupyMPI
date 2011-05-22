@@ -13,6 +13,9 @@ integration with :ref:`the plotting tool called pupyPlot <plot>`.
 .. autoclass:: Test
    :members: start, stop, discard
 
+
+.. _stencil: 
+
 A full example 
 --------------------------------------
 Take a look at the example stencil solver located in
