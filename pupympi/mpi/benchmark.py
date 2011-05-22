@@ -20,6 +20,7 @@ Benchmarking documentation
 
 from csv import DictWriter
 from datetime import datetime
+import time
 
 class BenchmarkWriter(DictWriter):
     """
@@ -48,15 +49,20 @@ class BenchmarkWriter(DictWriter):
         
 class Benchmark(object):
     """
-    A minimal benchmarking utility working very well with pupyplot for plotting different tests and runs. The class is initialized with an optional communicator instance. If the communicator instance is present the :func:`get_tester` is able to default the number of processors. Use the :func:`flush` method when all the run has been timed and the data should be written to the disk.
+    A minimal benchmarking utility working very well with pupyplot for plotting different tests and runs. The 
+    class is initialized with an optional communicator instance and datasize. The communicator and datasize 
+    is used as defaults for the parameters in the :func:`get_tester` method documented below. 
+
+    Use the :func:`flush` method when all the run has been timed and the data should be written to the disk.
     
     .. versionadded:: 0.9.5
     """
-    def __init__(self, communicator=None):
+    def __init__(self, communicator, datasize=None):
+        self.datasize = datasize
         self.communicator = communicator
         self.testers = {}
        
-    def get_tester(self, testname, procs=None, datasize=0):
+    def get_tester(self, testname, procs=None, datasize=None):
         """
         Creates and track a :class:`Test` instance with the given parameters. 
         
@@ -64,10 +70,10 @@ class Benchmark(object):
             
         """
         if procs is None:
-            if self.communicator is not None:
-                procs = self.communicator.size()
-            else:
-                procs = 0
+            procs = self.communicator.size()
+                
+        if datasize is None:
+            datasize = self.datasize
 
         if procs not in self.testers:
             self.testers[procs] = {}
@@ -81,13 +87,13 @@ class Benchmark(object):
         
         return self.testers[procs][datasize][testname], create
 
-    def flush(self, folder=None):
+    def flush(self):
         """
         Write the gathered data into several .csv files. The names for the format will include the test name and the number of involving processors. This is done accordingly to
         pupymark which is the internal benchmarking suite for pupyMPI. The files will also include a timestamp of the benchmark. This means that two benchmarks will not overwrite
-        each others files unless the time and data is exactly the same which is very unlikely. 
+        each others files unless the time and data is exactly the same which is very unlikely.
         
-        .. note:: The `folder` parameters is not used currently but saved for later expansion of the functionality. 
+        The files will be saved in the LOGDIR folder, defaulting to ``user_logs``. See the documentation for :ref:`mpirun` for more information about settings the default log dir. 
         
         .. note:: This method will not close any running times, so these will not be included in the flushed output. 
         """
@@ -108,13 +114,15 @@ class Benchmark(object):
                 testlist = tests[testname]
                 
                 # Sort the test list according to the datasize. 
+                filename = self.communicator.mpi.logdir + "/pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
+                filename = filename.replace(" ", "_").replace(":", "-")
                 
-                filename = "pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
-                fh = open(filename.replace(" ", "_").replace(":", "-"), "w")
+                fh = open(filename, "w")
                 bw = BenchmarkWriter(fh)
                 for t in testlist:
                     datasize, t_obj = t
                     bw.writerow(t_obj.get_dict())
+                fh.close()
                 
 class Test(object):
     def __init__(self, testname, procs, datasize):
