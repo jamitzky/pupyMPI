@@ -13,6 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
+# Make sure the with keyword is available
+from __future__ import with_statement
+
 
 """
 Benchmarking documentation
@@ -196,3 +199,9 @@ class Test(object):
         """
         # Clear for another run
         self.started_at = None
+        
+    def __enter__(self):
+        self.start()
+        
+    def __exit__(self, type, value, tb):
+        self.stop()
