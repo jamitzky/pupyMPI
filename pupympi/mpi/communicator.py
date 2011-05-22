@@ -279,7 +279,7 @@ class Communicator:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
 
-    def _direct_send(self, message, receivers=[], tag=constants.MPI_TAG_ANY, serialized=True):
+    def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True):
         """
         A helper function for sending a message without passing the
         message through the queues. The data is assumed to be properly serialized already.
@@ -296,7 +296,7 @@ class Communicator:
 
         rl = []        
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        message = prepare_message(message, self.rank(), tag=tag, cmd=constants.CMD_USER, ack=False, comm_id=self.id, is_pickled=serialized)
+        message = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_pickled=serialized)
         for recp in receivers:
             request = Request("send", self, recp, tag, data=message)
             request.is_prepared = True

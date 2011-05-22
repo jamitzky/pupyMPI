@@ -35,7 +35,7 @@ class TreeScatter(BaseCollectiveRequest):
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
         if not topology:
-            raise Exception("Cant broadcast without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+            raise Exception("Cannot broadcast without a topology... do you expect me to randomly behave well? I REFUSE!!!")
 
         self.parent = topology.parent()
         self.children = topology.children()
