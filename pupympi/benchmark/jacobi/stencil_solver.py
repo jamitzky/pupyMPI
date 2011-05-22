@@ -9,6 +9,21 @@ def stencil_solver(local,epsilon):
     """
     The function receives a partial system-matrix including ghost rows in top and bottom
     """
+    from mpi.benchmark import Benchmark
+    
+    # We define the data size as the product of W and H times the byte size of the inner
+    # data type. 
+    datasize = height*width*local.dtype.itemsize
+    bw = Benchmark(world, datasize=datasize)
+    
+    # We wish to benchmark the complete solving (identifier complete), the edge exchange
+    # identifier (edge) and the delta calculation (identifier delta).
+    bw_complete, _ = bw.get_tester("complete")
+    bw_edge, _ = bw.get_tester("edge")
+    bw_delta, _ = bw.get_tester("delta")
+    
+    bw_complete.start()
+    
     W, H = local.shape
     maxrank = size - 1
     
@@ -23,17 +38,29 @@ def stencil_solver(local,epsilon):
     delta = epsilon+1
     counter = 0
     while epsilon<delta:
+        bw_edge.start()
         if rank != 0:
             local[0,:] = world.sendrecv(local[1,:], dest=rank-1)
         if rank != maxrank:
-            local[-1,:] = world.sendrecv(local[-2,:], dest=rank-1)
+            local[-1,:] = world.sendrecv(local[-2,:], dest=rank+1)
+        bw_edge.stop()
         work[:] = (cells+up+left+right+down)*0.2
+        
+        bw_delta.start()
         delta = world.allreduce(numpy.sum(numpy.abs(cells-work)), MPI_sum)
+        bw_delta.stop()
+        
         cells[:] = work
         counter += 1
         
     if rank == 0:
         print "rank %i done, in %i iterations with final delta:%s (sample:%s)" % (rank, counter, delta, cells[10,34:42])
+
+    bw_complete.stop()
+
+    # Flush the benchmarked data to files
+    bw.flush()
+    
 
 # for realism one process initializes and distributes the global state
 if rank == 0:
