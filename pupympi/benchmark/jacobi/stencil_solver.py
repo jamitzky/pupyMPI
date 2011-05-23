@@ -14,7 +14,7 @@ def stencil_solver(local,epsilon):
     # We define the data size as the product of W and H times the byte size of the inner
     # data type.
     datasize = height*width*local.dtype.itemsize
-    bw = Benchmark(world, datasize=datasize, roots=[1])
+    bw = Benchmark(world, datasize=datasize)
 
     # We wish to benchmark the complete solving (identifier complete), the edge exchange
     # identifier (edge) and the delta calculation (identifier delta).
