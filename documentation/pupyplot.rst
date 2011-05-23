@@ -84,7 +84,52 @@ That will change the tag names in every plot that use the ``plotdata.pkl``.
 
 Common grounds for the avilable plots
 -------------------------------------------------------------------------------
+Most of the available plotting scripts - described below - have a number of
+common command line arguments. This include everything from selecting the
+proper data on each axis to data filtering and minipulation. This section will
+not give an extensive overview and description of these paramters, but the
+scripts will not resue arguments for different purposes. There are some key
+elements that bears mention.
 
+**Data filtering:** There are several different ways to filter the parsed data
+if you only want to plot a subset of this. There are some very expressive ways
+to filter specific important paramters and a low level filtering method:
+
+``--filter-test=testname1,testname2``
+    Filters the data to only contain data with identifiers *testname1* or
+    *testname2*. The identifiers is the names of the test you give as argument
+    to the :func:`get_tester <mpi.benchmark.Benchmark.get_tester>` function.
+
+``--y-filter=`` and ``--x-filter=``
+    Allows you to filter the data you choose on either axis according to some
+    predefined filers. Currently only the *zero* filter is available that
+    filters elements that evaluate to false in Python. 
+
+``--raw-filters=``
+    This allows you to describe filters that apply to any given column in the
+    parsed data files. Currently it is only possible to filter according to
+    *is equal to* or *is not equal to*, but this can be extended in the
+    future. It is possible to give multiple values for each filter. For
+    example a filter that only allows data for runs with 8 and 32 procsessors
+    for a test called mytest can be written as
+    ``--raw-filters=nodes:8,3;testname=mytest``
+
+.. note:: Be careful when filtering the data. Remember what you need to show
+    be sure to document the data selection. It is often easy to filter data to
+    match a wanted situation than to explain why the data does not fit into
+    the grand plan. 
+
+**Data aggregation:** It is not uncommon to end up with multiple values for a
+single x coordinate. In many cases it is actually a very good thing as this
+menas you have pleanty of benchmark data. In many plots - scatter plots being
+the exception - you do know want to plot every data point but pick a
+representative (or calculate one). There are not only one valid solution for
+this, so pupyPlot comes with several options:
+
+* ``min``
+* ``max``
+* ``avg``
+* ``stddiv``
 
 Line plots - ``line.py`` 
 -------------------------------------------------------------------------------
