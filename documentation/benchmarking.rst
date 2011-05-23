@@ -13,7 +13,6 @@ integration with :ref:`the plotting tool called pupyPlot <plot>`.
 .. autoclass:: Test
    :members: start, stop, discard
 
-
 .. _stencil: 
 
 A full example 
@@ -111,8 +110,7 @@ phrone. Instead the above benchmarking library is inserted::
         bw_complete.stop()
 
         # Flush the benchmarked data to files
-        if rank == 0:
-            bw.flush()
+        bw.flush()
 
 Now we are ready to benchmark some runs. We automate the run by writing the
 following simple shell script::
@@ -160,11 +158,10 @@ sent to mpirun.py. If you specificed this parameter you should look into the
 documentation to see what you did wrong. If you did not, your .csv files
 should be located in the ``user_logs`` directory. 
 
-Do you see more output files than you would expect? If you look in the above
-example the ``flush`` method is only called for ``rank == 0``. Otherwise you
-will have a file per rank. This is considered a fature and can be used to plot
-the performance difference for different ranks. 
-
+Do you see more output files than you would expect? The ``roots`` parameter
+is used to set which ranks should write the final csv files to the file
+system. This will default to only rank 0, so if you supply a bigger list, you
+will see a lot of files.
 
 Benchmarking with fewer lines
 ----------------------------------------------------
@@ -183,11 +180,9 @@ method is always called indifferent of when you exit a function etc. This is
 much like the problems people face when working with locks. The above code can
 be made cleaner and safer like this::
 
-
     bw_edge, _ = bw.get_tester("edge")
     with bw_edge:
         # ... calculate something..
-
 
 Note that the above code will record the time no matter what happens. If you
 want to break the control flow without recording the running timer you need to
