@@ -72,13 +72,16 @@ The ``.plk`` extension is home brewed for *pickled data*. Notice that the
 script did not only create a file called ``plotdata.pkl`` but also the file
 named ``plotdata.pkl.tagmapper``. By editing this file it is possible to
 rename the tags from their simple folder names to something nicer that should
-be used in the plots. For example, the original content::
+be used in the plots. For example, the original content (mu username is
+bromer)::
 
-    something
+    "/home/bromer/benchmarkdata/blocking/":"/home/bromer/benchmarkdata/blocking/"
+    "/home/bromer/benchmarkdata/nonblocking/":"/home/bromer/benchmarkdata/nonblocking/"
 
 could be changed to::
 
-    something else
+    "/home/bromer/benchmarkdata/blocking/":"Blocking"
+    "/home/bromer/benchmarkdata/nonblocking/":"Nonblocking"
 
 That will change the tag names in every plot that use the ``plotdata.pkl``. 
 
@@ -158,12 +161,33 @@ with the ``--axis-x-type`` and ``--axis-y-type`` that takes either ``lin`` or
 
 Line plots - ``line.py`` 
 -------------------------------------------------------------------------------
+The line plot functionality is available in the ``line.py`` script. The above
+mention command above applies for the line plots. 
+
+.. note:: The line plot can not plot columns charts (also called bar plots).
 
 Scatter plots - ``scatter.py``
 -------------------------------------------------------------------------------
+The scatter plot is the only plot that will not aggregate data. It will plot
+each data point and is usefull for creating an overview of the gathered data.
+Stray data points will be easily identified in this plot. If you want to
+display the insecurity in the data plots you should use a line plots with
+error lines instead.
 
 Scale or speedup plots - ``scale.py``
 -------------------------------------------------------------------------------
+This script will manipulate the data somewhat extra than the other plots. It
+will compare the different ``tags`` and calculate the speedup factor. This
+plot is very useful when displaying relative performance gains / losses. 
+
+Customizing your plot beyond pupyPlots abilities
+-------------------------------------------------------------------------------
+Depending on your layouting needs pupyPlot might not be good enough to produce
+a plot that is pretty and usefull a report. However the system is implemented
+in such a way that is can be used as a starting point minimizing the work you
+need to do manually. By using the ``--keep-temp-files`` command line argument
+pupyPlot will leave the ``.gnu`` and ``.data`` files which is all you need to
+play around with most settings. 
 
 
 Plot automation
