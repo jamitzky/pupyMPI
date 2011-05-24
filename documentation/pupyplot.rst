@@ -126,10 +126,35 @@ the exception - you do know want to plot every data point but pick a
 representative (or calculate one). There are not only one valid solution for
 this, so pupyPlot comes with several options:
 
-* ``min``
-* ``max``
-* ``avg``
-* ``stddiv``
+* ``min`` Takes the minimum value. This is usefull if the plot should show
+  the theoretically best or optimal time. 
+* ``max`` Takes the maximum values. Usefull for locating worst case
+  situations.
+* ``avg`` Uses the average value of the data points. 
+* ``stddiv`` Takes the standard deviation of the data points.
+
+**Defining series:** It is not uncommon to want more than one series per tag,
+so pupyPlot supports selecting a column that will divide into series. For
+example, if a plot should show the run time on the y axis, the datasize on the
+x axis and have a series per node count, the following parameters could be
+selected::
+
+    --x-data=datasize --y-data=avgtime --series-column=nodes
+
+.. warning:: Looking at the above parameters also shows a possible error in
+    not selecting a series column. Of obmitted the plotted data would
+    aggregate the runtimes for each data size regardless of the node count.
+    This means that you would see the average time taken on multiple node
+    counts at the same time. This does probably not make sense. 
+
+**Layout of the plot:** It is possible to define the width and height of the
+plot by using the ``--plot-width`` and ``--plot-height`` parameters. 
+
+The format of the axis is a very important parameter in visualizing your data.
+Some key factors might be hidden complete if the y axis is a regular linary
+axis while other will be hidden if you use a log. You control the axis types
+with the ``--axis-x-type`` and ``--axis-y-type`` that takes either ``lin`` or
+``log`` as argument.
 
 Line plots - ``line.py`` 
 -------------------------------------------------------------------------------
