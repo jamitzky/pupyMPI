@@ -119,7 +119,7 @@ class Request(BaseRequest):
         if not self.is_prepared:
             # Create the proper data structure and pickle the data
             self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
-                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_pickled=self.is_pickled)
+                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
         #DEBUG
         else:
             Logger().debug("Reusing already prepared message")

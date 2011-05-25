@@ -61,6 +61,7 @@ class Tree(object):
         """
         return self._descendants
 
+
 class FlatTree(Tree):
     """
     Implements a flat free:

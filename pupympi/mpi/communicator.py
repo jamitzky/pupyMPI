@@ -296,7 +296,7 @@ class Communicator:
 
         rl = []        
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        message = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_pickled=serialized)
+        message = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized)
         for recp in receivers:
             request = Request("send", self, recp, tag, data=message)
             request.is_prepared = True
