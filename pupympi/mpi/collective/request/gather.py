@@ -260,7 +260,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         For now we accept all...
         Eventually we always accept as long as it is numpy data
         """
-        import numpy
+        import numpy # FIXME: Move this import somewhere nice
         
         # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
         if isinstance(kwargs['data'], numpy.ndarray):
