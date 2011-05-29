@@ -96,7 +96,7 @@ class BinomialTreeIterative(Tree):
                     desc.extend(new_desc)
                     i_future += 1
                 
-                # Weed out own rank and ranks that are larger than  max rank
+                # Weed out own rank and ranks that are larger than max rank
                 desc = [ dr for dr in desc[1:] if r < s ]
                 
                 self.children[r_child] = {'descendants' : desc, 'start_iteration' : i}
@@ -107,31 +107,30 @@ class BinomialTreeIterative(Tree):
         # Now swap if needed
         self._root_swap()
         
-        print "for a tree of size:%i rank %i receives from parent:%i in iteration %i final_i:%i child_ranks:%s" % (self.size, self.rank, self.parent, i_start, i_final, self.child_ranks)        
+        #print "for a tree of size:%i rank %i receives from parent:%i in iteration %i final_i:%i child_ranks:%s" % (self.size, self.rank, self.parent, i_start, i_final, self.child_ranks)        
         #print "for a tree of size:%i rank %i receives from parent:%i in iteration %i final_i:%i child_ranks:%s \nchildren:%s" % (self.size, r, p, i_start, i_final, child_ranks, children )
 
     def _root_swap(self):
         """
         Swap rank 0 for whatever root was specified
         
-        parent, children and descendants have been calculated correctly for all nodes except for
-        the root swapped with rank 0
+        If the root has been swapped (ie. is different from default rank 0)
+        parent, children and descendants have been calculated correctly for all
+        nodes except for where they refer to the root or rank 0.
         
-        Search is parent, children, descendants in that order. If the root is not
-        found to be any of these we can ignore the root swap since it happened
-        in an area of the tree that does not concern us.
+        We ignore root swap to save calculations in three cases:
+        0) When there is no root swap (ie. root is 0)
+        1) if it takes place above the parent
+        2) if it concerns the equal ranks while we are odd (or vice versa) (excluding rank 0 and its children)
         
-        Three cases:
-        1) No root swap root remains rank 0
-        2) A child of rank 0 is new root
-        3) A child of a child of rank 0 is new root
+        Otherwise the search  goes through parent, children, descendants in that
+        order. If the root is not found to be any of these we can ignore the root
+        swap since it happened in an area of the tree that does not concern us.        
         """
-        # We ignore root swap to save calculations in three cases
-        # 0) When there is no root swap (ie. root is 0)
-        # 1) if it takes place above the parent
-        # 2) if it concerns the equal ranks while we are odd (or vice versa) (excluding rank 0 and its children)
+        
+        # Check if we can ignore root swap totally
         if (self.root == 0) or (self.root < self.parent) or (self.root % 2 != self.rank % 2 and self.rank != 0 and self.parent != 0):
-                return None
+            return None
         else:
             if self.parent == 0: # parent was root so swap
                 self.parent = self.root                    
@@ -148,18 +147,32 @@ class BinomialTreeIterative(Tree):
                 for cr in self.children:
                     cdesc = self.children[cr]['descendants']
                     for i,dr in enumerate(cdesc):
-                        if self.root == dr: # found, now swap and stop looking
+                        if dr == self.root: # found, now swap and stop looking
                             cdesc[i] = 0
                             self.children[cr]['descendants'] = cdesc
                             break
-                            
-
+                        
+    def parent(self):
+        """
+        Returning the rank of the parent, None if the rank is the root of the
+        tree.
+        """
+        if self.rank == self.root:
+            return None
+        else:
+            return self.parent
+        
+    def children(self):
+        """
+        Acessor for child ranks. Might be superflous later on.
+        """
+        return self.child_ranks
 
     def descendants(self, child_rank):
         """
         return the descendants of a given rank
         """
-        return self.children[r_child]['descendants']
+        return self.children[child_rank]['descendants']
 
 class BinomialTreeRecursive(Tree):
     def _find_parent(self):
