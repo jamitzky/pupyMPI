@@ -78,10 +78,8 @@ class BinomialTreeIterative(Tree):
             
         # What is the parent rank
         self.parent = int(r - 2**(i_start-1))
-        #if self.rank in (0,2,8):
-        #    print "rank%s->%s go parent:%s beforeround:%s" % (self.rank,r, self.parent, r - 2**(i_start-1))
             
-        # TODO: There are possible optimizations in the following loops
+        # TODO: There are some optimizations possible in the following loops
         # What are the rank's children and each child's descendants
         i = i_start
         while i < i_final:
@@ -122,35 +120,29 @@ class BinomialTreeIterative(Tree):
         Search is parent, children, descendants in that order. If the root is not
         found to be any of these we can ignore the root swap since it happened
         in an area of the tree that does not concern us.
+        
+        Three cases:
+        1) No root swap root remains rank 0
+        2) A child of rank 0 is new root
+        3) A child of a child of rank 0 is new root
         """
-        #if self.rank == 0:
-        #    print "RANk:%s self.parent:%s self.root:%s" % (self.rank, self.parent, self.root)
-
-
-        if not self.root == 0: # Non-default root
-            
-            #if self.root < self.parent or self.root % 2 != self.rank % 2: # root swap does not take place in local subtree or at parent
-            #    print "rank:%s uproot:%s" % (self.rank, self.root)
-            #    pass
-            #el
-
-            if self.parent == 0 and self.rank != 0: # parent was root so swap
-                print "rank:%s swappin da p:%s for:%s" % (self.rank, self.parent, self.root)
-                self.parent = self.root
+        # We ignore root swap to save calculations in three cases
+        # 0) When there is no root swap (ie. root is 0)
+        # 1) if it takes place above the parent
+        # 2) if it concerns the equal ranks while we are odd (or vice versa) (excluding rank 0 and its children)
+        if (self.root == 0) or (self.root < self.parent) or (self.root % 2 != self.rank % 2 and self.rank != 0 and self.parent != 0):
+                return None
+        else:
+            if self.parent == 0: # parent was root so swap
+                self.parent = self.root                    
             elif self.parent == self.root: # parent is to be root so swap
-                print "rank:%s swappin da p:%s for:ZERO" % (self.rank, self.parent)
                 self.parent = 0
-            elif self.root in self.child_ranks: # a child is to be root so swap
-                print "rank:%s swap da c:%s" % (self.rank, self.root)
+                
+            if self.root in self.child_ranks: # a child is to be root so swap
                 for i,cr in enumerate(self.child_ranks):
                     if cr == self.root: # found, now swap and stop looking
                         self.child_ranks[i] = 0
                         self.children[0] = self.children.pop(self.root)
-                        # FIXME: rank 0 will not find the root in children here
-                        # since children will have been calculated on the basis of being swapped...                        
-                        ### when rank 0 finds the root in children it must 
-                        #if self.rank == 0:
-                        #    self.parent = cr
                         break
             else: # check for root swap with a descendant
                 for cr in self.children:
@@ -279,7 +271,9 @@ class BinomialTreeRecursive(Tree):
 # TESTING GROUNDS    
 for ra in range(14):
     #t = BinomialTreeIterative(root=0,size=16, rank=ra)
-    t = BinomialTreeIterative(root=8,size=16, rank=ra)
+    #t = BinomialTreeIterative(root=8,size=16, rank=ra)
+    #t = BinomialTreeIterative(root=3,size=16, rank=ra)
+    t = BinomialTreeIterative(root=7,size=16, rank=ra)
     
     #t = BinomialTreeIterative(root=0,size=32, rank=ra)
     #t = BinomialTreeIterative(root=0,size=22, rank=ra)
