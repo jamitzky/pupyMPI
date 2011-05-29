@@ -65,7 +65,7 @@ class Tree(object):
 class FlatTree(Tree):
     """
     Implements a flat free:
-        -> Maximum hight is 2 (the root and everything else).
+        -> Maximum height is 2 (the root and everything else).
         -> The root has size-1 fanout.
         -> No one other than the root as any children.
     """
