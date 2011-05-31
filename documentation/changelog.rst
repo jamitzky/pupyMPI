@@ -1,6 +1,27 @@
 Releases
 =================================================================
 
+Changes to version 0.9.5
+-----------------------------------------------------------------
+* By receiving directly into buffers and sending from buffers pupyMPI does not pickle when sending numpy types or bytearrays. 
+
+Changes to version 0.9.4
+-----------------------------------------------------------------
+* Allreduce and reduce performance gain due to new element wise reduction (special focus on NumPy)
+
+Changes to version 0.9.3
+-----------------------------------------------------------------
+* pupyplot.py has been rewritten to a number of smaller independent utilities.
+* Core code for sending messages moved to avoid the MPI thread. 
+
+Changes to version 0.9.2
+-----------------------------------------------------------------
+* Ranks on same host communicate through unix sockets. 
+* Support for Wtick and Wtime API functions.
+* Fixed error in pupymark confusing indidual tests. 
+* Fixed error in communicator inheritance.
+* Support for X forwarding. 
+
 Changes to version 0.9.1:
 -----------------------------------------------------------------
 * Made it possible to configure pupyMPI with a custom settings module.
