@@ -69,7 +69,6 @@ class TreeScatter(BaseCollectiveRequest):
         return self.data[self.rank]
 
 
-
 class TreeScatterPickless(BaseCollectiveRequest):
     """
     Scatter taking advantage of bytearrays and ndarrays
@@ -139,19 +138,20 @@ class TreeScatterPickless(BaseCollectiveRequest):
         return False
 
     def send_to_children(self, transit=True):
-        desc = self.topology.descendants()
+        #desc = self.topology.descendants()
         
         for child in self.children:
+            desc = self.topology.descendants(child)
             data = [None] * self.size
             
-            ranks = desc[child].append(child)
-            data[child] = self.data[child]            
-            desc = self.topology.descendants()
-            for r in range(self.size):
-                if r == child or r in desc[child]:
-                    data[r] = self.data[r]
-            Logger().debug("child:%s desc:%s subnodes:%s" % (child, desc, ranks) )
-                    
+            #ranks = desc[child].append(child)
+            #data[child] = self.data[child]
+            #desc = self.topology.descendants()
+            for r in desc:
+                data[r] = self.data[r]
+            Logger().debug("child:%s desc:%s" % (child, desc) )
+            
+            #Logger().debug("child:%s desc:%s subnodes:%s" % (child, desc, ranks) )                    
             #Logger().debug("children:%s desc:%s values:%s" % (self.children, desc, desc.values()) )            
             #Logger().debug("children:%s desc:%s values:%s flat:%s" % (self.children, desc, desc.values(), [ r for sublist in desc.values() for r in sublist ]) )
              
