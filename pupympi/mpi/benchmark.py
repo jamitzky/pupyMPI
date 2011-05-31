@@ -137,6 +137,12 @@ class Benchmark(object):
 
                 fh = open(filename, "w")
                 bw = BenchmarkWriter(fh)
+
+                # Sort the data list according to the data size. This is only to make the
+                # file more human readable as pupyplot can parse and handle an unsorted
+                # file without problems.
+                testlist.sort(key=lambda t: t[0])
+
                 for t in testlist:
                     datasize, t_obj = t
                     bw.writerow(t_obj.get_dict())
