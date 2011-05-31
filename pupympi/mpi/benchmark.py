@@ -98,7 +98,7 @@ class Benchmark(object):
 
         return self.testers[procs][datasize][testname], create
 
-    def flush(self):
+    def flush(self, flushdir):
         """
         Write the gathered data into several .csv files. The names for the format will include the test name and the number of involving processors. This is done accordingly to
         pupymark which is the internal benchmarking suite for pupyMPI. The files will also include a timestamp of the benchmark. This means that two benchmarks will not overwrite
@@ -108,7 +108,7 @@ class Benchmark(object):
 
         .. note:: This method will not close any running times, so these will not be included in the flushed output.
         """
-        if self.communicator.rank() not in self.roots:
+        if self.communicator and self.communicator.rank() not in self.roots:
             return
 
         # Run through the gathered data sort it
@@ -127,8 +127,12 @@ class Benchmark(object):
             for testname in tests:
                 testlist = tests[testname]
 
-                # Sort the test list according to the datasize.
-                filename = self.communicator.mpi.logdir + "/pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
+                if flushdir:
+                    filename = flushdir
+                else:
+                    filename = self.communicator.mpi.logdir
+
+                filename += "/pupymark.%s.%dprocs.%s.csv" % (testname, procs, datetime.now())
                 filename = filename.replace(" ", "_").replace(":", "-")
 
                 fh = open(filename, "w")
