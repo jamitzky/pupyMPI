@@ -133,7 +133,7 @@ typeint_to_type = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.i
 type_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items()+othertypes.items() ] )
 
 
-def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_pickled=False):
+def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_serialized=False):
     """
     Internal function to
     - serialize payload if needed
@@ -146,66 +146,125 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     system cmd
     mpi or system tag
     acknowledge needed
-    communicator id    
+    communicator id
     """
-    if is_pickled:
-        pickled_data = data
-    else:
+    if is_serialized:
         # DEBUG
-        #Logger().debug("serializing !!! type:%s" % (type(data)) )
-        if isinstance(data,numpy.ndarray):
-            # Multidimensional array?
-            if len(data.shape) > 1:
-                # DEBUG
-                Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
-
-                # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
-                byteshape = numpy.array(data.shape).tostring()
-                # Note how many bytes are shape bytes
-                shapelen = len(byteshape)
-                # Look up the correct type int
-                cmd = type_to_typeint[data.dtype]
-                # Store shapelen in the upper decimals of the cmd
-                cmd = shapelen*1000 + cmd
-                # Convert data to bytearray with shape prepended
-                pickled_data = byteshape + data.tostring()
-                
-                # BELOW WORKS WITH NUMPY >= 1.5                
-                ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
-                #byteshape = bytearray(numpy.array(data.shape))
-                ## Note how many bytes are shape bytes
-                #shapelen = len(byteshape)                
-                ## Look up the correct type int
-                #cmd = numpytype_to_typeint[data.dtype]
-                ## Store shapelen in the upper decimals of the cmd
-                #cmd = shapelen*1000 + cmd
-                ## Convert data to bytearray with shape prepended
-                #pickled_data = byteshape + bytearray(data)            
-            else:
-                Logger().debug("prepare ONEDIM - type:%s" % (type(data[0])) )
-                
-                pickled_data = data.tostring()
-                
-                # BELOW WORKS WITH NUMPY >= 1.5                
-                #pickled_data = bytearray(data)
-                
-                # Look up the correct type int
-                cmd = type_to_typeint[data.dtype]
-        elif isinstance(data,bytearray):            
-            cmd = type_to_typeint[type(data)]
-            Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
-            pickled_data = data
-        else:
-            #Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
-            pickled_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        try:
+            Logger().debug("using already pickled data! type:%s data:%s" % (type(data), pickle.loads(data)) )
+        except:
+            Logger().debug("using already serialized data! type:%s data:%s" % (type(data), data) )
+        serialized_data = data
+    else:
+        serialized_data, cmd = serialize_message(data,cmd)
         
-    lpd = len(pickled_data)
+    lpd = len(serialized_data)
 
     header = struct.pack("llllll", lpd, rank, cmd, tag, ack, comm_id)
-    return header+pickled_data
+    return header+serialized_data
+
+def serialize_message(data, cmd=None):
+    """
+    Internal function to
+    - measure and serialize payload
+    - construct proper msg_type (cmd) including possible shapebytes
+    """
+    if isinstance(data,numpy.ndarray):
+        # Multidimensional array?
+        if len(data.shape) > 1:
+            # DEBUG
+            Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
+
+            # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
+            byteshape = numpy.array(data.shape).tostring()
+            # Note how many bytes are shape bytes
+            shapelen = len(byteshape)
+            # Look up the correct type int
+            cmd = type_to_typeint[data.dtype]
+            # Store shapelen in the upper decimals of the cmd
+            cmd = shapelen*1000 + cmd
+            # Convert data to bytearray with shape prepended
+            serialized_data = byteshape + data.tostring()
+            
+            # BELOW WORKS WITH NUMPY >= 1.5                
+            ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
+            #byteshape = bytearray(numpy.array(data.shape))
+            ## Note how many bytes are shape bytes
+            #shapelen = len(byteshape)                
+            ## Look up the correct type int
+            #cmd = numpytype_to_typeint[data.dtype]
+            ## Store shapelen in the upper decimals of the cmd
+            #cmd = shapelen*1000 + cmd
+            ## Convert data to bytearray with shape prepended
+            #serialized_data = byteshape + bytearray(data)            
+        else:
+            Logger().debug("prepare ONEDIM - type:%s" % (type(data[0])) )
+            
+            serialized_data = data.tostring()
+            
+            # BELOW WORKS WITH NUMPY >= 1.5                
+            #serialized_data = bytearray(data)
+            
+            # Look up the correct type int
+            cmd = type_to_typeint[data.dtype]
+    elif isinstance(data,bytearray):            
+        cmd = type_to_typeint[type(data)]
+        Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
+        serialized_data = data
+    else:
+        # NOTE: cmd is not overwritten for vanilla pickling since it is up to caller to decide between eg. system message or user message
+        #Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
+        serialized_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+        
+    return (serialized_data, cmd)
+
+def deserialize_message(raw_data, msg_type):
+    """
+    Retrieve the original message from a payload given the message type
+    """
+    #Logger().debug("DESERIALIZING msgtype:%s" % msg_type)
+    
+    # Non-pickled data is recognized via msg_type
+    if msg_type > constants.CMD_RAWTYPE:
+        # Multidimensional arrays have the number of shapebytes hiding in the upper decimals
+        shapelen = msg_type / 1000
+        # typeint occupies the lower decimals
+        typeint = msg_type % 1000
+        if shapelen:
+            # Slice shapebytes out of msg
+            shapebytes = raw_data[:shapelen]
+            # Restore shape tuple
+            shape = tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
+            # Lookup the numpy type
+            t = typeint_to_type[typeint]
+            # Restore numpy array from the rest of the string
+            data = numpy.fromstring(raw_data[shapelen:],t).reshape(shape)
+        
+        else:
+            # Numpy type or bytearray
+            if msg_type == constants.CMD_BYTEARRAY:
+                # plain old bytearray
+                data = bytearray(raw_data)
+            else:
+                # Lookup the numpy type
+                t = typeint_to_type[msg_type]
+                # Restore numpy array
+                data = numpy.fromstring(raw_data,t)
+    else:
+        try:
+            # Both system messages and user pickled messages are unpickled here
+            data = pickle.loads(raw_data)
+        except Exception as e:
+            Logger().error("BAD PICKLE msg_type:%s raw_data:%s" % (msg_type,raw_data) )
+            raise e
+    
+    return data
+
 
 def _nice_data(data):
     """
+    FIXME: This function is obsolete, prone to error, and should be deleted
+    
     Internal function to allow safer printing/logging of raw data
     Tries to eliminate the hex (?) ASCII symbols that appear as tcp-like
     control packets.

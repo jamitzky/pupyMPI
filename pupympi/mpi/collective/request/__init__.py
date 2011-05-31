@@ -35,18 +35,22 @@ class BaseCollectiveRequest(object):
 
     def wait(self):
         """
-        Wait until the collective operation has finihsed and then return the data.
+        Wait until the collective operation has finished and then return the data.
         """
         self._finished.wait()
 
+        return self._get_data()
+        
         # Requests are free to override this method, and implement their own
         # wait(), but it is probably not needed. Look into writing a _get_data
         # method instead.
-        f = getattr(self, "_get_data", None)
-        if callable(f):
-            return f()
-        else:
-            return getattr(self, "data", None)
+
+        # FIXME:         
+        #f = getattr(self, "_get_data", None)
+        #if callable(f):
+        #    return f()
+        #else:
+        #    return getattr(self, "data", None)
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
@@ -99,7 +103,7 @@ class FlatTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
@@ -119,7 +123,7 @@ class BinomialTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_binomial_%d" % root
             topology = cache.get(cache_idx, default=None)
@@ -140,7 +144,7 @@ class StaticFanoutTreeAccepter(object):
         if size >= accept_min and size <= accept_max:
             obj = cls(communicator, *args, **kwargs)
             
-            # Check if the topology fits in the cache.
+            # Check if the topology is in the cache.
             root = kwargs.get("root", 0) 
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)

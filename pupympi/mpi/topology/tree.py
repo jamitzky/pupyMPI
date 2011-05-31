@@ -3,6 +3,7 @@ Contains different tree topologies. See the :func:`Tree` abstract topology for
 the generic API available on all tree topologies. Each implementation can offer
 other elements / functions, but the basic API **must** be implemented.
 """
+from mpi.logger import Logger
 
 class Tree(object):
     def __init__(self, communicator, root=0):
@@ -14,183 +15,180 @@ class Tree(object):
         self.size = communicator.comm_group.size()
         self.root = root
 
-        # Placeholder objects. Each tree must fill the two first with
-        # a _find_children and _find_parent method.
-        self._children = []
+        # Placeholder objects. Each tree must fill these during generation
         self._parent = None
-        self._descendants = {}
-
+        self.child_ranks = [] # shorthand, just the ranks
+        self._children = {} # { child rank : {'descendants : <int list>, 'iteration' : i } # iteration is the 'turn' in which the node would receive a message from root
+        
         # Generate the tree if there is a bound function with the
         # proper name
-        self.tree = None
         generator = getattr(self, "generate_tree", None)
         if generator:
-            self.tree = generator()
-
-        self._find_children()
-        self._find_parent()
-        
-        # Now we have the parent and children (by the actual class). We use
-        # a generic method to find the descendants.
-        self._find_descendants()
-        
-    def _find_descendants(self):
-        pass
+            generator()
 
     def parent(self):
         """
-        Returning the rank of the parant, None if the rank is the root of the
+        Returning the rank of the parent, None if the rank is the root of the
         tree.
         """
-        return self._parent
+        if self.rank == self.root:
+            return None
+        else:
+            return self._parent
 
     def children(self):
         """
         Return a list of children ranks. If called on a leaf-node the list
         will be empty.
+        """
+        return self.child_ranks
 
-        Different tree topologies might return list with different length. For
-        example a binary tree will return a list of length 0, 1 or 2. A binomial
-        tree can send anywhere between 0 l where the size of the tree is fab(l).
+    def descendants(self, child_rank):
         """
-        return self._children
+        return the descendants of a given rank
+        """
+        return self._children[child_rank]['descendants']
 
-    def descendants(self):
-        """
-        There are never any descendants
-        """
-        return self._descendants
 
 class FlatTree(Tree):
     """
     Implements a flat free:
-        -> Maximum hight is 2 (the root and everything else).
+        -> Maximum height is 2 (the root and everything else).
         -> The root has size-1 fanout.
-        -> No one other than the root as any children.
+        -> None other than the root has any children.
     """
-    def _find_children(self):
-        if self.rank == self.root:
-            all = range(0, self.size)
-            all.remove(self.rank)
-            self._children = all
-
-    def _find_parent(self):
-        if self.rank != self.root:
-            self._parent = self.root
-            
-    def _find_descendants(self):       
-        for child in self.children():
-            self._descendants[child] = []
-
-class BinomialTree(Tree):
-    """
-    Implement a biniomal tree useful for keeping every node active in
-    communication.
-    """
-    def _find_parent(self):
-        def find(node, candidate):
-            if self.rank == node['rank']:
-                if candidate:
-                    self._parent = candidate['rank']
-            else:
-                for child in node['children']:
-                    find(child, node)
-
-        self._parent = None
-        find(self.tree, None)
-
-    def _find_children(self):
-        """
-        Find all the children of a node.
-        If no node is specified all children of calling rank are returned.
-        """
-        def find(node):
-            if self.rank == node['rank']:
-                self._children = [x['rank'] for x in node['children']]
-            else:
-                for child in node['children']:
-                    find(child)
-
-        find(self.tree)
-
     def generate_tree(self):
-        ranks = range(self.size)
-        ranks.sort()
-        ranks.remove(self.root)
-        new_ranks = [self.root]
-        new_ranks.extend(ranks)
+        if self.rank == self.root:
+            self._parent = None
+            self.child_ranks = range(self.size)
+            self.child_ranks.remove(self.rank) # All but own rank
+            for i, rank in enumerate(self.child_ranks):
+                self._children[rank] = {'descendants' : [], 'iteration' : i+1}            
+        else:
+            self._parent = self.root
+            self.child_ranks = []
+            self._children = {}
 
-        def node_create(rank, iteration=0):
-            return {
-              'rank' : rank,
-              'children' : [],
-              'iteration' :iteration
-            }
-
-        def find_all_leafs(node):
-            def find_sub(node):
-                l = [node]
-                children = node['children']
-                if children:
-                    for child in children:
-                        l.extend( find_sub( child ))
-                return l
-            return find_sub(node)
-            
-        root = node_create( new_ranks.pop(0) )
-
-        iteration = 1
-        while new_ranks:
-            try:
-                leafs = find_all_leafs( root )
-                for leaf in leafs:
-                    leaf['children'].append( node_create( new_ranks.pop(0), iteration ))
-            except IndexError:
-                break
-
-            iteration += 1
-        return root
-    
-    def _find_descendants(self):
-        """
-        This creates a dict, which values are lists. Each child for the
-        rank of this process has a list with all their descendants.
-        """
-        if not self.tree:
-            raise Exception("Topology cant find descendants without a generated tree.")
+#class BinomialTreeIterative(Tree):
+class BinomialTree(Tree):
+    def generate_tree(self):
+        """            
+        If
+        a) Every node can send one copy of the message to another rank in one iteration
+        b) No node but the root can send before receiving from another node (a parent)
         
-        # The idea is to iterate until we find onw of our children. When this is done
-        # the iteration process will register every seen node from that point as a 
-        # descendant.
-        def rec(node, child=None):
-            def ensure(rank):
-                if rank not in self._descendants:
-                    self._descendants[rank] = []
+        Then a message is propagated through a tree of 2^i nodes in i iterations
+       
+        A node with rank r receives the message from its parent in iteration i
+        where 2^(i-1) <= r < 2^i
+        
+        In iteration i a node with rank r sends to the receiver with rank n
+        where n = 2^i + r
+        
+        A node with rank r in a tree of size s has the parent p
+        where p = r - 2**(i_start-1)
+        
+        children = { rank: { 'descendants': [d1,d2,...], 'start_iteration': i,  }, ... }
+        """
+        # Is this node involved in root swap?
+        if self.rank == 0 and self.root != 0:
+            r = self.root  # Fake being a lower rank
+        elif self.rank == self.root:
+            r = 0 # Fake being root
+        else:
+            r = self.rank # Be yourself
+            
+        s = self.size
 
-            def register(rank, desc_rank):
-                ensure(rank)
-                self._descendants[rank].append(desc_rank)
+        # What is the final iteration
+        import math
+        i_final = int(math.ceil(math.log(s,2)))
+        
+        # In which iteration does the rank receive from parent
+        try:
+            i_start = int(math.floor(math.log(r,2)) + 1)
+        except ValueError as e:
+            # Taking math.log of 0 raises ValueError: math domain error
+            i_start = 0
+            
+        # What is the parent rank
+        self._parent = int(r - 2**(i_start-1))
+            
+        # TODO: There are some optimizations possible in the following loops
+        # What are the rank's children and each child's descendants
+        i = i_start
+        while i < i_final:
+            r_child = 2**i + r
+            if r_child < s:
+                self.child_ranks.append(r_child)
+                # Calculate descendants of the child                
+                desc = [r_child]
+                i_future = i+1
+                while i_future < i_final:
+                    new_desc = []
+                    for d in desc:                        
+                        new_desc.append(2**i_future + d)
+                    desc.extend(new_desc)
+                    i_future += 1
                 
-            # We have already found a child to register for, so we just
-            # return the data and resurse a bit more
-            if child is not None:
-                register(child, node['rank'])
-                # Iterate
-                for node_child in node['children']:
-                    rec(node_child, child=child)
-            # We have not found which child to look for. So if this node is
-            # actually the child of our rank every descendants from there should
-            # be registered.
+                # Weed out own rank and ranks that are larger than max rank
+                desc = [ dr for dr in desc[1:] if r < s ]
+                
+                self._children[r_child] = {'descendants' : desc, 'start_iteration' : i}
             else:
-                if node['rank'] in self.children():
-                    # ensure structure
-                    ensure(node['rank'])
-                    child = node['rank']
-                    
-                for node_child in node['children']:
-                    rec(node_child, child=child)
-        rec(self.tree)
-                    
+                break
+            i += 1
+        
+        # Now swap if needed
+        self._root_swap()
+        
+        # DEBUG        
+        #print "for a tree of size:%i rank %i receives from parent:%i in iteration %i final_i:%i child_ranks:%s" % (self.size, self.rank, self.parent, i_start, i_final, self.child_ranks)        
+        #print "for a tree of size:%i rank %i receives from parent:%i in iteration %i final_i:%i child_ranks:%s \nchildren:%s" % (self.size, r, p, i_start, i_final, child_ranks, children )
+
+    def _root_swap(self):
+        """
+        Swap rank 0 for whatever root was specified
+        
+        If the root has been swapped (ie. is different from default rank 0)
+        parent, children and descendants have been calculated correctly for all
+        nodes except for where they refer to the root or rank 0.
+        
+        We ignore root swap to save calculations in three cases:
+        0) When there is no root swap (ie. root is 0)
+        1) if it takes place above the parent
+        2) if it concerns the equal ranks while we are odd (or vice versa) (excluding rank 0 and its children)
+        
+        Otherwise the search  goes through parent, children, descendants in that
+        order. If the root is not found to be any of these we can ignore the root
+        swap since it happened in an area of the tree that does not concern us.        
+        """
+        
+        # Check if we can ignore root swap totally
+        if (self.root == 0) or (self.root < self._parent) or (self.root % 2 != self.rank % 2 and self.rank != 0 and self._parent != 0):
+            return None
+        else:
+            if self._parent == 0: # parent was root so swap
+                self._parent = self.root                    
+            elif self._parent == self.root: # parent is to be root so swap
+                self._parent = 0
+                
+            if self.root in self.child_ranks: # a child is to be root so swap
+                for i,cr in enumerate(self.child_ranks):
+                    if cr == self.root: # found, now swap and stop looking
+                        self.child_ranks[i] = 0
+                        self._children[0] = self._children.pop(self.root)
+                        break
+            else: # check for root swap with a descendant
+                for cr in self._children:
+                    cdesc = self._children[cr]['descendants']
+                    for i,dr in enumerate(cdesc):
+                        if dr == self.root: # found, now swap and stop looking
+                            cdesc[i] = 0
+                            self._children[cr]['descendants'] = cdesc
+                            break
+
+
 class StaticFanoutTree(BinomialTree):
     def __init__(self, communicator, root=0, fanout=2):
         """

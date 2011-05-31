@@ -30,9 +30,9 @@ class Controller(object):
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
-            constants.TAG_SCATTER : [scatter.FlatTreeScatter, scatter.BinomialTreeScatter, scatter.StaticFanoutTreeScatter],
+            constants.TAG_SCATTER : [scatter.BinomialTreeScatterPickless, scatter.FlatTreeScatter, scatter.BinomialTreeScatter, scatter.StaticFanoutTreeScatter],
             constants.TAG_ALLGATHER : [gather.DisseminationAllGather],
-            constants.TAG_GATHER : [gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
+            constants.TAG_GATHER : [gather.BinomialTreeGatherPickless,gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
             constants.TAG_SCAN : [reduce.FlatTreeScan, reduce.BinomialTreeScan, reduce.StaticFanoutTreeScan],
         }
 
@@ -48,6 +48,7 @@ class Controller(object):
         
         for req_class in req_class_list:
             obj = req_class.accept(self.communicator, self.communicator.mpi.settings, self.cache, *args, **kwargs)
+            #Logger().debug("rank:%i has %s for req_class:%s arg:%s" % (self.rank,bool(obj), req_class.__name__, kwargs['data']) )
             if obj:
                 # Set the tag on the object.
                 obj.tag = tag

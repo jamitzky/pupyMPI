@@ -1,6 +1,7 @@
 from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, BinomialTreeAccepter, StaticFanoutTreeAccepter
 from mpi import constants
 from mpi.logger import Logger
+import mpi.network.utils as utils
 
 from mpi.topology import tree
 
@@ -25,6 +26,7 @@ class TreeBCast(BaseCollectiveRequest):
         self.data = data
         self.root = root
         self.communicator = communicator
+        self.msg_type = constants.CMD_USER # This will be found on msg accept, it is used to deserialize the payload
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
@@ -38,21 +40,27 @@ class TreeBCast(BaseCollectiveRequest):
         self.children = topology.children()
 
         if self.parent is None:
-            # we're the root.. let us send the data to each child
-            self.send_to_children()
+            # we're the root.. let us send the data to each child 
+            self.send_to_children(transit=False)
             # Mark that we are done with this request from a local perspective
             self._finished.set()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
 
         if rank == self.parent:
-            self.data = data            
+            self.data = raw_data
+
+            # Note the msg_type for later deserialization
+            self.msg_type = msg_type
+
             # Pass it on to children if we have any
             if self.children:
                 self.send_to_children()
+            
+            
             # DEBUG
             #Logger().debug("--accept_msg to:%i from:%i children:%s" % (self.rank, rank, self.children) )
 
@@ -62,14 +70,25 @@ class TreeBCast(BaseCollectiveRequest):
 
         return False
 
-    def send_to_children(self):
-        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BCAST)
+    def send_to_children(self, transit=True):
+        """
+        Nice wrapper around the direct send call
+        
+        Transit flag means the sending node is just a transit node for data, ie. the data is already serialized
+        """
+        self.communicator._direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
         # DEBUG
         Logger().debug("--sent to %s" % self.children)
         
 
-    def _get_data(self):
-        return self.data
+    def _get_data(self):        
+        # For root the data is not serialized
+        if self.parent is None:
+            return self.data
+        else:
+            return utils.deserialize_message(self.data, self.msg_type)
+            #import pickle
+            #return pickle.loads(self.data)
 
 class FlatTreeBCast(FlatTreeAccepter, TreeBCast):
     pass

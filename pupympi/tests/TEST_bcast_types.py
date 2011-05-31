@@ -1,7 +1,8 @@
 #!/usr/bin/env python2.6
-# meta-description: Test if broadcast works with simple types
+# meta-description: Test if broadcast works with all types
 # meta-expectedresult: 0
 # meta-minprocesses: 11
+import numpy
 
 from mpi import MPI
 
@@ -12,10 +13,16 @@ world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 size = world.size()
 
-BCAST_ROOT = 3
-BCAST_FIRST_MESSAGE = "Test message from rank %d" % BCAST_ROOT
+BCAST_ROOT = 2
 
-messages = [BCAST_FIRST_MESSAGE, None, "", -1]
+l = range(100)
+d = dict( [ (str(i),i) for i in l] )
+t = tuple(l)
+na = numpy.array(l)
+naf = numpy.array([ i/3.0 for i in l] )
+ba = bytearray("abcdefg")
+
+messages = [l,d,t,na,naf]
 
 for msg in messages:
     if rank == BCAST_ROOT:
@@ -23,7 +30,7 @@ for msg in messages:
     else:
         message = world.bcast(root=BCAST_ROOT)
         try:
-            assert message == msg
+            numpy.alltrue(message == msg)
         except AssertionError, e:
             print "="*80
             print "Expected", msg

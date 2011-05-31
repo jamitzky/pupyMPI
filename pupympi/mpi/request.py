@@ -60,7 +60,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None, cmd=constants.CMD_USER):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, data=None, cmd=constants.CMD_USER, multi=False):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -71,6 +71,7 @@ class Request(BaseRequest):
         self.tag = tag
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data
+        self.multi = multi # Flag that data is a list of payloads
 
         self.cmd = cmd
         
@@ -118,7 +119,7 @@ class Request(BaseRequest):
         if not self.is_prepared:
             # Create the proper data structure and pickle the data
             self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
-                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_pickled=self.is_pickled)
+                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
         #DEBUG
         else:
             Logger().debug("Reusing already prepared message")

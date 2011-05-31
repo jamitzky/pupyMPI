@@ -160,7 +160,7 @@ class TreeGather(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
         self.missing_children = copy.copy(self.children)
-
+        #Logger().debug("No go away class!")
         # We forward up the tree unless we have to wait for children
         if not self.children:
             self.send_parent()
@@ -194,7 +194,104 @@ class TreeGather(BaseCollectiveRequest):
         else:
             return None
 
+class TreeGatherPickless(BaseCollectiveRequest):
+    """
+    This is a gather used when data should not be pickled and unpickled on its way
+    up in the tree.
+    ISSUES:
+    - Currently only ndarrays trigger the use of this class, eventually we'll want bytearrays too
+    - Hardcoded with binomial tree since comm size is not taken into account
+    """
+    
+    SETTINGS_PREFIX = "GATHERPL"
+    
+    def __init__(self, communicator, data=None, root=0):
+        super(TreeGatherPickless, self).__init__()
+
+        self.root = root
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+
+        self.data = [None] * self.size
+        self.data[self.rank] = data
+
+    def start(self):
+        topology = getattr(self, "topology", None) # You should really set the topology.. please
+        if not topology:
+            raise Exception("Cant gather without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+
+        self.parent = topology.parent()
+        self.children = topology.children()
+        self.missing_children = copy.copy(self.children)
+        Logger().debug("NUMPY CLASS - rank:%i has children:%s" % (self.rank,self.children) )
+        
+        # We forward up the tree unless we have to wait for children
+        if not self.children:
+            self.send_parent()
+
+    def send_parent(self):
+        # Send data to the parent (if any)
+        if (not self._finished.is_set()) and self.parent is not None:
+            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)
+
+        self._finished.set()
+
+    def accept_msg(self, rank, data):
+        if self._finished.is_set() or rank not in self.missing_children:
+            return False
+
+        self.missing_children.remove(rank)
+
+        for i in range(len(data)):
+            item = data[i]
+            if item is not None:
+                self.data[i] = item
+
+        if not self.missing_children:
+            self.send_parent()
+
+        return True
+
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        """
+        For now we accept all...
+        Eventually we always accept as long as it is numpy data
+        """
+        import numpy # FIXME: Move this import somewhere nice
+        
+        # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
+        if isinstance(kwargs['data'], numpy.ndarray):
+            obj = cls(communicator, *args, **kwargs)
+            
+            # Check if the topology is in the cache
+            root = kwargs.get("root", 0)
+            cache_idx = "tree_binomial_%d" % root
+            topology = cache.get(cache_idx, default=None)
+            if not topology:
+                # TODO:
+                # here the orthogonality of accepting on topology vs. accepting on data type or data size really kicks in
+                # since the accept logic is coded only with communicator size in mind, it is hard to intersperse other accept conditions
+                # For now we just assume that binomial tree is the way to go,that is we ignore communicator size
+                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class
+                topology = tree.BinomialTree(communicator, root=root)
+                cache.set(cache_idx, topology)
+    
+            obj.topology = topology
+            return obj
+
+    def _get_data(self):
+        if self.root == self.rank:
+            return self.data
+        else:
+            return None
+
 class FlatTreeGather(FlatTreeAccepter, TreeGather):
+    pass
+
+class BinomialTreeGatherPickless(TreeGatherPickless):
     pass
 
 class BinomialTreeGather(BinomialTreeAccepter, TreeGather):

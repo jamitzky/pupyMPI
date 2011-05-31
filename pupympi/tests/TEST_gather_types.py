@@ -14,20 +14,17 @@ rank = world.rank()
 size = world.size()
 
 # Every processes sends rank to the root
-ROOT = 3
-received = world.gather(rank, root=ROOT)
-if ROOT == rank:
-    assert received == range(0, size)
-else:
-    assert received == None
-
-# Test list, make every processes sends rank range to the root
 ROOT = 2
-received = world.gather(range(rank), root=ROOT)
+
+# Test numpy arrays everyone sends an array of three elements
+na = numpy.arange(rank,rank+3)
+received = world.gather(na, root=ROOT)
 if ROOT == rank:
-    assert received == [range(r) for r in range(size)]
-    print received
+    #assert received == [numpy.arange(r,r+3) for r in range(size)]
+    print "Rank:%i received:%s" % (rank, received)
 else:
-    assert received == None
+    #assert received == None
+    pass
+
 
 mpi.finalize()

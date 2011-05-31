@@ -86,7 +86,7 @@ class MigratePack(object):
 
         connection = socket.create_connection(self.script_hostinfo, 4.0 )
 
-        msg = prepare_message(dill.dumps(self.data), self.rank, is_pickled=True)
+        msg = prepare_message(dill.dumps(self.data), self.rank, is_serialized=True)
         robust_send(connection, msg)
 
         sys.exit(0)
