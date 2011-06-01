@@ -70,7 +70,8 @@ class Request(BaseRequest):
         self.participant = participant # The other process' rank
         self.tag = tag
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
-        self.data = data
+        self.data = data # payload
+        self.header = None # header for the payload
         self.multi = multi # Flag that data is a list of payloads
 
         self.cmd = cmd
@@ -112,14 +113,19 @@ class Request(BaseRequest):
     def prepare_send(self):
         """
         Ready the payload of the request for sending
+        
+        TODO: Either this function is always called before sending, and so could be folded into Request initialization
+              OR it is only called sometimes and so the rationale for calling should be commented here
         """
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
 
         if not self.is_prepared:
             # Create the proper data structure and pickle the data
-            self.data = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
+            header,payload = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
                                            tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
+            self.data = payload
+            self.header = header
         #DEBUG
         else:
             Logger().debug("Reusing already prepared message")

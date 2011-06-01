@@ -175,8 +175,8 @@ def communicate_startup(no_procs, ssocket, resume_state=None):
 
         data = (all_procs, session)
 
-        message = prepare_message(data, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
-        utils.robust_send(conn, message)
+        header,payload = prepare_message(data, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
+        utils.robust_send(conn, header+payload)
 
     return all_procs, handle_procs, sender_conns
 
@@ -185,9 +185,9 @@ def signal_handler(signal, frame):
     COMM_ID = -1
     COMM_RANK = -1
     data = (COMM_ID, COMM_RANK, constants.TAG_SHUTDOWN, all_procs)
-    message = prepare_message(data, constants.CMD_ABORT)
+    header,payload = prepare_message(data, constants.CMD_ABORT)
     for conn in sender_conns:
-        utils.robust_send(conn, message)
+        utils.robust_send(conn, header+payload)
     processloaders.terminate_children()
     sys.exit(3)
 

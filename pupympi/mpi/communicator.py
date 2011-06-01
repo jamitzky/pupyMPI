@@ -278,7 +278,37 @@ class Communicator:
     # other stuff, related to requests that may get done:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
+    def _multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER):
+        """
+        An internal send function built on _isend.
+        Content is assumed to be a list of already serialized pieces of data. The pieces are
+        sent back to back.
+        
+        TODO: This function differs from _isend only on the multi switch and so should probably be folded into _isend eventually
+        """
+        # Check that destination exists
+        if not self.have_rank(destination):
+            if isinstance(destination, int):
+                raise MPINoSuchRankException("No process with rank %d in communicator %s." % (destination, self.name))
+            else:
+                raise MPIInvalidRankException("Rank %s is not a valid rank (a rank should be an integer)." % (destination))
 
+        # Check that tag is valid
+        if not isinstance(tag, int):
+            raise MPIInvalidTagException("All tags should be integers")
+        # Create a send request object
+        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True)
+        # If sending to self, take a short-cut
+        if destination == self.rank():
+            self._send_to_self(handle)
+            return handle
+
+        # Add the request to the MPI layer unstarted requests queue. We
+        # signal the condition variable to wake the MPI thread and have
+        # it handle the request start.
+        self._add_unstarted_request(handle)
+        return handle
+    
     def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True):
         """
         A helper function for sending a message without passing the
@@ -296,9 +326,9 @@ class Communicator:
 
         rl = []        
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        message = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized)
+        header, payload = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized)
         for recp in receivers:
-            request = Request("send", self, recp, tag, data=message)
+            request = Request("send", self, recp, tag, data=(header+payload))
             request.is_prepared = True
             #request.is_pickled= True
             request.prepare_send()
