@@ -86,8 +86,8 @@ class MigratePack(object):
 
         connection = socket.create_connection(self.script_hostinfo, 4.0 )
 
-        msg = prepare_message(dill.dumps(self.data), self.rank, is_serialized=True)
-        robust_send(connection, msg)
+        header,payload = prepare_message(dill.dumps(self.data), self.rank, is_serialized=True)
+        robust_send(connection, header+payload)
 
         sys.exit(0)
 
@@ -128,8 +128,8 @@ class MigratePack(object):
 
             # Handle the writes.
             for wsocket in wlist:
-                message = mpi_utils.prepare_message("", rank, cmd=constants.CMD_CONN_CLOSE)
-                mpi_utils.robust_send(wsocket, message)
+                header,payload = mpi_utils.prepare_message("", rank, cmd=constants.CMD_CONN_CLOSE)
+                mpi_utils.robust_send(wsocket, header+payload)
                 write_connections.remove(wsocket)
 
             # Handle the reads.

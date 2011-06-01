@@ -74,7 +74,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
     def __init__(self, communicator, data=None, root=0):
         super(TreeScatterPickless, self).__init__()
 
-        self.data = data
+        #self.data = data
         self.root = root
         self.communicator = communicator
 
@@ -82,11 +82,16 @@ class TreeScatterPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
         
         self.msg_type = None
-
-        # Slice the data
+        
+        # Serialize the data
         if self.root == self.rank:
-            chunk_size = len(data) / self.size
-            self.data = [data[r*chunk_size:(r+1)*chunk_size] for r in range(self.size) ]
+            # TODO: This is done from the start but maybe we want to hold off until later
+            self.data,cmd = utils.serialize_message(data)
+            self.msg_type = cmd
+            #chunk_size = len(data) / self.size
+            #self.data = [data[r*chunk_size:(r+1)*chunk_size] for r in range(self.size) ]
+        else:
+            self.data = data
         
         #Logger().debug("rank:%i initialized data:%s from:%s" % (self.rank, self.data, data) )
 
@@ -113,7 +118,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
             
             #if self.msg_type == constants.CMD_USER:
             #else:
-            self.data = utils.deserialize_message(raw_data, msg_type)
+            self.data = raw_data
             #Logger().debug("rank:%i got data:%s" % (self.rank, self.data) )
             self.send_to_children()
             return True
@@ -121,23 +126,27 @@ class TreeScatterPickless(BaseCollectiveRequest):
         return False
 
     def send_to_children(self, transit=True):
+        # chunksize is always the data the node holds relative to how many recipients will share it
+        
         for child in self.children:
             desc = self.topology.descendants(child)
             data = [None] * self.size
+            
             data[child] = self.data[child]
             for r in desc:
                 data[r] = self.data[r]
 
             #Logger().debug("send to child:%s desc:%s data:%s" % (child, desc, data) )
             
-            self.communicator._isend(data, child, tag=constants.TAG_SCATTER)
+            self.communicator._multisend(data, child, tag=constants.TAG_SCATTER)
 
         self._finished.set()
 
     def _get_data(self):
-        Logger().debug("rank:%i GET data:%s" % (self.rank, self.data) )
-        # We only need our own data
-        return self.data[self.rank]
+        #Logger().debug("rank:%i GET data:%s" % (self.rank, self.data) )
+        
+        # TODO: We only need our own data        
+        return utils.deserialize_message(self.data, self.msg_type)
 
 class FlatTreeScatter(FlatTreeAccepter, TreeScatter): 
     pass
@@ -145,12 +154,8 @@ class FlatTreeScatter(FlatTreeAccepter, TreeScatter):
 class BinomialTreeScatter(BinomialTreeAccepter, TreeScatter):
     pass
 
-class BinomialTreeScatterPickless(BinomialTreeAccepter, TreeScatter):
+class BinomialTreeScatterPickless(BinomialTreeAccepter, TreeScatterPickless):
     pass
-
-#class BinomialTreeScatterPickless(BinomialTreeAccepter, TreeScatterPickless):
-#    pass
-
 
 class StaticFanoutTreeScatter(StaticFanoutTreeAccepter, TreeScatter):
     pass

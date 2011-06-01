@@ -93,8 +93,8 @@ class Sender(Thread):
             sys.exit(1)
 
         from mpi.network import utils as mpi_utils
-        message = mpi_utils.prepare_message(self.data, -1, cmd=constants.CMD_MIGRATE_PACK)
-        mpi_utils.robust_send(connection, message)
+        header,payload = mpi_utils.prepare_message(self.data, -1, cmd=constants.CMD_MIGRATE_PACK)
+        mpi_utils.robust_send(connection, header+payload)
 
         self.event.set()
 

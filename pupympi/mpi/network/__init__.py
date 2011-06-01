@@ -182,7 +182,8 @@ class Network(object):
         s_conn.connect(recipient)
 
         # Pack the data with our special format
-        utils.robust_send(s_conn, prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING))
+        header,payload = prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING)
+        utils.robust_send(s_conn, (header+payload) )
 
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
@@ -406,7 +407,7 @@ class BaseCommunicationHandler(threading.Thread):
                     #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
-                        utils.robust_send(write_socket,request.data)
+                        utils.robust_send_multi(write_socket,[request.header,request.data])
                     except socket.error, e:
                         #Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
