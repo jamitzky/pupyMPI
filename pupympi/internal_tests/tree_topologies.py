@@ -10,6 +10,7 @@ The only requirements for a tree topology so far is that it
 
 from mpi.topology.tree import Tree
 from mpi.topology.tree import BinomialTree as BinomialTreeIterative
+import copy
 
 class BinomialTreeRecursive(Tree):
     def _find_parent(self):
@@ -90,38 +91,28 @@ class BinomialTreeRecursive(Tree):
         """
         if not self.tree:
             raise Exception("Topology cant find descendants without a generated tree.")
+        
+        # We create the data structure that will hold all the descendants. 
+        self._children = {}
+        for r in range(self.size):
+            self._children[r] = {'descendants' : []}
+        
+        # Go though the tree with a list of ranks found above. This means that
+        # each of those ranks will have the current rank in its descendants. 
+        def recurse(node, ancestors):
+           # print "Called with ancestors", ancestors
+            
+            for rank in ancestors:
+                self._children[rank]['descendants'].append(node['rank'])
+            
+            # Create a new list with this rank on it
+            new_ancestors = copy.copy(ancestors) 
+            new_ancestors.append(node['rank'])
+            
+            for child in node['children']:
+                recurse(child, new_ancestors)
 
-        # The idea is to iterate until we find onw of our children. When this is done
-        # the iteration process will register every seen node from that point as a
-        # descendant.
-        def rec(node, child=None):
-            def ensure(rank):
-                if rank not in self._descendants:
-                    self._descendants[rank] = []
-
-            def register(rank, desc_rank):
-                ensure(rank)
-                self._descendants[rank].append(desc_rank)
-
-            # We have already found a child to register for, so we just
-            # return the data and resurse a bit more
-            if child is not None:
-                register(child, node['rank'])
-                # Iterate
-                for node_child in node['children']:
-                    rec(node_child, child=child)
-            # We have not found which child to look for. So if this node is
-            # actually the child of our rank every descendants from there should
-            # be registered.
-            else:
-                if node['rank'] in self.children():
-                    # ensure structure
-                    ensure(node['rank'])
-                    child = node['rank']
-
-                for node_child in node['children']:
-                    rec(node_child, child=child)
-        rec(self.tree)
+        recurse(self.tree, [])
 
 def compare():
     def inner_compare(size=1, rank=0, root=0):
@@ -131,13 +122,30 @@ def compare():
 
         pt1, pt2 = t1.parent(), t2.parent()
 
-        if pt1 != pt2:
-            print "t1 parent != t2.parent", pt1, pt2
+        print "===================== Compare report ====================="
+
+        pmatch = pt1 == pt2
+        print "Parent match:", pmatch
+        if not pmatch:
+            print "\tRecursive:", pt2
+            print "\tIterative:", pt1
             
         ct1, ct2 = t1.children(), t2.children()
-
-        if ct1 != ct2:
-            print "t1 child ranks != t2.child_ranks", ct1, ct2
+        cmatch = ct1 == ct2
+        print "Children match:", cmatch
+        if not pmatch:
+            print "\tRecursive:", ct2
+            print "\tIterative:", ct1
+            
+        for r in ct1:
+            d1 = t1.descendants(r)
+            d2 = t2.descendants(r)
+            dmatch = d1 == d2
+            print "Children match for child rank", r, dmatch
+            if not dmatch:
+                print "\tRecursive:", d2
+                print "\tIterative:", d1
+        print "=========================================================="
 
     inner_compare(size=10, rank=0, root=0)
 
