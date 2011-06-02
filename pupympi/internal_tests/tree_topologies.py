@@ -69,9 +69,9 @@ class BinomialTreeRecursive(Tree):
                 break
 
             iteration += 1
-            
+
         self.tree = root
-            
+
         # Call internal functions for finding / setting children etc
         self._find_parent()
         self._find_children()
@@ -84,24 +84,24 @@ class BinomialTreeRecursive(Tree):
         """
         if not self.tree:
             raise Exception("Topology cant find descendants without a generated tree.")
-        
-        # We create the data structure that will hold all the descendants. 
+
+        # We create the data structure that will hold all the descendants.
         self._children = {}
         for r in range(self.size):
             self._children[r] = {'descendants' : []}
-        
+
         # Go though the tree with a list of ranks found above. This means that
-        # each of those ranks will have the current rank in its descendants. 
+        # each of those ranks will have the current rank in its descendants.
         def recurse(node, ancestors):
            # print "Called with ancestors", ancestors
-            
+
             for rank in ancestors:
                 self._children[rank]['descendants'].append(node['rank'])
-            
+
             # Create a new list with this rank on it
-            new_ancestors = copy.copy(ancestors) 
+            new_ancestors = copy.copy(ancestors)
             new_ancestors.append(node['rank'])
-            
+
             for child in node['children']:
                 recurse(child, new_ancestors)
 
@@ -123,27 +123,27 @@ def compare():
             error = True
             debug += "\n\tRecursive: " + str(pt2)
             debug += "\n\tIterative: " + str(pt1)
-            
+
         ct1, ct2 = t1.children(), t2.children()
-        
+
         # We need to sort as it otherwise might fail in compare
         ct1.sort()
         ct2.sort()
-        
+
         cmatch = ct1 == ct2
         debug += "\nChildren match: " + str(cmatch)
         if not pmatch:
             error = True
             debug += "\n\tRecursive: " + str(ct2)
             debug += "\n\tIterative: " + str(ct1)
-            
+
         for r in ct1:
             d1 = t1.descendants(r)
             d2 = t2.descendants(r)
-            
+
             d1.sort()
             d2.sort()
-            
+
             dmatch = d1 == d2
             debug += "\nChildren match for child rank " + str(r) + " " + str(dmatch)
             if not dmatch:
@@ -152,12 +152,12 @@ def compare():
                 debug += "\n\tIterative: " + str(d1)
         debug += "\n=========================================================="
         return error, debug
-    
+
     C = 100000
     import random
     print "Sampling starting. Running %d samples" % C
     errors = 0
-    
+
     for i in range(C):
         size = random.randint(1, 10000)
         root = random.randint(0, size-1)
@@ -166,9 +166,9 @@ def compare():
         error, debug = inner_compare(size=10, rank=0, root=0)
         if error:
             errors =+ 1
-            
+
     print "A total of %d errors" % errors
-      
+
 if __name__ == "__main__":
     import sys
 
@@ -195,11 +195,11 @@ if __name__ == "__main__":
     from mpi.benchmark import Benchmark
     b = Benchmark(None)
 
-    for size in range(0, 50001, 500)[1:]:
+    for size in range(0, 50001, 1000)[1:]:
         print "Starting with size", size
         tester, _ = b.get_tester(identifier, procs=1, datasize=size)
 
-        for root in range(0, 1000):
+        for root in range(0, 100):
             root = root % size
             with tester:
                 tr(root=root, size=size, rank=0)

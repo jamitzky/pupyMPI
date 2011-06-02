@@ -33,7 +33,7 @@ from pupyplot.lib.tagmapper import get_tag_mapping
 from pupyplot.parser.handle import Handle, DataSupplier, DataAggregator
 from pupyplot.gnuplot import LinePlot
 
-# This is more generic than a simple line plot. It should be moved. 
+# This is more generic than a simple line plot. It should be moved.
 FORMAT_CHOICES = {
     'datasize' : 'datasize',
     'total_time'  :'time',
@@ -45,46 +45,46 @@ FORMAT_CHOICES = {
 }
 
 if __name__ == "__main__":
-    # Receive the parser and groups so we can add further elements 
+    # Receive the parser and groups so we can add further elements
     # if we want
     parser, groups = plot_parser()
-    
-    # Extend the parser to let users input which tag should be the baseline tag. 
-    
-    # Parse it. This will setup logging and other things.    
+
+    # Extend the parser to let users input which tag should be the baseline tag.
+
+    # Parse it. This will setup logging and other things.
     options, args = parse(parser)
-    
+
     Logger().debug("Command line arguments parsed.")
-    
+
     # Object creation, used to keep, filter, aggregate, validate data.
     handle = Handle(args[0])
-    
+
     tag_mapper = {}
     if options.tag_mapper:
         tag_mapper = get_tag_mapping(options.tag_mapper)
-    
+
     # to extract and filter the data.
     ds = DataSupplier(handle.getdata())
-    
+
     # It should be possible to limit the tests to one single test. how should
-    # this be one. 
+    # this be one.
     all_tests = ds.get_tests()
     for testname in all_tests:
         if testname != 'Reduce':
             continue
-        
+
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
         xlabel = DATA_CHOICES[options.x_data]
         ylabel = "Speedup" # Always
-        
-        # Format the axis. 
+
+        # Format the axis.
         axis_x_format = FORMAT_CHOICES[options.x_data]
-        axis_y_format = "scale" # Always. 
-        
+        axis_y_format = "scale" # Always.
+
         tags = ds.get_tags()
         tags.sort()
-        
+
         base_tag = tags[0]
         base_x_data, base_y_data = None, None
 
@@ -92,11 +92,11 @@ if __name__ == "__main__":
         for tag in tags:
             # Extract the data from the data store.
             xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
-            
-            # Aggregate the data. 
+
+            # Aggregate the data.
             da = DataAggregator(ydata)
             ydata = da.getdata(options.y_data_aggr)
-            
+
             if tag == base_tag:
                 base_x_data, base_y_data = xdata, ydata
                 ydata_plot = [1 for _ in ydata]
@@ -109,8 +109,8 @@ if __name__ == "__main__":
                     speedup = t/n
                     ydata_plot.append(speedup)
                     title = tag_mapper.get(tag, tag)
-            
+
             lp.add_serie(xdata, ydata_plot, title=title)
-        
+
         lp.plot()
         lp.close()
