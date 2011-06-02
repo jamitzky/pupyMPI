@@ -31,7 +31,7 @@ class BinomialTreeRecursive(Tree):
         """
         def find(node):
             if self.rank == node['rank']:
-                self._children = [x['rank'] for x in node['children']]
+                self.child_ranks = [x['rank'] for x in node['children']]
             else:
                 for child in node['children']:
                     find(child)
@@ -80,13 +80,8 @@ class BinomialTreeRecursive(Tree):
             
         # Call internal functions for finding / setting children etc
         self._find_parent()
-        
-        print self.parent()
-        
         self._find_children()
         self._find_descendants()
-            
-        return root
 
     def _find_descendants(self):
         """
@@ -134,11 +129,15 @@ def compare():
         t1 = BinomialTreeIterative(rank=rank, size=size, root=root)
         t2 = BinomialTreeRecursive(rank=rank, size=size, root=root)
 
-        if t1.parent != t2.parent:
-            print "t1 parent != t2.parent", t1.parent(), t2.parent()
+        pt1, pt2 = t1.parent(), t2.parent()
 
-        if t1.children() != t2.children():
-            print "t1 child ranks != t2.child_ranks", t1.child_ranks, t2.child_ranks
+        if pt1 != pt2:
+            print "t1 parent != t2.parent", pt1, pt2
+            
+        ct1, ct2 = t1.children(), t2.children()
+
+        if ct1 != ct2:
+            print "t1 child ranks != t2.child_ranks", ct1, ct2
 
     inner_compare(size=10, rank=0, root=0)
 

@@ -6,13 +6,12 @@ other elements / functions, but the basic API **must** be implemented.
 from mpi.logger import Logger
 
 class Tree(object):
-    def __init__(self, communicator, root=0):
+    def __init__(self, size=0, rank=0, root=0):
         """
         Creating the topology.
         """
-        self.communicator = communicator
-        self.rank = communicator.comm_group.rank()
-        self.size = communicator.comm_group.size()
+        self.rank = rank
+        self.size = size
         self.root = root
 
         # Placeholder objects. Each tree must fill these during generation
