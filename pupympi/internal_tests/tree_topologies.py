@@ -18,6 +18,9 @@ class Tree(object):
         if (rank >= size) or size<1:
             raise Exception("Bad tree topology!")
 
+        if (root >= size):
+            raise Exception("Bad tree topology by root!")
+
         self.size = size
         self.root = root
         self.rank = rank
@@ -204,6 +207,7 @@ class BinomialTreeRecursive(Tree):
     def generate_tree(self):
         ranks = range(self.size)
         ranks.sort()
+
         ranks.remove(self.root)
         new_ranks = [self.root]
         new_ranks.extend(ranks)
@@ -279,9 +283,28 @@ class BinomialTreeRecursive(Tree):
                     rec(node_child, child=child)
         rec(self.tree)
 
+def compare():
+    def inner_compare(size=1, rank=0, root=0):
+        t1 = BinomialTreeIterative(size=size, rank=rank, root=root)
+        t2 = BinomialTreeRecursive(size=size, rank=rank, root=root)
+
+        if t1.parent != t2.parent:
+            print "t1 parent != t2.parent", t1.parent, t2.parent
+
+        if t1.child_ranks != t2.child_ranks:
+            print "t1 child ranks != t2.child_ranks", t1.child_ranks, t2.child_ranks
+
+    inner_compare(size=10, rank=0, root=0)
+
+
 
 if __name__ == "__main__":
     import sys
+
+    # Check first if we should compare the two classes.
+    if "compare" in sys.argv:
+        compare()
+        sys.exit(0)
 
     if len(sys.argv) != 3:
         print "There should be two and only two arguments for the benchmarker. Use 'old' to benchmark the old structure and 'new' to benchmark the new one as the first parameter. The second is a filepath indicating where to store the benchmark files"
@@ -306,6 +329,7 @@ if __name__ == "__main__":
         tester, _ = b.get_tester(identifier, procs=1, datasize=size)
 
         for root in range(0, 1000):
+            root = root % size
             with tester:
                 tr(root=root, size=size, rank=0)
 
