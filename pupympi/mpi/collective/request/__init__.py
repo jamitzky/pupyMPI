@@ -108,7 +108,7 @@ class FlatTreeAccepter(object):
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
             if not topology:
-                topology = tree.FlatTree(communicator, root=root)
+                topology = tree.FlatTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
     
             obj.topology = topology
@@ -128,7 +128,7 @@ class BinomialTreeAccepter(object):
             cache_idx = "tree_binomial_%d" % root
             topology = cache.get(cache_idx, default=None)
             if not topology:
-                topology = tree.BinomialTree(communicator, root=root)
+                topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
     
             obj.topology = topology
@@ -149,7 +149,7 @@ class StaticFanoutTreeAccepter(object):
             cache_idx = "tree_static_%d" % root
             topology = cache.get(cache_idx, default=None)
             if not topology:
-                topology = tree.StaticFanoutTree(communicator, root=root, fanout=communicator.mpi.settings.STATIC_TREE_FANOUT_COUNT)
+                topology = tree.StaticFanoutTree(size=communicator.size(), rank=communicator.rank(), root=root, fanout=communicator.mpi.settings.STATIC_TREE_FANOUT_COUNT)
                 cache.set(cache_idx, topology)
     
             obj.topology = topology
