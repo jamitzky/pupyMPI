@@ -132,9 +132,11 @@ class BinomialTree(Tree):
                     i_future += 1
                 
                 # Weed out own rank and ranks that are larger than max rank
-                desc = [ dr for dr in desc[1:] if r < s ]
+                desc = [ dr for dr in desc[1:] if dr < s ]
                 
                 self._children[r_child] = {'descendants' : desc, 'start_iteration' : i}
+                
+                
             else:
                 break
             i += 1
