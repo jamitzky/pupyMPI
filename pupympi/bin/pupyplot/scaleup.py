@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     # It should be possible to limit the tests to one single test. how should
     # this be one.
-    all_tests = ds.get_tests()
+    all_tests = ds.get_tests(options.test_filter)
     for testname in all_tests:
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
@@ -88,26 +88,32 @@ if __name__ == "__main__":
         lp = LinePlot(testname, title=testname, xlabel=xlabel, ylabel=ylabel, keep_temp_files=options.keep_temp, axis_x_type=options.axis_x_type, axis_y_type=options.axis_y_type, axis_x_format=axis_x_format, axis_y_format=axis_y_format)
         for tag in tags:
             # Extract the data from the data store.
-            xdata, ydata = ds.getdata(testname, tag, options.x_data, options.y_data, filters=[])
+            series_list = ds.getdata(testname, tag, options.x_data, options.y_data, options.series_col, filters=[])
 
-            # Aggregate the data.
-            da = DataAggregator(ydata)
-            ydata = da.getdata(options.y_data_aggr)
+            for s in series_list:
+                series_data, xdata, ydata = s
 
-            if tag == base_tag:
-                base_x_data, base_y_data = xdata, ydata
-                ydata_plot = [1 for _ in ydata]
-                title = tag_mapper.get(tag, tag) + " (baseline)"
-            else:            # Calculate the speedup data
-                ydata_plot = []
-                for i in range(len(ydata)):
-                    t = float(ydata[i])
-                    n = float(base_y_data[i])
-                    speedup = t/n
-                    ydata_plot.append(speedup)
-                    title = tag_mapper.get(tag, tag)
+                # Aggregate the data.
+                da = DataAggregator(ydata)
+                ydata = da.getdata(options.y_data_aggr)
 
-            lp.add_serie(xdata, ydata_plot, title=title)
+                title = tag_mapper.get(tag, tag)
+                if options.series_col != 'none':
+                    title += " (%s: %s)" % (options.series_col, series_data)
+
+                if tag == base_tag:
+                    base_x_data, base_y_data = xdata, ydata
+                    ydata_plot = [1 for _ in ydata]
+                    title += " (baseline)"
+                else:            # Calculate the speedup data
+                    ydata_plot = []
+                    for i in range(len(ydata)):
+                        t = float(ydata[i])
+                        n = float(base_y_data[i])
+                        speedup = t/n
+                        ydata_plot.append(speedup)
+
+                lp.add_serie(xdata, ydata_plot, title=title)
 
         lp.plot()
         lp.close()
