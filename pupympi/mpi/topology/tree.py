@@ -4,6 +4,7 @@ the generic API available on all tree topologies. Each implementation can offer
 other elements / functions, but the basic API **must** be implemented.
 """
 from mpi.logger import Logger
+import math
 
 class Tree(object):
     def __init__(self, size=0, rank=0, root=0):
@@ -68,7 +69,6 @@ class FlatTree(Tree):
             self.child_ranks = []
             self._children = {}
 
-#class BinomialTreeIterative(Tree):
 class BinomialTree(Tree):
     def generate_tree(self):
         """            
@@ -189,8 +189,39 @@ class BinomialTree(Tree):
                             self._children[cr]['descendants'] = cdesc
                             break
 
-
 class StaticFanoutTree(BinomialTree):
+
+    def __init__(self, size=0, rank=0, root=0, fanout=2):
+        self.fanout = fanout
+        super(StaticFanoutTree, self).__init__(size=size, rank=rank, root=root)
+
+    def generate_tree(self):
+        def get_childs(rank):
+            return filter(lambda x: x < self.size, [rank*self.fanout+i for i in range(1, self.fanout+1)])
+        
+        self.child_ranks = get_childs(self.rank)
+        
+        # Parent
+        self._parent = int(math.ceil(float(self.rank)/self.fanout))-1
+        if self._parent < 0: self._parent = None
+        
+        self._children = {}
+        for child in self.child_ranks:
+
+            lookset = [child]
+            desc = []
+            last_seen = []
+            for rank in lookset:
+                new_desc = get_childs(rank)
+                if last_seen == new_desc: break
+                
+                last_seen = new_desc
+                desc.extend(new_desc)
+                lookset.extend(new_desc)
+                
+            self._children[child] = {'descendants' : desc, 'start_iteration' : None}
+
+class StaticFanoutTreeRecursive(BinomialTree):
     def __init__(self, communicator, root=0, fanout=2):
         """
         Creating the topology.
