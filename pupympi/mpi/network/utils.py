@@ -138,7 +138,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     Internal function to
     - serialize payload if needed
     - measure payload
-    - construct and append header
+    - construct header
     
     The header format has following fields:
     length of payload
@@ -147,6 +147,8 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     mpi or system tag
     acknowledge needed
     communicator id
+    
+    TODO: We might not have to create a header always. In at least one place we chop off header to reuse, this is wasteful
     """
     if is_serialized:
         # DEBUG
@@ -161,7 +163,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     lpd = len(serialized_data)
 
     header = struct.pack("llllll", lpd, rank, cmd, tag, ack, comm_id)
-    return header+serialized_data
+    return (header,serialized_data)
 
 def serialize_message(data, cmd=None):
     """
@@ -291,6 +293,23 @@ def _nice_data(data):
         _, sep, rest = sdata.partition("(I")
         # Now tcp control chars garble garble has been removed
         return (sep+rest).replace("\n","<n>")
+        
+def robust_send_multi(socket, messages):
+    """
+    experimental cousin of robust_send
+    if we can agree that the overhead of always considering messages a list is negligible this can be folded into regular robust_send
+    """
+    for message in messages:
+        target = len(message) # how many bytes to send
+        transmitted_bytes = 0
+    
+        while target > transmitted_bytes:
+            delta = socket.send(message)
+            transmitted_bytes += delta
+    
+            if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
+                message = message[transmitted_bytes:]
+                Logger().debug("Message sliced because it was too large for one send.")
 
 def robust_send(socket, message):
     """

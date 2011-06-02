@@ -79,14 +79,14 @@ def execute_commands(mpi):
             # We need to access the rank like this. Calling rank() on the
             # communicator will active this function again. Should be
             # apply some locking?
-            msg = prepare_message("PONG", rank)
-            robust_send(connection, msg)
+            header,payload = prepare_message("PONG", rank)
+            robust_send(connection, header+payload)
 
         elif cmd == constants.CMD_READ_REGISTER:
             # Send our registers. We just send everything and let the
             # client filter.
-            msg = prepare_message(mpi.user_register, rank)
-            robust_send(connection, msg)
+            header,payload = prepare_message(mpi.user_register, rank)
+            robust_send(connection, header+payload)
 
         elif cmd == constants.CMD_MIGRATE_PACK:
             # This if is just here so people know it is not missing. We
@@ -96,8 +96,8 @@ def execute_commands(mpi):
         elif cmd == constants.CMD_CONFIG:
             res = mpi.set_configuration(user_data)
             # Send the result back
-            msg = prepare_message(res, rank)
-            robust_send(connection, msg)
+            header,payload = prepare_message(res, rank)
+            robust_send(connection, header+payload)
         
     mpi.pending_systems_commands = rest_list
 

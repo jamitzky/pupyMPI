@@ -124,9 +124,9 @@ def prp_sender(address,port):
     message = "This message was sent"
 
     data = (0, 0, tag, False, message)
-    requestdata = prepare_message(data, 0, 0)    
+    header,payload = prepare_message(data, 0, 0)    
 
-    robust_send(s,requestdata)
+    robust_send(s,header+payload)
     
     print "sender done"
     s.close()    

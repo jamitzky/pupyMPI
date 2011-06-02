@@ -53,8 +53,8 @@ class SendSimpleCommand(threading.Thread):
                 self.error = "Could not connect to rank %d. We received a connect timeout" % self.rank
             else:
                 # Send the message
-                message = utils.prepare_message((self.security_component, self.send_data), -1, cmd=self.cmd_id, comm_id=-1)
-                utils.robust_send(connection, message)
+                header,payload = utils.prepare_message((self.security_component, self.send_data), -1, cmd=self.cmd_id, comm_id=-1)
+                utils.robust_send(connection, header+payload)
 
                 # Test if we should also receive a message back from the rank. If so, we wait
                 # for that message for a specific timeout. If we haven't received the message
