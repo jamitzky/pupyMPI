@@ -70,9 +70,6 @@ if __name__ == "__main__":
     # this be one.
     all_tests = ds.get_tests()
     for testname in all_tests:
-        if testname != 'Reduce':
-            continue
-
         # Write nice labels
         from pupyplot.lib.cmdargs import DATA_CHOICES
         xlabel = DATA_CHOICES[options.x_data]
