@@ -6,8 +6,8 @@ class BaseCollectiveRequest(object):
     def __init__(self, *args, **kwargs):
         self.tag = None
 
-        # This object (with the acquire() and release() methods) defiend below
-        # opens for the pythoic way to lock an object (with-keyword)
+        # This object (with the acquire() and release() methods) defined below
+        # opens for the pythonic way to lock an object (with-keyword)
         self._lock = threading.Lock()
         self._finished = threading.Event()
 

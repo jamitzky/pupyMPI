@@ -328,7 +328,8 @@ class Communicator:
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
         header, payload = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized)
         for recp in receivers:
-            request = Request("send", self, recp, tag, data=(header+payload))
+            request = Request("send", self, recp, tag, data=payload, header=header)
+            #request = Request("send", self, recp, tag, data=(header+payload))
             request.is_prepared = True
             #request.is_pickled= True
             request.prepare_send()

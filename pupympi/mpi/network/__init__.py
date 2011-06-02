@@ -399,7 +399,13 @@ class BaseCommunicationHandler(threading.Thread):
         for write_socket in writelist:
             removal = []
             with self.socket_to_request_lock:
-                request_list = self.socket_to_request[write_socket]
+                #request_list = self.socket_to_request[write_socket]
+                #DEBUG
+                try:
+                    request_list = self.socket_to_request[write_socket]
+                except Exception as e:
+                    Logger().debug("rank:%i trying to find %s on socket_to_request:%s" % (self.rank, write_socket, self.socket_to_request ) )
+                    raise e
             for request in request_list:
                 if request.status == "cancelled":
                     removal.append((socket, request))
@@ -407,13 +413,14 @@ class BaseCommunicationHandler(threading.Thread):
                     #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
+                        #utils.robust_send(write_socket,request.header+request.data)
                         utils.robust_send_multi(write_socket,[request.header,request.data])
                     except socket.error, e:
-                        #Logger().error("send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
                     except Exception, e:
-                        #Logger().error("Other exception robust_send() threw:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        Logger().error("Other exception got:%s for socket:%s with header:%s payload:%s" % (e,write_socket,request.header, request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
                         continue
 
@@ -502,6 +509,9 @@ class BaseCommunicationHandler(threading.Thread):
         if self.type in ("combo","out"):
             while self.socket_to_request:
                 (_, out_list, _) = self.select_out()
+                # DEBUG
+                #Logger().debug("rank:%i calling final HW for out_list:%s" % (self.rank, out_list ) )
+                #Logger().debug("rank:%i calling final HW for %i sockets" % (self.rank, len(out_list) ) )
                 self._handle_writelist(out_list)
 
                 removal = []

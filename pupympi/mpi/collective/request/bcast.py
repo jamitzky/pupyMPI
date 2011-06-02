@@ -39,6 +39,9 @@ class TreeBCast(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
 
+        # DEBUG
+        #Logger().debug("BCAST rank:%i root:%i children:%s" % (self.rank, self.root, self.children) )
+
         if self.parent is None:
             # we're the root.. let us send the data to each child 
             self.send_to_children(transit=False)
@@ -60,7 +63,6 @@ class TreeBCast(BaseCollectiveRequest):
             if self.children:
                 self.send_to_children()
             
-            
             # DEBUG
             #Logger().debug("--accept_msg to:%i from:%i children:%s" % (self.rank, rank, self.children) )
 
@@ -78,7 +80,7 @@ class TreeBCast(BaseCollectiveRequest):
         """
         self.communicator._direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
         # DEBUG
-        Logger().debug("--sent to %s" % self.children)
+        #Logger().debug("--sent to %s" % self.children)
         
 
     def _get_data(self):        

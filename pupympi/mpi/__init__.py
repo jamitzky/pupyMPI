@@ -726,9 +726,10 @@ class MPI(Thread):
         for r in range(size):
             if r == rank:
                 continue
-
+            
+            # FIXME: Why is cmd not set on Request initialization?
             # send about message to the process with rank r.
-            # Create a send request object
+            # Create a send request object            
             handle = Request("send", world, r, constants.MPI_TAG_ANY, False)
             handle.cmd = constants.CMD_ABORT
 
