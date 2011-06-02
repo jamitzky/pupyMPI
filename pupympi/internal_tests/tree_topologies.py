@@ -46,31 +46,24 @@ class BinomialTreeRecursive(Tree):
         ranks.remove(self.root)
         new_ranks = [self.root]
         new_ranks.extend(ranks)
+        leafs = []
 
         def node_create(rank, iteration=0):
-            return {
+            node = {
               'rank' : rank,
               'children' : [],
               'iteration' :iteration
             }
-
-        def find_all_leafs(node):
-            def find_sub(node):
-                l = [node]
-                children = node['children']
-                if children:
-                    for child in children:
-                        l.extend( find_sub( child ))
-                return l
-            return find_sub(node)
+            leafs.append(node)
+            return node
 
         root = node_create( new_ranks.pop(0) )
 
         iteration = 1
         while new_ranks:
             try:
-                leafs = find_all_leafs( root )
-                for leaf in leafs:
+                itleafs = copy.copy(leafs)
+                for leaf in itleafs:
                     leaf['children'].append( node_create( new_ranks.pop(0), iteration ))
             except IndexError:
                 break
@@ -116,39 +109,66 @@ class BinomialTreeRecursive(Tree):
 
 def compare():
     def inner_compare(size=1, rank=0, root=0):
-        
         t1 = BinomialTreeIterative(rank=rank, size=size, root=root)
         t2 = BinomialTreeRecursive(rank=rank, size=size, root=root)
 
         pt1, pt2 = t1.parent(), t2.parent()
+        error = False
 
-        print "===================== Compare report ====================="
+        debug = "\n===================== Compare report ====================="
 
         pmatch = pt1 == pt2
-        print "Parent match:", pmatch
+        debug += "\nParent match:" + str(pmatch)
         if not pmatch:
-            print "\tRecursive:", pt2
-            print "\tIterative:", pt1
+            error = True
+            debug += "\n\tRecursive: " + str(pt2)
+            debug += "\n\tIterative: " + str(pt1)
             
         ct1, ct2 = t1.children(), t2.children()
+        
+        # We need to sort as it otherwise might fail in compare
+        ct1.sort()
+        ct2.sort()
+        
         cmatch = ct1 == ct2
-        print "Children match:", cmatch
+        debug += "\nChildren match: " + str(cmatch)
         if not pmatch:
-            print "\tRecursive:", ct2
-            print "\tIterative:", ct1
+            error = True
+            debug += "\n\tRecursive: " + str(ct2)
+            debug += "\n\tIterative: " + str(ct1)
             
         for r in ct1:
             d1 = t1.descendants(r)
             d2 = t2.descendants(r)
+            
+            d1.sort()
+            d2.sort()
+            
             dmatch = d1 == d2
-            print "Children match for child rank", r, dmatch
+            debug += "\nChildren match for child rank " + str(r) + " " + str(dmatch)
             if not dmatch:
-                print "\tRecursive:", d2
-                print "\tIterative:", d1
-        print "=========================================================="
-
-    inner_compare(size=10, rank=0, root=0)
-
+                error = True
+                debug += "\n\tRecursive: " + str(d2)
+                debug += "\n\tIterative: " + str(d1)
+        debug += "\n=========================================================="
+        return error, debug
+    
+    C = 100000
+    import random
+    print "Sampling starting. Running %d samples" % C
+    errors = 0
+    
+    for i in range(C):
+        size = random.randint(1, 10000)
+        root = random.randint(0, size-1)
+        rank = random.randint(0, size-1)
+        print "\tSample %d: size(%d), rank(%d), root(%d)" % (i, size, rank, root)
+        error, debug = inner_compare(size=10, rank=0, root=0)
+        if error:
+            errors =+ 1
+            
+    print "A total of %d errors" % errors
+      
 if __name__ == "__main__":
     import sys
 
