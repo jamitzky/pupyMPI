@@ -127,26 +127,44 @@ class TreeScatterPickless(BaseCollectiveRequest):
 
     def send_to_children(self, transit=True):
         # chunksize is always the data the node holds relative to how many recipients will share it
-        
+        chunksize = len(self.data) / self.size # should be calculated in advance based on tree generation
+        all_my_descendants = [self.rank] + self.children
+        for child in self.children:
+            all_my_descendants.extend( self.topology.descendants(child) )
+        all_my_descendants.sort()
+
         for child in self.children:
             desc = self.topology.descendants(child)
-            data = [None] * self.size
             
-            data[child] = self.data[child]
+            #Logger().debug("rank%i has child:%s desc:%s" % (self.rank, child, desc) )            
+            #data = [None] * self.size            
+            #data[child] = self.data[child]
+            
+            payloads = []
+            payloads.append( self.data[child_index:child_index+1] )
             for r in desc:
-                data[r] = self.data[r]
+                try:
+                    payloads.append( self.data[r:(r+1)] )
+                except Exception as e:
+                    Logger().debug("rank%i has payloads:%s self.data:%s index(rank):%i of:%s" % (self.rank, payloads, self.data, r, desc) )
+                    raise e
 
             #Logger().debug("send to child:%s desc:%s data:%s" % (child, desc, data) )
-            
-            self.communicator._multisend(data, child, tag=constants.TAG_SCATTER)
+            self.communicator._multisend(payloads, child, tag=constants.TAG_SCATTER)
+            #self.communicator._multisend(data, child, tag=constants.TAG_SCATTER)
 
         self._finished.set()
 
     def _get_data(self):
-        #Logger().debug("rank:%i GET data:%s" % (self.rank, self.data) )
+        Logger().debug("rank:%i GET data:%s" % (self.rank, self.data) )
+        #begin = self.rank
+        #end = self.rank+1
+        begin = 0
+        end = 1
         
-        # TODO: We only need our own data        
-        return utils.deserialize_message(self.data, self.msg_type)
+        # TODO: We only need our own data
+        return utils.deserialize_message(self.data[begin:end], self.msg_type)
+        #return utils.deserialize_message(self.data, self.msg_type)
 
 class FlatTreeScatter(FlatTreeAccepter, TreeScatter): 
     pass
