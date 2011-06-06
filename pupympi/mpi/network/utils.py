@@ -74,6 +74,7 @@ def get_raw_message(client_socket, bytecount=4096):
         """
         Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
         """
+        #Logger().debug("recieve_fixed: length:%s" % (length))
         message = ""
         while length > 0:
             try:
@@ -99,7 +100,8 @@ def get_raw_message(client_socket, bytecount=4096):
     header_size = struct.calcsize("llllll")
     header = receive_fixed(header_size)
     lpd, rank, cmd, tag, ack, comm_id = struct.unpack("llllll", header)
-
+    # DEBUG
+    #Logger().debug("recieved: length:%s tuple:%s" % (header_size, (lpd, rank, cmd, tag, ack, comm_id )))
     return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
 
 
@@ -131,7 +133,19 @@ numpytypes = {
 
 typeint_to_type = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items()+othertypes.items() ] )
 type_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items()+othertypes.items() ] )
+def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, payload_length=0):
+    """
+    Internal function to
+    - construct header for a list of already serialized payloads
+    
+    NOTE: Caller is assumed to know the combined length of the payloads since
+          initial serialization and the segmentation has been done by the caller
+    
+    The header format is the traditional
+    """        
 
+    header = struct.pack("llllll", payload_length, rank, cmd, tag, ack, comm_id)
+    return header
 
 def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_serialized=False):
     """
@@ -200,7 +214,6 @@ def serialize_message(data, cmd=None):
             ## Convert data to bytearray with shape prepended
             #serialized_data = byteshape + bytearray(data)            
         else:
-            Logger().debug("prepare ONEDIM - type:%s" % (type(data[0])) )
             
             serialized_data = data.tostring()
             
@@ -209,6 +222,7 @@ def serialize_message(data, cmd=None):
             
             # Look up the correct type int
             cmd = type_to_typeint[data.dtype]
+            Logger().debug("prepare ONEDIM - type:%s cmd:%s" % (type(data[0]), cmd) )
     elif isinstance(data,bytearray):            
         cmd = type_to_typeint[type(data)]
         Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
@@ -251,7 +265,13 @@ def deserialize_message(raw_data, msg_type):
                 # Lookup the numpy type
                 t = typeint_to_type[msg_type]
                 # Restore numpy array
-                data = numpy.fromstring(raw_data,t)
+                # DEBUG try
+                try:
+                    data = numpy.fromstring(raw_data,t)
+                except Exception as e:
+                    Logger().error("BAD FROMSTRING msg_type:%s len(raw_data):%i t:%s" % (msg_type,len(raw_data), t) )
+                    raise e
+                #data = numpy.fromstring(raw_data,t)
     else:
         try:
             # Both system messages and user pickled messages are unpickled here

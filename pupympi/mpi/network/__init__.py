@@ -413,8 +413,11 @@ class BaseCommunicationHandler(threading.Thread):
                     #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
                     # Send the data on the socket
                     try:
-                        #utils.robust_send(write_socket,request.header+request.data)
-                        utils.robust_send_multi(write_socket,[request.header,request.data])
+                        if request.multi:
+                            utils.robust_send(write_socket,request.header)
+                            utils.robust_send_multi(write_socket,request.data)
+                        else:
+                            utils.robust_send_multi(write_socket,[request.header,request.data])                            
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time

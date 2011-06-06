@@ -25,7 +25,7 @@ SCATTER_ROOT = 0
 #assert my_data == [[rank,rank]]
 #
 # Numpy array
-chunksize = 5
+chunksize = 4
 if rank == SCATTER_ROOT:    
     scatter_data = numpy.arange(size*chunksize)
 else:
@@ -33,6 +33,7 @@ else:
 
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 assert numpy.alltrue(my_data == numpy.arange(rank*chunksize,(rank+1)*chunksize))
+print "rank %i got %s" % (rank, my_data)
 
 ## 4D Numpy float array
 #if rank == SCATTER_ROOT:    
