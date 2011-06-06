@@ -484,7 +484,7 @@ class MPI(Thread):
             with self.received_collective_data_lock:
                 new_data_list = []
                 # DEBUG
-                #Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
+                Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
                 for item in self.received_collective_data:
                     (rank, msg_type, tag, ack, comm_id, raw_data) = item
 

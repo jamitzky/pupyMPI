@@ -60,7 +60,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False, payload_size=0):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -71,8 +71,9 @@ class Request(BaseRequest):
         self.tag = tag
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data # payload
-        self.header = header # header for the payload
-        self.multi = multi # Flag that data is a list of payloads
+        self.header = header # serialized header for the payload
+        self.multi = multi # flag that the request has a list of payloads
+        self.payload_size = payload_size # combined bytesize of payloads if single payload this is 0 for now
 
         self.cmd = cmd
         
@@ -120,15 +121,19 @@ class Request(BaseRequest):
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
 
-        if not self.is_prepared:
-            # Create the proper data structure and pickle the data
-            header,payload = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
-                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
-            self.data = payload
-            self.header = header
-        #DEBUG
+        if self.multi:
+            self.header = utils.prepare_multiheader(self.communicator.rank(), cmd=self.cmd,
+                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, payload_length=self.payload_size)
         else:
-            Logger().debug("Reusing already prepared message")
+            if not self.is_prepared:
+                # Create the proper data structure and pickle the data
+                header,payload = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
+                                               tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
+                self.data = payload
+                self.header = header
+            #DEBUG
+            else:
+                Logger().debug("Reusing already prepared message")
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
