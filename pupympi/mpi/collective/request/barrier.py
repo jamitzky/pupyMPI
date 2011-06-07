@@ -135,7 +135,7 @@ class RingBarrier(BaseCollectiveRequest):
             self.msg_count = 1
             self.send_next()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, data, msg_type=None):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
