@@ -308,7 +308,7 @@ class MPI(Thread):
         # Make every node connect to each other if settings specify it
         if not options.disable_full_network_startup:
             self.network.start_full_network()
-            
+
         self.initinfo = (self.MPI_COMM_WORLD, self.MPI_COMM_WORLD.rank(), self.MPI_COMM_WORLD.size())
 
         # Set a static attribute on the class so we know it is initialised.
@@ -319,7 +319,7 @@ class MPI(Thread):
 
         if self.resume and resumer:
             resumer(self)
-            
+
 
     def parse_options(self):
         parser = OptionParser()
@@ -497,7 +497,10 @@ class MPI(Thread):
                         #Logger().debug("trying to match")
                         # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
-                            match = request.accept_msg(rank, raw_data, msg_type)
+                            try:
+                                match = request.accept_msg(rank, raw_data, msg_type)
+                            except TypeError, e:
+                                print "TypeError when accepting msg for request of type", request.__class__
 
                             # Debug only. Should go away (maybe)
                             if match is None:
@@ -575,15 +578,15 @@ class MPI(Thread):
 
         while not self.shutdown_event.is_set():
             #Logger().debug("--Gonna wait for work")
-            
+
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
-            
+
             #Logger().debug("--No more wait for work")
-            
+
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
                 with self.raw_data_lock:
@@ -592,7 +595,7 @@ class MPI(Thread):
                     with self.received_data_lock:
                         for element in self.raw_data_queue:
                             (rank, msg_type, tag, ack, comm_id, raw_data) = element
-                            
+
                             if tag in constants.COLLECTIVE_TAGS:
                                 # Messages that are part of a collective request, are handled
                                 # on a seperate queue and matched and deserialized later
@@ -625,7 +628,7 @@ class MPI(Thread):
             if self.pending_collective_requests_has_work.is_set():
                 # DEBUG
                 #Logger().debug("Trying to match collective pending")
-                
+
                 self.match_collective_pending()
                 # NOTE: Codus Rex made a boo-boo here since he neglected to clear the signal
                 # If the list is empty clear the signal
@@ -652,7 +655,7 @@ class MPI(Thread):
                         self.pending_requests.remove(request)
 
                     self.pending_requests_has_work.clear() # We can't match for now wait until further data received
-        
+
 
         # TODO: Remove this when TRW is in effect again
         self.queues_flushed.set()
@@ -683,7 +686,7 @@ class MPI(Thread):
 
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
-            
+
         # DEBUG
         #Logger().debug("done running and flushing")
 
@@ -726,10 +729,10 @@ class MPI(Thread):
         for r in range(size):
             if r == rank:
                 continue
-            
+
             # FIXME: Why is cmd not set on Request initialization?
             # send about message to the process with rank r.
-            # Create a send request object            
+            # Create a send request object
             handle = Request("send", world, r, constants.MPI_TAG_ANY, False)
             handle.cmd = constants.CMD_ABORT
 
