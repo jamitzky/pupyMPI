@@ -90,7 +90,7 @@ class TreeBarrier(BaseCollectiveRequest):
             return False
 
     def send_children(self):
-        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER)
+        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER, serialized=False)
         self._finished.set()
 
     def _get_data(self):
