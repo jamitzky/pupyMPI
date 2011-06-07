@@ -23,17 +23,32 @@ SCATTER_ROOT = 2
 #
 #my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 #assert my_data == [[rank,rank]]
-#
-# Numpy array
-chunksize = 5
+
+# bytearray
+chunksize = 4
+import string
+# set it up so rank 0 gets 'a'*chunksize rank 1 gets 'b'*chunksize and so on
+basebytes = bytearray( ''.join([l*chunksize for l in string.ascii_letters[:size]]) )
+
 if rank == SCATTER_ROOT:    
-    scatter_data = numpy.arange(size*chunksize)
+    scatter_data = basebytes
 else:
     scatter_data = None
 
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
-assert numpy.alltrue(my_data == numpy.arange(rank*chunksize,(rank+1)*chunksize))
-#print "rank %i got %s" % (rank, my_data)
+assert numpy.alltrue(my_data == bytearray( string.ascii_letters[rank]*chunksize ) )
+
+## Numpy array
+#chunksize = 5
+#if rank == SCATTER_ROOT:    
+#    scatter_data = numpy.arange(size*chunksize)
+#else:
+#    scatter_data = None
+#
+#my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+#assert numpy.alltrue(my_data == numpy.arange(rank*chunksize,(rank+1)*chunksize))
+##print "rank %i got %s" % (rank, my_data)
+
 
 ## 4D Numpy float array
 #if rank == SCATTER_ROOT:    
