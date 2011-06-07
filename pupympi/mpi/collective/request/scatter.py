@@ -127,16 +127,25 @@ class TreeScatterPickless(BaseCollectiveRequest):
 
         return False
 
-    def send_to_children(self, transit=True):        
+    def send_to_children(self, transit=True):
+        """
+        Send appropriate data to all children including payloads for descendants
+        
+        NOTE: The first part of this function deals with setting attributes that
+              are also used elsewhere. It could be refactored out but is is a
+              requirement that data must be present at call time.
+        """
         # Map child/descendant rank to position in self.data        
         all_ranks = [self.rank] + self.children
         for child in self.children:
             all_ranks.extend( self.topology.descendants(child) )
         all_ranks.sort()
         rank_pos_map = dict([(r,i) for i,r in enumerate(all_ranks)])
-
+        
         # chunksize is always the data the node holds relative to how many nodes (including self) will share it
         self.chunksize = len(self.data) / len(all_ranks) # should be calculated in advance based on tree generation
+        # Note the position of the node's own slice (only differ from 0 if involved in a root-swap)
+        self.pos = rank_pos_map[self.rank]
 
         for child in self.children:
             desc = self.topology.descendants(child)
@@ -147,8 +156,6 @@ class TreeScatterPickless(BaseCollectiveRequest):
             
             payloads = []
             
-            #pos_child = rank_pos_map[child]
-            #payloads.append( self.data[pos_child:pos_child+1] )
             all_ranks = [child]+desc
             for r in all_ranks:
                 pos_r = rank_pos_map[r]
@@ -165,15 +172,15 @@ class TreeScatterPickless(BaseCollectiveRequest):
 
             #Logger().debug("send to child:%s payloads:%s of len:%i" % (child, payloads, len(payloads[0]) ))
             self.communicator._multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
-            #self.communicator._multisend(data, child, tag=constants.TAG_SCATTER)
 
         self._finished.set()
 
     def _get_data(self):
-        # TODO: We only need our own data
-        Logger().debug("rank:%i GET msg_type:%s chunksize:%s" % (self.rank, self.msg_type, self.chunksize) )
-        return utils.deserialize_message(self.data[0:self.chunksize], self.msg_type)
-        #return utils.deserialize_message(self.data, self.msg_type)
+        #Logger().debug("rank:%i GET msg_type:%s chunksize:%s" % (self.rank, self.msg_type, self.chunksize) )
+        begin = self.pos * self.chunksize
+        end = begin + self.chunksize
+        return utils.deserialize_message(self.data[begin:end], self.msg_type)
+        
 
 class FlatTreeScatter(FlatTreeAccepter, TreeScatter): 
     pass
