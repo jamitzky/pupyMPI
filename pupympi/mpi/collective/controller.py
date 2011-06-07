@@ -22,11 +22,12 @@ class Controller(object):
         # possible request classes are defined. When starting a new request,
         # the first class accepting the data is created and executed.
         self.cls_mapping = {
-            # Non-used bcast algorithms: bcast.RingBCast 
+            # Non-used bcast algorithms: bcast.RingBCast
             constants.TAG_BCAST : [bcast.FlatTreeBCast, bcast.BinomialTreeBCast, bcast.StaticFanoutTreeBCast],
-            
+
             # Non-used barrier algorithms: barrier.RingBarrier
-            constants.TAG_BARRIER : [barrier.FlatTreeBarrier, barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
+            #constants.TAG_BARRIER : [barrier.FlatTreeBarrier, barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
+            constants.TAG_BARRIER : [barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
             constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
@@ -45,7 +46,7 @@ class Controller(object):
             req_class_list = self.cls_mapping[tag]
         except:
             Logger().warning("Unable to find collective list in the cls_mapping for tag %s" % tag)
-        
+
         for req_class in req_class_list:
             obj = req_class.accept(self.communicator, self.communicator.mpi.settings, self.cache, *args, **kwargs)
             #Logger().debug("rank:%i has %s for req_class:%s arg:%s" % (self.rank,bool(obj), req_class.__name__, kwargs['data']) )
