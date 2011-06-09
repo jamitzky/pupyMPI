@@ -15,14 +15,14 @@ SCATTER_ROOT = 4
 # DEBUG
 #SCATTER_ROOT = 0
 
-## List
-#if rank == SCATTER_ROOT:
-#    scatter_data = [[x]*2 for x in range(size)]
-#else:
-#    scatter_data = None
-#
-#my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
-#assert my_data == [[rank,rank]]
+# List
+if rank == SCATTER_ROOT:
+    scatter_data = [[x]*2 for x in range(size)]
+else:
+    scatter_data = None
+
+my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+assert my_data == [[rank,rank]]
 
 # bytearray
 chunksize = 4
