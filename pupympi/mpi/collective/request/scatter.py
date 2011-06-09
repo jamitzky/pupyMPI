@@ -96,7 +96,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
                 self.shape = utils.get_shape(self.shapebytes)
                 #self.data = self.data[self.shapelen:] # try waiting with cutoff since this triggers an allocation
 
-            Logger().debug("RANK:%i len:%i cmd:%s self.shapelen:%s" % (self.rank,len(self.data), cmd, self.shapelen) )
+            #Logger().debug("RANK:%i len:%i cmd:%s self.shapelen:%s" % (self.rank,len(self.data), cmd, self.shapelen) )
             #Logger().debug("RANK:%i len:%i serialized:%s cmd:%s" % (self.rank,len(self.data), self.data, cmd) )
         else:
             self.data = data
@@ -131,7 +131,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
             if self.shapelen:
                 self.shapebytes = raw_data[:self.shapelen]
                 self.shape = utils.get_shape(self.shapebytes)
-                Logger().debug("rank:%i got MULTI data:%s rawdatalen:%i shapelen:%s shape:%s" % (self.rank, raw_data, len(raw_data), self.shapelen, self.shape) )
+                #Logger().debug("rank:%i got MULTI data:%s rawdatalen:%i shapelen:%s shape:%s" % (self.rank, raw_data, len(raw_data), self.shapelen, self.shape) )
                 #self.shape = tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
                 
                 self.data = raw_data
@@ -139,7 +139,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
                 
             else:
                 self.data = raw_data
-                Logger().debug("rank:%i got data:%s" % (self.rank, self.data) )
+                #Logger().debug("rank:%i got data:%s" % (self.rank, self.data) )
                 
             self.send_to_children()
             return True
@@ -156,21 +156,26 @@ class TreeScatterPickless(BaseCollectiveRequest):
         """
         # Map child/descendant rank to position in self.data        
         all_ranks = [self.rank] + self.children
+        #all_ranks = [] + self.children
+        #all_ranks = self.children
         for child in self.children:
             all_ranks.extend( self.topology.descendants(child) )
         all_ranks.sort()
+        #all_ranks = [self.rank] + all_ranks # put own rank in front
         rank_pos_map = dict([(r,i) for i,r in enumerate(all_ranks)])
         
         # chunksize is always the data the node holds relative to how many nodes (including self) will share it
         self.chunksize = len(self.data[self.shapelen:]) / len(all_ranks) # should be calculated in advance based on tree generation
-        Logger().debug("rank%i CHUNKSIZE:%s all_ranks:%s datalen:%s" % (self.rank, self.chunksize, all_ranks, len(self.data) ) )            
         
-        # Note the position of the node's own slice (only differ from 0 if involved in a root-swap)
+        # Note the position of the node's own slice (only differs from 0 if involved in a root-swap)
         self.pos = rank_pos_map[self.rank]
+
+        #Logger().debug("rank%i CHUNKING all_ranks:%s pos:%s" % (self.rank, all_ranks, self.pos) )            
 
         for child in self.children:
             desc = self.topology.descendants(child)             
             all_ranks = [child]+desc # All the recipients of the message
+            all_ranks.sort() # keep it sorted
             if self.shapelen:
                 payloads = [self.shapebytes] # First payload to send is always shapebytes
             else:
@@ -199,7 +204,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
         end = begin + self.chunksize
         #Logger().debug("rank:%i GET msg_type:%s chunksize:%s, datalen:%i finished:%s" % (self.rank, self.msg_type, self.chunksize, len(self.data), self._finished.is_set() ) )
         if self.shapelen:
-            Logger().debug("rank:%i GET msg_type:%s chunksize:%s, datalen:%i shapebytes:%s finished:%s" % (self.rank, self.msg_type, self.chunksize, len(self.data), self.shapebytes, self._finished.is_set() ) )
+            #Logger().debug("rank:%i GET msg_type:%s chunksize:%s, datalen:%i shapebytes:%s finished:%s" % (self.rank, self.msg_type, self.chunksize, len(self.data), self.shapebytes, self._finished.is_set() ) )
             return utils.deserialize_message(self.shapebytes+self.data[begin:end], self.msg_type)
         else:        
             return utils.deserialize_message(self.data[begin:end], self.msg_type)
