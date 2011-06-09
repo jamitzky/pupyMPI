@@ -2,6 +2,7 @@ from mpi.collective.request import BaseCollectiveRequest, FlatTreeAccepter, Bino
 from mpi import constants
 from mpi.logger import Logger
 from mpi.topology import tree
+from mpi import utils
 
 from math import log
 import copy
@@ -172,11 +173,13 @@ class TreeGather(BaseCollectiveRequest):
 
         self._finished.set()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type=constants.TAG_GATHER):
         if self._finished.is_set() or rank not in self.missing_children:
             return False
 
         self.missing_children.remove(rank)
+        
+        data = utils.deserialize_message(raw_data, msg_type)
 
         for i in range(len(data)):
             item = data[i]
@@ -238,7 +241,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
 
         self._finished.set()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, data, msgtype=constants.TAG_GATHER):
         if self._finished.is_set() or rank not in self.missing_children:
             return False
 
@@ -275,8 +278,9 @@ class TreeGatherPickless(BaseCollectiveRequest):
                 # here the orthogonality of accepting on topology vs. accepting on data type or data size really kicks in
                 # since the accept logic is coded only with communicator size in mind, it is hard to intersperse other accept conditions
                 # For now we just assume that binomial tree is the way to go,that is we ignore communicator size
-                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class
-                topology = tree.BinomialTree(communicator, root=root)
+                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class                
+                #topology = tree.BinomialTree(communicator, root=root)
+                topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
     
             obj.topology = topology
