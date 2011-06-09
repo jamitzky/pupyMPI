@@ -156,12 +156,9 @@ class TreeScatterPickless(BaseCollectiveRequest):
         """
         # Map child/descendant rank to position in self.data        
         all_ranks = [self.rank] + self.children
-        #all_ranks = [] + self.children
-        #all_ranks = self.children
         for child in self.children:
             all_ranks.extend( self.topology.descendants(child) )
         all_ranks.sort()
-        #all_ranks = [self.rank] + all_ranks # put own rank in front
         rank_pos_map = dict([(r,i) for i,r in enumerate(all_ranks)])
         
         # chunksize is always the data the node holds relative to how many nodes (including self) will share it

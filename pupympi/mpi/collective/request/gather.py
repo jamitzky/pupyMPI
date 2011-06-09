@@ -166,14 +166,13 @@ class TreeGather(BaseCollectiveRequest):
         if not self.children:
             self.send_parent()
 
-    def send_parent(self):
+    def send_parent(self):        
         # Send data to the parent (if any)
         if (not self._finished.is_set()) and self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)
-
+            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)            
         self._finished.set()
 
-    def accept_msg(self, rank, raw_data, msg_type=constants.TAG_GATHER):
+    def accept_msg(self, rank, raw_data, msg_type=None):
         if self._finished.is_set() or rank not in self.missing_children:
             return False
 
@@ -201,6 +200,13 @@ class TreeGatherPickless(BaseCollectiveRequest):
     """
     This is a gather used when data should not be pickled and unpickled on its way
     up in the tree.
+    
+    A leaf sends its serialized payload to parent
+    A middle node waits for payloads from all children, then payloads are sent in order of increasing rank, with one's own first (excluding root swap)
+    Root waits for payloads from all children and the rearranges in rank order and deserializes
+    
+    All ranks are assumed to supply equally long arrays to the operation
+    
     ISSUES:
     - Currently only ndarrays trigger the use of this class, eventually we'll want bytearrays too
     - Hardcoded with binomial tree since comm size is not taken into account
@@ -218,8 +224,10 @@ class TreeGatherPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
 
         self.data = [None] * self.size
-        self.data[self.rank] = data
-
+        self.data[self.rank],cmd = utils.serialize_message(data)
+        self.msg_type = cmd
+        self.chunksize = len(self.data[self.rank])
+        
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
         if not topology:
@@ -228,7 +236,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
         self.missing_children = copy.copy(self.children)
-        Logger().debug("NUMPY CLASS - rank:%i has children:%s" % (self.rank,self.children) )
+        #Logger().debug("NUMPY CLASS - rank:%i has children:%s" % (self.rank,self.children) )
         
         # We forward up the tree unless we have to wait for children
         if not self.children:
@@ -237,20 +245,33 @@ class TreeGatherPickless(BaseCollectiveRequest):
     def send_parent(self):
         # Send data to the parent (if any)
         if (not self._finished.is_set()) and self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)
+            
+            payloads = [d for d in self.data if d is not None] # Filter potential Nones away
+            self.communicator._multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
+            Logger().debug("rank%i payloads:%s" % (self.rank, payloads) )
 
         self._finished.set()
 
-    def accept_msg(self, rank, data, msgtype=constants.TAG_GATHER):
-        if self._finished.is_set() or rank not in self.missing_children:
+    def accept_msg(self, child_rank, raw_data, msg_type):
+        if self._finished.is_set() or child_rank not in self.missing_children:
             return False
+        
+        self.missing_children.remove(child_rank)
+        
+        desc = self.topology.descendants(child_rank)
+        all_ranks = [child_rank]+desc # All the ranks having a payload in this message
+        all_ranks.sort() # keep it sorted
+        # Map child/descendant ranks to position in raw_data
+        #rank_pos_map = dict([(r,i) for i,r in enumerate(all_ranks)])
 
-        self.missing_children.remove(rank)
-
-        for i in range(len(data)):
-            item = data[i]
-            if item is not None:
-                self.data[i] = item
+        # Store payloads in proper positions
+        for i,r in enumerate(all_ranks):
+            pos_r = i
+            begin = pos_r * (self.chunksize)
+            end = begin + (self.chunksize)
+            
+            self.data[r] = raw_data[begin:end]
+        
 
         if not self.missing_children:
             self.send_parent()
@@ -260,8 +281,9 @@ class TreeGatherPickless(BaseCollectiveRequest):
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
         """
-        For now we accept all...
-        Eventually we always accept as long as it is numpy data
+        Accept as long as it is numpy data
+        
+        TODO: Needs to accept bytearrays also
         """
         import numpy # FIXME: Move this import somewhere nice
         
@@ -278,8 +300,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
                 # here the orthogonality of accepting on topology vs. accepting on data type or data size really kicks in
                 # since the accept logic is coded only with communicator size in mind, it is hard to intersperse other accept conditions
                 # For now we just assume that binomial tree is the way to go,that is we ignore communicator size
-                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class                
-                #topology = tree.BinomialTree(communicator, root=root)
+                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class
                 topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
     
@@ -288,7 +309,8 @@ class TreeGatherPickless(BaseCollectiveRequest):
 
     def _get_data(self):
         if self.root == self.rank:
-            return self.data
+            # The root deserializes all payloads
+            return [ utils.deserialize_message(self.data[r], self.msg_type) for r in range(self.size) ]
         else:
             return None
 
