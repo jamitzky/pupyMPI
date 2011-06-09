@@ -40,7 +40,7 @@ class TreeBCast(BaseCollectiveRequest):
         self.children = topology.children()
 
         # DEBUG
-        #Logger().debug("BCAST rank:%i root:%i children:%s" % (self.rank, self.root, self.children) )
+        Logger().debug("BCAST rank:%i root:%i children:%s parent:%s" % (self.rank, self.root, self.children, self.parent) )
 
         if self.parent is None:
             # we're the root.. let us send the data to each child 
