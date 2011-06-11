@@ -13,6 +13,7 @@ world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 size = world.size()
 
+# send rank
 received = world.allgather(rank)
 assert received == range(size)
 
