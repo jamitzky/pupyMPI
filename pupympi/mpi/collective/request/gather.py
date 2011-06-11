@@ -30,6 +30,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
         self.send_to = []
         self.recv_from = []
         self.send_ranges = [] # list of tuples of (range start, range end) where start may be larger than end, in the wrap-around case
+        # FIXME: Below is for clarity but should be done faster with list comprehensions
         for i in xrange(self.iterations):
             self.send_to.append( (2**i+self.rank) % self.size )
             self.recv_from.append( (self.rank - (2**i)) % self.size )
@@ -51,6 +52,8 @@ class DisseminationAllGather(BaseCollectiveRequest):
             #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
                 
         # Start by sending the message for iteration 0
+        # DEBUG
+        Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
         self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
         
         # Mark send communication as done for iteration 0
@@ -65,15 +68,17 @@ class DisseminationAllGather(BaseCollectiveRequest):
         """
         return cls(communicator, *args, **kwargs)
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type):
+        #self, child_rank, raw_data, msg_type
         """
         Check that the message is expected and send off messages as appropriate
         """
         if self._finished.is_set() or rank not in self.recv_from:
-            Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,data))
+            Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
             return False
 
-        # Put valid data in proper place            
+        # Put valid data in proper place
+        data = utils.deserialize_message(raw_data, msg_type)
         for e in range(self.size):
             if data[e] is not None:
                 self.data_list[e] = data[e]
