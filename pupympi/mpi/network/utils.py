@@ -337,6 +337,8 @@ def robust_send_multi(socket, messages):
     """
     experimental cousin of robust_send
     if we can agree that the overhead of always considering messages a list is negligible this can be folded into regular robust_send
+    
+    TODO: Check (eg. with wireshark) if every send produces a tcp packet or if several messages can be packed into on tcp packet (which we hope is what happens)
     """
     for message in messages:
         target = len(message) # how many bytes to send

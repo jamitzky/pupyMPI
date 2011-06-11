@@ -248,7 +248,6 @@ class TreeGatherPickless(BaseCollectiveRequest):
             
             payloads = [d for d in self.data if d is not None] # Filter potential Nones away
             self.communicator._multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
-            Logger().debug("rank%i payloads:%s" % (self.rank, payloads) )
 
         self._finished.set()
 
