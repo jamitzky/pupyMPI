@@ -31,17 +31,25 @@ ROOT = 2
 #    assert received == None
 #
 
-# Test numpy arrays everyone sends an array of chunksize elements
-chunksize = 3
-na = numpy.arange(rank,rank+chunksize)
-received = world.gather(na, root=ROOT)
+## gather a bytearray
+received = world.gather(bytearray("im the real rank:%i"%rank), root=ROOT)
 if ROOT == rank:
-    assert numpy.all( numpy.array(received) == numpy.array([numpy.arange(r,r+chunksize) for r in range(size)]) )
-    #received = [numpy.arange(r,r+chunksize) for r in range(size)]
-    print "Rank:%i received:%s" % (rank, received)
+    assert received == [bytearray("im the real rank:%i"%r) for r in range(size) ]
 else:
-    #assert received == None
-    pass
+    assert received == None
+
+
+## Test numpy arrays everyone sends an array of chunksize elements
+#chunksize = 3
+#na = numpy.arange(rank,rank+chunksize)
+#received = world.gather(na, root=ROOT)
+#if ROOT == rank:
+#    assert numpy.all( numpy.array(received) == numpy.array([numpy.arange(r,r+chunksize) for r in range(size)]) )
+#    #received = [numpy.arange(r,r+chunksize) for r in range(size)]
+#    print "Rank:%i received:%s" % (rank, received)
+#else:
+#    #assert received == None
+#    pass
 
 
 mpi.finalize()

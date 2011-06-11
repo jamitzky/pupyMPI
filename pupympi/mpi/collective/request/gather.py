@@ -288,7 +288,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         import numpy # FIXME: Move this import somewhere nice
         
         # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
-        if isinstance(kwargs['data'], numpy.ndarray):
+        if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
             obj = cls(communicator, *args, **kwargs)
             
             # Check if the topology is in the cache
