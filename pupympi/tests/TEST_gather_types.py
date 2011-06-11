@@ -31,12 +31,12 @@ ROOT = 2
 #    assert received == None
 #
 
-## gather a bytearray
-received = world.gather(bytearray("im the real rank:%i"%rank), root=ROOT)
-if ROOT == rank:
-    assert received == [bytearray("im the real rank:%i"%r) for r in range(size) ]
-else:
-    assert received == None
+### gather a bytearray
+#received = world.gather(bytearray("im the real rank:%i"%rank), root=ROOT)
+#if ROOT == rank:
+#    assert received == [bytearray("im the real rank:%i"%r) for r in range(size) ]
+#else:
+#    assert received == None
 
 
 ## Test numpy arrays everyone sends an array of chunksize elements
@@ -51,5 +51,19 @@ else:
 #    #assert received == None
 #    pass
 
+
+# Test numpy arrays everyone sends an array of chunksize elements
+chunksize = 3
+#na = numpy.arange(rank,rank+chunksize).r
+na = numpy.arange(rank*100,rank*100+size*chunksize*2).reshape(size*2,chunksize)
+received = world.gather(na, root=ROOT)
+
+if ROOT == rank:
+    control = numpy.array([numpy.arange(100*r,100*r+size*chunksize*2).reshape(size*2,chunksize) for r in range(size)]) 
+    assert numpy.all( numpy.array(received) == control)
+    #print "Rank:%i received shape:%s" % (rank, control.shape)
+else:
+    #assert received == None
+    pass
 
 mpi.finalize()
