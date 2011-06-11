@@ -300,38 +300,6 @@ def deserialize_message(raw_data, msg_type):
             raise e
     
     return data
-
-
-def _nice_data(data):
-    """
-    FIXME: This function is obsolete, prone to error, and should be deleted
-    
-    Internal function to allow safer printing/logging of raw data
-    Tries to eliminate the hex (?) ASCII symbols that appear as tcp-like
-    control packets.
-
-    NOTE: If we one day find something useful to do based on the control codes,
-    we should convert them nicely to string instead, but for now this will do.
-
-    There are some nice functions here to accomplish conversion of the byte-strings
-    http://docs.python.org/c-api/string.html#string-bytes-objects
-    """
-    if data == None:
-        return None
-
-    # This is a hackish way of detecting if data is pickled or not
-    # We try to unpickle and if it fails it is probably not pickled
-    try:
-        return pickle.loads(data)
-    except Exception:
-        #Logger().warning("Was NOT pickled")
-        # This is an equally hackish way of removing nasty printing chars
-        # a nicer way would be to use str.translate with appropriate mappings
-        sdata = str(data)
-        # _ is hexysymbols
-        _, sep, rest = sdata.partition("(I")
-        # Now tcp control chars garble garble has been removed
-        return (sep+rest).replace("\n","<n>")
         
 def robust_send_multi(socket, messages):
     """

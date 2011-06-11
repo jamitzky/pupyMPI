@@ -109,7 +109,7 @@ class Request(BaseRequest):
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, utils._nice_data(self.data) )
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, self.data )
 
     def prepare_send(self):
         """
