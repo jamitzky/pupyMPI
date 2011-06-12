@@ -53,7 +53,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
                 
         # Start by sending the message for iteration 0
         # DEBUG
-        Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
+        #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
         self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
         
         # Mark send communication as done for iteration 0
@@ -74,7 +74,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
         Check that the message is expected and send off messages as appropriate
         """
         if self._finished.is_set() or rank not in self.recv_from:
-            Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
+            #Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
             return False
 
         # Put valid data in proper place
@@ -127,6 +127,143 @@ class DisseminationAllGather(BaseCollectiveRequest):
             self.finish()
         
         #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
+        return True
+
+    def finish(self):
+        self.data = self.data_list
+        self._finished.set()
+
+    def _get_data(self):
+        return self.data
+
+
+class DisseminationAllGatherPickless(BaseCollectiveRequest):
+    
+    SETTINGS_PREFIX = "ALLGATHERPL"
+    
+    def __init__(self, communicator, data):
+        super(DisseminationAllGatherPickless, self).__init__()
+
+        self.data = data
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+
+    def start(self):
+        # Data list to hold gathered result - indexed by rank
+        self.data_list = [None] * self.size
+        self.data_list[self.rank] = self.data # Fill in own value
+
+        self.iterations = int(log(self.size, 2)) # How many iterations the algorithm will run, excluding gap-filling
+        self.gap_size = self.size - 2**self.iterations # If size is not a power of 2 there will be a gap
+        
+        # Ranks to receive or send from for algorithm to complete
+        # - indexed by the iteration in which the communication is to occur
+        self.send_to = []
+        self.recv_from = []
+        self.send_ranges = [] # list of tuples of (range start, range end) where start may be larger than end, in the wrap-around case
+        # FIXME: Below is for clarity but should be done faster with list comprehensions
+        for i in xrange(self.iterations):
+            self.send_to.append( (2**i+self.rank) % self.size )
+            self.recv_from.append( (self.rank - (2**i)) % self.size )
+            start = (self.rank - (2**i) + 1) % self.size
+            self.send_ranges.append( (start,self.rank) )
+        
+        # Filling gap
+        if self.gap_size:
+            # Calculate rank for receive and send (own rank offset by half of next power of two)
+            gap_send_to = (self.rank + 2**self.iterations) % self.size
+            
+            self.send_to.append( gap_send_to )
+            self.recv_from.append( (self.rank - 2**self.iterations) % self.size )
+            
+            gap_start = (gap_send_to + 1) % self.size
+            gap_end = (gap_start + self.gap_size) % self.size
+            self.send_ranges.append( (gap_start, gap_end) )
+            # DEBUG
+            #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
+                
+        # Start by sending the message for iteration 0
+        # DEBUG
+        #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
+        self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
+        
+        # Mark send communication as done for iteration 0
+        self.send_to[0] = None
+    
+
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        """
+        Accept as long as it is numpy array or bytearray
+        """
+        import numpy # FIXME: Move this import somewhere nice
+        
+        # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
+        if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
+            return cls(communicator, *args, **kwargs)        
+
+
+    def accept_msg(self, rank, raw_data, msg_type):
+        #self, child_rank, raw_data, msg_type
+        """
+        Check that the message is expected and send off messages as appropriate
+        """
+        if self._finished.is_set() or rank not in self.recv_from:
+            #Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
+            return False
+
+        # Put valid data in proper place
+        data = utils.deserialize_message(raw_data, msg_type)
+        for e in range(self.size):
+            if data[e] is not None:
+                self.data_list[e] = data[e]
+            
+        # Check if the accept puts the algorithm into next iteration
+        iteration = 0
+        blocked = False
+        for i,r in enumerate(self.recv_from):
+            if r == rank: # When we hit the rank we mark as having received
+                self.recv_from[i] = None
+                # If no blockers were found before, the next iteration can begin
+                if not blocked:
+                    iteration = i+1                
+            elif r == None: # Nones means that we have already received that iteration
+                if not blocked:
+                    iteration = i+1                
+            else: # If we hit any other rank it means we are still waiting for the receive belonging to that iteration
+                if not blocked: # First one we hit takes precedence
+                    iteration = i
+                    blocked = True
+        
+        # DEBUG
+        #Logger().debug("rank:%i RECV iteration:%i, recv_from:%s, r:%s" % (self.rank,iteration,self.recv_from, rank))
+
+        # Check if the next iteration needs sending
+        for i, r in enumerate(self.send_to):
+            if i > iteration: # We should send only up to the iteration after the one found to have been completed
+                break
+            elif r != None:
+                # Slice out the data that needs to be sent
+                (start,end) = self.send_ranges[i]
+                if end < start:
+                    slice = self.data_list[:end+1] + [None]*(start-end-1) + self.data_list[start:]
+                else:
+                    slice = [None]*start + self.data_list[start:end+1] + [None]*(self.size - (end+1))
+
+                # DEBUG
+                #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
+                
+                self.communicator._isend(slice, r, constants.TAG_ALLGATHER)
+                self.send_to[i] = None
+                
+        # Check if we are done
+        #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
+        if set(self.recv_from+self.send_to) == set([None]):            
+            self.finish()
+        
+        Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
         return True
 
     def finish(self):
@@ -285,9 +422,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
         """
-        Accept as long as it is numpy data
-        
-        TODO: Needs to accept bytearrays also
+        Accept as long as it is numpy array or bytearray
         """
         import numpy # FIXME: Move this import somewhere nice
         
