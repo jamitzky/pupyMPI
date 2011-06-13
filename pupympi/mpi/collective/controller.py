@@ -50,7 +50,7 @@ class Controller(object):
         id = 0
         for tag in self.cls_mapping:
             for cls in self.cls_mapping[tag]:
-                cls.__coll_class_id = id
+                cls._coll_class_id = id
                 self.class_ids[id] = cls
                 id += 1
 

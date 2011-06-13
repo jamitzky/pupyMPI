@@ -92,7 +92,7 @@ class BaseCollectiveRequest(object):
         self.mark_dirty()
         
         # Find the extra header information useful for changing request classes on the fly.
-        coll_class_id = self.__class__.__coll_class_id
+        coll_class_id = self.__class__._coll_class_id
         
         self.communicator._multisend(content, destination, tag=tag, cmd=cmd, payload_length=payload_length, collective_header_information=(coll_class_id,))
     

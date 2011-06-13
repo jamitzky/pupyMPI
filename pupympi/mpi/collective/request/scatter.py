@@ -68,6 +68,9 @@ class TreeScatter(BaseCollectiveRequest):
 class TreeScatterPickless(BaseCollectiveRequest):
     """
     Scatter taking advantage of bytearrays and ndarrays
+    
+    ISSUES:
+    - Still no switching with regular TreeScatter
     """
     def __init__(self, communicator, data=None, root=0):
         super(TreeScatterPickless, self).__init__()
@@ -85,6 +88,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
         if self.root == self.rank:
             # TODO: This is done from the start but maybe we want to hold off until later, if so root could skip the (de)serialization to self
             self.data,cmd = utils.serialize_message(data, recipients=self.size)
+            Logger().debug("RANK:%i data:%s self.data:%s" % (self.rank,data, self.data) )
             self.msg_type = cmd
             
             # FIXME: The recreation of shape and/or shapebytes should be avoided by letting serialize_message return it
