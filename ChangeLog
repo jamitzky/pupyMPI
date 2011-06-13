@@ -1,0 +1,59 @@
+Changes to version 0.9.5
+ * By receiving directly into buffers and sending from buffers pupyMPI
+   does not pickle when sending numpy types or bytearrays. 
+
+Changes to version 0.9.4
+ * Allreduce and reduce performance gain due to new element wise reduction
+   (special focus on NumPy)
+
+Changes to version 0.9.3
+ * pupyplot.py has been rewritten to a number of smaller independent
+   utilities.
+ * Core code for sending messages moved to avoid the MPI thread. 
+
+Changes to version 0.9.2
+ * Ranks on same host communicate through unix sockets. 
+ * Support for Wtick and Wtime API functions.
+ * Fixed error in pupymark confusing indidual tests. 
+ * Fixed error in communicator inheritance.
+ * Support for X forwarding. 
+
+Changes to version 0.9.1:
+ * Better handling of logging parameters.
+ * Possible for users to specify a settings module.
+
+Changes to version 0.9.0:
+ * Added non blocking collective operations. 
+
+Changes to version 0.8.0:
+
+Introduced migration and utilities: 
+* Added a utils/pupy_abort.py utility for aborting a running instance (bromer)
+* Added a utils/pupy_ping.py utility for testing if a running instance is "running" (bromer)
+* Added a utils/pupy_readregisters.py utility for reading user defined registers (bromer)
+* Added a utils/pupy_pack.py utility for migrating one instance to another (bromer)
+
+Changes to version 0.7.4:
+
+* Cruft cleaning for reduce and bcast in CollectiveRequest (fhantho)
+* Added TCP_NODELAY to all sockets (asser)
+
+Changes to version 0.7.3:
+
+* Only attempt an accept() call on the main server socket instead of all sockets.
+
+Changes to version 0.7.2:
+
+* Split handling of in and out sockets in select/poll functions and for in thread and out thread
+
+Changes to version 0.7.1:
+
+* Handle writelist only when outgoing requests exist
+
+Changes to version 0.7.0:
+
+* Implemented use of poll and epoll (Linux only)
+
+Changes to version 0.6:
+
+* Initial pupyMPI release
