@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = "0.9.2" # It bumps the version or else it gets the hose again!
+__version__ = "0.9.5" # It bumps the version or else it gets the hose again!
 
 import sys
 import threading
