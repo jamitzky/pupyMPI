@@ -1,5 +1,5 @@
 import threading, sys
-
+from mpi import constants
 from mpi.topology import tree
 
 class BaseCollectiveRequest(object):
@@ -10,6 +10,8 @@ class BaseCollectiveRequest(object):
         # opens for the pythonic way to lock an object (with-keyword)
         self._lock = threading.Lock()
         self._finished = threading.Event()
+        self._dirty = False
+        self._overtaken_request = None
 
     def acquire(self):
         """
@@ -38,19 +40,11 @@ class BaseCollectiveRequest(object):
         Wait until the collective operation has finished and then return the data.
         """
         self._finished.wait()
-
         return self._get_data()
         
         # Requests are free to override this method, and implement their own
         # wait(), but it is probably not needed. Look into writing a _get_data
         # method instead.
-
-        # FIXME:         
-        #f = getattr(self, "_get_data", None)
-        #if callable(f):
-        #    return f()
-        #else:
-        #    return getattr(self, "data", None)
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
@@ -61,6 +55,47 @@ class BaseCollectiveRequest(object):
 
     def start(self):
         raise NotImplementedError("The start() method was not implemented by the inheriting class.")
+
+    # Not all algorithms know enough to select the proper algorithm. For example if a broadcast makes a
+    # not standard algorithm choice based on the data only the root will know. Therefore we will change
+    # algorithm on the receiver side when this extended information is available. The functions below 
+    # are helpers for that.
+    def is_dirty(self):
+        """
+        Return a boolean indicating if the request object has already participated in a receive
+        or send. 
+        """
+        return self._is_dirty
+    
+    def mark_dirty(self):
+        self._is_dirty = True
+        
+    def request_overtake(self, request_cls, *args, **kwargs):
+        request = cls() # This will not work. We miss arguments here. 
+        
+        # There is another request that will take our place. We save a reference to it
+        # and handle some function magic
+        self._overtaken_request = request
+        
+        for method_name in ("acquire", "release", "test", "wait", "accept_msg", "is_dirty", "mark_dirty"):
+            setattr(self, method_name, getattr(request, method_name))
+            
+        # There is no reason to replace the original request in the system queues as
+        # we just pass on all the method calls. 
+        
+    def multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0):
+        """
+        This is a very thin wrapper around the :func:`_multisend` method from the communicator. This
+        wrapper will automaticly add information regarding the request id.
+        """
+        # Mark the request as dirty
+        self.mark_dirty()
+        
+        # Find the extra header information useful for changing request classes on the fly.
+        coll_class_id = self.__class__.__coll_class_id
+        
+        self.communicator._multisend(content, destination, tag=tag, cmd=cmd, payload_length=payload_length, collective_header_information=(coll_class_id,))
+    
 
 def get_accept_range(cls, settings, prefix="BINOMIAL_TREE"):
     # This method will check if there should exist

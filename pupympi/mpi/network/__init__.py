@@ -188,7 +188,7 @@ class Network(object):
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
         from mpi import dill
-        _, _, _, _, _, data = get_raw_message(s_conn)
+        _, _, _, _, _, _, data = get_raw_message(s_conn)
         all_procs, state = dill.loads(data)
 
         if state:
@@ -233,18 +233,6 @@ class Network(object):
         # Finish the receives
         for handle in recv_handles:
             handle.wait()
-
-    #def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
-    #    from mpi.request import Request
-    #    rl = []
-    #    message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-    #    for recp in receivers:
-    #        request = Request("send", communicator, recp, tag, data=message)
-    #        request.is_pickled = True
-    #        self.t_out.add_out_request(request)
-    #        rl.append(request)
-    #
-    #    return rl
 
     def finalize(self):
         """
@@ -360,7 +348,7 @@ class BaseCommunicationHandler(threading.Thread):
                 conn = read_socket
 
             try:
-                rank, msg_type, tag, ack, comm_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
+                rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
             except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -381,7 +369,7 @@ class BaseCommunicationHandler(threading.Thread):
             if msg_type >= constants.CMD_RAWTYPE:
                 try:
                     with self.network.mpi.raw_data_lock:
-                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, raw_data) )
+                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
                         # DEBUG
@@ -431,7 +419,6 @@ class BaseCommunicationHandler(threading.Thread):
 
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
-                        #Logger().debug("Ssend done, status set to unacked")
                     else:
                         request.update("ready") # update status and signal anyone waiting on this request
                 else:

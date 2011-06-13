@@ -5,13 +5,9 @@ from mpi import constants
 from mpi.logger import Logger
 
 from mpi.topology import tree
+from mpi.commons import numpy
 
 import copy
-
-try:
-    import numpy
-except ImportError:
-    numpy = None
 
 
 def reduce_elementwise(sequences, operation):

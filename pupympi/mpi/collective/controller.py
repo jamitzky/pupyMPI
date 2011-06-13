@@ -36,6 +36,23 @@ class Controller(object):
             constants.TAG_GATHER : [gather.BinomialTreeGatherPickless,gather.FlatTreeGather, gather.BinomialTreeGather, gather.StaticFanoutTreeGather],
             constants.TAG_SCAN : [reduce.FlatTreeScan, reduce.BinomialTreeScan, reduce.StaticFanoutTreeScan],
         }
+        
+        self.generate_class_ids()
+        
+    def generate_class_ids(self):
+        """
+        Run though the above list of collective requests and give them a unique ID. This enables 
+        us to add this ID in the payload header when sending messages. This in turn enables us to
+        alter the primary selected request type based on the id. 
+        """
+        self.class_ids = {}
+        
+        id = 0
+        for tag in self.cls_mapping:
+            for cls in self.cls_mapping[tag]:
+                cls.__coll_class_id = id
+                self.class_ids[id] = cls
+                id += 1
 
     def get_request(self, tag, *args, **kwargs):
         # Find the first suitable request for the given tag. There is no safety
@@ -69,3 +86,4 @@ class Controller(object):
         # Note: If we define a safety net we could select the first / last class
         # and initialize that.
         Logger().warning("Unable to initialize the collective request for tag %s. I suspect failure from this point" % tag)
+        

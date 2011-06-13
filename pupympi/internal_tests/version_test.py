@@ -1,17 +1,5 @@
-import sys
-import random
-import time
-import timeit
-import socket
-
-import ctypes
-import array
-
-import struct
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import sys, random, time, timeit, socket, ctypes, array, struct
+from mpi.commmons import pickle
     
 def robust_send(socket, message):
     """

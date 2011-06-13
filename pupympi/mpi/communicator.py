@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, copy, time
-
-import numpy
 
 from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
 from mpi.request import Request
 from mpi.syscommands import handle_system_commands, execute_system_commands
+
+import sys, time
+import numpy
 
 class Communicator:
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
@@ -212,6 +212,7 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
+        import copy
         execute_system_commands(self.mpi)
         new_comm = self.comm_create(self.group())
         for a in self.attr:
@@ -278,7 +279,7 @@ class Communicator:
     # other stuff, related to requests that may get done:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
-    def _multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0):
+    def _multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0, collective_header_information=()):
         """
         An internal send function built on _isend.
         Content is assumed to be a list of already serialized pieces of data. The pieces are
@@ -298,7 +299,7 @@ class Communicator:
             raise MPIInvalidTagException("All tags should be integers")
             
         # Create a send request object
-        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True, payload_size=payload_length)
+        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True, payload_size=payload_length, collective_header_information=collective_header_information)
         # If sending to self, take a short-cut
         if destination == self.rank():
             self._send_to_self(handle)

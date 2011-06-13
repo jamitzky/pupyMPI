@@ -15,13 +15,13 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-__version__ = "0.9.2" # It bumps the version or else it gets the hose again!
+__version__ = "0.9.5" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random, os
-from optparse import OptionParser, OptionGroup
-import threading, getopt, time
+import sys
+import threading
+import time
+
 from threading import Thread
-import numpy
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -30,22 +30,12 @@ from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
-import mpi.network.utils as utils
-
+from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
+from mpi.commons import pupyprof, yappi, numpy
+from optparse import OptionParser, OptionGroup
 
-import time
-
-try:
-    import yappi
-except ImportError:
-    pass
-
-try:
-    import pupyprof
-except ImportError:
-    pass
 
 class MPI(Thread):
     """
@@ -110,12 +100,6 @@ class MPI(Thread):
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
 
-        # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
-        # TRW
-        #self.unstarted_requests = []
-        #self.unstarted_requests_lock = threading.Lock()
-        #self.unstarted_requests_has_work = threading.Event()
-
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []
         self.pending_requests_lock = threading.Lock()
@@ -179,7 +163,7 @@ class MPI(Thread):
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
-
+            import os
             logger = Logger(os.path.join(options.logdir,"remotelog"), "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
 
@@ -483,38 +467,35 @@ class MPI(Thread):
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
                 new_data_list = []
-                # DEBUG
-                #Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
-                for item in self.received_collective_data:
-                    (rank, msg_type, tag, ack, comm_id, raw_data) = item
 
-                    # Match with a request.
+                for item in self.received_collective_data:
+                    (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
+
                     match = False
-                    # DEBUG
-                    #Logger().debug("mcp - pending_collective_requests:%i" % len(self.pending_collective_requests) )
                     for request in self.pending_collective_requests:
-                        # DEBUG
-                        #Logger().debug("trying to match")
-                        # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
                             try:
                                 match = request.accept_msg(rank, raw_data, msg_type)
+                                
                             except TypeError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
-                            # Debug only. Should go away (maybe)
-                            if match is None:
-                                Logger().warning("A collective request is behaving strangely. Received none from accept_msg. request is: %s" % request)
+                            if not match and not request.is_dirty() and request.__coll_class_id != coll_class_id: # Check if we can overtake the request object in stead.
+                                # Generate a new request. There might be some problems here that is hard to predict. Can we have a non dirty request that will actually
+                                # not be in the situation even though we have the same tag? A solution would be to number the collective operations and match them by
+                                # their numbers only. This should be a safe way to do it.
+                                cls = self.communicator.collective_controller.class_ids[coll_class_id]
+                                request.overtake(cls)
+
                             if match:
                                 # DEBUG
                                 #Logger().debug("match FOUND for - rank:%i, tag:%i" % (rank,tag))
                                 if request.test():
                                     prune = True
                                 break
+                            
 
                     if not match:
-                        # DEBUG
-                        #Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
                         new_data_list.append( item )
 
                 self.received_collective_data = new_data_list
@@ -523,14 +504,11 @@ class MPI(Thread):
                 # We remove all the requests marked as completed.
                 self.pending_collective_requests = [r for r in self.pending_collective_requests if not r.test()]
 
-
     def match_pending(self, request):
         """
-        Tries to match a pending request with something in
-        the received data.
+        Tries to match a pending request with something in the received data.
 
-        If the received data is found we remove it from the
-        list.
+        If the received data is found we remove it from the list.
 
         The request is updated with the data if found and this
         status update returned from the function so it is possible
@@ -577,8 +555,6 @@ class MPI(Thread):
             yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():
-            #Logger().debug("--Gonna wait for work")
-
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
@@ -594,13 +570,13 @@ class MPI(Thread):
                     # instead it should be enough to lock around the append and set() as is the case for received_collective_data_lock
                     with self.received_data_lock:
                         for element in self.raw_data_queue:
-                            (rank, msg_type, tag, ack, comm_id, raw_data) = element
+                            (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
 
                             if tag in constants.COLLECTIVE_TAGS:
                                 # Messages that are part of a collective request, are handled
                                 # on a seperate queue and matched and deserialized later
                                 with self.received_collective_data_lock:
-                                    self.received_collective_data.append((rank, msg_type, tag, ack, comm_id, raw_data) )
+                                    self.received_collective_data.append(element)
                                     self.pending_collective_requests_has_work.set()
 
                             else:
@@ -611,12 +587,9 @@ class MPI(Thread):
                     self.raw_data_has_work.clear()
 
             # Collective requests.
-            #Logger().debug("Collective requests has work???")
             if self.unstarted_collective_requests_has_work.is_set():
                 self.unstarted_collective_requests_has_work.clear()
                 with self.unstarted_collective_requests_lock:
-                    # DEBUG
-                    #Logger().debug("Collective requests has work %s" % self.unstarted_collective_requests)
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
@@ -687,14 +660,10 @@ class MPI(Thread):
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
 
-        # DEBUG
-        #Logger().debug("done running and flushing")
-
     def get_state(self):
         """
         A function for getting the current state of the MPI environment.
         """
-        import sys
         user_module = sys.argv[0].split("/")[-1].replace(".py","")
 
         return {
@@ -757,10 +726,6 @@ class MPI(Thread):
         for set_name in config_data:
             set_value = config_data[set_name]
             res[set_name] = self._set_config(set_name, set_value)
-
-        # Debug. Print all the stuff
-        for attr in dir(self.settings):
-            print "attr:", attr, getattr(self.settings, attr)
 
         return res
 
@@ -910,6 +875,7 @@ class MPI(Thread):
         Note that no component will be generated if the user did not want to
         allow run time manipulation of the execution environment.
         """
+        import random, hashlib
         if self.security_component:
             raise Exception("Security component already genearted!")
 
