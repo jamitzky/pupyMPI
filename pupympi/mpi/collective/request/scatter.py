@@ -56,7 +56,7 @@ class TreeScatter(BaseCollectiveRequest):
             data[child] = self.data[child]
             for r in desc:
                 data[r] = self.data[r]
-            self.communicator._isend(data, child, tag=constants.TAG_SCATTER)
+            self.isend(data, child, tag=constants.TAG_SCATTER)
 
         self._finished.set()
 

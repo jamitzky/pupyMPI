@@ -13,6 +13,9 @@ class BaseCollectiveRequest(object):
         self._dirty = False
         self._overtaken_request = None
 
+        self.init_args = args
+        self.init_kwargs = kwargs    
+
     def acquire(self):
         """
         The central request object. This is an internal locking facility
@@ -71,7 +74,7 @@ class BaseCollectiveRequest(object):
         self._is_dirty = True
         
     def request_overtake(self, request_cls, *args, **kwargs):
-        request = cls() # This will not work. We miss arguments here. 
+        request = cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
         
         # There is another request that will take our place. We save a reference to it
         # and handle some function magic
