@@ -91,7 +91,7 @@ class TreeBarrier(BaseCollectiveRequest):
 
     def send_children(self):
         self.direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER, serialized=False)
-        self._finished.set()
+        self.done()
 
     def _get_data(self):
         return self.data
@@ -155,7 +155,7 @@ class RingBarrier(BaseCollectiveRequest):
         # If we do not need to receive any more messages simply
         # set the finished flag.
         if self.msg_count == 0:
-            self._finished.set()
+            self.done()
 
         return True
 

@@ -79,7 +79,6 @@ class DisseminationAllGather(BaseCollectiveRequest):
         Check that the message is expected and send off messages as appropriate
         """
         if self._finished.is_set() or rank not in self.recv_from:
-            #Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
             return False
 
         # Put valid data in proper place
@@ -129,13 +128,10 @@ class DisseminationAllGather(BaseCollectiveRequest):
         # Check if we are done
         #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
         if set(self.recv_from+self.send_to) == set([None]):            
-            self.finish()
+            self.done()
         
         #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
         return True
-
-    def finish(self):
-        self._finished.set()
 
     def _get_data(self):
         return self.data_list
@@ -240,7 +236,6 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         Check that the message is expected and send off messages as appropriate
         """
         if self._finished.is_set() or rank not in self.recv_from:
-            #Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
             return False
         
         # Check if the accept puts the algorithm into next iteration
@@ -308,13 +303,10 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         # Check if we are done
         #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
         if set(self.recv_from+self.send_to) == set([None]):            
-            self.finish()
+            self.done()
         
         #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
         return True
-
-    def finish(self):
-        self._finished.set()
 
     def _get_data(self):
         #Logger().debug("rank:%i GETTING data_list:%s" % (self.rank, self.data_list) )
@@ -359,7 +351,7 @@ class TreeGather(BaseCollectiveRequest):
         # Send data to the parent (if any)
         if (not self._finished.is_set()) and self.parent is not None:
             self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)            
-        self._finished.set()
+        self.done()
 
     def accept_msg(self, rank, raw_data, msg_type=None):
         if self._finished.is_set() or rank not in self.missing_children:
@@ -438,7 +430,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
             payloads = [d for d in self.data if d is not None] # Filter potential Nones away
             self.communicator._multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
 
-        self._finished.set()
+        self.done()
 
     def accept_msg(self, child_rank, raw_data, msg_type):
         if self._finished.is_set() or child_rank not in self.missing_children:

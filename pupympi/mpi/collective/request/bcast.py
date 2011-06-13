@@ -46,7 +46,7 @@ class TreeBCast(BaseCollectiveRequest):
             # we're the root.. let us send the data to each child 
             self.send_to_children(transit=False)
             # Mark that we are done with this request from a local perspective
-            self._finished.set()
+            self.done()
 
     def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
@@ -63,11 +63,8 @@ class TreeBCast(BaseCollectiveRequest):
             if self.children:
                 self.send_to_children()
             
-            # DEBUG
-            #Logger().debug("--accept_msg to:%i from:%i children:%s" % (self.rank, rank, self.children) )
-
             # Mark that we are done with this request from a local perspective
-            self._finished.set()
+            self.done()
             return True
 
         return False
@@ -138,7 +135,7 @@ class RingBCast(BaseCollectiveRequest):
                 
     def forward(self):
         self.isend(self.data, self.next, tag=constants.TAG_BCAST)
-        self._finished.set()
+        self.done()
         
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):

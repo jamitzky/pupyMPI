@@ -151,7 +151,7 @@ class TreeAllReduce(BaseCollectiveRequest):
 
     def to_children(self):
         self.direct_send(self.data, receivers=self.children, tag=self.tag)
-        self._finished.set()
+        self.done()
 
     def to_parent(self):
         # Send self.data to the parent.
@@ -294,7 +294,7 @@ class TreeReduce(BaseCollectiveRequest):
         if self.parent is not None:
             self.isend(self.data, self.parent, tag=constants.TAG_REDUCE)
 
-        self._finished.set()
+        self.done()
 
 class FlatTreeReduce(FlatTreeAccepter, TreeReduce):
     pass

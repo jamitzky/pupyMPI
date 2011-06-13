@@ -62,7 +62,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
         # clean data first.
         if len(self.missing_participants) == 0:
             self.clean_data()
-            self._finished.set()
+            self.done()
 
         return True
 
