@@ -17,7 +17,7 @@
 #
 __version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random, os,threading, getopt, time, numpy, time
+import sys, hashlib, os, random, threading, getopt, time, numpy, time
 
 from optparse import OptionParser, OptionGroup
 from threading import Thread
@@ -33,7 +33,6 @@ from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
 from mpi.commons import pupyprof, yappi
-
 
 class MPI(Thread):
     """
