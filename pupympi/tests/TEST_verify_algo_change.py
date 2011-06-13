@@ -18,7 +18,6 @@ else:
     scatter_data = None
 
 req = world.iscatter(scatter_data, root=SCATTER_ROOT)
-
 my_data = req.wait()
 assert my_data == [rank]
 

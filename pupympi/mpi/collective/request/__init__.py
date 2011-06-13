@@ -12,9 +12,10 @@ class BaseCollectiveRequest(object):
         self._finished = threading.Event()
         self._dirty = False
         self._overtaken_request = None
+        self._parent_request = None
 
         self.init_args = args
-        self.init_kwargs = kwargs    
+        self.init_kwargs = kwargs 
 
     def acquire(self):
         """
@@ -37,18 +38,25 @@ class BaseCollectiveRequest(object):
         function will return right away.
         """
         return self._finished.is_set()
+    
+    def done(self):
+        "Each algorithm must call this method when the internal flow is done."
+        if self._parent_request:
+            self._parent_request._finished.set()
+            
+        self._finished.set()
 
     def wait(self):
         """
         Wait until the collective operation has finished and then return the data.
         """
         self._finished.wait()
-        return self._get_data()
-        
-        # Requests are free to override this method, and implement their own
-        # wait(), but it is probably not needed. Look into writing a _get_data
-        # method instead.
 
+        if self._overtaken_request:
+            return self._overtaken_request._get_data()
+        else:
+            return self._get_data()
+        
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
         raise NotImplementedError("The accept() method was not implemented by the inheriting class.")
@@ -79,6 +87,8 @@ class BaseCollectiveRequest(object):
         # There is another request that will take our place. We save a reference to it
         # and handle some function magic
         self._overtaken_request = request
+        request._parent_request = self
+        request._dirty = True
         
         for method_name in ("acquire", "release", "test", "wait", "accept_msg", "is_dirty", "mark_dirty"):
             setattr(self, method_name, getattr(request, method_name))
