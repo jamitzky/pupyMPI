@@ -171,7 +171,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
             p_length = len(all_ranks)*self.chunksize # length af all payloads combined
 
             #Logger().debug("send to child:%s payloads:%s of len:%i" % (child, payloads, len(payloads[0]) ))
-            self.communicator._multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
+            self.multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
 
         self._finished.set()
 
