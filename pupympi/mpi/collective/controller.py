@@ -53,12 +53,16 @@ class Controller(object):
                 cls._coll_class_id = id
                 self.class_ids[id] = cls
                 id += 1
+                
+        #import time
+        #time.sleep(self.communicator.rank()*3)
+        #print "-"*80
+        #print self.class_ids
 
     def get_request(self, tag, *args, **kwargs):
         # Find the first suitable request for the given tag. There is no safety
         # net so if requests are non-exhaustive in their combined accept
         # pattern those not cathed parameters will not return a Request.
-
         try:
             req_class_list = self.cls_mapping[tag]
         except:
@@ -66,7 +70,6 @@ class Controller(object):
 
         for req_class in req_class_list:
             obj = req_class.accept(self.communicator, self.communicator.mpi.settings, self.cache, *args, **kwargs)
-            #Logger().debug("rank:%i has %s for req_class:%s arg:%s" % (self.rank,bool(obj), req_class.__name__, kwargs['data']) )
             if obj:
                 # Set the tag on the object.
                 obj.tag = tag

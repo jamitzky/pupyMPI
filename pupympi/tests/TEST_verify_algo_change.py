@@ -3,6 +3,7 @@
 # meta-minprocesses: 10
 
 from mpi import MPI
+import numpy
 
 mpi = MPI()
 world = mpi.MPI_COMM_WORLD
@@ -12,7 +13,7 @@ size = world.size()
 
 SCATTER_ROOT = 0
 if rank == SCATTER_ROOT:
-    scatter_data = range(size)
+    scatter_data = numpy.arange(size)
 else:
     scatter_data = None
 
