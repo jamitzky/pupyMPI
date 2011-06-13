@@ -185,8 +185,6 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
             start = (self.rank - (2**i) + 1) % self.size
             self.send_ranges.append( (start,self.rank) )
         
-        # DEBUG
-        Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
 
         # Filling gap
         if self.gap_size:
@@ -200,11 +198,11 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
             # ranges as they appear to the rank from which we will receive
             recv_gap_send_to = self.rank
             recv_gap_start = (recv_gap_send_to + 1) % self.size
-            recv_gap_end = (recv_gap_start + self.gap_size) % self.size
+            recv_gap_end = (recv_gap_start - 1 + self.gap_size) % self.size
             self.recv_ranges.append( (recv_gap_start,recv_gap_end) )
             
             gap_start = (gap_send_to + 1) % self.size
-            gap_end = (gap_start + self.gap_size) % self.size
+            gap_end = (gap_start - 1 + self.gap_size) % self.size
             self.send_ranges.append( (gap_start, gap_end) )
             # DEBUG
             #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
@@ -212,6 +210,9 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         # Start by sending the message for iteration 0
         # DEBUG
         #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
+
+        # DEBUG
+        Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
 
         # TODO: Use an isend with already serialized message instead?
         #self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
@@ -282,7 +283,6 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
             for raw_index, slice_rank in enumerate(range(slice_start, slice_end+1)):
                 Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
-
 
             
         # DEBUG
