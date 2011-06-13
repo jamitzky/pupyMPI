@@ -234,18 +234,6 @@ class Network(object):
         for handle in recv_handles:
             handle.wait()
 
-    #def _direct_send(self, communicator, message="", receivers=[], tag=constants.MPI_TAG_ANY):
-    #    from mpi.request import Request
-    #    rl = []
-    #    message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-    #    for recp in receivers:
-    #        request = Request("send", communicator, recp, tag, data=message)
-    #        request.is_pickled = True
-    #        self.t_out.add_out_request(request)
-    #        rl.append(request)
-    #
-    #    return rl
-
     def finalize(self):
         """
         Forwarding the finalize call to the threads. Look at the
@@ -431,7 +419,6 @@ class BaseCommunicationHandler(threading.Thread):
 
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
-                        #Logger().debug("Ssend done, status set to unacked")
                     else:
                         request.update("ready") # update status and signal anyone waiting on this request
                 else:

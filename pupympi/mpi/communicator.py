@@ -278,7 +278,7 @@ class Communicator:
     # other stuff, related to requests that may get done:
     # MPI_TYPE_CREATE_DARRAY (Distributed Array Datatype Constructor)
     #
-    def _multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0):
+    def _multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0, collective_header_information=()):
         """
         An internal send function built on _isend.
         Content is assumed to be a list of already serialized pieces of data. The pieces are
@@ -298,7 +298,7 @@ class Communicator:
             raise MPIInvalidTagException("All tags should be integers")
             
         # Create a send request object
-        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True, payload_size=payload_length)
+        handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True, payload_size=payload_length, collective_header_information=collective_header_information)
         # If sending to self, take a short-cut
         if destination == self.rank():
             self._send_to_self(handle)
