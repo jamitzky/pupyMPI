@@ -41,7 +41,7 @@ class TreeAllReduce(BaseCollectiveRequest):
     SETTINGS_PREFIX = "ALLREDUCE"
     
     def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
-        super(TreeAllReduce, self).__init__()
+        super(TreeAllReduce, self).__init__(communicator, data, operation, tag=constants.TAG_ALLREDUCE)
 
         self.communicator = communicator
 
@@ -185,7 +185,7 @@ class TreeReduce(BaseCollectiveRequest):
     SETTINGS_PREFIX = "REDUCE"
     
     def __init__(self, communicator, data, operation, root=0):
-        super(TreeReduce, self).__init__()
+        super(TreeReduce, self).__init__(communicator, data, operation, root=0)
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):

@@ -14,7 +14,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
     """
     
     def __init__(self, communicator, data):
-        super(DisseminationAllGather, self).__init__()
+        super(DisseminationAllGather, self).__init__(communicator, data)
 
         self.communicator = communicator
 
@@ -150,7 +150,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
     SETTINGS_PREFIX = "ALLGATHERPL"
     
     def __init__(self, communicator, data):
-        super(DisseminationAllGatherPickless, self).__init__()
+        super(DisseminationAllGatherPickless, self).__init__(communicator, data)
 
         self.communicator = communicator
 
@@ -331,7 +331,7 @@ class TreeGather(BaseCollectiveRequest):
     SETTINGS_PREFIX = "GATHER"
     
     def __init__(self, communicator, data=None, root=0):
-        super(TreeGather, self).__init__()
+        super(TreeGather, self).__init__(communicator, data=None, root=0)
 
         self.root = root
         self.communicator = communicator
@@ -404,7 +404,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
     SETTINGS_PREFIX = "GATHERPL"
     
     def __init__(self, communicator, data=None, root=0):
-        super(TreeGatherPickless, self).__init__()
+        super(TreeGatherPickless, self).__init__(communicator, data=None, root=0)
 
         self.root = root
         self.communicator = communicator

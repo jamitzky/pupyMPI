@@ -21,7 +21,7 @@ class TreeBarrier(BaseCollectiveRequest):
     SETTINGS_PREFIX = "BARRIER"
 
     def __init__(self, communicator):
-        super(TreeBarrier, self).__init__()
+        super(TreeBarrier, self).__init__(communicator)
 
         self.communicator = communicator
 
@@ -112,7 +112,7 @@ class RingBarrier(BaseCollectiveRequest):
     operation, but also result in less peak overhead / overload.
     """
     def __init__(self, communicator):
-        super(RingBarrier, self).__init__()
+        super(RingBarrier, self).__init__(communicator)
 
         self.communicator = communicator
 

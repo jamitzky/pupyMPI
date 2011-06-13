@@ -11,7 +11,7 @@ class TreeScatter(BaseCollectiveRequest):
     Generic scatter valid for all types
     """
     def __init__(self, communicator, data=None, root=0):
-        super(TreeScatter, self).__init__()
+        super(TreeScatter, self).__init__(communicator, data=None, root=0)
 
         self.data = data
         self.root = root
@@ -73,7 +73,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
     - Still no switching with regular TreeScatter
     """
     def __init__(self, communicator, data=None, root=0):
-        super(TreeScatterPickless, self).__init__()
+        super(TreeScatterPickless, self).__init__(communicator, data=None, root=0)
 
         #self.data = data
         self.root = root
