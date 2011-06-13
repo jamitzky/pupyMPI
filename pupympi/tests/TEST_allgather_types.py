@@ -20,8 +20,7 @@ na = numpy.arange(rank,rank+chunksize)
 received = world.allgather(na)
 if rank == 0:
     print "rank:% received:%s" % (rank, received)
-    assert numpy.all( numpy.array(received) == numpy.array([numpy.arange(r,r+chunksize) for r in range(size)]) )
-else:
-    assert received == None
+
+assert numpy.all( numpy.array(received) == numpy.array([numpy.arange(r,r+chunksize) for r in range(size)]) )
 
 mpi.finalize()
