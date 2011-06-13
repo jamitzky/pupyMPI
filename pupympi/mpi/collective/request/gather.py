@@ -8,20 +8,25 @@ from math import log
 import copy
 
 class DisseminationAllGather(BaseCollectiveRequest):
+    """
+    ISSUES:
+    - Does not work for np=1
+    """
+    
     def __init__(self, communicator, data):
         super(DisseminationAllGather, self).__init__()
 
-        self.data = data
         self.communicator = communicator
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
 
-    def start(self):
         # Data list to hold gathered result - indexed by rank
         self.data_list = [None] * self.size
-        self.data_list[self.rank] = self.data # Fill in own value
+        self.data_list[self.rank] = data # Fill in own value
 
+
+    def start(self):
         self.iterations = int(log(self.size, 2)) # How many iterations the algorithm will run, excluding gap-filling
         self.gap_size = self.size - 2**self.iterations # If size is not a power of 2 there will be a gap
         
@@ -130,31 +135,35 @@ class DisseminationAllGather(BaseCollectiveRequest):
         return True
 
     def finish(self):
-        self.data = self.data_list
         self._finished.set()
 
     def _get_data(self):
-        return self.data
+        return self.data_list
 
 
 class DisseminationAllGatherPickless(BaseCollectiveRequest):
-    
+    """
+    ISSUES:
+    - We cannot deal with numpy arrays or bytearrays of varying sizes. If a rank sends an array greater og smaller than the others the slicing will be off
+    - We should consider preallocating a bytearray to hold the data this might be faster than the data_list and slicing would be simpler
+    """
     SETTINGS_PREFIX = "ALLGATHERPL"
     
     def __init__(self, communicator, data):
         super(DisseminationAllGatherPickless, self).__init__()
 
-        self.data = data
         self.communicator = communicator
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
 
-    def start(self):
         # Data list to hold gathered result - indexed by rank
         self.data_list = [None] * self.size
-        self.data_list[self.rank] = self.data # Fill in own value
+        self.data_list[self.rank],cmd = utils.serialize_message(data) # Fill in own value
+        self.msg_type = cmd
+        self.chunksize = len(self.data_list[self.rank])
 
+    def start(self):
         self.iterations = int(log(self.size, 2)) # How many iterations the algorithm will run, excluding gap-filling
         self.gap_size = self.size - 2**self.iterations # If size is not a power of 2 there will be a gap
         
@@ -162,21 +171,37 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         # - indexed by the iteration in which the communication is to occur
         self.send_to = []
         self.recv_from = []
+        self.recv_ranges = [] # list of tuples of (range start, range end) of ranks whose payloads are received in each iteration
         self.send_ranges = [] # list of tuples of (range start, range end) where start may be larger than end, in the wrap-around case
         # FIXME: Below is for clarity but should be done faster with list comprehensions
         for i in xrange(self.iterations):
             self.send_to.append( (2**i+self.rank) % self.size )
-            self.recv_from.append( (self.rank - (2**i)) % self.size )
+            recv_from_rank = (self.rank - (2**i)) % self.size            
+            self.recv_from.append( recv_from_rank )
+            
+            recv_start = (recv_from_rank - (2**i) + 1) % self.size # send ranges as they appear to the rank from which we will receive
+            self.recv_ranges.append( (recv_start,recv_from_rank) )
+            
             start = (self.rank - (2**i) + 1) % self.size
             self.send_ranges.append( (start,self.rank) )
         
+        # DEBUG
+        Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
+
         # Filling gap
         if self.gap_size:
             # Calculate rank for receive and send (own rank offset by half of next power of two)
-            gap_send_to = (self.rank + 2**self.iterations) % self.size
-            
+            gap_send_to = (self.rank + 2**self.iterations) % self.size            
             self.send_to.append( gap_send_to )
-            self.recv_from.append( (self.rank - 2**self.iterations) % self.size )
+            
+            recv_from_rank = (self.rank - (2**self.iterations)) % self.size
+            self.recv_from.append( recv_from_rank )
+            
+            # ranges as they appear to the rank from which we will receive
+            recv_gap_send_to = self.rank
+            recv_gap_start = (recv_gap_send_to + 1) % self.size
+            recv_gap_end = (recv_gap_start + self.gap_size) % self.size
+            self.recv_ranges.append( (recv_gap_start,recv_gap_end) )
             
             gap_start = (gap_send_to + 1) % self.size
             gap_end = (gap_start + self.gap_size) % self.size
@@ -187,7 +212,10 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         # Start by sending the message for iteration 0
         # DEBUG
         #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
-        self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
+
+        # TODO: Use an isend with already serialized message instead?
+        #self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
+        self.communicator._multisend([self.data_list[self.rank]], self.send_to[0], tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=self.chunksize )
         
         # Mark send communication as done for iteration 0
         self.send_to[0] = None
@@ -202,7 +230,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         
         # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
         if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
-            return cls(communicator, *args, **kwargs)        
+            return cls(communicator, *args, **kwargs)
 
 
     def accept_msg(self, rank, raw_data, msg_type):
@@ -213,19 +241,15 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         if self._finished.is_set() or rank not in self.recv_from:
             #Logger().debug("accept_msg BAIL finished_is_set:%s or rank:%i != self.recv_from:%s data was:%s" % (self._finished.is_set(), rank, self.recv_from,raw_data))
             return False
-
-        # Put valid data in proper place
-        data = utils.deserialize_message(raw_data, msg_type)
-        for e in range(self.size):
-            if data[e] is not None:
-                self.data_list[e] = data[e]
-            
+        
         # Check if the accept puts the algorithm into next iteration
         iteration = 0
+        message_iteration = 0 # what iteration the other party was in, that is what iteration the message belongs to
         blocked = False
         for i,r in enumerate(self.recv_from):
             if r == rank: # When we hit the rank we mark as having received
-                self.recv_from[i] = None
+                self.recv_from[i] = None # Mark the rank as having been received
+                message_iteration = i                
                 # If no blockers were found before, the next iteration can begin
                 if not blocked:
                     iteration = i+1                
@@ -236,7 +260,30 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
                 if not blocked: # First one we hit takes precedence
                     iteration = i
                     blocked = True
-        
+
+
+        # Store raw data in proper place
+        (slice_start, slice_end) = self.recv_ranges[message_iteration]        
+        # If end<start the slice wraps around and two slices are needed
+        if slice_end < slice_start:
+            ranks_in_the_middle = slice_start - slice_end - 1
+            ranks_in_last_slice = self.size - ranks_in_the_middle - slice_end
+            for raw_index, slice_rank in enumerate( range(0,slice_end)+range(slice_start, slice_start+ranks_in_last_slice) ):
+                Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
+                try:
+                    self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
+                except Exception as e:
+                    # DEBUG
+                    #Logger().debug("rank:%i slice_rank:%i start:%i end:%i len(data_list):%s" % (self.rank,slice_rank,slice_start, slice_end, len(self.data_list) ))
+                    raise e
+        else:
+            #for raw_index, slice_rank in enumerate(range(slice_start, slice_end)):
+            for raw_index, slice_rank in enumerate(range(slice_start, slice_end+1)):
+                Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
+                self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
+
+
+            
         # DEBUG
         #Logger().debug("rank:%i RECV iteration:%i, recv_from:%s, r:%s" % (self.rank,iteration,self.recv_from, rank))
 
@@ -248,14 +295,13 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
                 # Slice out the data that needs to be sent
                 (start,end) = self.send_ranges[i]
                 if end < start:
-                    slice = self.data_list[:end+1] + [None]*(start-end-1) + self.data_list[start:]
+                    payloads = self.data_list[:end+1] + self.data_list[start:]
                 else:
-                    slice = [None]*start + self.data_list[start:end+1] + [None]*(self.size - (end+1))
+                    payloads = self.data_list[start:end+1]
 
                 # DEBUG
                 #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
-                
-                self.communicator._isend(slice, r, constants.TAG_ALLGATHER)
+                self.communicator._multisend(payloads, r, tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
                 self.send_to[i] = None
                 
         # Check if we are done
@@ -267,11 +313,11 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         return True
 
     def finish(self):
-        self.data = self.data_list
         self._finished.set()
 
     def _get_data(self):
-        return self.data
+        Logger().debug("rank:%i GETTING data_list:%s" % (self.rank, self.data_list) )
+        return [ utils.deserialize_message(self.data_list[r], self.msg_type) for r in range(self.size) ]
 
 class TreeGather(BaseCollectiveRequest):
     """
