@@ -17,11 +17,10 @@
 #
 __version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random, os
+import sys, hashlib, random, os,threading, getopt, time, numpy, time
+
 from optparse import OptionParser, OptionGroup
-import threading, getopt, time
 from threading import Thread
-import numpy
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -30,22 +29,11 @@ from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
-import mpi.network.utils as utils
-
+from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
+from mpi.commons import pupyprof, yappi
 
-import time
-
-try:
-    import yappi
-except ImportError:
-    pass
-
-try:
-    import pupyprof
-except ImportError:
-    pass
 
 class MPI(Thread):
     """
@@ -109,12 +97,6 @@ class MPI(Thread):
         # Data structures for jobs.
         # The locks are for guarding the data structures
         # The events are for signalling change in data structures
-
-        # Unstarted requests are send requests, outbound requests are held here so the user thread can return quickly
-        # TRW
-        #self.unstarted_requests = []
-        #self.unstarted_requests_lock = threading.Lock()
-        #self.unstarted_requests_has_work = threading.Event()
 
         # Pending requests are recieve requests where the data may or may not have arrived
         self.pending_requests = []

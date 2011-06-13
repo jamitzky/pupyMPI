@@ -5,13 +5,12 @@
 
 from mpi import MPI
 from mpi.collective.operations import MPI_sum
+import sys
+from mpi.commons import numpy as np
 mpi = MPI()
 
-try:
-    import numpy as np
-except ImportError:
+if not np:
     print "NumPy not installed. Will bail from this test. "
-    import sys
     mpi.finalize()
     sys.exit()
 

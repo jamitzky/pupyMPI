@@ -61,10 +61,7 @@ classea have their own individual responsability:
     
     Several plots should be made by simply using this function multiple times.
 """
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+from mpi.commons import pickle
 
 from os import path
 from pupyplot.lib.aggregate import find_function
