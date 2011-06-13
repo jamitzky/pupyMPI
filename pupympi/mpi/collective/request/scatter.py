@@ -60,12 +60,11 @@ class TreeScatter(BaseCollectiveRequest):
                 data[r] = self.data[r]
             self.isend(data, child, tag=constants.TAG_SCATTER)
 
-        self._finished.set()
+        self.done()
 
     def _get_data(self):
         # We only need our own data
         return self.data[self.rank]
-
 
 class TreeScatterPickless(BaseCollectiveRequest):
     """
@@ -201,7 +200,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
             #Logger().debug("send to child:%s payloads:%s of len:%i" % (child, payloads, len(payloads[0]) ))
             self.multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
 
-        self._finished.set()
+        self.done()
         
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
