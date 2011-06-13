@@ -63,7 +63,7 @@ class SendSimpleCommand(threading.Thread):
                     incomming, _, errors = select.select([connection], [], [connection], self.timeout or 5)
                     if incomming:
                         # We read the message from the connection and set that as the result_data.
-                        rank, cmd, tag, ack, comm_id, data = get_raw_message(incomming[0])
+                        rank, cmd, tag, ack, comm_id, _, data = get_raw_message(incomming[0])
                         data = pickle.loads(data)
 
                         self.data = data
