@@ -13,9 +13,9 @@ except ImportError:
 try:
     import yappi
 except ImportError:
-    pass
+    yappi = None
 
 try:
     import pupyprof
 except ImportError:
-    pass
+    pupyprof = None
