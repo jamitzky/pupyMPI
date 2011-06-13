@@ -27,6 +27,8 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    
+HEADER_FORMAT = "llllllll"
 
 def create_random_socket(min=10000, max=30000):
     """
@@ -97,12 +99,12 @@ def get_raw_message(client_socket, bytecount=4096):
 
         return message
 
-    header_size = struct.calcsize("llllll")
+    header_size = struct.calcsize(HEADER_FORMAT)
     header = receive_fixed(header_size)
-    lpd, rank, cmd, tag, ack, comm_id = struct.unpack("llllll", header)
+    lpd, rank, cmd, tag, ack, comm_id, coll_class_id = struct.unpack(HEADER_FORMAT, header)
     # DEBUG
     #Logger().debug("recieved: length:%s tuple:%s" % (header_size, (lpd, rank, cmd, tag, ack, comm_id )))
-    return rank, cmd, tag, ack, comm_id, receive_fixed(lpd)
+    return rank, cmd, tag, ack, comm_id, coll_class_id, receive_fixed(lpd)
 
 
 # ... just for later inspiration
@@ -133,7 +135,7 @@ numpytypes = {
 
 typeint_to_type = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items()+othertypes.items() ] )
 type_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items()+othertypes.items() ] )
-def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, payload_length=0):
+def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, payload_length=0, collective_header_information=()):
     """
     Internal function to
     - construct header for a list of already serialized payloads
@@ -143,14 +145,15 @@ def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_
     
     The header format is the traditional
     """        
+    coll_class_id = collective_header_information[0]
 
-    header = struct.pack("llllll", payload_length, rank, cmd, tag, ack, comm_id)
+    header = struct.pack(HEADER_FORMAT, payload_length, rank, cmd, tag, ack, comm_id, coll_class_id)
     return header
 
 def get_shape(shapebytes):
     return tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
 
-def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_serialized=False):
+def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_serialized=False, collective_header_information=()):
     """
     Internal function to
     - serialize payload if needed
@@ -176,10 +179,8 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
         serialized_data = data
     else:
         serialized_data, cmd = serialize_message(data,cmd)
-        
-    lpd = len(serialized_data)
-
-    header = struct.pack("llllll", lpd, rank, cmd, tag, ack, comm_id)
+       
+    header =  prepare_multiheader(rank, cmd=cmd, tag=tag, ack=ack, comm_id=comm_id, payload_length=len(serialized_data), collective_header_information=collective_header_information)
     return (header,serialized_data)
 
 def serialize_message(data, cmd=None, recipients=1):
