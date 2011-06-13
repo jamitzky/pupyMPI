@@ -59,7 +59,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
         # Start by sending the message for iteration 0
         # DEBUG
         #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
-        self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
+        self.isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
         
         # Mark send communication as done for iteration 0
         self.send_to[0] = None

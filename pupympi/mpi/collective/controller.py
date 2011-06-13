@@ -78,8 +78,6 @@ class Controller(object):
                     # Signal
                     self.mpi.unstarted_collective_requests_has_work.set()
                     self.mpi.has_work_event.set()
-                    # DEBUG
-                    #Logger().debug("adding and signalled allgather req obj")
 
                 return obj
 

@@ -78,10 +78,7 @@ class TreeBCast(BaseCollectiveRequest):
         
         Transit flag means the sending node is just a transit node for data, ie. the data is already serialized
         """
-        self.communicator._direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
-        # DEBUG
-        #Logger().debug("--sent to %s" % self.children)
-        
+        self.direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
 
     def _get_data(self):        
         # For root the data is not serialized
@@ -140,7 +137,7 @@ class RingBCast(BaseCollectiveRequest):
         return True
                 
     def forward(self):
-        self.communicator._isend(self.data, self.next, tag=constants.TAG_BCAST)
+        self.isend(self.data, self.next, tag=constants.TAG_BCAST)
         self._finished.set()
         
     @classmethod
