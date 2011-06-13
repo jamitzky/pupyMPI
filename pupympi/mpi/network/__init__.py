@@ -188,7 +188,7 @@ class Network(object):
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
         from mpi import dill
-        _, _, _, _, _, data = get_raw_message(s_conn)
+        _, _, _, _, _, _, data = get_raw_message(s_conn)
         all_procs, state = dill.loads(data)
 
         if state:
@@ -348,7 +348,7 @@ class BaseCommunicationHandler(threading.Thread):
                 conn = read_socket
 
             try:
-                rank, msg_type, tag, ack, comm_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
+                rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data = get_raw_message(conn, self.network.mpi.settings.SOCKET_RECEIVE_BYTECOUNT)
             except MPIException, e:
                 # Broken connection is ok when shutdown is going on
                 if self.shutdown_event.is_set():
@@ -369,7 +369,7 @@ class BaseCommunicationHandler(threading.Thread):
             if msg_type >= constants.CMD_RAWTYPE:
                 try:
                     with self.network.mpi.raw_data_lock:
-                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, raw_data) )
+                        self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
                         # DEBUG

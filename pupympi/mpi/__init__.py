@@ -486,7 +486,7 @@ class MPI(Thread):
                 # DEBUG
                 #Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
                 for item in self.received_collective_data:
-                    (rank, msg_type, tag, ack, comm_id, raw_data) = item
+                    (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
 
                     # Match with a request.
                     match = False
@@ -499,6 +499,9 @@ class MPI(Thread):
                         if request.communicator.id == comm_id and request.tag == tag:
                             try:
                                 match = request.accept_msg(rank, raw_data, msg_type)
+                                
+                                # Check if we can overtake the request object in stead. 
+                                
                             except TypeError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
@@ -594,13 +597,13 @@ class MPI(Thread):
                     # instead it should be enough to lock around the append and set() as is the case for received_collective_data_lock
                     with self.received_data_lock:
                         for element in self.raw_data_queue:
-                            (rank, msg_type, tag, ack, comm_id, raw_data) = element
+                            (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
 
                             if tag in constants.COLLECTIVE_TAGS:
                                 # Messages that are part of a collective request, are handled
                                 # on a seperate queue and matched and deserialized later
                                 with self.received_collective_data_lock:
-                                    self.received_collective_data.append((rank, msg_type, tag, ack, comm_id, raw_data) )
+                                    self.received_collective_data.append(element)
                                     self.pending_collective_requests_has_work.set()
 
                             else:

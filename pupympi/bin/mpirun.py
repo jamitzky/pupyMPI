@@ -153,7 +153,7 @@ def communicate_startup(no_procs, ssocket, resume_state=None):
         sender_conns.append( sender_conn )
 
         # Receiving data about the communicator, by unpacking the head etc.
-        rank, command, tag, ack, comm_id, data = get_raw_message(sender_conn)
+        rank, command, tag, ack, comm_id, _, data = get_raw_message(sender_conn)
         message = pickle.loads(data)
 
         # Add the connection by the rank.

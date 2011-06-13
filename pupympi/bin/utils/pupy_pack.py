@@ -50,7 +50,7 @@ class Receiver(Thread):
             if incomming:
                 for connection in incomming:
                     from mpi.network import utils as mpi_utils
-                    rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(connection)
+                    rank, cmd, tag, ack, comm_id, _, data = mpi_utils.get_raw_message(connection)
                     connection.close()
 
                     self.connections.remove(connection)

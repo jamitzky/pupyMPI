@@ -135,7 +135,7 @@ class MigratePack(object):
             # Handle the reads.
             for rsocket in rlist:
                 try:
-                    rank, cmd, tag, ack, comm_id, data = mpi_utils.get_raw_message(rsocket)
+                    rank, cmd, tag, ack, comm_id, _, data = mpi_utils.get_raw_message(rsocket)
 
                     if cmd == constants.CMD_CONN_CLOSE:
                         read_connections.remove(rsocket)
