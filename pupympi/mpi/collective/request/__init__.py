@@ -70,7 +70,9 @@ class BaseCollectiveRequest(object):
     def mark_dirty(self):
         self._is_dirty = True
         
-    def request_overtake(self, request):
+    def request_overtake(self, request_cls, *args, **kwargs):
+        request = cls() # This will not work. We miss arguments here. 
+        
         # There is another request that will take our place. We save a reference to it
         # and handle some function magic
         self._overtaken_request = request
