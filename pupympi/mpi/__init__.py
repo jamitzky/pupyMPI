@@ -482,6 +482,8 @@ class MPI(Thread):
                             except TypeError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
+                            if request.communicator.rank() == 0:
+                                print "We found match ", match, "dirty", request.is_dirty(), "request coll id", request._coll_class_id, "received coll id", coll_class_id
                             if not match and not request.is_dirty() and request._coll_class_id != coll_class_id: # Check if we can overtake the request object in stead.
                                 # Generate a new request. There might be some problems here that is hard to predict. Can we have a non dirty request that will actually
                                 # not be in the situation even though we have the same tag? A solution would be to number the collective operations and match them by

@@ -71,7 +71,7 @@ class BaseCollectiveRequest(object):
         return self._dirty
     
     def mark_dirty(self):
-        self._is_dirty = True
+        self._dirty = True
         
     def request_overtake(self, request_cls, *args, **kwargs):
         request = cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
