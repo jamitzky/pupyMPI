@@ -73,8 +73,8 @@ class BaseCollectiveRequest(object):
     def mark_dirty(self):
         self._dirty = True
         
-    def request_overtake(self, request_cls, *args, **kwargs):
-        request = cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
+    def overtake(self, request_cls, *args, **kwargs):
+        request = request_cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
         
         # There is another request that will take our place. We save a reference to it
         # and handle some function magic
@@ -83,6 +83,11 @@ class BaseCollectiveRequest(object):
         for method_name in ("acquire", "release", "test", "wait", "accept_msg", "is_dirty", "mark_dirty"):
             setattr(self, method_name, getattr(request, method_name))
             
+        # Moving the topology is only a hack. We need to insert it nicer in the first place
+        if not hasattr(request, "topology") and hasattr(self, "topology"):
+            request.topology = self.topology
+         
+        request.start()   
         # There is no reason to replace the original request in the system queues as
         # we just pass on all the method calls. 
         
