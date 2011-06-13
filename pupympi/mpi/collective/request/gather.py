@@ -266,14 +266,15 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         (slice_start, slice_end) = self.recv_ranges[message_iteration]        
         # If end<start the slice wraps around and two slices are needed
         if slice_end < slice_start:
-            ranks_in_the_middle = slice_start - slice_end - 1
-            ranks_in_last_slice = self.size - ranks_in_the_middle - slice_end
-            for raw_index, slice_rank in enumerate( range(0,slice_end)+range(slice_start, slice_start+ranks_in_last_slice) ):
+            ranks_in_the_middle = slice_start - (slice_end - 1)
+            ranks_in_last_slice = self.size - ranks_in_the_middle - (slice_end - 1)
+            #for raw_index, slice_rank in enumerate( range(0,slice_end)+range(slice_start, slice_start+ranks_in_last_slice) ):
+            for raw_index, slice_rank in enumerate( range(0,slice_end+1)+range(slice_start, slice_start+ranks_in_last_slice) ):
                 Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 try:
                     self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
-                except Exception as e:
-                    # DEBUG
+                # DEBUG
+                except Exception as e:                
                     #Logger().debug("rank:%i slice_rank:%i start:%i end:%i len(data_list):%s" % (self.rank,slice_rank,slice_start, slice_end, len(self.data_list) ))
                     raise e
         else:
@@ -316,7 +317,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         self._finished.set()
 
     def _get_data(self):
-        Logger().debug("rank:%i GETTING data_list:%s" % (self.rank, self.data_list) )
+        #Logger().debug("rank:%i GETTING data_list:%s" % (self.rank, self.data_list) )
         return [ utils.deserialize_message(self.data_list[r], self.msg_type) for r in range(self.size) ]
 
 class TreeGather(BaseCollectiveRequest):
