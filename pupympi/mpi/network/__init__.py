@@ -409,7 +409,8 @@ class BaseCommunicationHandler(threading.Thread):
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
-                        continue
+                        #continue
+                        raise e
                     except Exception, e:
                         Logger().error("Other exception got:%s for socket:%s with header:%s payload:%s" % (e,write_socket,request.header, request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
