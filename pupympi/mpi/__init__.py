@@ -17,9 +17,10 @@
 #
 __version__ = "0.9.2" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, os, random, threading, getopt, time, numpy, time
+import sys
+import threading
+import time
 
-from optparse import OptionParser, OptionGroup
 from threading import Thread
 
 from mpi.communicator import Communicator
@@ -32,7 +33,9 @@ from mpi.network.utils import pickle, robust_send, prepare_message
 from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
-from mpi.commons import pupyprof, yappi
+from mpi.commons import pupyprof, yappi, numpy
+from optparse import OptionParser, OptionGroup
+
 
 class MPI(Thread):
     """
@@ -160,7 +163,7 @@ class MPI(Thread):
         # Decide how to deal with I/O
         if options.process_io == "remotefile":
             # Initialise the logger
-
+            import os
             logger = Logger(os.path.join(options.logdir,"remotelog"), "proc-%d" % options.rank, options.debug, options.verbosity, True)
             filename = constants.DEFAULT_LOGDIR+'mpi.local.rank%s.log' % options.rank
 
@@ -872,6 +875,7 @@ class MPI(Thread):
         Note that no component will be generated if the user did not want to
         allow run time manipulation of the execution environment.
         """
+        import random, hashlib
         if self.security_component:
             raise Exception("Security component already genearted!")
 
