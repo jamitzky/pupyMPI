@@ -2,14 +2,13 @@
 # meta-expectedresult: 0
 # meta-minprocesses: 2
 
+import sys
 from mpi import MPI
+from mpi.commons import numpy as np
 mpi = MPI()
 
-try:
-    import numpy as np
-except ImportError:
+if not np:
     print "NumPy not installed. Will bail from this test. "
-    import sys
     mpi.finalize()
     sys.exit()
 

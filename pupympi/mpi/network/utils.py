@@ -15,19 +15,13 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 #
-import socket, struct
-import random
-import numpy
+import socket, struct, random, numpy
 
 from mpi.logger import Logger
 from mpi.exceptions import MPIException
 from mpi import constants
+from mpi.commons import pickle
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-    
 HEADER_FORMAT = "llllllll"
 
 def create_random_socket(min=10000, max=30000):
