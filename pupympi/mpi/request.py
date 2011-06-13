@@ -123,7 +123,7 @@ class Request(BaseRequest):
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
         
-        common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : collective_header_information, }
+        common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : self.collective_header_information, }
 
         if self.multi:
             self.header = utils.prepare_multiheader(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)

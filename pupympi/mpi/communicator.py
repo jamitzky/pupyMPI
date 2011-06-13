@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License 2
 # along with pupyMPI.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, copy, time
-
-import numpy
 
 from mpi import constants
 from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICommunicatorGroupNotSubsetOf, MPICommunicatorNoNewIdAvailable, MPIException, NotImplementedException, MPIInvalidRankException
 from mpi.logger import Logger
 from mpi.request import Request
 from mpi.syscommands import handle_system_commands, execute_system_commands
+
+import sys, time
+import numpy
 
 class Communicator:
     def __init__(self, mpi, rank, size, network, group, id=0, name="MPI_COMM_WORLD", comm_root = None):
@@ -212,6 +212,7 @@ class Communicator:
 
         Original MPI 1.1 specification at http://www.mpi-forum.org/docs/mpi-11-html/node102.html
         """
+        import copy
         execute_system_commands(self.mpi)
         new_comm = self.comm_create(self.group())
         for a in self.attr:
