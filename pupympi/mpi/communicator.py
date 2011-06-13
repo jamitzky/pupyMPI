@@ -986,7 +986,7 @@ class Communicator:
         return self._iallgather(data)
 
     def _iallgather(self, data):
-        return self.collective_controller.get_request(constants.TAG_ALLGATHER, data)
+        return self.collective_controller.get_request(constants.TAG_ALLGATHER, data=data)
 
     def allreduce(self, data, operation):
         """

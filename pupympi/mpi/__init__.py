@@ -500,7 +500,7 @@ class MPI(Thread):
                             try:
                                 match = request.accept_msg(rank, raw_data, msg_type)
                             except TypeError, e:
-                                print "TypeError when accepting msg for request of type", request.__class__
+                                Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
                             # Debug only. Should go away (maybe)
                             if match is None:

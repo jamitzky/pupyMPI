@@ -147,6 +147,9 @@ def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_
     header = struct.pack("llllll", payload_length, rank, cmd, tag, ack, comm_id)
     return header
 
+def get_shape(shapebytes):
+    return tuple(numpy.fromstring(shapebytes,numpy.dtype(int)))
+
 def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, is_serialized=False):
     """
     Internal function to
@@ -179,29 +182,45 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     header = struct.pack("llllll", lpd, rank, cmd, tag, ack, comm_id)
     return (header,serialized_data)
 
-def serialize_message(data, cmd=None):
+def serialize_message(data, cmd=None, recipients=1):
     """
     Internal function to
     - measure and serialize payload
     - construct proper msg_type (cmd) including possible shapebytes
+    
+    NOTE:
+    The recipients parameter only takes effect when scattering multi-dimensional
+    numpy arrays. Here shapebytes are adjusted to reflect the final (scattered)
+    shape
     """
     if isinstance(data,numpy.ndarray):
         # Multidimensional array?
         if len(data.shape) > 1:
             # DEBUG
-            Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
+            #Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
 
             # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
-            byteshape = numpy.array(data.shape).tostring()
+            if recipients > 1:
+                # If the array is to be scattered, the first dimension is proportionally smaller
+                shape_array = numpy.array(data.shape)
+                shape_array[0] = shape_array[0] / recipients
+                byteshape = shape_array.tostring()
+            else:
+                byteshape = numpy.array(data.shape).tostring()
             # Note how many bytes are shape bytes
             shapelen = len(byteshape)
             # Look up the correct type int
             cmd = type_to_typeint[data.dtype]
             # Store shapelen in the upper decimals of the cmd
             cmd = shapelen*1000 + cmd
+            # FIXME: This is another unneccessary string allocation.
+            #        We need to keep payload separated into shapebytes and the bytes making up the actual numpy array
             # Convert data to bytearray with shape prepended
             serialized_data = byteshape + data.tostring()
             
+            # DEBUG
+            Logger().debug("prepare MULTI - type:%s shape:%s" % (data.dtype, data.shape) )
+
             # BELOW WORKS WITH NUMPY >= 1.5                
             ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
             #byteshape = bytearray(numpy.array(data.shape))
@@ -286,6 +305,8 @@ def robust_send_multi(socket, messages):
     """
     experimental cousin of robust_send
     if we can agree that the overhead of always considering messages a list is negligible this can be folded into regular robust_send
+    
+    TODO: Check (eg. with wireshark) if every send produces a tcp packet or if several messages can be packed into on tcp packet (which we hope is what happens)
     """
     for message in messages:
         target = len(message) # how many bytes to send
