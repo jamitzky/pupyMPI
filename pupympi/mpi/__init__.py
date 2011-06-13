@@ -483,31 +483,21 @@ class MPI(Thread):
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
                 new_data_list = []
-                # DEBUG
-                #Logger().debug("match_collective_pending: received %s" % self.received_collective_data)
+
                 for item in self.received_collective_data:
                     (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
 
-                    # Match with a request.
                     match = False
-                    # DEBUG
-                    #Logger().debug("mcp - pending_collective_requests:%i" % len(self.pending_collective_requests) )
                     for request in self.pending_collective_requests:
-                        # DEBUG
-                        #Logger().debug("trying to match")
-                        # Check we have the correct tag and communicator id.
                         if request.communicator.id == comm_id and request.tag == tag:
                             try:
                                 match = request.accept_msg(rank, raw_data, msg_type)
                                 
-                                # Check if we can overtake the request object in stead. 
+                                # Check if we can overtake the request object in stead.
                                 
                             except TypeError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
-                            # Debug only. Should go away (maybe)
-                            if match is None:
-                                Logger().warning("A collective request is behaving strangely. Received none from accept_msg. request is: %s" % request)
                             if match:
                                 # DEBUG
                                 #Logger().debug("match FOUND for - rank:%i, tag:%i" % (rank,tag))
@@ -516,8 +506,6 @@ class MPI(Thread):
                                 break
 
                     if not match:
-                        # DEBUG
-                        #Logger().debug("NO match for - rank:%i, tag:%i" % (rank,tag))
                         new_data_list.append( item )
 
                 self.received_collective_data = new_data_list
@@ -526,14 +514,11 @@ class MPI(Thread):
                 # We remove all the requests marked as completed.
                 self.pending_collective_requests = [r for r in self.pending_collective_requests if not r.test()]
 
-
     def match_pending(self, request):
         """
-        Tries to match a pending request with something in
-        the received data.
+        Tries to match a pending request with something in the received data.
 
-        If the received data is found we remove it from the
-        list.
+        If the received data is found we remove it from the list.
 
         The request is updated with the data if found and this
         status update returned from the function so it is possible
@@ -580,8 +565,6 @@ class MPI(Thread):
             yappi.start(builtins=True)
 
         while not self.shutdown_event.is_set():
-            #Logger().debug("--Gonna wait for work")
-
             # NOTE: If someone sets this event between the wait and the clear that
             # signal will be missed, but that is just fine since we are about to
             # check the queues anyway
@@ -614,12 +597,9 @@ class MPI(Thread):
                     self.raw_data_has_work.clear()
 
             # Collective requests.
-            #Logger().debug("Collective requests has work???")
             if self.unstarted_collective_requests_has_work.is_set():
                 self.unstarted_collective_requests_has_work.clear()
                 with self.unstarted_collective_requests_lock:
-                    # DEBUG
-                    #Logger().debug("Collective requests has work %s" % self.unstarted_collective_requests)
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
@@ -690,14 +670,10 @@ class MPI(Thread):
         if sys.stdout is not None:
             sys.stdout.flush() # Slight hack to get the rest of the output out
 
-        # DEBUG
-        #Logger().debug("done running and flushing")
-
     def get_state(self):
         """
         A function for getting the current state of the MPI environment.
         """
-        import sys
         user_module = sys.argv[0].split("/")[-1].replace(".py","")
 
         return {
@@ -760,10 +736,6 @@ class MPI(Thread):
         for set_name in config_data:
             set_value = config_data[set_name]
             res[set_name] = self._set_config(set_name, set_value)
-
-        # Debug. Print all the stuff
-        for attr in dir(self.settings):
-            print "attr:", attr, getattr(self.settings, attr)
 
         return res
 
