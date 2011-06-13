@@ -48,7 +48,9 @@ class Controller(object):
         self.class_ids = {}
         
         id = 0
-        for tag in self.cls_mapping:
+        tags = self.cls_mapping.keys()
+        tags.sort()
+        for tag in tags:
             for cls in self.cls_mapping[tag]:
                 cls._coll_class_id = id
                 self.class_ids[id] = cls
