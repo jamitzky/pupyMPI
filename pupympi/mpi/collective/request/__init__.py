@@ -65,7 +65,7 @@ class BaseCollectiveRequest(object):
         Return a boolean indicating if the request object has already participated in a receive
         or send. 
         """
-        return self._is_dirty
+        return self._dirty
     
     def mark_dirty(self):
         self._is_dirty = True
