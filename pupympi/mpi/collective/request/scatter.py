@@ -19,7 +19,9 @@ class TreeScatter(BaseCollectiveRequest):
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
-
+        # DEBUG
+        Logger().debug("VANILLA class initializing")
+        
         # Slice the data.
         if self.root == self.rank:
             chunk_size = len(data) / self.size
@@ -83,12 +85,13 @@ class TreeScatterPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
         
         self.msg_type = None
+        Logger().debug("PICKLESS class initializing")
         
         # Serialize the data
         if self.root == self.rank:
             # TODO: This is done from the start but maybe we want to hold off until later, if so root could skip the (de)serialization to self
             self.data,cmd = utils.serialize_message(data, recipients=self.size)
-            Logger().debug("RANK:%i data:%s self.data:%s" % (self.rank,data, self.data) )
+            #Logger().debug("RANK:%i data:%s self.data:%s" % (self.rank,data, self.data) )
             self.msg_type = cmd
             
             # FIXME: The recreation of shape and/or shapebytes should be avoided by letting serialize_message return it
@@ -199,6 +202,33 @@ class TreeScatterPickless(BaseCollectiveRequest):
             self.multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
 
         self._finished.set()
+        
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        """
+        Accept as long as it is numpy array or bytearray
+        """
+        import numpy # FIXME: Move this import somewhere nice
+        
+        # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
+        if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
+            obj = cls(communicator, *args, **kwargs)
+            
+            # Check if the topology is in the cache
+            root = kwargs.get("root", 0)
+            cache_idx = "tree_binomial_%d" % root
+            topology = cache.get(cache_idx, default=None)
+            if not topology:
+                # TODO:
+                # here the orthogonality of accepting on topology vs. accepting on data type or data size really kicks in
+                # since the accept logic is coded only with communicator size in mind, it is hard to intersperse other accept conditions
+                # For now we just assume that binomial tree is the way to go,that is we ignore communicator size
+                # BUT when benchmarking we should have both the data type AND the communicator size considered before choosing a class
+                topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
+                cache.set(cache_idx, topology)
+    
+            obj.topology = topology
+            return obj
 
     def _get_data(self):
         begin = self.pos * self.chunksize + self.shapelen
@@ -217,7 +247,7 @@ class FlatTreeScatter(FlatTreeAccepter, TreeScatter):
 class BinomialTreeScatter(BinomialTreeAccepter, TreeScatter):
     pass
 
-class BinomialTreeScatterPickless(BinomialTreeAccepter, TreeScatterPickless):
+class BinomialTreeScatterPickless(TreeScatterPickless):
     pass
 
 class StaticFanoutTreeScatter(StaticFanoutTreeAccepter, TreeScatter):
