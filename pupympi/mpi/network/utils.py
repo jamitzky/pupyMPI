@@ -141,8 +141,8 @@ def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_
     """      
     try:
         coll_class_id = collective_header_information[0]
-    except IndexError:
-        coll_class_id = 0
+    except IndexError, e:
+        coll_class_id = -1
 
     header = struct.pack(HEADER_FORMAT, payload_length, rank, cmd, tag, ack, comm_id, coll_class_id)
     return header
