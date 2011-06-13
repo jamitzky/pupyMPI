@@ -60,7 +60,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False, payload_size=0):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False, payload_size=0, collective_header_information=()):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -78,6 +78,8 @@ class Request(BaseRequest):
         self.cmd = cmd
         
         self.global_rank = None # Global rank of recipient process is None for ingoing requests and None for out requests until the request is prepared
+
+        self.collective_header_information = collective_header_information
 
         # Meta information we use to keep track of what is going on. There are some different
         # status a request object can be in:
@@ -120,15 +122,15 @@ class Request(BaseRequest):
         """
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
+        
+        common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : collective_header_information, }
 
         if self.multi:
-            self.header = utils.prepare_multiheader(self.communicator.rank(), cmd=self.cmd,
-                                           tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, payload_length=self.payload_size)
+            self.header = utils.prepare_multiheader(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)
         else:
             if not self.is_prepared:
                 # Create the proper data structure and pickle the data
-                header,payload = utils.prepare_message(self.data, self.communicator.rank(), cmd=self.cmd,
-                                               tag=self.tag, ack=self.acknowledge, comm_id=self.communicator.id, is_serialized=self.is_pickled)
+                header, payload = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
                 self.data = payload
                 self.header = header
             #DEBUG
@@ -178,8 +180,6 @@ class Request(BaseRequest):
         On successfull completion the ressources occupied by this request object will
         be garbage collected.
         """
-        #Logger().info("Starting a %s wait, tag: %s" % (self.request_type,self.tag) )
-
         if self.status == "cancelled":
             #Logger().debug("WAIT on cancel illegality")
             raise MPIException("Illegal to wait on a cancelled request object")
