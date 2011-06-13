@@ -21,7 +21,7 @@ class TreeBCast(BaseCollectiveRequest):
     SETTINGS_PREFIX = "BCAST"
     
     def __init__(self, communicator, data=None, root=0):
-        super(TreeBCast, self).__init__()
+        super(TreeBCast, self).__init__(communicator, data=None, root=0)
 
         self.data = data
         self.root = root
@@ -106,7 +106,7 @@ class RingBCast(BaseCollectiveRequest):
     and lower memory footprint.
     """
     def __init__(self, communicator, data=None, root=0):
-        super(RingBCast, self).__init__(communicator)
+        super(RingBCast, self).__init__(communicator, data=None, root=0)
         
         self.communicator = communicator
         self.rank = self.communicator.comm_group.rank()

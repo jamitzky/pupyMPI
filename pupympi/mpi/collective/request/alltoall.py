@@ -11,7 +11,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
         the user available API call.
     """
     def __init__(self, communicator, data):
-        super(NaiveAllToAll, self).__init__()
+        super(NaiveAllToAll, self).__init__(communicator, data)
 
         self.data = data
         self.communicator = communicator
