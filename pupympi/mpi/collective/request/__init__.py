@@ -1,5 +1,5 @@
 import threading, sys
-
+from mpi import constants
 from mpi.topology import tree
 
 class BaseCollectiveRequest(object):

@@ -22,7 +22,7 @@ from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.commons import pickle
 
-HEADER_FORMAT = "llllllll"
+HEADER_FORMAT = "lllllll"
 
 def create_random_socket(min=10000, max=30000):
     """
@@ -138,8 +138,11 @@ def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_
           initial serialization and the segmentation has been done by the caller
     
     The header format is the traditional
-    """        
-    coll_class_id = collective_header_information[0]
+    """      
+    try:
+        coll_class_id = collective_header_information[0]
+    except IndexError:
+        coll_class_id = 0
 
     header = struct.pack(HEADER_FORMAT, payload_length, rank, cmd, tag, ack, comm_id, coll_class_id)
     return header

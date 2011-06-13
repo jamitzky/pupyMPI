@@ -17,11 +17,11 @@
 #
 __version__ = "0.9.5" # It bumps the version or else it gets the hose again!
 
-import sys, hashlib, random, os
-from optparse import OptionParser, OptionGroup
-import threading, getopt, time
+import sys
+import threading
+import time
+
 from threading import Thread
-import numpy
 
 from mpi.communicator import Communicator
 from mpi.logger import Logger
@@ -30,23 +30,11 @@ from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
 from mpi.network.utils import pickle, robust_send, prepare_message
-import mpi.network.utils as utils
-
+from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
-
-import time
-
-try:
-    import yappi
-except ImportError:
-    pass
-
-try:
-    import pupyprof
-except ImportError:
-    pass
-
+from mpi.commons import pupyprof, yappi, numpy
+from optparse import OptionParser, OptionGroup
 
 
 class MPI(Thread):
