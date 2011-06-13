@@ -212,7 +212,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
 
         # DEBUG
-        Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
+        #Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
 
         # TODO: Use an isend with already serialized message instead?
         #self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
@@ -271,7 +271,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
             ranks_in_last_slice = self.size - ranks_in_the_middle - (slice_end - 1)
             #for raw_index, slice_rank in enumerate( range(0,slice_end)+range(slice_start, slice_start+ranks_in_last_slice) ):
             for raw_index, slice_rank in enumerate( range(0,slice_end+1)+range(slice_start, slice_start+ranks_in_last_slice) ):
-                Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
+                #Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 try:
                     self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
                 # DEBUG
@@ -281,7 +281,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         else:
             #for raw_index, slice_rank in enumerate(range(slice_start, slice_end)):
             for raw_index, slice_rank in enumerate(range(slice_start, slice_end+1)):
-                Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
+                #Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
 
             
@@ -310,7 +310,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         if set(self.recv_from+self.send_to) == set([None]):            
             self.finish()
         
-        Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
+        #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
         return True
 
     def finish(self):
