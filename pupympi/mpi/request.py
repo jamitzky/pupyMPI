@@ -60,7 +60,7 @@ class BaseRequest(object):
 
 class Request(BaseRequest):
 
-    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False, payload_size=0, collective_header_information=()):
+    def __init__(self, request_type, communicator, participant, tag, acknowledge=False, header=None, data=None, cmd=constants.CMD_USER, multi=False, payload_size=0):
         super(Request, self).__init__()
         if request_type not in ('bcast_send', 'send','recv'):
             raise MPIException("Invalid request_type in request creation. This should never happen. ")
@@ -76,8 +76,6 @@ class Request(BaseRequest):
         self.payload_size = payload_size # combined bytesize of payloads if single payload this is 0 for now
 
         self.cmd = cmd
-        
-        self.collective_header_information = collective_header_information
         
         self.global_rank = None # Global rank of recipient process is None for ingoing requests and None for out requests until the request is prepared
 
@@ -107,12 +105,11 @@ class Request(BaseRequest):
             'participant' : self.participant,
             'tag' : self.tag,
             'comm_id' : self.communicator.id,
-            'collective_header_information' : self.collective_header_information,
         }
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s)>" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status)
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, self.data )
 
     def prepare_send(self):
         """
