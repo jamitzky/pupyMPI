@@ -311,7 +311,7 @@ class Communicator:
         self._add_unstarted_request(handle)
         return handle
     
-    def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True):
+    def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True,collective_header_information=()):
         """
         A helper function for sending a message without passing the
         message through the queues. The data is assumed to be properly serialized already.
@@ -330,14 +330,11 @@ class Communicator:
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
         header, payload = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized)
         for recp in receivers:
-            request = Request("send", self, recp, tag, data=payload, header=header)
-            #request = Request("send", self, recp, tag, data=(header+payload))
+            request = Request("send", self, recp, tag, data=payload, header=header,collective_header_information=collective_header_information)
             request.is_prepared = True
-            #request.is_pickled= True
             request.prepare_send()
             self.network.t_out.add_out_request(request)
             rl.append(request)
-            #Logger().debug("--appended direct send" )
 
         return rl
     

@@ -83,7 +83,7 @@ class BaseCollectiveRequest(object):
         # There is no reason to replace the original request in the system queues as
         # we just pass on all the method calls. 
         
-    def multisend(self, content, destination, tag=constants.MPI_TAG_ANY, cmd=constants.CMD_USER, payload_length=0):
+    def multisend(self, *args, **kwargs):
         """
         This is a very thin wrapper around the :func:`_multisend` method from the communicator. This
         wrapper will automaticly add information regarding the request id.
@@ -93,8 +93,9 @@ class BaseCollectiveRequest(object):
         
         # Find the extra header information useful for changing request classes on the fly.
         coll_class_id = self.__class__._coll_class_id
+        kwargs["collective_header_information"] = (coll_class_id, )
         
-        self.communicator._multisend(content, destination, tag=tag, cmd=cmd, payload_length=payload_length, collective_header_information=(coll_class_id,))
+        self.communicator._multisend(*args, **kwargs)
     
     def send(self, *args, **kwargs):
         return self.isend(*args, **kwargs).wait()
@@ -107,6 +108,16 @@ class BaseCollectiveRequest(object):
 
         kwargs["collective_header_information"] = (coll_class_id, )
         return self.communicator._isend(*args, **kwargs)
+    
+    def direct_send(self, *args, **kwargs):
+        self.mark_dirty()
+        
+        # Find the extra header information useful for changing request classes on the fly.
+        coll_class_id = self.__class__._coll_class_id
+
+        kwargs["collective_header_information"] = (coll_class_id, )
+        return self.communicator._direct_send(*args, **kwargs)
+        
     
 def get_accept_range(cls, settings, prefix="BINOMIAL_TREE"):
     # This method will check if there should exist

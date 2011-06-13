@@ -47,7 +47,7 @@ class TreeBarrier(BaseCollectiveRequest):
 
     def send_parent(self):
         # Send a barrier token upwards.
-        self.communicator._isend(None, self.parent, tag=constants.TAG_BARRIER)
+        self.send(None, self.parent, tag=constants.TAG_BARRIER)
         self.wait_parent = True
 
     def accept_msg(self, rank, data, msg_type=None):
@@ -90,7 +90,7 @@ class TreeBarrier(BaseCollectiveRequest):
             return False
 
     def send_children(self):
-        self.communicator._direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER, serialized=False)
+        self.direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER, serialized=False)
         self._finished.set()
 
     def _get_data(self):
@@ -160,10 +160,10 @@ class RingBarrier(BaseCollectiveRequest):
         return True
 
     def send_next(self):
-        self.communicator._isend(None, self.next, tag=constants.TAG_BARRIER)
+        self.isend(None, self.next, tag=constants.TAG_BARRIER)
 
     def send_previous(self):
-        self.communicator._isend(None, self.previous, tag=constants.TAG_BARRIER)
+        self.isend(None, self.previous, tag=constants.TAG_BARRIER)
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):

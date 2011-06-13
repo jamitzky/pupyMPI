@@ -42,7 +42,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
             if r == self.rank:
                 self.accept_msg(r, data)
             else:
-                self.communicator._isend(data, r, self.tag)
+                self.isend(data, r, self.tag)
 
     def accept_msg(self, rank, data):
         # A finished request do not accept messages.
