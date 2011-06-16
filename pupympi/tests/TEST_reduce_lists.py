@@ -24,7 +24,7 @@ temp = ints[rank]
 ints[rank] = ints[max_number]
 ints[max_number] = temp
 
-result = world.reduce(ints, MPI_max, 0)
+result = world.reduce(ints, MPI_max, root)
 
 # The expected result is a list of the where the lower half are max_number since
 # everyone swapped in a max_number at their rank position. The upper half are
@@ -32,7 +32,7 @@ result = world.reduce(ints, MPI_max, 0)
 # max rank since that is the highest rank swapped in there.
 expected_result = [(max_number) for _ in range(size)] + range(size,max_number) + [size-1]
 
-if rank == 0: # Root announces the results
+if rank == root: # Root announces the results
     assert expected_result == result
 else:
     assert None == result
