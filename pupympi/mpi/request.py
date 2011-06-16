@@ -133,7 +133,7 @@ class Request(BaseRequest):
                 header, payload = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
                 self.data = payload
                 self.header = header
-            #DEBUG
+            #DEBUG this case should be deleted eventually
             else:
                 Logger().debug("Reusing already prepared message")
 
