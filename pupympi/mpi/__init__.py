@@ -485,9 +485,13 @@ class MPI(Thread):
         
                                 if match:
                                     request.mark_dirty()
-                                
-                            except TypeError, e:
+                            
+                            # DEBUG switched to value error to show error properly
+                            except ValueError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
+
+                            #except TypeError, e:
+                            #    Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
                                 
                             if match:
                                 if request.test():

@@ -14,7 +14,7 @@ class BaseCollectiveRequest(object):
         self._dirty = False
         self._overtaken_request = None
         self._parent_request = None
-
+        
         self.init_args = args
         self.init_kwargs = kwargs 
 
@@ -82,9 +82,9 @@ class BaseCollectiveRequest(object):
     def mark_dirty(self):
         self._dirty = True
         
-    def overtake(self, request_cls, *args, **kwargs):
-        Logger().debug("what is it request_cls:%s init_args:%s init_kwargs:%s" % (request_cls, self.init_args, self.init_kwargs) )
-        request = request_cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
+    def overtake(self, request_cls):
+        #Logger().debug("OVERTAKING  with request_cls:%s init_args:%s init_kwargs:%s" % (request_cls, self.init_args, self.init_kwargs) )
+        request = request_cls(*self.init_args, **self.init_kwargs) # Initial args are reused
         
         # There is another request that will take our place. We save a reference to it
         # and handle some function magic

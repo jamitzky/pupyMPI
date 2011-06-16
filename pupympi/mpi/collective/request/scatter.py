@@ -11,7 +11,7 @@ class TreeScatter(BaseCollectiveRequest):
     Generic scatter valid for all types
     """
     def __init__(self, communicator, data=None, root=0):
-        super(TreeScatter, self).__init__(communicator, data=None, root=0)
+        super(TreeScatter, self).__init__(communicator, data=data, root=root)
 
         self.data = data
         self.root = root
@@ -19,8 +19,6 @@ class TreeScatter(BaseCollectiveRequest):
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
-        # DEBUG
-        Logger().debug("VANILLA class initializing")
         
         # Slice the data.
         if self.root == self.rank:
@@ -74,7 +72,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
     - Still no switching with regular TreeScatter
     """
     def __init__(self, communicator, data=None, root=0):
-        super(TreeScatterPickless, self).__init__(communicator, data=None, root=0)
+        super(TreeScatterPickless, self).__init__(communicator, data=data, root=root)
 
         #self.data = data
         self.root = root
@@ -84,13 +82,12 @@ class TreeScatterPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
         
         self.msg_type = None
-        Logger().debug("PICKLESS class initializing")
         
         # Serialize the data
         if self.root == self.rank:
             # TODO: This is done from the start but maybe we want to hold off until later, if so root could skip the (de)serialization to self
             self.data,cmd = utils.serialize_message(data, recipients=self.size)
-            #Logger().debug("RANK:%i data:%s self.data:%s" % (self.rank,data, self.data) )
+            #Logger().debug("RANK:%i data:%s self.data:%s cmd:%s" % (self.rank,data, self.data, cmd) )
             self.msg_type = cmd
             
             # FIXME: The recreation of shape and/or shapebytes should be avoided by letting serialize_message return it
@@ -212,6 +209,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
         # NOTE: Maybe change the kwargs['data'] to kwargs.get('data',None) in case some silly bugger omits the named parameter
         if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
             obj = cls(communicator, *args, **kwargs)
+            #Logger().debug("rank:%i ACCEPT with args:%s, kwargs:%s obj:%s cls:%s" % (communicator.rank(), args, kwargs, obj, cls))
             
             # Check if the topology is in the cache
             root = kwargs.get("root", 0)
