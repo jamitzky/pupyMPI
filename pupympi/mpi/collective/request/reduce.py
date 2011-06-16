@@ -185,7 +185,7 @@ class TreeReduce(BaseCollectiveRequest):
     SETTINGS_PREFIX = "REDUCE"
     
     def __init__(self, communicator, data, operation, root=0):
-        super(TreeReduce, self).__init__(communicator, data, operation, root=0)
+        super(TreeReduce, self).__init__(communicator, data, operation, root=root)
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):

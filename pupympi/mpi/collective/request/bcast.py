@@ -21,7 +21,7 @@ class TreeBCast(BaseCollectiveRequest):
     SETTINGS_PREFIX = "BCAST"
     
     def __init__(self, communicator, data=None, root=0):
-        super(TreeBCast, self).__init__(communicator, data=None, root=0)
+        super(TreeBCast, self).__init__(communicator, data=data, root=root)
 
         self.data = data
         self.root = root
