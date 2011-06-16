@@ -1,5 +1,6 @@
 import threading, sys
 from mpi import constants
+from mpi.logger import Logger
 from mpi.topology import tree
 
 class BaseCollectiveRequest(object):
@@ -82,6 +83,7 @@ class BaseCollectiveRequest(object):
         self._dirty = True
         
     def overtake(self, request_cls, *args, **kwargs):
+        Logger().debug("what is it request_cls:%s init_args:%s init_kwargs:%s" % (request_cls, self.init_args, self.init_kwargs) )
         request = request_cls(*self.init_args, **self.init_kwargs) # This will not work. We miss arguments here. 
         
         # There is another request that will take our place. We save a reference to it
