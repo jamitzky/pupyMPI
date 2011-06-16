@@ -103,7 +103,7 @@ class RingBCast(BaseCollectiveRequest):
     and lower memory footprint.
     """
     def __init__(self, communicator, data=None, root=0):
-        super(RingBCast, self).__init__(communicator, data=None, root=0)
+        super(RingBCast, self).__init__(communicator, data=data, root=root)
         
         self.communicator = communicator
         self.rank = self.communicator.comm_group.rank()
