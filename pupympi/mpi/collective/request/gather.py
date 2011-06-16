@@ -122,7 +122,7 @@ class DisseminationAllGather(BaseCollectiveRequest):
                 # DEBUG
                 #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
                 
-                self.communicator._isend(slice, r, constants.TAG_ALLGATHER)
+                self.isend(slice, r, constants.TAG_ALLGATHER)
                 self.send_to[i] = None
                 
         # Check if we are done
@@ -211,8 +211,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         #Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
 
         # TODO: Use an isend with already serialized message instead?
-        #self.communicator._isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
-        self.communicator._multisend([self.data_list[self.rank]], self.send_to[0], tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=self.chunksize )
+        self.multisend([self.data_list[self.rank]], self.send_to[0], tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=self.chunksize )
         
         # Mark send communication as done for iteration 0
         self.send_to[0] = None
@@ -297,7 +296,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
 
                 # DEBUG
                 #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
-                self.communicator._multisend(payloads, r, tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
+                self.multisend(payloads, r, tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
                 self.send_to[i] = None
                 
         # Check if we are done
@@ -350,7 +349,7 @@ class TreeGather(BaseCollectiveRequest):
     def send_parent(self):        
         # Send data to the parent (if any)
         if (not self._finished.is_set()) and self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=constants.TAG_GATHER)            
+            self.isend(self.data, self.parent, tag=constants.TAG_GATHER)            
         self.done()
 
     def accept_msg(self, rank, raw_data, msg_type=None):
@@ -428,7 +427,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         if (not self._finished.is_set()) and self.parent is not None:
             
             payloads = [d for d in self.data if d is not None] # Filter potential Nones away
-            self.communicator._multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
+            self.multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
 
         self.done()
 
