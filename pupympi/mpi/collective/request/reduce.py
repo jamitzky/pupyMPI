@@ -3,6 +3,7 @@ from mpi.exceptions import MPIException
 
 from mpi import constants
 from mpi.logger import Logger
+from mpi import utils
 
 from mpi.topology import tree
 from mpi.commons import numpy
@@ -229,7 +230,7 @@ class TreeReduce(BaseCollectiveRequest):
                 self.data = {self.rank : self.data}
             self.to_parent()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
 
         if self._finished.is_set():
@@ -240,7 +241,8 @@ class TreeReduce(BaseCollectiveRequest):
 
         # Remove the rank from the missing children.
         self.missing_children.remove(rank)
-
+    
+        data = utils.deserialize_message(raw_data, msg_type)
         # Add the data to the list of received data
         if self.partial:
             # If partial reduce we didn't get a dict but just the reduced data
