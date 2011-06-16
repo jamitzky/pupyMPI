@@ -12,17 +12,17 @@ rank = world.rank()
 size = world.size()
 
 SCATTER_ROOT = 3
-# DEBUG
-#SCATTER_ROOT = 0
 
-## List
-#if rank == SCATTER_ROOT:
-#    scatter_data = [[x]*2 for x in range(size)]
-#else:
-#    scatter_data = None
-#
-#my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
-#assert my_data == [[rank,rank]]
+
+# List
+if rank == SCATTER_ROOT:
+    scatter_data = [[x]*2 for x in range(size)]
+else:
+    scatter_data = None
+
+my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+assert my_data == [[rank,rank]]
+
 
 # bytearray
 chunksize = 4
@@ -38,6 +38,7 @@ else:
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 assert numpy.alltrue(my_data == bytearray( string.ascii_letters[rank]*chunksize ) )
 
+
 # Numpy array
 chunksize = 5
 if rank == SCATTER_ROOT:    
@@ -47,7 +48,6 @@ else:
 
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 assert numpy.alltrue(my_data == numpy.arange(rank*chunksize,(rank+1)*chunksize))
-#print "rank %i got %s" % (rank, my_data)
 
 
 # multidimensional Numpy float arrays
@@ -70,4 +70,3 @@ my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 assert numpy.alltrue(my_data == numpy.arange(rank*chunksize*12,(rank+1)*chunksize*12).reshape(3,chunksize,2,2) )
 
 mpi.finalize()
-
