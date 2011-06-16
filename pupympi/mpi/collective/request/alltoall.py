@@ -1,5 +1,7 @@
 from mpi.collective.request import BaseCollectiveRequest
 from mpi import constants
+from mpi import utils
+from mpi.logger import Logger
 
 class NaiveAllToAll(BaseCollectiveRequest):
     """
@@ -21,6 +23,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
 
         # Setup the ranks we still need to hear from.
         self.missing_participants = range(self.size)
+        self.missing_participants.remove(self.rank)
 
         # We will a list with integers. We will replace the contents in the
         # accept_msg function.
@@ -35,18 +38,22 @@ class NaiveAllToAll(BaseCollectiveRequest):
         return cls(communicator, *args, **kwargs)
 
     def start(self):
+        # Get own data
+
         # slice the data and send it to each participant.
         chunk_size = len(self.data) / self.size
         for r in range(self.size):
-            data = self.data[r*chunk_size:(r+1)*chunk_size]
+            data = self.data[r*chunk_size:(r+1)*chunk_size]            
             if r == self.rank:
-                self.accept_msg(r, data)
-            else:
+                # msg to self bypasses queues
+                self.received_data[self.rank] = data
+            else:                
                 self.isend(data, r, self.tag)
 
-    def accept_msg(self, rank, data):
-        # A finished request do not accept messages.
-        if self._finished.is_set():
+    def accept_msg(self, rank, raw_data, msg_type):
+
+        # A finished request does not accept messages.
+        if self._finished.is_set():            
             return False
 
         # And we only accept messages from the ones we havn't hear from
@@ -54,6 +61,9 @@ class NaiveAllToAll(BaseCollectiveRequest):
             return False
         else:
             self.missing_participants.remove(rank) # we accept (but only once)
+            
+        # Deserialize data
+        data = utils.deserialize_message(raw_data, msg_type)
 
         # Insert the data at the proper place.
         self.received_data[rank] = data
