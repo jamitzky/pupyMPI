@@ -38,6 +38,12 @@ def reduce_elementwise(sequences, operation):
     return reduced_results
 
 class TreeAllReduce(BaseCollectiveRequest):
+    """
+    The allreduce operation is handled by receiving data from each
+    child, reducing the data at the root node, potentially with some partial
+    reduction along the way at intermediate nodes.
+    The reduced result is then broadcast back down the tree to all nodes.
+    """
     
     SETTINGS_PREFIX = "ALLREDUCE"
     
@@ -54,13 +60,13 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.operation = operation
         self.unpack = False # should we unpack a list to a simpler type (see next if)
         
-        #if not getattr(data, "__iter__", False):
+        # If not sliceable we are dealing with a bool or integer and box it into a list for convenience
         if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
-            self.unpack = True
+            self.unpack = True # Mark that data should be unboxed later
             
         self.data = data
-        self.partial = getattr(operation, "partial_data", False)
+        self.partial = getattr(operation, "partial_data", False) # Does the reduce operation allow partial reduction
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -74,20 +80,26 @@ class TreeAllReduce(BaseCollectiveRequest):
         self.missing_children = copy.copy(self.children)
         self.phase = "up"
 
-        # The all reduce operation is handled by receiving data from each
-        # child, reduce the data, and send the result to the parent.
+        # Leaf nodes don't wait for children
         if not self.children:
             # We dont wait for messages, we simply send our data to the parent.
             if not self.partial:
                 # On partial reduce we keep the data as is to ensure flexible serialization
                 # but otherwise we transmit it in a nice dict to ensure rank order
+                # FIXME: This is premature, put it in dict (if need be) at intermediate nodes only
                 self.data = {self.rank : self.data}
             self.to_parent()
 
-    def accept_msg(self, rank, data):
+    def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
+        
+        # DEBUG
+        #Logger().debug("rank:%i from rank:%i msg_type:%s, raw_data:%s" % (self.rank, rank, msg_type, raw_data))
+        
+        # Deserialize data
+        data = utils.deserialize_message(raw_data, msg_type)
 
         if self.phase == "up":
             if rank not in self.missing_children:
@@ -103,19 +115,17 @@ class TreeAllReduce(BaseCollectiveRequest):
             else:
                 self.received_data.update(data)
 
-
-            # If the list of missing children i empty we have received from
+            # When the list of missing children is empty we have received from
             # every child and can reduce the data and send to the parent.
             if not self.missing_children:
                 # Add our own data element
-                self.received_data[self.rank] = self.data                
+                self.received_data[self.rank] = self.data
                 
                 # reduce the data
                 if self.partial:                        
                     self.data = reduce_elementwise(self.received_data.values(), self.operation)
                 else:
                     self.data = self.received_data
-
 
                 # forward to the parent.
                 self.to_parent()
@@ -151,18 +161,19 @@ class TreeAllReduce(BaseCollectiveRequest):
             return val
 
     def to_children(self):
-        self.direct_send(self.data, receivers=self.children, tag=self.tag)
+        self.direct_send(self.data, receivers=self.children, tag=self.tag, serialized=False)
         self.done()
 
     def to_parent(self):
         # Send self.data to the parent.
         if self.parent is not None:
-            self.communicator._isend(self.data, self.parent, tag=self.tag)
+            self.isend(self.data, self.parent, tag=self.tag)
 
-        self.phase = "down"
+        self.phase = "down" # Mark next phase as begun
 
         if self.parent is None:
-            # Clean data if possible.
+            # Clean data if needed
+            # (this is only the case if the allreduce is used for a scan operation)
             cleaner = getattr(self, "clean_data", None)
             if cleaner:
                 cleaner()
@@ -308,6 +319,11 @@ class StaticTreeReduce(StaticFanoutTreeAccepter, TreeReduce):
     pass
 # ------------------------ scan operation below ------------------------
 class TreeScan(TreeAllReduce):
+    """
+    TreeScan implements the scan operation as a TreeAllReduce with no partial
+    reduction where input from ranks above self are not used in the reduction
+    operation, as specified by MPI semantics.
+    """
     
     SETTINGS_PREFIX = "SCAN"
     
