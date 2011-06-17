@@ -1,6 +1,6 @@
-# meta-description: A reduce showing that numpy objects can be transferred with collective operations
+# meta-description: An allreduce showing that numpy objects can be transferred with collective operations
 # meta-expectedresult: 0
-# meta-minprocesses: 7
+# meta-minprocesses: 10
 # meta-max_runtime: 25
 
 from mpi import MPI
@@ -18,17 +18,14 @@ world = mpi.MPI_COMM_WORLD
 
 rank = world.rank()
 size = world.size()
-ROOT = 3
 
 local_reduce_data = np.int_([rank,rank*2,rank*4])
 
 expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
 
-data = world.reduce(local_reduce_data, MPI_sum, ROOT)
+data = world.allreduce(local_reduce_data, MPI_sum)
 
-if rank == ROOT:
-    assert np.alltrue(data == expected_data)
-else:
-    assert data is None
+for i in range(3):
+    assert data[i] == expected_data[i]
     
 mpi.finalize()
