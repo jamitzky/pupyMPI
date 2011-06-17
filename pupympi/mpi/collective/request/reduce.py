@@ -231,13 +231,13 @@ class TreeReduce(BaseCollectiveRequest):
             
         self.missing_children = copy.copy(self.children)
 
-        # The reduce operation is handled by receiving data from each
-        # child, reduce the data, and send the result to the parent.
+        # Leaf nodes don't wait for children
         if not self.children:
             # We dont wait for messages, we simply send our data to the parent.
             if not self.partial:
                 # On partial reduce we keep the data as is to ensure flexible serialization
                 # but otherwise we transmit it in a nice dict to ensure rank order
+                # FIXME: This is premature, put it in dict (if need be) at intermediate nodes only
                 self.data = {self.rank : self.data}
             self.to_parent()
 
@@ -317,6 +317,155 @@ class BinomialTreeReduce(BinomialTreeAccepter, TreeReduce):
 
 class StaticTreeReduce(StaticFanoutTreeAccepter, TreeReduce):
     pass
+
+class TreeReducePickless(BaseCollectiveRequest):
+    """
+    Flexible serialization for the types that can handle it.
+    Only serializing at source and deserializing at root.
+    Since data remains serialized at intermediate nodes, the only form of
+    partial reduction this class offers is for bytearrays.
+    
+    ISSUES:
+    - Using the rank indexed data list is kinda clumsy
+    - bytearrays do not get partial reduction yet
+    - numpy arrays with elements of 1 byte (eg. bool, 8 bit ints etc.) should in many cases be partially reducible as well
+    """
+    
+    SETTINGS_PREFIX = "REDUCEPL"
+    
+    def __init__(self, communicator, data, operation, root=0):
+        super(TreeReducePickless, self).__init__(communicator, data, operation, root=root)
+        
+        Logger().debug("PICKLESS REDUCE")
+        
+        self.communicator = communicator
+
+        self.size = communicator.comm_group.size()
+        self.rank = communicator.comm_group.rank()
+
+        self.root = root
+
+        self.operation = operation
+        
+        # TODO: Check also that we are dealing with a 1 byte datatype before committing to partial reduction here
+        #if not hasattr(self, "partial"):
+        #    self.partial = getattr(operation, "partial_data", False)
+        self.partial = False # DEBUG
+            
+        self.data_list = [None] * self.size
+        self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
+        self.chunksize = len(self.data_list[self.rank])
+
+
+    def start(self):
+        topology = getattr(self, "topology", None) # You should really set the topology.. please
+        if not topology:
+            raise Exception("Cant reduce without a topology... do you expect me to randomly behave well? I REFUSE!!!")
+
+        self.parent = topology.parent()
+        self.children = topology.children()
+        self.received_data = {}        
+            
+        self.missing_children = copy.copy(self.children)
+
+        # Leaf nodes don't wait for children
+        if not self.children:
+            ## We dont wait for messages, we simply send our data to the parent.
+            #if not self.partial:
+            #    # On partial reduce we keep the data as is to ensure flexible serialization
+            #    # but otherwise we transmit it in a nice dict to ensure rank order
+            #    # FIXME: This is premature, put it in dict (if need be) at intermediate nodes only
+            #    self.data = {self.rank : self.data}
+            self.to_parent()
+            
+    def accept_msg(self, child_rank, raw_data, msg_type):
+        # Do not do anything if the request is completed.
+
+        if self._finished.is_set():
+            return False
+
+        if child_rank not in self.missing_children:
+            return False
+
+        # Remove the rank from the missing children.
+        self.missing_children.remove(child_rank)
+    
+        desc = self.topology.descendants(child_rank)
+        all_ranks = [child_rank]+desc # All the ranks having a payload in this message
+        all_ranks.sort() # keep it sorted
+
+        # Store payloads in proper positions
+        for i,r in enumerate(all_ranks):
+            pos_r = i
+            begin = pos_r * (self.chunksize)
+            end = begin + (self.chunksize)
+            # Add the data to the list of received data
+            self.data_list[r] = raw_data[begin:end]
+        
+        # DEBUG
+        Logger().debug("rank:%i ACCEPT:%s msg_type:%s" % (self.rank, raw_data, msg_type))
+
+        # If the list of missing children is empty we have received from
+        # every child and can reduce the data and send to the parent.
+        if not self.missing_children:
+
+            ## reduce the data
+            #if self.partial:
+            #    self.data = reduce_elementwise(self.received_data.values(), self.operation)
+            #else:
+            #    self.data = self.received_data
+
+            # forward to the parent.
+            self.to_parent()
+        return True
+    
+    @classmethod
+    def accept(cls, communicator, settings, cache, *args, **kwargs):
+        """
+        Accept as long as it is numpy array or bytearray
+        """
+        if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
+            obj = cls(communicator, *args, **kwargs)
+            
+            # Check if the topology is in the cache
+            root = kwargs.get("root", 0)
+            cache_idx = "tree_binomial_%d" % root
+            topology = cache.get(cache_idx, default=None)
+            if not topology:
+                topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
+                cache.set(cache_idx, topology)
+    
+            obj.topology = topology
+            return obj
+        
+    def _get_data(self):
+        if self.rank != self.root:
+            return None
+
+        val = None
+            
+        Logger().debug("rank:%i _GET_DATA:%s" % (self.rank, self.data_list))
+        # Deserialize all payloads before reduction
+        for r in range(self.size):
+            self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
+        val = reduce_elementwise(self.data_list, self.operation)
+
+        return val
+
+    def to_parent(self):
+        # DEBUG
+        payloads = [d for d in self.data_list if d is not None]
+        #Logger().debug("rank:%i gonna send:%s" % (self.rank, dl))
+        # Send self.data to the parent.        
+        if self.parent is not None:
+            self.multisend(payloads, self.parent, tag=constants.TAG_REDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
+
+        self.done()
+        
+class BinomialTreeReducePickless(TreeReducePickless):
+    pass
+
+
 # ------------------------ scan operation below ------------------------
 class TreeScan(TreeAllReduce):
     """

@@ -16,6 +16,8 @@ size = world.size()
 rank = world.rank()
 
 root = 2
+#DEBUG
+root = 0
 
 base = "ibewhereibeat"
 
@@ -34,8 +36,12 @@ ba = bytearray(base)
 ba[rank] = b'A'
 result2 = world.reduce(ba, MPI_min, root)
 
+# DEBUG
+result1 = 'A'*size+base[size:]
+
 if rank == root:
-    assert result2 == bytearray(result1)
+    print "root got:%s" % result2
+    assert result2 == bytearray(result1)    
 
 # Bool
 # Everybody but rank 0 says True but False is smaller
