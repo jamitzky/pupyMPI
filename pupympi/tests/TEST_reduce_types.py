@@ -16,8 +16,6 @@ size = world.size()
 rank = world.rank()
 
 root = 2
-#DEBUG
-root = 0
 
 base = "ibewhereibeat"
 
