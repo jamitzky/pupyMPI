@@ -322,13 +322,13 @@ class TreeReducePickless(BaseCollectiveRequest):
     """
     Flexible serialization for the types that can handle it.
     Only serializing at source and deserializing at root.
-    Since data remains serialized at intermediate nodes, the only form of
-    partial reduction this class offers is for bytearrays.
+    Since data remains serialized at intermediate nodes there is no partial
+    reduction.
     
     ISSUES:
     - Using the rank indexed data list is kinda clumsy
-    - bytearrays do not get partial reduction yet
-    - numpy arrays with elements of 1 byte (eg. bool, 8 bit ints etc.) should in many cases be partially reducible as well
+    - bytearrays and numpy arrays with elements of 1 byte (eg. bool, 8 bit ints etc.)
+      should in many cases be partially reducible even though serialized.
     """
     
     SETTINGS_PREFIX = "REDUCEPL"
@@ -336,26 +336,25 @@ class TreeReducePickless(BaseCollectiveRequest):
     def __init__(self, communicator, data, operation, root=0):
         super(TreeReducePickless, self).__init__(communicator, data, operation, root=root)
         
-        Logger().debug("PICKLESS REDUCE")
-        
         self.communicator = communicator
-
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
-
         self.root = root
-
-        self.operation = operation
-        
-        # TODO: Check also that we are dealing with a 1 byte datatype before committing to partial reduction here
-        #if not hasattr(self, "partial"):
-        #    self.partial = getattr(operation, "partial_data", False)
-        self.partial = False # DEBUG
+        self.operation = operation        
             
         self.data_list = [None] * self.size
         self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
         self.chunksize = len(self.data_list[self.rank])
 
+        self.partial = False # No partial reduction for now
+        
+        ## Partial reduction should be done if bytesize allows and operation is listed as allowing it
+        #if not hasattr(self, "partial") and (len(data) == self.chunksize):
+        #    self.partial = getattr(operation, "partial_data", False)
+        #else:
+        #    self.partial = False
+
+        #Logger().debug("PICKLESS REDUCE partial:%s" % self.partial)
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -370,12 +369,6 @@ class TreeReducePickless(BaseCollectiveRequest):
 
         # Leaf nodes don't wait for children
         if not self.children:
-            ## We dont wait for messages, we simply send our data to the parent.
-            #if not self.partial:
-            #    # On partial reduce we keep the data as is to ensure flexible serialization
-            #    # but otherwise we transmit it in a nice dict to ensure rank order
-            #    # FIXME: This is premature, put it in dict (if need be) at intermediate nodes only
-            #    self.data = {self.rank : self.data}
             self.to_parent()
             
     def accept_msg(self, child_rank, raw_data, msg_type):
@@ -403,18 +396,15 @@ class TreeReducePickless(BaseCollectiveRequest):
             self.data_list[r] = raw_data[begin:end]
         
         # DEBUG
-        Logger().debug("rank:%i ACCEPT:%s msg_type:%s" % (self.rank, raw_data, msg_type))
+        #Logger().debug("rank:%i ACCEPT:%s msg_type:%s" % (self.rank, raw_data, msg_type))
 
         # If the list of missing children is empty we have received from
         # every child and can reduce the data and send to the parent.
         if not self.missing_children:
-
-            ## reduce the data
+            ## reduce the data before passing on
             #if self.partial:
-            #    self.data = reduce_elementwise(self.received_data.values(), self.operation)
-            #else:
-            #    self.data = self.received_data
-
+            #    self.data_list[self.rank] = reduce_elementwise([d for d in self.data_list if d != None], self.operation)
+                
             # forward to the parent.
             self.to_parent()
         return True
@@ -444,7 +434,6 @@ class TreeReducePickless(BaseCollectiveRequest):
 
         val = None
             
-        Logger().debug("rank:%i _GET_DATA:%s" % (self.rank, self.data_list))
         # Deserialize all payloads before reduction
         for r in range(self.size):
             self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
@@ -454,10 +443,15 @@ class TreeReducePickless(BaseCollectiveRequest):
 
     def to_parent(self):
         # DEBUG
-        payloads = [d for d in self.data_list if d is not None]
         #Logger().debug("rank:%i gonna send:%s" % (self.rank, dl))
+        # FIXME: Avoid stupid list boxing
         # Send self.data to the parent.        
         if self.parent is not None:
+            if self.partial:
+                # With partial reduce we only send the reduced value up                
+                payloads = [self.data_list[self.rank]]
+            else:
+                payloads = [d for d in self.data_list if d is not None]
             self.multisend(payloads, self.parent, tag=constants.TAG_REDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
 
         self.done()
