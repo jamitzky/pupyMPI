@@ -25,7 +25,7 @@ expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
 
 data = world.allreduce(local_reduce_data, MPI_sum)
 
-for i in range(3):
-    assert data[i] == expected_data[i]
+assert np.alltrue( data == expected_data)
+#print "RANK:%i GOT:%s" % (rank, data)
     
 mpi.finalize()

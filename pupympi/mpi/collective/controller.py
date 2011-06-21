@@ -28,7 +28,7 @@ class Controller(object):
             # Non-used barrier algorithms: barrier.RingBarrier
             #constants.TAG_BARRIER : [barrier.FlatTreeBarrier, barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
             constants.TAG_BARRIER : [barrier.BinomialTreeBarrier, barrier.StaticFanoutTreeBarrier],
-            constants.TAG_ALLREDUCE : [reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
+            constants.TAG_ALLREDUCE : [reduce.BinomialTreeAllReducePickless, reduce.FlatTreeAllReduce, reduce.BinomialTreeAllReduce, reduce.StaticTreeAllReduce],
             constants.TAG_REDUCE : [reduce.BinomialTreeReducePickless, reduce.FlatTreeReduce, reduce.BinomialTreeReduce, reduce.StaticTreeReduce],
             constants.TAG_ALLTOALL : [alltoall.NaiveAllToAll],
             constants.TAG_SCATTER : [scatter.BinomialTreeScatterPickless, scatter.FlatTreeScatter, scatter.BinomialTreeScatter, scatter.StaticFanoutTreeScatter],
