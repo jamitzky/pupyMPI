@@ -13,18 +13,18 @@ import copy
 def reduce_elementwise(sequences, operation):
     """
     Perform a element-wise reduction on elements of equal length sequences
-    
+
     Sequences can be everything iterable
     """
     # Check if a pupyMPI/numpy operation exists for this operation
     numpy_op = getattr(operation, "numpy_op", None)
-    
+
     # If it is a numpy array and an optimized operation exists we use it
-    if isinstance(sequences[0], numpy.ndarray) and numpy_op:        
+    if isinstance(sequences[0], numpy.ndarray) and numpy_op:
         reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
     else:
         reduced_results = map(operation,zip(*sequences))
-            
+
         # Restore the type of the sequence
         if isinstance(sequences[0],numpy.ndarray):
             reduced_results = numpy.array(reduced_results,dtype=sequences[0].dtype)
@@ -44,9 +44,9 @@ class TreeAllReduce(BaseCollectiveRequest):
     reduction along the way at intermediate nodes.
     The reduced result is then broadcast back down the tree to all nodes.
     """
-    
+
     SETTINGS_PREFIX = "ALLREDUCE"
-    
+
     def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
         super(TreeAllReduce, self).__init__(communicator, data, operation, tag=constants.TAG_ALLREDUCE)
 
@@ -59,12 +59,12 @@ class TreeAllReduce(BaseCollectiveRequest):
 
         self.operation = operation
         self.unpack = False # should we unpack a list to a simpler type (see next if)
-        
+
         # If not sliceable we are dealing with a bool or integer and box it into a list for convenience
         if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
             self.unpack = True # Mark that data should be unboxed later
-            
+
         self.data = data
         self.partial = getattr(operation, "partial_data", False) # Does the reduce operation allow partial reduction
 
@@ -94,10 +94,7 @@ class TreeAllReduce(BaseCollectiveRequest):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
-        
-        # DEBUG
-        #Logger().debug("rank:%i from rank:%i msg_type:%s, raw_data:%s" % (self.rank, rank, msg_type, raw_data))
-        
+
         # Deserialize data
         data = utils.deserialize_message(raw_data, msg_type)
 
@@ -120,9 +117,9 @@ class TreeAllReduce(BaseCollectiveRequest):
             if not self.missing_children:
                 # Add our own data element
                 self.received_data[self.rank] = self.data
-                
+
                 # reduce the data
-                if self.partial:                        
+                if self.partial:
                     self.data = reduce_elementwise(self.received_data.values(), self.operation)
                 else:
                     self.data = self.received_data
@@ -195,18 +192,18 @@ class StaticTreeAllReduce(StaticFanoutTreeAccepter, TreeAllReduce):
 class TreeAllReducePickless(BaseCollectiveRequest):
     """
     """
-    
+
     SETTINGS_PREFIX = "ALLREDUCEPL"
-    
+
     def __init__(self, communicator, data, operation, tag=constants.TAG_ALLREDUCE):
         super(TreeAllReducePickless, self).__init__(communicator, data, operation, tag=constants.TAG_ALLREDUCE)
-        
+
         self.communicator = communicator
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
         self.root = 0
-        self.operation = operation        
-            
+        self.operation = operation
+
         self.data_list = [None] * self.size
         self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
         self.chunksize = len(self.data_list[self.rank])
@@ -228,12 +225,12 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         # Leaf nodes don't wait for children
         if not self.children:
             self.to_parent()
-            
+
     def accept_msg(self, rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
-        
+
         if self.phase == "up":
             if rank not in self.missing_children:
                 return False
@@ -244,7 +241,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             desc = self.topology.descendants(rank)
             all_ranks = [rank]+desc # All the ranks having a payload in this message
             all_ranks.sort() # keep it sorted
-    
+
             # Store payloads in proper positions
             for i,r in enumerate(all_ranks):
                 pos_r = i
@@ -259,11 +256,11 @@ class TreeAllReducePickless(BaseCollectiveRequest):
                 # forward to the parent.
                 self.to_parent()
             return True
-        
+
         elif self.phase == "down":
             if rank != self.parent:
                 return False
-            
+
             # FIXME: just fix!
             self.data_list = raw_data
             self.to_children()
@@ -287,7 +284,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             self.multisend(payloads, self.parent, tag=constants.TAG_ALLREDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
 
         self.phase = "down" # Mark next phase as begun
-        
+
         if self.parent is None:
             # Clean data if needed
             # (this is only the case if the allreduce is used for a scan operation)
@@ -301,7 +298,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             for r in range(self.size):
                 self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
             val = reduce_elementwise(self.data_list, self.operation)
-            
+
             self.data_list,self.msg_type = utils.serialize_message(val)
             self.to_children()
 
@@ -312,7 +309,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         """
         if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
             obj = cls(communicator, *args, **kwargs)
-            
+
             # Check if the topology is in the cache
             root = kwargs.get("root", 0)
             cache_idx = "tree_binomial_%d" % root
@@ -320,7 +317,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             if not topology:
                 topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
-    
+
             obj.topology = topology
             return obj
 
@@ -329,15 +326,15 @@ class BinomialTreeAllReducePickless(TreeAllReducePickless):
 
 # ------------------------ reduce operation below ------------------------
 class TreeReduce(BaseCollectiveRequest):
-    
+
     SETTINGS_PREFIX = "REDUCE"
-    
+
     def __init__(self, communicator, data, operation, root=0):
         super(TreeReduce, self).__init__(communicator, data, operation, root=root)
 
         self.unpack = False
         #if not getattr(data, "__iter__", False):
-        
+
         # the attribute index is found on strings (which __iter__ is not) but excludes numpy arrays
         if not (hasattr(data,"index") or isinstance(data, numpy.ndarray)):
             data = [data]
@@ -352,7 +349,7 @@ class TreeReduce(BaseCollectiveRequest):
         self.root = root
 
         self.operation = operation
-        
+
         if not hasattr(self, "partial"):
             self.partial = getattr(operation, "partial_data", False)
 
@@ -364,7 +361,7 @@ class TreeReduce(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
         self.received_data = {}
-            
+
         self.missing_children = copy.copy(self.children)
 
         # Leaf nodes don't wait for children
@@ -388,7 +385,7 @@ class TreeReduce(BaseCollectiveRequest):
 
         # Remove the rank from the missing children.
         self.missing_children.remove(rank)
-    
+
         data = utils.deserialize_message(raw_data, msg_type)
         # Add the data to the list of received data
         if self.partial:
@@ -420,7 +417,7 @@ class TreeReduce(BaseCollectiveRequest):
             return None
 
         val = None
-        
+
         if self.partial:
             #val = self.data[self.root]
             val = self.data
@@ -460,30 +457,30 @@ class TreeReducePickless(BaseCollectiveRequest):
     Only serializing at source and deserializing at root.
     Since data remains serialized at intermediate nodes there is no partial
     reduction.
-    
+
     ISSUES:
     - Using the rank indexed data list is kinda clumsy
     - bytearrays and numpy arrays with elements of 1 byte (eg. bool, 8 bit ints etc.)
       should in many cases be partially reducible even though serialized.
     """
-    
+
     SETTINGS_PREFIX = "REDUCEPL"
-    
+
     def __init__(self, communicator, data, operation, root=0):
         super(TreeReducePickless, self).__init__(communicator, data, operation, root=root)
-        
+
         self.communicator = communicator
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
         self.root = root
-        self.operation = operation        
-            
+        self.operation = operation
+
         self.data_list = [None] * self.size
         self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
         self.chunksize = len(self.data_list[self.rank])
 
         self.partial = False # No partial reduction for now
-        
+
         ## Partial reduction should be done if bytesize allows and operation is listed as allowing it
         #if not hasattr(self, "partial") and (len(data) == self.chunksize):
         #    self.partial = getattr(operation, "partial_data", False)
@@ -499,14 +496,14 @@ class TreeReducePickless(BaseCollectiveRequest):
 
         self.parent = topology.parent()
         self.children = topology.children()
-        self.received_data = {}        
-            
+        self.received_data = {}
+
         self.missing_children = copy.copy(self.children)
 
         # Leaf nodes don't wait for children
         if not self.children:
             self.to_parent()
-            
+
     def accept_msg(self, child_rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
 
@@ -518,7 +515,7 @@ class TreeReducePickless(BaseCollectiveRequest):
 
         # Remove the rank from the missing children.
         self.missing_children.remove(child_rank)
-    
+
         desc = self.topology.descendants(child_rank)
         all_ranks = [child_rank]+desc # All the ranks having a payload in this message
         all_ranks.sort() # keep it sorted
@@ -530,9 +527,6 @@ class TreeReducePickless(BaseCollectiveRequest):
             end = begin + (self.chunksize)
             # Add the data to the list of received data
             self.data_list[r] = raw_data[begin:end]
-        
-        # DEBUG
-        #Logger().debug("rank:%i ACCEPT:%s msg_type:%s" % (self.rank, raw_data, msg_type))
 
         # If the list of missing children is empty we have received from
         # every child and can reduce the data and send to the parent.
@@ -540,17 +534,17 @@ class TreeReducePickless(BaseCollectiveRequest):
             ## reduce the data before passing on
             #if self.partial:
             #    self.data_list[self.rank] = reduce_elementwise([d for d in self.data_list if d != None], self.operation)
-                
+
             # forward to the parent.
             self.to_parent()
         return True
-            
+
     def _get_data(self):
         if self.rank != self.root:
             return None
 
         val = None
-            
+
         # Deserialize all payloads before reduction
         for r in range(self.size):
             self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
@@ -559,13 +553,11 @@ class TreeReducePickless(BaseCollectiveRequest):
         return val
 
     def to_parent(self):
-        # DEBUG
-        #Logger().debug("rank:%i gonna send:%s" % (self.rank, dl))
         # FIXME: Avoid stupid list boxing
-        # Send self.data to the parent.        
+        # Send self.data to the parent.
         if self.parent is not None:
             if self.partial:
-                # With partial reduce we only send the reduced value up                
+                # With partial reduce we only send the reduced value up
                 payloads = [self.data_list[self.rank]]
             else:
                 payloads = [d for d in self.data_list if d is not None]
@@ -580,7 +572,7 @@ class TreeReducePickless(BaseCollectiveRequest):
         """
         if isinstance(kwargs['data'], numpy.ndarray) or isinstance(kwargs['data'],bytearray):
             obj = cls(communicator, *args, **kwargs)
-            
+
             # Check if the topology is in the cache
             root = kwargs.get("root", 0)
             cache_idx = "tree_binomial_%d" % root
@@ -588,7 +580,7 @@ class TreeReducePickless(BaseCollectiveRequest):
             if not topology:
                 topology = tree.BinomialTree(size=communicator.size(), rank=communicator.rank(), root=root)
                 cache.set(cache_idx, topology)
-    
+
             obj.topology = topology
             return obj
 
@@ -603,9 +595,9 @@ class TreeScan(TreeAllReduce):
     reduction where input from ranks above self are not used in the reduction
     operation, as specified by MPI semantics.
     """
-    
+
     SETTINGS_PREFIX = "SCAN"
-    
+
     def __init__(self, communicator, data, operation):
         self.partial = False
         super(TreeScan, self).__init__(communicator, data, operation, tag=constants.TAG_SCAN)
@@ -620,19 +612,19 @@ class TreeScan(TreeAllReduce):
         for rank in keys:
             data = self.data[rank]
             so_far.append(data)
-            
+
             # Element wise operation
             new_data = []
             for i in range(len(so_far[0])):
                 vals = []
                 for alist in so_far:
                     vals.append(alist[i])
-                new_data.append(self.operation(vals)) 
+                new_data.append(self.operation(vals))
             reduced = new_data
-            
+
             if self.unpack:
                 reduced = reduced[0]
-            
+
             final_data[rank] = reduced
 
         self.data = final_data

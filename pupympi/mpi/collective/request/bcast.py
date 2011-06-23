@@ -17,9 +17,9 @@ class TreeBCast(BaseCollectiveRequest):
     to each child. If - on the other hand - there is a parent, we wait for
     a message from that rank and send to our own children.
     """
-    
+
     SETTINGS_PREFIX = "BCAST"
-    
+
     def __init__(self, communicator, data=None, root=0):
         super(TreeBCast, self).__init__(communicator, data=data, root=root)
 
@@ -39,11 +39,8 @@ class TreeBCast(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
 
-        # DEBUG
-        Logger().debug("BCAST rank:%i root:%i children:%s parent:%s" % (self.rank, self.root, self.children, self.parent) )
-
         if self.parent is None:
-            # we're the root.. let us send the data to each child 
+            # we're the root.. let us send the data to each child
             self.send_to_children(transit=False)
             # Mark that we are done with this request from a local perspective
             self.done()
@@ -62,7 +59,7 @@ class TreeBCast(BaseCollectiveRequest):
             # Pass it on to children if we have any
             if self.children:
                 self.send_to_children()
-            
+
             # Mark that we are done with this request from a local perspective
             self.done()
             return True
@@ -72,12 +69,12 @@ class TreeBCast(BaseCollectiveRequest):
     def send_to_children(self, transit=True):
         """
         Nice wrapper around the direct send call
-        
+
         Transit flag means the sending node is just a transit node for data, ie. the data is already serialized
         """
         self.direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
 
-    def _get_data(self):        
+    def _get_data(self):
         # For root the data is not serialized
         if self.parent is None:
             return self.data
@@ -104,41 +101,41 @@ class RingBCast(BaseCollectiveRequest):
     """
     def __init__(self, communicator, data=None, root=0):
         super(RingBCast, self).__init__(communicator, data=data, root=root)
-        
+
         self.communicator = communicator
         self.rank = self.communicator.comm_group.rank()
         self.size = self.communicator.comm_group.size()
-        
+
         self.root = root
         self.data = data
-        
+
         self.next = (self.rank +1) % self.size
         self.previous = (self.rank -1) % self.size
-        
+
     def start(self):
         if self.rank == self.root:
             self.forward()
-            
+
     def accept_msg(self, rank, data):
         # Do not do anything if the request is completed.
         if self._finished.is_set():
             return False
-        
+
         if rank != self.previous:
             return False
-        
+
         self.data = data
-        
+
         self.forward()
-        
+
         return True
-                
+
     def forward(self):
         self.isend(self.data, self.next, tag=constants.TAG_BCAST)
         self.done()
-        
+
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):
-        # Debug for testing. This will always accept, which makes it 
+        # Debug for testing. This will always accept, which makes it
         # quite easy to test.
         return cls(communicator, *args, **kwargs)

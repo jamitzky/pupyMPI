@@ -92,7 +92,7 @@ class Communicator:
         """Iterates through each value in the cached attribute collection and calls the value if its callable"""
         for a in self.attr:
             if hasattr(self.attr[a], '__call__'):
-                Logger().debug("Calling callback function on '%s'" % a)
+                #Logger().debug("Calling callback function on '%s'" % a)
                 self.attr[a](self, **kwargs)
         # done
 
@@ -119,7 +119,7 @@ class Communicator:
         for potential_new_member in group.members:
             if potential_new_member not in self.group().members:
                 raise MPICommunicatorGroupNotSubsetOf(potential_new_member)
-                
+
         new_comm = self._comm_create_local(group)
         return new_comm
 
@@ -128,24 +128,24 @@ class Communicator:
         Local only implementation. Can only handle log2(sys.maxint)-1 communicator creation depth/breadth.
         This means that on a typical 32-bit platform only 31 new communicators can be derived from world.
         From each of these one can in turn derive 30 communicators, and so on.
-        
+
         Even though this is local only, id ranges are separated and globally unique
         """
         execute_system_commands(self.mpi)
-        
+
         # Check that ids are available
         if self.id_ceiling <= 2:
-            raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")        
-                
+            raise MPICommunicatorNoNewIdAvailable("Local communication creation mode only supports log2(sys.maxint)-1 creation depth, and you've exceeded that.")
+
         old_comm_id = self.id
         old_comm_ceiling = self.id_ceiling
-        
+
         # Spawned communicator gets upper half of id range
         new_comm_ceiling = old_comm_ceiling
         new_comm_id = ((new_comm_ceiling-old_comm_id)//2)+old_comm_id
         # Parent communicator lowers ceiling accordingly
         self.id_ceiling = new_comm_id
-        
+
         # The actual communicator is only created and returned to those who are included in it
         if group.rank() == -1:
             return constants.MPI_COMM_NULL
@@ -284,7 +284,7 @@ class Communicator:
         An internal send function built on _isend.
         Content is assumed to be a list of already serialized pieces of data. The pieces are
         sent back to back.
-        
+
         TODO: This function differs from _isend only on the multi switch and so should probably be folded into _isend eventually
         """
         # Check that destination exists
@@ -297,7 +297,7 @@ class Communicator:
         # Check that tag is valid
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
-            
+
         # Create a send request object
         handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, multi=True, payload_size=payload_length, collective_header_information=collective_header_information)
         # If sending to self, take a short-cut
@@ -310,23 +310,23 @@ class Communicator:
         # it handle the request start.
         self._add_unstarted_request(handle)
         return handle
-    
+
     def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True,collective_header_information=()):
         """
         A helper function for sending a message without passing the
         message through the queues. The data is assumed to be properly serialized already.
-        
+
         A list of request handles is returned, all of which needs to be waited on before
         the entire send can be considered complete.
         """
         # FIXME: This is a silly safety precaution, let's only call direct send with a list of receivers and drop this check
         if not getattr(receivers, "__iter__", False):
             receivers = [receivers]
-        
+
         # FIXME: Move this import somewhere pretty
         from mpi.network.utils import prepare_message
 
-        rl = []        
+        rl = []
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
         header, payload = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
         for recp in receivers:
@@ -337,7 +337,7 @@ class Communicator:
             rl.append(request)
 
         return rl
-    
+
     def irecv(self, sender=constants.MPI_SOURCE_ANY, tag=constants.MPI_TAG_ANY):
         #Logger().debug(" -- irecv called -- sender:%s" % (sender) )
         """
@@ -397,7 +397,7 @@ class Communicator:
     def _add_unstarted_request(self, request):
         # Create the proper data structure and pickle the data
         request.prepare_send()
-        
+
         self.network.t_out.add_out_request(request)
 
     # Add a request for communication with self
@@ -474,8 +474,8 @@ class Communicator:
         # Check that tag is valid
         if not isinstance(tag, int):
             raise MPIInvalidTagException("All tags should be integers")
-        
-        # Create a send request object. We use the **kwargs as a simple way for users to push things into the request. 
+
+        # Create a send request object. We use the **kwargs as a simple way for users to push things into the request.
         handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, **kwargs)
         # If sending to self, take a short-cut
         if destination == self.rank():
@@ -727,7 +727,7 @@ class Communicator:
             See the :ref:`TagRules` page for rules about your custom tags
         """
         execute_system_commands(self.mpi)
-        return self._isend(content, destination, tag).wait()        
+        return self._isend(content, destination, tag).wait()
 
     def recv(self, source, tag = constants.MPI_TAG_ANY):
         """
@@ -771,7 +771,7 @@ class Communicator:
         A message sent by a send-receive operation can be received by a regular
         receive operation or probed by a probe operation; a send-receive operation
         can receive a message sent by a regular send operation.
-    
+
         **Default values**: If no ``source`` is defined it is defined same as the ``dest``.
 
         **Example usage**:
@@ -810,7 +810,7 @@ class Communicator:
 
         """
         execute_system_commands(self.mpi)
-        
+
         if source is None:
             source = dest
 
@@ -955,7 +955,7 @@ class Communicator:
 
             from mpi import MPI
             mpi = MPI()
-            
+
             def calc():
                 import time
                 time.sleep(5)
@@ -1071,7 +1071,7 @@ class Communicator:
             from mpi import MPI
 
             mpi = MPI()
-            
+
             world = mpi.MPI_COMM_WORLD
 
             rank = world.rank()
@@ -1086,7 +1086,7 @@ class Communicator:
             # This will then look like the following. We're still rank 2
             # ['0 --> 2', '1 --> 2', '2 --> 2', '3 --> 2']
             print recv_data
-            
+
             mpi.finalize()
 
         .. note::
@@ -1172,11 +1172,11 @@ class Communicator:
     def _igather(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-        
+
         return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
-        
+
         #if isinstance(data,numpy.ndarray): # FIXME: This test should spot all pickless types
-        #    return self.collective_controller.get_request(constants.TAG_GATHERPL, data=data, root=root)            
+        #    return self.collective_controller.get_request(constants.TAG_GATHERPL, data=data, root=root)
         #else:
         #    return self.collective_controller.get_request(constants.TAG_GATHER, data=data, root=root)
 
@@ -1362,7 +1362,7 @@ class Communicator:
     def _iscatter(self, data, root):
         if not self.have_rank(root):
             raise MPINoSuchRankException("Root not present in this communicator.")
-        
+
         # FIXME: This condition excludes strings which should preferable be scatterable
         if self.comm_group.rank() == root and (not getattr(data,"__iter__",False) or (len(data) == 0) or (len(data) % self.size() != 0)):
             raise MPIException("Scatter used with invalid arguments.")
@@ -1702,7 +1702,7 @@ class Communicator:
     def Wtime(self):
         """
         Returns the wall clock time this rank has been active. This time is
-        not syncronized between the ranks. 
+        not syncronized between the ranks.
         """
         execute_system_commands(self.mpi)
         return time.time() - self.mpi.startup_timestamp
@@ -1711,7 +1711,7 @@ class Communicator:
         """
         Return the **measured** resolution of the Wtime() call. This is not
         to be taken super strict. The Wtime() call is a Python floating point
-        but not all systems will actually provide any such resolution. 
+        but not all systems will actually provide any such resolution.
         """
         execute_system_commands(self.mpi)
         s = str(self.mpi.startup_timestamp)

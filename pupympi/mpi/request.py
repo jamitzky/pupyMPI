@@ -76,7 +76,7 @@ class Request(BaseRequest):
         self.payload_size = payload_size # combined bytesize of payloads if single payload this is 0 for now
 
         self.cmd = cmd
-        
+
         self.global_rank = None # Global rank of recipient process is None for ingoing requests and None for out requests until the request is prepared
 
         self.collective_header_information = collective_header_information
@@ -116,13 +116,13 @@ class Request(BaseRequest):
     def prepare_send(self):
         """
         Ready the payload of the request for sending
-        
+
         TODO: Either this function is always called before sending, and so could be folded into Request initialization
               OR it is only called sometimes and so the rationale for calling should be commented here
         """
         # Set global rank to allow the outbound thread to do its socket/rank lookup
         self.global_rank = self.communicator.group().members[self.participant]['global_rank']
-        
+
         common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : self.collective_header_information, }
 
         if self.multi:
@@ -133,9 +133,6 @@ class Request(BaseRequest):
                 header, payload = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
                 self.data = payload
                 self.header = header
-            #DEBUG this case should be deleted eventually
-            else:
-                Logger().debug("Reusing already prepared message")
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
@@ -158,7 +155,7 @@ class Request(BaseRequest):
         by all parties involved.
         """
         # TODO: The cancel test is simplistic and we should ensure that we can actually cancel in proper MPI fashion
-        
+
         # We just set a status and return right away. What needs to happen can be done
         # at a later point
         self.update("cancelled")
