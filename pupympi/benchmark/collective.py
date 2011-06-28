@@ -3,7 +3,8 @@
 """
 collective.py - collection of collective tests inspired by Intel MPI Benchmark (IMB)
 """
-from mpi.collective.operations import MPI_max
+#from mpi.collective.operations import MPI_max
+from mpi.collective.operations import MPI_sum
 
 import comm_info as ci
 
@@ -93,50 +94,37 @@ def test_Alltoall(size, max_iterations):
             comm.alltoall(data)
         # end of test
 
-    # Alltoall is not valid for size < numprocs
-    if size < ci.num_procs:
-        return -42
-
-    # Prepack data into lists for nicer iteration
-    # We send size/numprocs data to each process
-    #chunksize = size/ci.num_procs
-    chunksize = size
-    # each distinct chunk goes to a distinct process
-    datalist = [ ci.data[(x*chunksize):(x*chunksize)+chunksize] for x in range(ci.num_procs) ]
+    # Slice the data to the size needed
+    dataslice = ci.data[:(size*ci.num_procs)]
     ci.synchronize_processes()
     t1 = ci.clock_function()
 
     # do magic
-    Alltoall(datalist, max_iterations)
+    Alltoall(dataslice, max_iterations)
 
     t2 = ci.clock_function()
     time = t2 - t1
     return time
 
 def test_Scatter(size, max_iterations):
-    """
-    NOTE:
-    It appears that we have been mistaken with our comparison with LAM MPI and the IMB benchmark suite.
-    They measure data size as the size received at each individual process, not the size to be scattered.
-    We have to change that.
-    """
     rank = ci.rank
     num_procs = ci.num_procs
     comm = ci.communicator
 
     data = ci.data[:(size*num_procs)]
-    if len(data) < comm.size():
-        return None
 
     def Scatter(data, max_iterations):
         current_root = 0
         for _ in xrange(max_iterations):
-            my_data = data if rank == current_root else None # NOTE: probably superflous, discuss with Rune
-            comm.scatter(my_data, current_root)
+            comm.scatter(data, current_root)
 
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
+
+    # scatter makes no sense for size < 1
+    if not size > 0:
+        return None
 
     ci.synchronize_processes()
     t1 = ci.clock_function()
@@ -174,22 +162,23 @@ def test_Reduce(size, max_iterations):
     comm = ci.communicator
     num_procs = ci.num_procs
 
-    if size < 2:
-        return -42
-
     def Reduce(data, max_iterations):
         """docstring for Reduce"""
         current_root = 0
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            comm.reduce(data, MPI_max, current_root)
+            comm.reduce(data, MPI_sum, current_root)
             # Switch root
             current_root = (current_root +1) % num_procs
     # end of test
 
+    # reduce makes no sense for size < 1
+    if not size > 0:
+        return None
+
     ci.synchronize_processes()
     t1 = ci.clock_function()
-
+    
     # do magic
     Reduce(ci.reduce_data[:size], max_iterations)
 
@@ -200,15 +189,15 @@ def test_Reduce(size, max_iterations):
 def test_Allreduce(size, max_iterations):
     comm = ci.communicator
 
-    if size < 2:
-        return -42
-
     def Allreduce(data, max_iterations):
         for _ in xrange(max_iterations):
             # For the reduce operator we use pupyMPI's built-in max
-            comm.allreduce(data, MPI_max)
-
+            comm.allreduce(data, MPI_sum)
     # end of test
+
+    # allreduce makes no sense for size < 1
+    if not size > 0:
+        return None
 
     ci.synchronize_processes()
     t1 = ci.clock_function()
