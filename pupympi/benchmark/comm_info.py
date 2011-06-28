@@ -5,7 +5,7 @@ comm_info.py
 
 per process settings at top, and assist functions at bottom
 """
-import time, array
+import time, array, string
 from mpi import constants
  
 N_BARR = 2                  # Number of calls to barrier deemed neccessary for sync
@@ -20,7 +20,7 @@ px, py = (None, None)       # processes are part of px x py topology
 
 communicator = None         # underlying communicator for benchmark(s)  
 
-num_procs = None            # number of processes in communicator (aka size)      
+num_procs = None            # number of processes in communicator
 rank = None                 # rank of actual process in communicator    
 
 s_data_type = 'b'           # data type of sent data                    
@@ -65,29 +65,56 @@ def synchronize_processes():
         communicator.barrier()
     
 def gen_reduce_testset(size):
+    """
+    Generate a testset to use in reduction operations.
+    
+    NOTE: We use 32 bit floats even though this might not be the native float
+          size in Python. This is to match IMB where MPI_FLOAT is specified
+          which is 32 bit.
+    """
     import numpy
     
     # Sanity check. The size parameter is in bytes, and as we store
-    # 32 bit integers we should have at least 4 bytes and always a
+    # 32 bit floats we should have at least 4 bytes and always a
     # multipla of 4.
     if size < 4:
         return None
+    if not num_procs > 1:
+        print "gen_reduce_testset called with illegal number of processes (np:%s)" % num_procs
+        return None
     
-    array_length = size / 4
+    array_length = size*num_procs / 4
         
-    # TODO:
-    # Rerun tests with floats
-    # Use floats since some numpy operations are faster on floats 
-    #return numpy.arange(array_length, dtype=numpy.float32)
-    return numpy.array(xrange(array_length), dtype=numpy.int32)
+    return numpy.arange(array_length, dtype=numpy.float32)
     
 baseset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 def gen_testset(size):
-    """Generates a test message byte array of asked-for size. Used for single and parallel ops.
-    Current implementation is really slow - even without random.
+    """
+    Generates a byte array of size*num_procs.
+    Used for single and parallel ops.
+    We stick to letters even though more bytes could be represented in a bytearray
+    since this makes it easier on the eyes when debugging.
+    
+    TODO: This might be is an inefficient way of generating a large bytearray
+          potentially of size 4M * 32 procs, so consider other methods
+    """
+    if not num_procs > 1:
+        print "gen_testset called with illegal number of processes (np:%s)" % num_procs
+        return None
+
+    baseset = string.letters # Nicely visible in debug output
+    l = len(baseset)
+    data = bytearray([ baseset[i%l] for i in xrange(0,size*num_procs) ])
+    return data
+
+def gen_testset_old(size):
+    """
+    Generates test data of type array (byte) in the asked-for size.
+    This function remains from when we supported python 2.5 (no bytearray)
     """
 
     data = array.array('b')
-    for x in xrange(0, size):
+    for x in xrange(0, size*num_procs):
         data.append(ord(baseset[x % len(baseset)])) # Fast generation of data
     return data
