@@ -93,7 +93,6 @@ class SocketPool(object):
         connection attempt.
         """
         if global_rank >= 0 and self.readonly:
-            # DEBUG
             #Logger().debug("Bad conn to rank %i with metainfo:%s and sockets:%s" % (global_rank, self.metainfo, self.sockets))
             raise Exception("Can't add accepted socket. We're in readonly mode")
 
@@ -132,7 +131,7 @@ class SocketPool(object):
         for client_socket in self.sockets:
             (srank, referenced, force_persistent) = self.metainfo[client_socket]
             if force_persistent: # We do not remove persistent connections
-                Logger.debug("FOUND A PERSISTENT ONE!")
+                #Logger.debug("FOUND A PERSISTENT ONE!")
                 continue
 
             if referenced: # Mark second chance

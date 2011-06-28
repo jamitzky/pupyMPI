@@ -46,7 +46,7 @@ def create_random_socket(min=10000, max=30000):
     while True:
         port_no = random.randint(min, max)
         if port_no in used:
-            logger.debug("get_socket: We know port %d is already in use, try a new one" % port_no)
+            #logger.debug("get_socket: We know port %d is already in use, try a new one" % port_no)
             continue
 
         try:
@@ -54,7 +54,7 @@ def create_random_socket(min=10000, max=30000):
             sock.bind( (hostname, port_no) )
             break
         except socket.error:
-            logger.debug("get_socket: Permission error on port %d, trying a new one" % port_no)
+            #logger.debug("get_socket: Permission error on port %d, trying a new one" % port_no)
             used.append( port_no ) # Mark socket as used (or no good or whatever)
             continue
 
@@ -96,8 +96,6 @@ def get_raw_message(client_socket, bytecount=4096):
     header_size = struct.calcsize(HEADER_FORMAT)
     header = receive_fixed(header_size)
     lpd, rank, cmd, tag, ack, comm_id, coll_class_id = struct.unpack(HEADER_FORMAT, header)
-    # DEBUG
-    #Logger().debug("recieved: length:%s tuple:%s" % (header_size, (lpd, rank, cmd, tag, ack, comm_id )))
     return rank, cmd, tag, ack, comm_id, coll_class_id, receive_fixed(lpd)
 
 
@@ -133,12 +131,12 @@ def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_
     """
     Internal function to
     - construct header for a list of already serialized payloads
-    
+
     NOTE: Caller is assumed to know the combined length of the payloads since
           initial serialization and the segmentation has been done by the caller
-    
+
     The header format is the traditional
-    """      
+    """
     try:
         coll_class_id = collective_header_information[0]
     except IndexError, e:
@@ -156,7 +154,7 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     - serialize payload if needed
     - measure payload
     - construct header
-    
+
     The header format has following fields:
     length of payload
     rank of sender
@@ -164,19 +162,14 @@ def prepare_message(data, rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, com
     mpi or system tag
     acknowledge needed
     communicator id
-    
+
     TODO: We might not have to create a header always. In at least one place we chop off header to reuse, this is wasteful
     """
     if is_serialized:
-        # DEBUG
-        try:
-            Logger().debug("using already pickled data! type:%s data:%s" % (type(data), pickle.loads(data)) )
-        except:
-            Logger().debug("using already serialized data! type:%s data:%s" % (type(data), data) )
         serialized_data = data
     else:
         serialized_data, cmd = serialize_message(data,cmd)
-       
+
     header =  prepare_multiheader(rank, cmd=cmd, tag=tag, ack=ack, comm_id=comm_id, payload_length=len(serialized_data), collective_header_information=collective_header_information)
     return (header,serialized_data)
 
@@ -185,7 +178,7 @@ def serialize_message(data, cmd=None, recipients=1):
     Internal function to
     - measure and serialize payload
     - construct proper msg_type (cmd) including possible shapebytes
-    
+
     NOTE:
     The recipients parameter only takes effect when scattering multi-dimensional
     numpy arrays. Here shapebytes are adjusted to reflect the final (scattered)
@@ -194,9 +187,6 @@ def serialize_message(data, cmd=None, recipients=1):
     if isinstance(data,numpy.ndarray):
         # Multidimensional array?
         if len(data.shape) > 1:
-            # DEBUG
-            #Logger().debug("prepare MULTI - type:%s " % (data.dtype) )
-
             # Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
             if recipients > 1:
                 # If the array is to be scattered, the first dimension is proportionally smaller
@@ -215,40 +205,37 @@ def serialize_message(data, cmd=None, recipients=1):
             #        We need to keep payload separated into shapebytes and the bytes making up the actual numpy array
             # Convert data to bytearray with shape prepended
             serialized_data = byteshape + data.tostring()
-            
-            # DEBUG
-            Logger().debug("prepare MULTI - type:%s shape:%s" % (data.dtype, data.shape) )
 
-            # BELOW WORKS WITH NUMPY >= 1.5                
+            # BELOW WORKS WITH NUMPY >= 1.5
             ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
             #byteshape = bytearray(numpy.array(data.shape))
             ## Note how many bytes are shape bytes
-            #shapelen = len(byteshape)                
+            #shapelen = len(byteshape)
             ## Look up the correct type int
             #cmd = numpytype_to_typeint[data.dtype]
             ## Store shapelen in the upper decimals of the cmd
             #cmd = shapelen*1000 + cmd
             ## Convert data to bytearray with shape prepended
-            #serialized_data = byteshape + bytearray(data)            
+            #serialized_data = byteshape + bytearray(data)
         else:
-            
+
             serialized_data = data.tostring()
-            
-            # BELOW WORKS WITH NUMPY >= 1.5                
+
+            # BELOW WORKS WITH NUMPY >= 1.5
             #serialized_data = bytearray(data)
-            
+
             # Look up the correct type int
             cmd = type_to_typeint[data.dtype]
-            Logger().debug("prepare ONEDIM - type:%s cmd:%s" % (type(data[0]), cmd) )
-    elif isinstance(data,bytearray):            
+            #Logger().debug("prepare ONEDIM - type:%s cmd:%s" % (type(data[0]), cmd) )
+    elif isinstance(data,bytearray):
         cmd = type_to_typeint[type(data)]
-        Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
+        #Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
         serialized_data = data
     else:
         # NOTE: cmd is not overwritten for vanilla pickling since it is up to caller to decide between eg. system message or user message
         #Logger().debug("prepare VANILLA type:%s header:%s data:%s" %  (type(data),  (rank, cmd, tag, ack, comm_id), data) )
         serialized_data = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
-        
+
     return (serialized_data, cmd)
 
 def deserialize_message(raw_data, msg_type):
@@ -256,7 +243,7 @@ def deserialize_message(raw_data, msg_type):
     Retrieve the original message from a payload given the message type
     """
     #Logger().debug("DESERIALIZING msgtype:%s" % msg_type)
-    
+
     # Non-pickled data is recognized via msg_type
     if msg_type > constants.CMD_RAWTYPE:
         # Multidimensional arrays have the number of shapebytes hiding in the upper decimals
@@ -272,7 +259,7 @@ def deserialize_message(raw_data, msg_type):
             t = typeint_to_type[typeint]
             # Restore numpy array from the rest of the string
             data = numpy.fromstring(raw_data[shapelen:],t).reshape(shape)
-        
+
         else:
             # Numpy type or bytearray
             if msg_type == constants.CMD_BYTEARRAY:
@@ -296,27 +283,27 @@ def deserialize_message(raw_data, msg_type):
         except Exception as e:
             Logger().error("BAD PICKLE msg_type:%s raw_data:%s" % (msg_type,raw_data) )
             raise e
-    
+
     return data
-        
+
 def robust_send_multi(socket, messages):
     """
     experimental cousin of robust_send
     if we can agree that the overhead of always considering messages a list is negligible this can be folded into regular robust_send
-    
+
     TODO: Check (eg. with wireshark) if every send produces a tcp packet or if several messages can be packed into on tcp packet (which we hope is what happens)
     """
     for message in messages:
         target = len(message) # how many bytes to send
         transmitted_bytes = 0
-    
+
         while target > transmitted_bytes:
             delta = socket.send(message)
             transmitted_bytes += delta
-    
+
             if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
                 message = message[transmitted_bytes:]
-                Logger().debug("Message sliced because it was too large for one send.")
+                #Logger().debug("Message sliced because it was too large for one send.")
 
 def robust_send(socket, message):
     """
@@ -333,5 +320,5 @@ def robust_send(socket, message):
 
         if target > transmitted_bytes: # Rare unseen case therefore relegated to if clause instead of always slicing in send
             message = message[transmitted_bytes:]
-            Logger().debug("Message sliced because it was too large for one send.")
+            #Logger().debug("Message sliced because it was too large for one send.")
 
