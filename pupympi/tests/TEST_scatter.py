@@ -27,8 +27,17 @@ else:
 
 my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
 expected_data = range(10*rank, 10*(rank+1))
-
 assert my_data == expected_data
+
+# Ensure that we can handle if non-root processes supply gibberish data
+if rank == SCATTER_ROOT:
+    scatter_data = range(size)
+else:
+    scatter_data = "gibberish"
+
+my_data = world.scatter(scatter_data, root=SCATTER_ROOT)
+assert my_data == [rank]
+
 
 mpi.finalize()
 
