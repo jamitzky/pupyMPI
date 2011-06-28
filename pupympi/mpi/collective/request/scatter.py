@@ -102,7 +102,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
             #Logger().debug("RANK:%i len:%i cmd:%s self.shapelen:%s" % (self.rank,len(self.data), cmd, self.shapelen) )
             #Logger().debug("RANK:%i len:%i serialized:%s cmd:%s" % (self.rank,len(self.data), self.data, cmd) )
         else:
-            self.data = data
+            self.data = None
             self.shapelen = False
         
         #Logger().debug("rank:%i initialized data:%s from:%s" % (self.rank, self.data, data) )
