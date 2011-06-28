@@ -461,9 +461,6 @@ class MPI(Thread):
         the received data.
         """
         prune = False
-        #DEBUG
-        #Logger().debug("match_collective_pending: going in")
-
         with self.pending_collective_requests_lock:
             with self.received_collective_data_lock:
                 new_data_list = []
@@ -482,18 +479,18 @@ class MPI(Thread):
                                         cls = request.communicator.collective_controller.class_ids[coll_class_id]
                                         request.overtake(cls)
                                         match = request.accept_msg(rank, raw_data, msg_type)
-        
+
                                 if match:
                                     request.mark_dirty()
-                            
+
                             except TypeError, e:
                                 Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
-                                
+
                             if match:
                                 if request.test():
                                     prune = True
                                 break
-                            
+
 
                     if not match:
                         new_data_list.append( item )
@@ -535,13 +532,14 @@ class MPI(Thread):
                             match = True
                             # Outgoing synchronized communication requires acknowledgement
                             if acknowledge:
-                                Logger().debug("SSEND RECEIVED request: %s" % request)
+                                #Logger().debug("SSEND RECEIVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
                                 # NOTE: Consider using an empty message string, to save (a little) resources
                                 self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
-                                Logger().debug("ACK RECEIVED request: %s" % request)
+                                pass
+                                #Logger().debug("ACK RECEIVED request: %s" % request)
 
                             break # We can only find matching data for one request and we have
 
@@ -599,7 +597,6 @@ class MPI(Thread):
                 self.pending_collective_requests_has_work.set()
 
             if self.pending_collective_requests_has_work.is_set():
-                # DEBUG
                 #Logger().debug("Trying to match collective pending")
 
                 self.match_collective_pending()
@@ -637,13 +634,13 @@ class MPI(Thread):
         if self._profiler_enabled:
             pupyprof.stop()
             pupyprof.dump_stats(os.path.join(self.logdir,'prof.rank%s.log' % self.MPI_COMM_WORLD.rank()))
-            Logger().debug("Writing profiling traces to %s" % self.logdir)
+            #Logger().debug("Writing profiling traces to %s" % self.logdir)
 
         if self._yappi_enabled:
             yappi.stop()
 
             filename = os.path.join(self.logdir,'yappi.rank%s.log' % self.MPI_COMM_WORLD.rank())
-            Logger().debug("Writing yappi stats to %s" % filename)
+            #Logger().debug("Writing yappi stats to %s" % filename)
             try:
                 f = open(filename, "w")
             except:

@@ -102,7 +102,7 @@ class Network(object):
             self.t_out.start()
             self.t_out.type = "out"
             self.t_in.type = "in"
-        
+
         if self.options.unixsockets:
             # Create a unix socket for communicating with other ranks
             # on the same host.
@@ -112,14 +112,14 @@ class Network(object):
             uxs.bind(unix_socket_filename)
             uxs.listen(options.size-1)
             self.unix_socket_filename = unix_socket_filename
-            
+
             self.t_in.add_in_socket(uxs) # Put unix receive sockets on incoming list
             self.t_in.unix_socket = uxs # Set unix receive socket for comparison in _handle_readlist
         else:
             # These values are convenient dummies (just so we don't have to check for self.options.unixsockets everywhere)
             self.unix_socket_filename = ""
             self.t_in.unix_socket = None
-        
+
         # Create the main receive socket
         (server_socket, hostname, port_no) = create_random_socket()
         self.port = port_no
@@ -229,7 +229,7 @@ class Network(object):
         # Send all
         for s_rank in sender_ranks:
             self.mpi.MPI_COMM_WORLD._isend(our_rank, s_rank, constants.TAG_FULL_NETWORK).wait()
-        
+
         # Finish the receives
         for handle in recv_handles:
             handle.wait()
@@ -364,7 +364,7 @@ class BaseCommunicationHandler(threading.Thread):
             # Now that we know the rank of sender we can add the socket to the pool
             if add_to_pool:
                 self.network.socket_pool.add_accepted_socket(conn, rank)
-            
+
             # user messages have a cmd field larger than CMD_RAWTYPE
             if msg_type >= constants.CMD_RAWTYPE:
                 try:
@@ -372,7 +372,6 @@ class BaseCommunicationHandler(threading.Thread):
                         self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
-                        # DEBUG
                         #Logger().debug("Special treatment of :%s" % msg_type)
                 except AttributeError, e:
                     Logger().error("Strange error:%s" % e)
@@ -388,11 +387,10 @@ class BaseCommunicationHandler(threading.Thread):
             removal = []
             with self.socket_to_request_lock:
                 #request_list = self.socket_to_request[write_socket]
-                #DEBUG
                 try:
                     request_list = self.socket_to_request[write_socket]
                 except Exception as e:
-                    Logger().debug("rank:%i trying to find %s on socket_to_request:%s" % (self.rank, write_socket, self.socket_to_request ) )
+                    #Logger().debug("rank:%i trying to find %s on socket_to_request:%s" % (self.rank, write_socket, self.socket_to_request ) )
                     raise e
             for request in request_list:
                 if request.status == "cancelled":
@@ -405,7 +403,7 @@ class BaseCommunicationHandler(threading.Thread):
                             utils.robust_send(write_socket,request.header)
                             utils.robust_send_multi(write_socket,request.data)
                         else:
-                            utils.robust_send_multi(write_socket,[request.header,request.data])                            
+                            utils.robust_send_multi(write_socket,[request.header,request.data])
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
@@ -435,7 +433,6 @@ class BaseCommunicationHandler(threading.Thread):
                     self.outbound_requests -= removed
 
     def run(self):
-        # DEBUG
         emptyreads = 0
         emptywrites = 0
 
@@ -475,7 +472,6 @@ class BaseCommunicationHandler(threading.Thread):
                 #Logger().debug("Select in - for base communication handler type:%s" %(self.type))
                 (in_list, _, _) = self.select_in()
 
-                #DEBUG
                 #if not in_list:
                 #    emptyreads += 1
 
@@ -487,7 +483,6 @@ class BaseCommunicationHandler(threading.Thread):
             while not self.shutdown_event.is_set():
                 if self.outbound_requests > 0:
                     (_, out_list, _) = self.select_out()
-                    #DEBUG
                     #if not out_list:
                     #    emptywrites += 1
                     self._handle_writelist(out_list)
@@ -500,7 +495,6 @@ class BaseCommunicationHandler(threading.Thread):
         if self.type in ("combo","out"):
             while self.socket_to_request:
                 (_, out_list, _) = self.select_out()
-                # DEBUG
                 #Logger().debug("rank:%i calling final HW for out_list:%s" % (self.rank, out_list ) )
                 #Logger().debug("rank:%i calling final HW for %i sockets" % (self.rank, len(out_list) ) )
                 self._handle_writelist(out_list)
