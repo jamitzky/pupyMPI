@@ -1,0 +1,43 @@
+{% extends "defindex.html" %}
+{% block tables %}
+<p>pupyMPI is an implementation of (most of) MPI 1.3 with some pretty neat stuff
+added.<br>
+Look around or use the quick search if you are looking for something specific.</p>
+  <table class="contentstable" align="center"><tr>
+    <td width="25%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("tut_getting_started") }}">Getting started tutorial</a><br/>
+         <span class="linkdescr">start here</span></p>
+    </td><td width="25%">
+      <p class="biglink"><a href="{{ pathto("mpirun") }}"><span style="font-size: 1.3em; text-align:left">Running your pupyMPI<br>program</span></a><br/>
+         <span class="linkdescr">explore command line switches and advanced stuff</span></p>
+    </td><td width="25%">
+	<p class="biglink"><a href="{{ pathto("benchmarking") }}">
+			<span style="font-size: 1.3em; text-align:left">Benchmarking</span></a><br/>
+         <span class="linkdescr">Benchmark and plot your pupyMPI runs.</span></p>
+	</td>
+    </tr><tr>
+    <td width="25%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("api") }}">API documentation</a><br/>
+         <span class="linkdescr">keep this under your pillow</span></p>
+    </td><td width="25%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("developer") }}">Developer section</a><br/>
+        <span class="linkdescr">the inner workings of pypyMPI</span></p>
+    </td><td width="25%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("utils") }}">Utilities</a><br/>
+         <span class="linkdescr">useful scripts to interact with pupyMPI</span></p>
+    </tr>
+  </table>
+
+  <p><strong>Listings and indices:</strong></p>
+  <table class="contentstable" align="center"><tr>
+    <td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("modindex") }}">Global Module Index</a><br/>
+         <span class="linkdescr">quick access to all modules (only one so far)</span></p>
+    </td><td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("genindex") }}">General Index</a><br/>
+         <span class="linkdescr">all functions, classes, terms</span></p>
+    </td></tr>
+  </table>
+
+{% endblock %}
+
