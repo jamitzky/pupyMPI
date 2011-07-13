@@ -11,6 +11,11 @@ class NaiveAllToAll(BaseCollectiveRequest):
     .. note::
         This class will expect data to be well-sized. This should be handled in
         the user available API call.
+        
+    ISSUES:
+    - It is possible that it would be more efficient to serialize the whole
+      dataset once instead of piecemeal and then slice out portions to send to
+      each node
     """
     def __init__(self, communicator, data):
         super(NaiveAllToAll, self).__init__(communicator, data)
@@ -25,7 +30,7 @@ class NaiveAllToAll(BaseCollectiveRequest):
         self.missing_participants = range(self.size)
         self.missing_participants.remove(self.rank)
 
-        # We will a list with integers. We will replace the contents in the
+        # A list with integers. We will replace the contents in the
         # accept_msg function.
         self.received_data = range(self.size)
 
