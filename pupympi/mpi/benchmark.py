@@ -98,7 +98,7 @@ class Benchmark(object):
 
         return self.testers[procs][datasize][testname], create
 
-    def flush(self, flushdir):
+    def flush(self, flushdir=None):
         """
         Write the gathered data into several .csv files. The names for the format will include the test name and the number of involving processors. This is done accordingly to
         pupymark which is the internal benchmarking suite for pupyMPI. The files will also include a timestamp of the benchmark. This means that two benchmarks will not overwrite
