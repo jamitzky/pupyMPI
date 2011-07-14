@@ -43,7 +43,8 @@ class MigratePack(object):
                 'network_type' : self.network_type
             },
         }
-
+        
+        # TODO: Fix this comment - what pause are you talkin' 'bout?
         # Pause the threads. Note that pause.set() might be called two times on
         # one network thread, if we are using the combo version.
         self.mpi.shutdown_event.set()
@@ -54,8 +55,8 @@ class MigratePack(object):
         # Make the MPI thread run out if its main loop. We keep it around so
         # the network threads and add messages to it (there might be some on
         # the network layer while we are shuttig down)
-        self.mpi.shutdown_event.set()
-        self.mpi.queues_flushed.wait()
+        self.mpi.shutdown_event.set() # FIXME: why are we calling this again?
+        ###self.mpi.queues_flushed.wait()
 
         # Make the network send CONN_CLOSE on every socket connection. This way
         # we are sure not to miss messages "on the wire".
