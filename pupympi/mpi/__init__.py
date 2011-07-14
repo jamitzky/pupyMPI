@@ -562,22 +562,38 @@ class MPI(Thread):
                 with self.raw_data_lock:
                     # FIXME: The received_data_lock does not need to be held here,
                     # instead it should be enough to lock around the append and set() as is the case for received_collective_data_lock
-                    with self.received_data_lock:
-                        for element in self.raw_data_queue:
-                            (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
+                    #with self.received_data_lock:
+                    #    for element in self.raw_data_queue:
+                    #        (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
+                    #
+                    #        if tag in constants.COLLECTIVE_TAGS:
+                    #            # Messages that are part of a collective request, are handled
+                    #            # on a seperate queue and matched and deserialized later
+                    #            with self.received_collective_data_lock:
+                    #                self.received_collective_data.append(element)
+                    #                self.pending_collective_requests_has_work.set()
+                    #
+                    #        else:
+                    #            data = utils.deserialize_message(raw_data, msg_type)
+                    #            self.received_data.append( (rank, tag, ack, comm_id, data) )
+                    #            self.pending_requests_has_work.set()
+                    #    self.raw_data_queue = []
+                    for element in self.raw_data_queue:
+                        (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
 
-                            if tag in constants.COLLECTIVE_TAGS:
-                                # Messages that are part of a collective request, are handled
-                                # on a seperate queue and matched and deserialized later
-                                with self.received_collective_data_lock:
-                                    self.received_collective_data.append(element)
-                                    self.pending_collective_requests_has_work.set()
+                        if tag in constants.COLLECTIVE_TAGS:
+                            # Messages that are part of a collective request, are handled
+                            # on a seperate queue and matched and deserialized later
+                            with self.received_collective_data_lock:
+                                self.received_collective_data.append(element)
+                                self.pending_collective_requests_has_work.set()
 
-                            else:
-                                data = utils.deserialize_message(raw_data, msg_type)
+                        else:
+                            data = utils.deserialize_message(raw_data, msg_type)
+                            with self.received_data_lock:
                                 self.received_data.append( (rank, tag, ack, comm_id, data) )
                                 self.pending_requests_has_work.set()
-                        self.raw_data_queue = []
+                    self.raw_data_queue = []
                     self.raw_data_has_work.clear()
 
             # Collective requests.
