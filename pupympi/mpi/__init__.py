@@ -141,7 +141,6 @@ class MPI(Thread):
         # When the collective requsts are started they are moved to this queue until
         # they are finished.
         self.pending_collective_requests = []
-        #self.pending_collective_requests_lock = threading.Lock()
 
         self.received_collective_data_lock = threading.Lock()
         self.received_collective_data = []
@@ -453,40 +452,35 @@ class MPI(Thread):
 
     def match_collective_pending(self):
         """
-        Look through all the pending collective requests and match them with
-        the received data.
+        Look through all the received collective data and see if they can be
+        matched with a pending collective request.
         """
         prune = False
-        #with self.pending_collective_requests_lock:
         with self.received_collective_data_lock:
-            new_data_list = []
+            unmatched_data_list = [] # save the unmatched for later
             for item in self.received_collective_data:
                 (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
                 match = False
                 for request in self.pending_collective_requests:
                     if request.communicator.id == comm_id and request.tag == tag:
-                        try:
-                            if request._coll_class_id == coll_class_id:
+                        if request._coll_class_id == coll_class_id:
+                            match = request.accept_msg(rank, raw_data, msg_type)
+                        else:
+                            if not request.is_dirty():
+                                cls = request.communicator.collective_controller.class_ids[coll_class_id]
+                                request.overtake(cls)
                                 match = request.accept_msg(rank, raw_data, msg_type)
-                            else:
-                                if not request.is_dirty():
-                                    cls = request.communicator.collective_controller.class_ids[coll_class_id]
-                                    request.overtake(cls)
-                                    match = request.accept_msg(rank, raw_data, msg_type)
-
-                            if match:
-                                request.mark_dirty()
-                        except TypeError, e:
-                            Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
                         if match:
+                            request.mark_dirty() # from now on the request cannot change algo
+                            # is the request all done?
                             if request.test():
                                 prune = True
                             break
                 if not match:
-                    new_data_list.append( item )
+                    unmatched_data_list.append( item )
 
-            self.received_collective_data = new_data_list
+            self.received_collective_data = unmatched_data_list
 
         if prune:
             # We remove all the requests marked as completed.
@@ -580,7 +574,6 @@ class MPI(Thread):
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
-                    #with self.pending_collective_requests_lock:
                     self.pending_collective_requests.extend(self.unstarted_collective_requests)
                     
                     self.unstarted_collective_requests = []
@@ -588,14 +581,14 @@ class MPI(Thread):
 
             if self.pending_collective_requests_has_work.is_set():
                 #Logger().debug("Trying to match collective pending")
-
                 self.match_collective_pending()
-                # If the list is empty clear the signal
+                # If the list is empty we matched them all so clear the signal
                 if not self.pending_collective_requests:
                     self.pending_collective_requests_has_work.clear()
 
             # Pending requests are receive requests they may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
+                self.pending_requests_has_work.clear() # rather have an empty queue than hold the lock too long
                 with self.pending_requests_lock:
                     removal = [] # Remember succesfully matched requests so we can remove them
                     for request in self.pending_requests:
@@ -608,7 +601,6 @@ class MPI(Thread):
                     for request in removal:
                         self.pending_requests.remove(request)
 
-                    self.pending_requests_has_work.clear() # We can't match for now wait until further data received
 
 
         # TODO: Remove this when TRW is in effect again
