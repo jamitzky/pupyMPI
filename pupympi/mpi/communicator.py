@@ -21,6 +21,7 @@ from mpi.exceptions import MPINoSuchRankException, MPIInvalidTagException, MPICo
 from mpi.logger import Logger
 from mpi.request import Request
 from mpi.syscommands import handle_system_commands, execute_system_commands
+import mpi.network.utils as utils
 
 import sys, time
 import numpy
@@ -323,12 +324,9 @@ class Communicator:
         if not getattr(receivers, "__iter__", False):
             receivers = [receivers]
 
-        # FIXME: Move this import somewhere pretty
-        from mpi.network.utils import prepare_message
-
         rl = []
         #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
-        header, payload = prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
+        header, payload = utils.prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
         for recp in receivers:
             request = Request("send", self, recp, tag, data=payload, header=header)
             request.is_prepared = True

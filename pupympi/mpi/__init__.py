@@ -389,11 +389,7 @@ class MPI(Thread):
         # The MPI state contains a list of request objects. There can not be a
         # lock object, so only the request state if present now. We restore it
         # with a helper function.
-        # TRW
-        #self.unstarted_requests = [ Request.from_state(state, self) for state in self.unstarted_requests ]
         self.pending_requests = [ Request.from_state(state, self) for state in self.pending_requests ]
-
-        # FIXME: Setup the communicator and groups.
 
         # Find a user supplied function (if any) and call it so the user script can restore any
         # unsafe objects if needed.

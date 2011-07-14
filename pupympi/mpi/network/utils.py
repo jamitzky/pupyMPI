@@ -183,6 +183,13 @@ def serialize_message(data, cmd=None, recipients=1):
     The recipients parameter only takes effect when scattering multi-dimensional
     numpy arrays. Here shapebytes are adjusted to reflect the final (scattered)
     shape
+
+    ISSUES:
+    - For multidumensional numpy arrays there is an unnecessary string allocation
+      since the byteshape is first made into a string and then prepended to a
+      serialized numpy array.
+      Ideally we should keep payload separated into shapebytes and the bytes
+      making up the actual numpy array, and send them one after the other
     """
     if isinstance(data,numpy.ndarray):
         # Multidimensional array?
@@ -202,7 +209,6 @@ def serialize_message(data, cmd=None, recipients=1):
             # Store shapelen in the upper decimals of the cmd
             cmd = shapelen*1000 + cmd
             # FIXME: This is another unneccessary string allocation.
-            #        We need to keep payload separated into shapebytes and the bytes making up the actual numpy array
             # Convert data to bytearray with shape prepended
             serialized_data = byteshape + data.tostring()
 
