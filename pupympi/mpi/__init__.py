@@ -141,7 +141,7 @@ class MPI(Thread):
         # When the collective requsts are started they are moved to this queue until
         # they are finished.
         self.pending_collective_requests = []
-        self.pending_collective_requests_lock = threading.Lock()
+        #self.pending_collective_requests_lock = threading.Lock()
 
         self.received_collective_data_lock = threading.Lock()
         self.received_collective_data = []
@@ -457,45 +457,40 @@ class MPI(Thread):
         the received data.
         """
         prune = False
-        with self.pending_collective_requests_lock:
-            with self.received_collective_data_lock:
-                new_data_list = []
-
-                for item in self.received_collective_data:
-                    (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
-
-                    match = False
-                    for request in self.pending_collective_requests:
-                        if request.communicator.id == comm_id and request.tag == tag:
-                            try:
-                                if request._coll_class_id == coll_class_id:
+        #with self.pending_collective_requests_lock:
+        with self.received_collective_data_lock:
+            new_data_list = []
+            for item in self.received_collective_data:
+                (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
+                match = False
+                for request in self.pending_collective_requests:
+                    if request.communicator.id == comm_id and request.tag == tag:
+                        try:
+                            if request._coll_class_id == coll_class_id:
+                                match = request.accept_msg(rank, raw_data, msg_type)
+                            else:
+                                if not request.is_dirty():
+                                    cls = request.communicator.collective_controller.class_ids[coll_class_id]
+                                    request.overtake(cls)
                                     match = request.accept_msg(rank, raw_data, msg_type)
-                                else:
-                                    if not request.is_dirty():
-                                        cls = request.communicator.collective_controller.class_ids[coll_class_id]
-                                        request.overtake(cls)
-                                        match = request.accept_msg(rank, raw_data, msg_type)
-
-                                if match:
-                                    request.mark_dirty()
-
-                            except TypeError, e:
-                                Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
                             if match:
-                                if request.test():
-                                    prune = True
-                                break
+                                request.mark_dirty()
+                        except TypeError, e:
+                            Logger().error("rank:%i got TypeError:%s when accepting msg for request of type:%s" % (rank, e, request.__class__) )
 
+                        if match:
+                            if request.test():
+                                prune = True
+                            break
+                if not match:
+                    new_data_list.append( item )
 
-                    if not match:
-                        new_data_list.append( item )
+            self.received_collective_data = new_data_list
 
-                self.received_collective_data = new_data_list
-
-            if prune:
-                # We remove all the requests marked as completed.
-                self.pending_collective_requests = [r for r in self.pending_collective_requests if not r.test()]
+        if prune:
+            # We remove all the requests marked as completed.
+            self.pending_collective_requests = [r for r in self.pending_collective_requests if not r.test()]
 
     def match_pending(self, request):
         """
@@ -559,7 +554,7 @@ class MPI(Thread):
 
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
-                self.raw_data_has_work.clear()
+                self.raw_data_has_work.clear() # rather have an empty queue than hold the lock too long
                 with self.raw_data_lock:
                     for element in self.raw_data_queue:
                         (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = element
@@ -580,13 +575,13 @@ class MPI(Thread):
 
             # Collective requests
             if self.unstarted_collective_requests_has_work.is_set():
-                self.unstarted_collective_requests_has_work.clear()
+                self.unstarted_collective_requests_has_work.clear() # rather have an empty queue than hold the lock too long
                 with self.unstarted_collective_requests_lock:
                     for coll_req in self.unstarted_collective_requests:
                         coll_req.start()
 
-                    with self.pending_collective_requests_lock:
-                        self.pending_collective_requests.extend(self.unstarted_collective_requests)
+                    #with self.pending_collective_requests_lock:
+                    self.pending_collective_requests.extend(self.unstarted_collective_requests)
                     
                     self.unstarted_collective_requests = []
                 self.pending_collective_requests_has_work.set()
@@ -598,11 +593,6 @@ class MPI(Thread):
                 # If the list is empty clear the signal
                 if not self.pending_collective_requests:
                     self.pending_collective_requests_has_work.clear()
-                else:
-                    # NOTE: This solution is too harsh
-                    # Signal self that more is to come
-                    #self.has_work_event.set()
-                    pass
 
             # Pending requests are receive requests they may have a matching recv posted (actual message recieved)
             if self.pending_requests_has_work.is_set():
