@@ -34,6 +34,7 @@ elif rank == 1: # Recieve
     recieved = mpi.MPI_COMM_WORLD.recv(neighbour, DUMMY_TAG)    
     f.write("Rank: %d recieved '%s' \n" % (rank,recieved) )
     f.flush()
+    print "RANK:%i GOT:%s" % (rank,recieved)
 
 f.write("Done for rank %d\n" % rank)
 f.flush()

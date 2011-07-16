@@ -319,13 +319,8 @@ class Communicator:
 
         A list of request handles is returned, all of which needs to be waited on before
         the entire send can be considered complete.
-        """
-        # FIXME: This is a silly safety precaution, let's only call direct send with a list of receivers and drop this check
-        if not getattr(receivers, "__iter__", False):
-            receivers = [receivers]
-
+        """        
         rl = []
-        #message = pickle.dumps(message, pickle.HIGHEST_PROTOCOL)
         header, payload = utils.prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
         for recp in receivers:
             request = Request("send", self, recp, tag, data=payload, header=header)
@@ -558,7 +553,7 @@ class Communicator:
             raise MPIInvalidTagException("All tags should be integers")
 
         # Create a send request object
-        dummyhandle = Request("send", self, destination, tag, True, data=content)
+        dummyhandle = Request("send", self, destination, tag, acknowledge=True, data=content)
 
         # Create a recv request object to catch the acknowledgement message coming in
         # when this request is matched it also triggers the unacked->ready transition on the request handle
