@@ -506,28 +506,28 @@ class MPI(Thread):
 
                 # Any communication must take place within the same communicator
                 if request.communicator.id == communicator_id:
-
+                    
                     # The participant must match or any rank have been specified
                     if request.participant in (sender, constants.MPI_SOURCE_ANY):
-
+                        
                         # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
                         if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
                             remove.append(element)
-                            request.update(status="ready", data=message)
                             match = True
                             # Outgoing synchronized communication requires acknowledgement
                             if acknowledge:
-                                #Logger().debug("SSEND RECEIVED request: %s" % request)
+                                Logger().debug("SSEND RECEIVED request: %s" % request)
                                 # Generate an acknowledge message as an isend
                                 # NOTE: Consider using an empty message string, to save (a little) resources
                                 self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                             # System message: Acknowledge receive of ssend
                             elif request.tag == constants.TAG_ACK:
+                                Logger().debug("ACK RECEIVED request: %s" % request)
                                 pass
-                                #Logger().debug("ACK RECEIVED request: %s" % request)
-
+                            
+                            request.update(status="ready", data=message)
                             break # We can only find matching data for one request and we have
-
+                        
             for data in remove:
                 self.received_data.remove(data)
         return match
