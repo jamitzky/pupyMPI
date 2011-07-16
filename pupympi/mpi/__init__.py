@@ -497,39 +497,32 @@ class MPI(Thread):
         to remove the item from the list.
         """
         match = False
-        remove = []
         with self.received_data_lock:
             #Logger().debug("-- Match pending has lock! received_data:%s" % self.received_data)
-
             for element in self.received_data:
                 (sender, tag, acknowledge, communicator_id, message) = element
-
-                # Any communication must take place within the same communicator
-                if request.communicator.id == communicator_id:
+                
+                # For a message to match
+                # 1) it must be within the same communicator
+                # 2) participant must match or any rank have been specified
+                # 3) tag must match OR if any-tag has been specified the message should just be any user tag (ie. non-negative)
+                if request.communicator.id == communicator_id \
+                and request.participant in (sender, constants.MPI_SOURCE_ANY) \
+                and ( (request.tag == tag) or (request.tag == constants.MPI_TAG_ANY and tag > 0) ):
+                    # Incoming synchronized communication requires acknowledgement
+                    if acknowledge:
+                        Logger().debug("SSEND RECEIVED request: %s" % request)
+                        # Generate an acknowledge message as an isend
+                        # NOTE: Consider using an empty message string, to save (a little) resources
+                        self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
                     
-                    # The participant must match or any rank have been specified
-                    if request.participant in (sender, constants.MPI_SOURCE_ANY):
-                        
-                        # The tag must match or any tag have been specified or it must be an acknowledgement (system message)
-                        if (request.tag == tag) or (request.tag in (constants.MPI_TAG_ANY, constants.TAG_ACK) and tag > 0):
-                            remove.append(element)
-                            match = True
-                            # Outgoing synchronized communication requires acknowledgement
-                            if acknowledge:
-                                Logger().debug("SSEND RECEIVED request: %s" % request)
-                                # Generate an acknowledge message as an isend
-                                # NOTE: Consider using an empty message string, to save (a little) resources
-                                self.communicators[communicator_id]._isend( "ACKNOWLEDGEMENT", sender, constants.TAG_ACK)
-                            # System message: Acknowledge receive of ssend
-                            elif request.tag == constants.TAG_ACK:
-                                Logger().debug("ACK RECEIVED request: %s" % request)
-                                pass
-                            
-                            request.update(status="ready", data=message)
-                            break # We can only find matching data for one request and we have
-                        
-            for data in remove:
-                self.received_data.remove(data)
+                    matched_element = element
+                    match = True
+                    request.update(status="ready", data=message)
+                    break # We can only find matching data for one request and we have
+            
+            if match:
+                self.received_data.remove(matched_element)
         return match
 
     def run(self):
