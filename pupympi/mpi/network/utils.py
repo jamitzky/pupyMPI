@@ -62,13 +62,14 @@ def create_random_socket(min=10000, max=30000):
 
 def get_raw_message(client_socket, bytecount=4096):
     """
-    The first part of a message is the actual size (N) of the message. The
-    rest is N bytes of pickled data. So we start by receiving a long and
-    when using that value to unpack the remaining part.
+    Receive first a header and then actual payload.
+    
+    A message header contains among other things the size of the payload. The
+    header is unpacked and the message size is used to receive the payload.
     """
     def receive_fixed(length):
         """
-        Black box - Receive a fixed amount from a socket in batches not larger than 4096 bytes
+        Receive a fixed amount from a socket in batches not larger than bytecount bytes
         """
         #Logger().debug("recieve_fixed: length:%s" % (length))
         message = ""
@@ -76,13 +77,13 @@ def get_raw_message(client_socket, bytecount=4096):
             try:
                 data = client_socket.recv(min(length, bytecount))
             except socket.error, e:
-                #Logger().debug("recieve_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
-                raise MPIException("recieve_fixed threw socket error: %s" % e)
+                #Logger().debug("receive_fixed: recv() threw:%s for socket:%s length:%s message:%s" % (e,client_socket, length,message))
+                raise MPIException("receive_fixed threw socket error: %s" % e)
                 # NOTE: We can maybe recover more gracefully here but that requires
                 # throwing status besides message and rank upwards.
             except Exception, e:
                 #Logger().error("get_raw_message: Raised error: %s" %e)
-                raise MPIException("recieve_fixed threw other error: %s" % e)
+                raise MPIException("receive_fixed threw other error: %s" % e)
 
             # Other side closed
             if len(data) == 0:
@@ -122,11 +123,9 @@ numpytypes = {
 }
 
 # Mapping dicts
-#typeint_to_numpytype = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items() ] )
-#numpytype_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items() ] )
-
 typeint_to_type = dict( [(typeint,desc['type']) for typeint,desc in numpytypes.items()+othertypes.items() ] )
 type_to_typeint = dict( [(desc['type'],typeint) for typeint,desc in numpytypes.items()+othertypes.items() ] )
+
 def prepare_multiheader(rank, cmd=0, tag=constants.MPI_TAG_ANY, ack=False, comm_id=0, payload_length=0, collective_header_information=()):
     """
     Internal function to
