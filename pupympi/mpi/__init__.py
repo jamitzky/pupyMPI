@@ -121,7 +121,6 @@ class MPI(Thread):
 
         # Shutdown signals
         self.shutdown_event = threading.Event() # MPI finalize has been called, shutdown in progress
-        ###self.queues_flushed = threading.Event() # Queues are flushed, shutting down network threads can begin
 
         # Lock and counter for enumerating request ids
         self.current_request_id_lock = threading.Lock()
@@ -594,10 +593,6 @@ class MPI(Thread):
                     for request in removal:
                         self.pending_requests.remove(request)
 
-
-        # TODO: Remove this when TRW is in effect again
-        ###self.queues_flushed.set()
-
         # Start built-in profiling facility
         if self._profiler_enabled:
             pupyprof.stop()
@@ -778,8 +773,6 @@ class MPI(Thread):
         #Logger().debug("--- Finalize has been called ---")
         self.shutdown_event.set() # signal shutdown to mpi thread
         self.has_work_event.set() # let mpi thread once through the run loop in case it is stalled waiting for work
-
-        ###self.queues_flushed.wait()
 
         # We have now flushed all messages to the network layer. So we signal that it's time
         # to close
