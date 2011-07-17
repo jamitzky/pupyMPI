@@ -5,9 +5,9 @@ import tempfile
 import socket
 import random
 import string
+#import twiggy
 import sys
 import numpy
-import argparse
 
 """
 This module is for benchmarking different methods of sending data over Python
@@ -42,6 +42,33 @@ ISSUES:
 
 
 ### AUXILLARY
+
+def clear_port(portno):
+    """
+    return first available port from portno and up
+
+    make sure that the chosen port is available by binding it succesfully and
+    then closing it
+    """
+    unbound = True
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while unbound:
+        try:
+            server_socket.bind( ('127.0.0.1', portno))
+        except socket.error as e:    
+            #raise e
+            portno += 1
+            print("port not available (error:%s), trying %i ..." % (e,portno) )           
+        except Exception as e:
+            print("unexpected error:%s" % e )
+            raise e
+        
+        # success
+        unbound = False
+    
+    server_socket.close()
+    
+    return portno
 
 
 def generate_container(type,size,filler=0):
@@ -306,7 +333,7 @@ def bytearray_recv(connection,size,container=None):
 
 
 ### MISSION CONTROL
-def sender(confs):
+def sender(dummy,confs):
     def setup_connection(portno,address):
         maxtries = 3
         tries = 1
@@ -315,21 +342,19 @@ def sender(confs):
             print("Sender trying port:%i try:%i" % (portno,tries))
             try:
                 if conf['connection_type'] == "local":
-                    print("Creating local socket to (%s, %s)" % (portno,address))
+                    #Logger().debug("Creating local socket to %s" % connection_info)
                     client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     client_socket.connect(socketfile)
+                    return client_socket
             
                 elif conf['connection_type'] == "tcp":
-                    print("Creating TCP socket to (%s, %s)" % (portno,address))
+                    #Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
                     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)            
-                    client_socket.connect( (address, portno))
+                    client.connect( (address, portno))
+                    return connection
             except socket.error:
-                print "got a socket error trying again..."
                 tries += 1
-
-            return client_socket
-
     
     # Run configurations that are to be tested
     for conf in confs:
@@ -351,41 +376,29 @@ def sender(confs):
                 func(connection, msg)
             t2 = time.time()
             
-            connection.shutdown(socket.SHUT_RDWR)
             connection.close()
             
             print("(%i kB/s) -- %s -- sent %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1) ) 
 
 
-def receiver(confs):
+def receiver(dummy,confs,validate=True):
     def setup_connection(portno,address):
+        print("Receiver starting with port no:%i" % portno)
         if conf['connection_type'] == "local":
             global socketfile
             socketfile = tempfile.NamedTemporaryFile()
+            #Logger().debug("Creating local socket to %s" % connection_info)
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
     
-        elif conf['connection_type'] == "tcp":            
-            unbound = True
+        elif conf['connection_type'] == "tcp":
+            #Logger().debug("Creating TCP socket to (%s, %s)" % connection_info)
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            while unbound:
-                try:
-                    server_socket.bind( (address, portno) )
-                    unbound = False
-                except socket.error as e:    
-                    #raise e
-                    portno += 1
-                    print("port not available (error:%s), trying %i ..." % (e,portno) )           
-                except Exception as e:
-                    print("unexpected error:%s" % e )
-                    raise e
-                
+        
+            server_socket.bind((address, portno))
             server_socket.listen(10)
             
-        print("Receiver listening on port no:%i" % portno)
-        
         return server_socket.accept()
        
     # Run configurations that are to be tested
@@ -421,61 +434,129 @@ def receiver(confs):
                     func(connection, size, container)
                 t2 = time.time()
             else:
-                t1 = time.time()
-                for i in range(iterations):
-                    # DEBUG
-                    #print("C1: %s" % container)
-                    container = func(connection, size, container)                    
-                t2 = time.time()
-                
-            connection.shutdown(socket.SHUT_RDWR)
+                if validate: # if not reusing buffer, validation requires storing all transmitted data
+                    received_data = []
+                    
+                    t1 = time.time()
+                    for i in range(iterations):
+                        received_data.append( func(connection, size, container) )
+                    t2 = time.time()
+                else:
+                    t1 = time.time()
+                    for i in range(iterations):
+                        # DEBUG
+                        #print("C1: %s" % container)
+                        container = func(connection, size, container)                    
+                    t2 = time.time()
+    
+            # DEBUG
+            #print("C2: %s" % container)
+            
             connection.close()
             
+            if validate:
+                if prebuf:
+                    received_data = [container]
+                validate_results(received_data,conf['data'])
+                
             print("(%i kB/s) -- %s -- got %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1))
         
 
     
 def runner():
-    parser = argparse.ArgumentParser(description='Get test parameters')
-    parser.add_argument('send_recv', metavar='s/r', choices=['s','r'], 
-                   help='whether this is a sender or receiver')    
-    parser.add_argument('-P', type=int, metavar='port', default='15010',
-                   help='which port to use')
-    parser.add_argument('-H', metavar='host', default='127.0.0.1',
-                   help='which host address to use')
-
-    args = parser.parse_args()
-    
-    port = args.P
-    host = args.H
+    localhost = '127.0.0.1' # Feels like localhost
+    startport = 15001    
+    testport = clear_port(startport)
     
     # Python 2.6 compatible
     testconf1 = {
-        "iterations" : 1000,
+        "iterations" : 10000,
         "msgsize" : 800, # always in bytes
         "msgtype" : 'ascii',
-        #"sfunctions" : [str_buffer_send],
-        #"rfunctions" : [str_list_recv],
-        #"sfunctions" : [str_primitive_send],
-        #"rfunctions" : [str_primitive_recv],
+        #"sfunctions" : [str_primitive_send, str_buffer_send],
+        #"rfunctions" : [str_primitive_recv, str_list_recv],
+        #"sfunctions" : [str_primitive_send, str_buffer_send,str_primitive_send, str_buffer_send],
+        #"rfunctions" : [str_primitive_recv, str_primitive_recv, str_list_recv, str_list_recv],
         "sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
         "rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
-        "port" : port,  # This one should be pre-cleared
-        "address" : host,
+        #"sfunctions" : [str_buffer_send,str_primitive_send],
+        #"rfunctions" : [str_list_recv,str_primitive_recv],
+        "port" : testport,  # This one should be pre-cleared
+        "address" : localhost,
         "connection_type" : 'tcp',
+    }
+
+    testconf2 = {
+        "iterations" : 10000,
+        "msgsize" : 4000, # always in bytes
+        "msgtype" : 'ascii',
+        "sfunctions" : [str_buffer_send],
+        "rfunctions" : [str_list_recv],
+        "port" : testport,  # This one should be pre-cleared
+        "address" : localhost,
+    }
+    
+    # Python 2.7 and up
+    testconf3 = {
+        "iterations" : 10000,
+        "msgsize" : 4000, # always in bytes
+        "msgtype" : 'numpy',
+        "sfunctions" : [numpy_send],
+        "rfunctions" : [numpy_recv],
+        "port" : testport,  # This one should be pre-cleared
+        "address" : localhost,
+        "prebuf" : True,
+    }
+    
+    # Python 2.7 and up
+    testconf4 = {
+        "iterations" : 1000000,
+        "msgsize" : 4000, # always in bytes
+        "msgtype" : 'bytearray',
+        "sfunctions" : [bytearray_send],
+        "rfunctions" : [bytearray_recv],
+        "port" : testport,  # This one should be pre-cleared
+        "address" : localhost,
+        "prebuf" : True,
+    }
+    
+    # Python 2.7 and up
+    testconf5 = {
+        "iterations" : 10000,
+        "msgsize" : 4000, # always in bytes
+        "msgtype" : 'ascii',
+        "sfunctions" : [str_view_send],
+        #"rfunctions" : [str_list_recv],
+        "rfunctions" : [str_decoding_recv],
+        "port" : testport,  # This one should be pre-cleared
+        "address" : localhost,
     }
 
     # Switcheroo
     configurations = [testconf1]
+    #configurations = [testconf2]
+    #configurations = [testconf3]
+    #configurations = [testconf4]
+    #configurations = [testconf5]
+    
+    #configurations = [testconf1,testconf2,testconf3,testconf4,testconf5]
+    #configurations = [testconf1,testconf2,testconf3,testconf4]
+    #configurations.reverse()
+    
+    #validate = True
+    validate = False
         
     generate_data(configurations) # pre-generate data to ensure that both ends have same set
     
-    # do it
-    if args.send_recv == 's':        
-        sender(configurations)
-    else:
-        receiver(configurations)
-        
-    print("done running %i configurations" % (len(configurations)))
+    t1 = threading.Thread(target=receiver, args=("dummmy",configurations,validate), kwargs={})
+    t2 = threading.Thread(target=sender, args=("dummmy",configurations), kwargs={})
+    
+    t1.start()
+    t2.start()
+    
+    t1.join()
+    t2.join()
+    
+    print("done running %i configurations with validation %s" % (len(configurations), "ON" if validate else "OFF"))
     
 runner()
