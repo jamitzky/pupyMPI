@@ -13,20 +13,13 @@ import optparse
 This module is for benchmarking different methods of sending data over Python
 sockets.
 
-A message is sent repeatedly from sender to receiver. The receiver validates that
-no corruption of the data ocurred en route.
 The costs of setting up and tearing down the connection are not counted, as this
 should be the same for all methods. The cost of validating the correctness is
 not counted either since this is just for ensuring correctness during development.
 
 NOTES:
-- Testing does not show the expected results so far. Possible variations:
-  - limit receiver to smaller chunks
-  - check TCP protocol weirdness via Wireshark
-  - Try limiting sender via TCP options
-  - Try with TCP NODELAY (nagle off)
 
-- For now we test with a message size known to both sides. This is intentional
+- For now we test with a sink or with a message size known to both sides. This is intentional
   since we want to measure only the simplest recv and send loops. In the
   practical applications we need to have the header received examined before
   receiving the payload but this makes measuring more complicated and also
@@ -467,26 +460,19 @@ def sink(confs):
     
     conf = confs[0]
     server_socket = setup_connection(conf['port'],conf['address'])
+    buffersize = conf['buffersize']
     try:
         while True:
-    
-            m = 4096
-            m = 8192
-            m = 16384
-            m = 32768
-            m = 65536
-            m = 131072
-            m = 262144
-            m = 524288
-    
+        
             connection, address = server_socket.accept()
-            print("Sink (chunksize:%i) accepted connection from %s" % (m,address) )
+            print("Sink (chunksize:%i) accepted connection from %s" % (buffersize,address) )
             while True:
                 try:
-                    data = connection.recv(m)
+                    data = connection.recv(buffersize)
                     if data:
                         l = len(data)
-                        print "got datalen:%s \t%s" % (l, "x" if l < m else "!")
+                        if l == buffersize:
+                            print "got datalen:%s \t%s" % (l, "" if l < buffersize else "!")
                     else:
                         print "sink got empty data (connection closed)"
                         break
@@ -525,17 +511,29 @@ def runner():
     # Python 2.6 compatible
     testconf1 = {
         "iterations" : 10,
-        "msgsize" : 800, # always in bytes
+        "msgsize" : 800000, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
         #"sfunctions" : [str_primitive_send],
         #"rfunctions" : [str_primitive_recv],
-        "sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
-        "rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
+        #"sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
+        #"rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
+        "sfunctions" : [str_primitive_send, str_buffer_send],
+        "rfunctions" : [str_primitive_recv, str_list_recv],
         "port" : port,  # This one should be pre-cleared
         "address" : host,
         "connection_type" : 'tcp',
+        #"buffersize" : 2**10, # Good ol' 1024
+        #"buffersize" : 2**12, # Good ol' 4096
+        #"buffersize" : 2**13, # 8192
+        #"buffersize" : 2**14, # 16384
+        #"buffersize" : 2**15, # 32768
+        #"buffersize" : 2**16, # 65536
+        #"buffersize" : 2**17, # 131072
+        #"buffersize" : 2**18, # 262144
+        "buffersize" : 2**19, # 524288 (This size is possible via localhost)
+        #"buffersize" : 2**20, # 1048576 (This size has not been observed even via localhost)
     }
 
     # Switcheroo
