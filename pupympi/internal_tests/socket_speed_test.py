@@ -7,7 +7,7 @@ import random
 import string
 import sys
 import numpy
-import argparse
+import optparse
 
 """
 This module is for benchmarking different methods of sending data over Python
@@ -436,18 +436,23 @@ def receiver(confs):
 
     
 def runner():
-    parser = argparse.ArgumentParser(description='Get test parameters')
-    parser.add_argument('send_recv', metavar='s/r', choices=['s','r'], 
-                   help='whether this is a sender or receiver')    
-    parser.add_argument('-P', type=int, metavar='port', default='15010',
-                   help='which port to use')
-    parser.add_argument('-H', metavar='host', default='127.0.0.1',
-                   help='which host address to use')
+    # Parse args
+    parser = optparse.OptionParser()
+    parser.add_option("-P", "--port", dest="port", default=15001,
+                      help="which port to use")
+    parser.add_option("-H", "--host", dest="host", default="127.0.0.1",
+                      help="which host address to use")
+    (options, args) = parser.parse_args()
 
-    args = parser.parse_args()
-    
-    port = args.P
-    host = args.H
+    port = options.port
+    host = options.host
+    type = None
+    if 's' in args or 'sender' in args:
+        type = 'sender'
+    elif 'r' in args or 'receiver' in args:
+        type = 'receiver'
+    else:
+        type = 'sink'
     
     # Python 2.6 compatible
     testconf1 = {
@@ -471,10 +476,14 @@ def runner():
     generate_data(configurations) # pre-generate data to ensure that both ends have same set
     
     # do it
-    if args.send_recv == 's':        
+    if type=='sender':
         sender(configurations)
+    elif type=='receiver':
+        receiver(configurations)
     else:
         receiver(configurations)
+        # FIXME: make a sink
+        # sink(configurations) 
         
     print("done running %i configurations" % (len(configurations)))
     
