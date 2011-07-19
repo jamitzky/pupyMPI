@@ -463,7 +463,7 @@ def sink(confs):
     buffersize = conf['buffersize']
     try:
         while True:
-        
+            max_received = 0
             connection, address = server_socket.accept()
             print("Sink (chunksize:%i) accepted connection from %s" % (buffersize,address) )
             while True:
@@ -472,7 +472,8 @@ def sink(confs):
                     if data:
                         l = len(data)
                         if l == buffersize:
-                            print "got datalen:%s \t%s" % (l, "" if l < buffersize else "!")
+                            max_received += 1
+                            #print "got datalen:%s \t%s" % (l, "" if l < buffersize else "!")
                     else:
                         print "sink got empty data (connection closed)"
                         break
@@ -480,6 +481,7 @@ def sink(confs):
                     print "inner loop got exception:%s" % e
                     break
                 
+            print("sink had %i receptions of full buffersize" % max_received)
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
             
@@ -511,7 +513,7 @@ def runner():
     # Python 2.6 compatible
     testconf1 = {
         "iterations" : 10,
-        "msgsize" : 800000, # always in bytes
+        "msgsize" : 10**7, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
@@ -524,7 +526,7 @@ def runner():
         "port" : port,  # This one should be pre-cleared
         "address" : host,
         "connection_type" : 'tcp',
-        #"buffersize" : 2**10, # Good ol' 1024
+        "buffersize" : 2**10, # Good ol' 1024
         #"buffersize" : 2**12, # Good ol' 4096
         #"buffersize" : 2**13, # 8192
         #"buffersize" : 2**14, # 16384
@@ -532,17 +534,18 @@ def runner():
         #"buffersize" : 2**16, # 65536
         #"buffersize" : 2**17, # 131072
         #"buffersize" : 2**18, # 262144
-        "buffersize" : 2**19, # 524288 (This size is possible via localhost)
+        #"buffersize" : 2**19, # 524288 (This size is possible via localhost)
         #"buffersize" : 2**20, # 1048576 (This size has not been observed even via localhost)
     }
 
     # Switcheroo
     configurations = [testconf1]
         
-    generate_data(configurations) # pre-generate data to ensure that both ends have same set
+    
     
     # do it
     if type=='sender':
+        generate_data(configurations) # pre-generate data to ensure that both ends have same set
         sender(configurations)
     elif type=='receiver':
         receiver(configurations)
