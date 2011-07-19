@@ -72,18 +72,18 @@ def generate_data(confs):
         if conf['msgtype'] == 'ascii':
             size = conf['msgsize']
             # only lowercase chars from alphabet
-            conf['data'] = ''.join(random.choice(string.ascii_lowercase) for i in range(size))
+            conf['data'] = ''.join(random.choice(string.ascii_lowercase) for i in xrange(size))
             
         elif conf['msgtype'] == 'numpy':
             size = conf['msgsize'] // 8 # int64 array is 8 bytes per element
-            #conf['data'] = numpy.array(range(size)) # linear
+            #conf['data'] = numpy.array(xrange(size)) # linear
             conf['data'] = numpy.random.random_integers(0,size,size )  # numpy random
             
         elif conf['msgtype'] == 'bytearray':
             size = conf['msgsize']
-            #bytestring = ''.join([ 'a' for i in range(size) ])
+            #bytestring = ''.join([ 'a' for i in xrange(size) ])
              # TODO: make more random
-            bytestring = ''.join([ chr(i%255) for i in range(size) ])
+            bytestring = ''.join([ chr(i%255) for i in xrange(size) ])
             try:
                 conf['data'] = bytearray(bytestring)
             except TypeError as e:        
@@ -340,7 +340,7 @@ def sender(confs):
             #print("Sender sending %s" % msg)
             
             t1 = time.time()        
-            for i in range(conf['iterations']):
+            for i in xrange(conf['iterations']):
                 func(connection, msg)
             t2 = time.time()
             
@@ -408,14 +408,14 @@ def receiver(confs):
             
             if prebuf:
                 t1 = time.time()
-                for i in range(iterations):                
+                for i in xrange(iterations):                
                     # DEBUG
                     #print("C1: %s" % container)
                     func(connection, size, container)
                 t2 = time.time()
             else:
                 t1 = time.time()
-                for i in range(iterations):
+                for i in xrange(iterations):
                     # DEBUG
                     #print("C1: %s" % container)
                     container = func(connection, size, container)                    
