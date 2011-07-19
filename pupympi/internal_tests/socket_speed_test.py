@@ -155,32 +155,47 @@ def validate_results(received_data_list,reference_data):
 
 ### SEND LOOPS
 
-def str_primitive_send(connection,msg):
+def str_primitive_send(connection,msg,verbose=False):
+    loopcount = 0
     size = len(msg)
     sent = 0
     while sent < size:
         sent += connection.send(msg[sent:])
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
         
-def str_buffer_send(connection,msg):
+def str_buffer_send(connection,msg,verbose=False):
     """
     This seems suboptimal. It looses to str_primitive_send on both 2.6 and 2.7
     when testing via localhost.
     
     Defunct in python 3 where buffer is replaced by memoryview
     """
+    loopcount = 0
     buf = buffer(msg)
     while len(buf):
         buf = buffer(msg,len(buf) + connection.send(buf))
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
 
-def str_view_send(connection,msg):
+def str_view_send(connection,msg,verbose=False):
     """
     Works for both 2.7 and 3.1
     """
+    loopcount = 0
     bytesize = len(msg)
     sent = 0
     view = memoryview(msg.encode('latin1'))
     while sent < bytesize:        
         sent += connection.send(view[sent:])
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
 
 
 def numpy_send(connection,msg):
@@ -188,20 +203,30 @@ def numpy_send(connection,msg):
     for now this is the same as primitive send, but we should determine whether
     time is saved by using a view over the numpy array in the loop instead of normal slice
     """
+    loopcount = 0
     bytesize = msg.nbytes
     sent = 0
     while sent < bytesize:
         sent += connection.send(msg[sent:])
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
     # DEBUG
     #print("sent a numpy array of %i type:%s element-type:%s" % (len(msg),type(msg),type(msg[0])))
 
         
-def bytearray_send(connection,msg):
+def bytearray_send(connection,msg,verbose=False):
+    loopcount = 0
     bytesize = len(msg) # len equals size for bytearrays
     sent = 0
     view = memoryview(msg)
     while sent < bytesize:
         sent += connection.send(view[sent:])
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
 
 
 ### RECEIVE LOOPS
@@ -341,7 +366,7 @@ def sender(confs):
             
             t1 = time.time()        
             for i in xrange(conf['iterations']):
-                func(connection, msg)
+                func(connection, msg, conf['verbose'])
             t2 = time.time()
             
             connection.shutdown(socket.SHUT_RDWR)
@@ -512,6 +537,7 @@ def runner():
     
     # Python 2.6 compatible
     testconf1 = {
+        "verbose" : True,
         "iterations" : 10,
         "msgsize" : 10**7, # always in bytes
         "msgtype" : 'ascii',
