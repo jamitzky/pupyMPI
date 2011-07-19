@@ -434,7 +434,75 @@ def receiver(confs):
             print("(%i kB/s) -- %s -- got %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1))
         
 
+def sink(confs):
+    def setup_connection(portno,address):
+        if conf['connection_type'] == "local":
+            global socketfile
+            socketfile = tempfile.NamedTemporaryFile()
+            server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server_socket.bind(socketfile)
     
+        elif conf['connection_type'] == "tcp":            
+            unbound = True
+            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            while unbound:
+                try:
+                    server_socket.bind( (address, portno) )
+                    unbound = False
+                except socket.error as e:    
+                    #raise e
+                    portno += 1
+                    print("port not available (error:%s), trying %i ..." % (e,portno) )           
+                except Exception as e:
+                    print("unexpected error:%s" % e )
+                    raise e
+                
+            server_socket.listen(10)
+            
+        print("Sink listening on host:%s port no:%i" % (address,portno) )
+        
+        return server_socket
+    
+    conf = confs[0]
+    server_socket = setup_connection(conf['port'],conf['address'])
+    try:
+        while True:
+    
+            m = 4096
+            m = 8192
+            m = 16384
+            m = 32768
+            m = 65536
+            m = 131072
+            m = 262144
+            m = 524288
+    
+            connection, address = server_socket.accept()
+            print("Sink (chunksize:%i) accepted connection from %s" % (m,address) )
+            while True:
+                try:
+                    data = connection.recv(m)
+                    if data:
+                        l = len(data)
+                        print "got datalen:%s \t%s" % (l, "x" if l < m else "!")
+                    else:
+                        print "sink got empty data (connection closed)"
+                        break
+                except Exception as e:
+                    print "inner loop got exception:%s" % e
+                    break
+                
+            connection.shutdown(socket.SHUT_RDWR)
+            connection.close()
+            
+    except KeyboardInterrupt as e:
+        server_socket.shutdown(socket.SHUT_RDWR)
+        server_socket.close()
+        print "sink stopped"
+    
+
 def runner():
     # Parse args
     parser = optparse.OptionParser()
@@ -456,7 +524,7 @@ def runner():
     
     # Python 2.6 compatible
     testconf1 = {
-        "iterations" : 1000,
+        "iterations" : 10,
         "msgsize" : 800, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
@@ -481,9 +549,7 @@ def runner():
     elif type=='receiver':
         receiver(configurations)
     else:
-        receiver(configurations)
-        # FIXME: make a sink
-        # sink(configurations) 
+        sink(configurations)
         
     print("done running %i configurations" % (len(configurations)))
     
