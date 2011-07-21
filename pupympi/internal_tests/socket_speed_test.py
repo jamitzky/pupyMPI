@@ -540,7 +540,7 @@ def sink(confs):
 def runner():
     # Parse args
     parser = optparse.OptionParser()
-    parser.add_option("-P", "--port", dest="port", default=15001,
+    parser.add_option("-P", "--port", dest="port", default=15001, type=int,
                       help="which port to use")
     parser.add_option("-H", "--host", dest="host", default="127.0.0.1",
                       help="which host address to use")
@@ -560,8 +560,7 @@ def runner():
     testconf1 = {
         "verbose" : True,
         "iterations" : 3,
-        #"msgsize" : 10**3, # always in bytes
-        "msgsize" : 10**7, # always in bytes
+        "msgsize" : 10**3, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
