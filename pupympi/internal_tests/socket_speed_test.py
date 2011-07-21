@@ -83,21 +83,21 @@ def generate_data(confs):
     random.seed(42)
     numpy.random.seed(42)
     
+    
     for conf in confs:
+        size = conf['msgsize']
+        print("generating data size:%i of type:%s" % (size, conf['msgtype']) )
         if conf['msgtype'] == 'ascii':
-            size = conf['msgsize']
             # only lowercase chars from alphabet
             conf['data'] = ''.join(random.choice(string.ascii_lowercase) for i in xrange(size))
             
         elif conf['msgtype'] == 'numpy':
-            size = conf['msgsize'] // 8 # int64 array is 8 bytes per element
-            #conf['data'] = numpy.array(xrange(size)) # linear
-            conf['data'] = numpy.random.random_integers(0,size,size )  # numpy random
+            elementsize = 8 # 8 bytes per numpy array element as standard
+            conf['data'] = numpy.random.random_integers(0,size//elementsize,size//elementsize )  # numpy random
             
         elif conf['msgtype'] == 'bytearray':
             size = conf['msgsize']
-            #bytestring = ''.join([ 'a' for i in xrange(size) ])
-             # TODO: make more random
+            # TODO: make more random
             bytestring = ''.join([ chr(i%255) for i in xrange(size) ])
             try:
                 conf['data'] = bytearray(bytestring)
@@ -354,7 +354,8 @@ def sender(confs):
                 elif conf['connection_type'] == "tcp":
                     print("Creating TCP socket to (%s, %s)" % (portno,address))
                     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)            
+                    client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024)
                     client_socket.connect( (address, portno))
             except socket.error:
                 print "got a socket error trying again..."

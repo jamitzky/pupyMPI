@@ -37,6 +37,12 @@ rcvbuf = tcpsocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
 print "socket.SO_SNDBUF: %s" % sndbuf
 print "socket.SO_RCVBUF: %s" % rcvbuf
 
+"""
+1024 is the minimum size that is respected for the send buffer, any lower is rounded up to 1024
+"""
+tcpsocket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024)
+sndbuf = tcpsocket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+print "new socket.SO_SNDBUF: %s" % sndbuf
 
 
 solist = [x for x in dir(socket) if x.startswith('SO_')]
