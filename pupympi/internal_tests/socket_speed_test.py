@@ -355,8 +355,11 @@ def sender(confs):
                     print("Creating TCP socket to (%s, %s)" % (portno,address))
                     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024)
+                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024*8) # standard size is 1024*8
+                    bufs = client_socket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+                    nodelay = client_socket.getsockopt(socket.SOL_TCP, socket.TCP_NODELAY)
                     client_socket.connect( (address, portno))
+                    print("Connected TCP socket SO_SNDBUF:%i TCP_NODELAY:%i" % (bufs, nodelay))                    
             except socket.error:
                 print "got a socket error trying again..."
                 tries += 1
@@ -487,6 +490,7 @@ def sink(confs):
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            rcvbuf = server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
             while unbound:
                 try:
                     server_socket.bind( (address, portno) )
@@ -528,7 +532,7 @@ def sink(confs):
                     print "inner loop got exception:%s" % e
                     break
                 
-            print("sink had %i receptions of full buffersize" % max_received)
+            print("sink had %i receptions of max size, SO_RCVBUF:%i" % (max_received, server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)) )
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
             
