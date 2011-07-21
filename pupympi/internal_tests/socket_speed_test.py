@@ -45,6 +45,7 @@ ISSUES:
 - Turn off delayed ack/nagle for connections
 - Validation of conf should include python version
 - Occasionally the port is not freed before attempting next connection setup, maybe sleep between, or increment port number for each conf
+- when using unixsockets the user has to manually paste the filename, instead an agreed upon filename should be used
 """
 
 
@@ -347,9 +348,9 @@ def sender(confs):
             print("Sender trying port:%i try:%i" % (portno,tries))
             try:
                 if conf['connection_type'] == "local":
-                    print("Creating local socket to (%s, %s)" % (portno,address))
+                    print("Creating local socket to file %s" % (conf['socketfile']))
                     client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    client_socket.connect(socketfile)
+                    client_socket.connect(conf['socketfile'])
             
                 elif conf['connection_type'] == "tcp":
                     print("Creating TCP socket to (%s, %s)" % (portno,address))
@@ -368,6 +369,10 @@ def sender(confs):
         if not validate_conf(conf):
             continue
         
+        if conf['connection_type'] == 'local':
+            socketfile = raw_input("paste name of socketfile:")        
+            conf['socketfile'] = socketfile
+            
         functions = conf['sfunctions']
         msg = conf['data']
         iterations = conf['iterations']
@@ -392,8 +397,8 @@ def sender(confs):
 def receiver(confs):
     def setup_connection(portno,address):
         if conf['connection_type'] == "local":
-            global socketfile
-            socketfile = tempfile.NamedTemporaryFile()
+            socketfile = raw_input("paste name of socketfile:")
+            #socketfile = tempfile.NamedTemporaryFile()
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
     
@@ -473,6 +478,8 @@ def sink(confs):
             socketfile = tempfile.NamedTemporaryFile().name
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
+            server_socket.listen(10)                
+            print("Sink listening on file:%s" % (socketfile) )
     
         elif conf['connection_type'] == "tcp":            
             unbound = True
@@ -491,9 +498,8 @@ def sink(confs):
                     print("unexpected error:%s" % e )
                     raise e
                 
-            server_socket.listen(10)
-            
-        print("Sink listening on host:%s port no:%i" % (address,portno) )
+            server_socket.listen(10)                
+            print("Sink listening on host:%s port no:%i" % (address,portno) )
         
         return server_socket
     
@@ -504,6 +510,7 @@ def sink(confs):
         while True:
             max_received = 0
             connection, address = server_socket.accept()
+            #address = server_socket.accept()
             print("Sink (chunksize:%i) accepted connection from %s" % (buffersize,address) )
             while True:
                 try:
@@ -552,7 +559,8 @@ def runner():
     # Python 2.6 compatible
     testconf1 = {
         "verbose" : True,
-        "iterations" : 10,
+        "iterations" : 3,
+        #"msgsize" : 10**3, # always in bytes
         "msgsize" : 10**7, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
@@ -565,6 +573,7 @@ def runner():
         "rfunctions" : [str_primitive_recv, str_list_recv],
         "port" : port,  # This one should be pre-cleared
         "address" : host,
+        #"connection_type" : 'local',
         "connection_type" : 'tcp',
         "buffersize" : 2**10, # Good ol' 1024
         #"buffersize" : 2**12, # Good ol' 4096
@@ -580,8 +589,6 @@ def runner():
 
     # Switcheroo
     configurations = [testconf1]
-        
-    
     
     # do it
     if type=='sender':
