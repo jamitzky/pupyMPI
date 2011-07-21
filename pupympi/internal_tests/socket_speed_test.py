@@ -25,6 +25,20 @@ NOTES:
   receiving the payload but this makes measuring more complicated and also
   depends on eg. the header format chosen. So we postpone this.
   
+QUESTIONS:
+- it seems that when sending, all the bytes are sent every time no matter how many are passed to socket.send
+  This means that advice on how to construct the send loop is largely meaningless since there is never any looping done
+  This finding leads to two questions:
+  1) Why does socket send never return with a sent amount less than the full - as the docs state it could?
+     Maybe we have some sort of setting that inhibit it?
+  2) Is it fine that socket send is busy for the whole sending period? Or would we benefit from
+     sending in smaller batches?
+     Is the call releasing the GIL?
+     What is the effect when multiple processes send over the same network interface? Will there be queuing up or intermingling?
+     Do we use too much memory?
+     
+     
+  
 ISSUES:
 - When running multiple functions under one conf, prebuf can conflict with validation and type may conflict too
 - Pregenerated data should only be generated once for each requested type, and of maximum size (confs needing less can slice)
@@ -456,7 +470,7 @@ def sink(confs):
     def setup_connection(portno,address):
         if conf['connection_type'] == "local":
             global socketfile
-            socketfile = tempfile.NamedTemporaryFile()
+            socketfile = tempfile.NamedTemporaryFile().name
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
     
