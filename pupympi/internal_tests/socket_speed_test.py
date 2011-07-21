@@ -344,7 +344,6 @@ def sender(confs):
         maxtries = 3
         tries = 1
         while tries < maxtries:
-            time.sleep(tries) # give receiver time to open listening socket
             print("Sender trying port:%i try:%i" % (portno,tries))
             try:
                 if conf['connection_type'] == "local":
@@ -360,6 +359,7 @@ def sender(confs):
             except socket.error:
                 print "got a socket error trying again..."
                 tries += 1
+                time.sleep(tries) # give receiver time to open listening socket
 
             return client_socket
 
