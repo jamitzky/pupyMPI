@@ -224,7 +224,8 @@ def str_primitive_send_nb(connection,msg,verbose=False):
         try:
             sent += connection.send(msg[sent:])
         except socket.error as e:
-            print "ouch got:%s" % e
+            #print "ouch got:%s" % e
+            pass
         loopcount += 1
     if verbose:
         print("Sender looped %i times" % loopcount)
@@ -255,7 +256,8 @@ def str_buffer_send_nb(connection,msg,verbose=False):
             s = connection.send(buf)
             buf = buffer(msg,len(buf) + s)
         except socket.error as e:
-            print "ouch got:%s" % e
+            #print "ouch got:%s" % e
+            pass
 
         loopcount += 1    
     if verbose:
@@ -639,6 +641,7 @@ def runner():
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
+        #"sfunctions" : [str_buffer_send_nb],
         "sfunctions" : [str_primitive_send_nb],
         "rfunctions" : [str_primitive_recv],
         #"sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
