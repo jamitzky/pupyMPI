@@ -16,8 +16,11 @@ print "=== Python Unix socket stuff ==="
 socketfile = tempfile.NamedTemporaryFile().name
 unixsocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 unixsocket.bind(socketfile)
+
+timeout = unixsocket.gettimeout()
 sndbuf = unixsocket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
 rcvbuf = unixsocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+print "timeout: %s" % timeout
 print "socket.SO_SNDBUF: %s" % sndbuf
 print "socket.SO_RCVBUF (no effect): %s" % rcvbuf
 
@@ -32,16 +35,21 @@ tcpsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 tcpsocket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
 tcpsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+timeout = tcpsocket.gettimeout()
 sndbuf = tcpsocket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
 rcvbuf = tcpsocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+print "timeout: %s" % timeout
 print "socket.SO_SNDBUF: %s" % sndbuf
 print "socket.SO_RCVBUF: %s" % rcvbuf
 
 """
 1024 is the minimum size that is respected for the send buffer, any lower is rounded up to 1024
 """
+#tcpsocket.setblocking(0)
+tcpsocket.settimeout(2)
 tcpsocket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024)
 sndbuf = tcpsocket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+print "timeout: %s" % tcpsocket.gettimeout()
 print "new socket.SO_SNDBUF: %s" % sndbuf
 
 
