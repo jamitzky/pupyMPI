@@ -46,6 +46,34 @@ ISSUES:
 - Validation of conf should include python version
 - Occasionally the port is not freed before attempting next connection setup, maybe sleep between, or increment port number for each conf
 - when using unixsockets the user has to manually paste the filename, instead an agreed upon filename should be used
+
+
+
+
+
+FINDINGS:
+
+SOCKET.SEND only returns before sending everything in the case of
+1) non-blocking socket
+and
+2) message too large to fit in buffer but not too large for buffer not to
+   have cleared out on next go-around in the loop
+
+GENERAL THROUGPUT BASED ON SENDBUFFER SIZE
+testing on klynge sending from n1 to n0
+sending 10**7 bytes
+to a receiver getting chunks of 1024 bytes
+maximum is 1024*128 ( which is reported as double =262142)
+
+unset buffer: 120000-125000 kB/s (which means default of 8K)
+128K-64K  buffer: 115000
+32K: 114000
+16K: 110000 (here naive sender is slightly faster)
+8K: 79000
+4K: 77000 (again naive is slightly faster)
+2K: 77000
+1K: 1600 (rock bottom performance)
+
 """
 
 
@@ -177,7 +205,7 @@ def str_primitive_send(connection,msg,verbose=False):
     while sent < size:
         sent += connection.send(msg[sent:])
         loopcount += 1
-    
+        print("Sender SENT:%i" % sent)
     if verbose:
         print("Sender looped %i times" % loopcount)
         
@@ -355,13 +383,17 @@ def sender(confs):
                     print("Creating TCP socket to (%s, %s)" % (portno,address))
                     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     client_socket.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024*8) # standard size is 1024*8
+                    #client_socket.setblocking(1)
+                    #client_socket.settimeout(0.5)
+                    #client_socket.settimeout(0.0)
+                    #client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,1024*8) # standard size is 1024*8
                     bufs = client_socket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
                     nodelay = client_socket.getsockopt(socket.SOL_TCP, socket.TCP_NODELAY)
                     client_socket.connect( (address, portno))
-                    print("Connected TCP socket SO_SNDBUF:%i TCP_NODELAY:%i" % (bufs, nodelay))                    
-            except socket.error:
-                print "got a socket error trying again..."
+                    client_socket.settimeout(0.0) # set it to blocking AFTER connecting to avoid "[Errno 115] Operation now in progress"
+                    print("Connected TCP socket SO_SNDBUF:%i TCP_NODELAY:%i timeout:%s" % (bufs, nodelay, client_socket.gettimeout()) )
+            except socket.error as e:
+                print "got a socket error (%s) trying again..." % e
                 tries += 1
                 time.sleep(tries) # give receiver time to open listening socket
 
@@ -513,6 +545,7 @@ def sink(confs):
     buffersize = conf['buffersize']
     try:
         while True:
+            total = 0
             max_received = 0
             connection, address = server_socket.accept()
             #address = server_socket.accept()
@@ -522,11 +555,12 @@ def sink(confs):
                     data = connection.recv(buffersize)
                     if data:
                         l = len(data)
+                        total += l
                         if l == buffersize:
                             max_received += 1
                             #print "got datalen:%s \t%s" % (l, "" if l < buffersize else "!")
                     else:
-                        print "sink got empty data (connection closed)"
+                        print "sink got empty data (connection closed) after receiving %i bytes" % total
                         break
                 except Exception as e:
                     print "inner loop got exception:%s" % e
@@ -565,16 +599,16 @@ def runner():
     testconf1 = {
         "verbose" : True,
         "iterations" : 3,
-        "msgsize" : 10**3, # always in bytes
+        "msgsize" : 10**5, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
-        #"sfunctions" : [str_primitive_send],
-        #"rfunctions" : [str_primitive_recv],
+        "sfunctions" : [str_primitive_send],
+        "rfunctions" : [str_primitive_recv],
         #"sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
         #"rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
-        "sfunctions" : [str_primitive_send, str_buffer_send],
-        "rfunctions" : [str_primitive_recv, str_list_recv],
+        #"sfunctions" : [str_primitive_send, str_buffer_send],
+        #"rfunctions" : [str_primitive_recv, str_list_recv],
         "port" : port,  # This one should be pre-cleared
         "address" : host,
         #"connection_type" : 'local',
