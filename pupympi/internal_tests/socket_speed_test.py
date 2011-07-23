@@ -199,6 +199,9 @@ def validate_results(received_data_list,reference_data):
 ### SEND LOOPS
 
 def str_primitive_send(connection,msg,verbose=False):
+    """
+    Meant to be called on blocking sockets
+    """
     loopcount = 0
     size = len(msg)
     sent = 0
@@ -208,12 +211,26 @@ def str_primitive_send(connection,msg,verbose=False):
         print("Sender SENT:%i" % sent)
     if verbose:
         print("Sender looped %i times" % loopcount)
+
+
+def str_primitive_send_nb(connection,msg,verbose=False):
+    """
+    Robust enough for non-blocking sockets
+    """
+    loopcount = 0
+    size = len(msg)
+    sent = 0
+    while sent < size:
+        try:
+            sent += connection.send(msg[sent:])
+        except socket.error as e:
+            print "ouch got:%s" % e
+        loopcount += 1
+    if verbose:
+        print("Sender looped %i times" % loopcount)
         
 def str_buffer_send(connection,msg,verbose=False):
-    """
-    This seems suboptimal. It looses to str_primitive_send on both 2.6 and 2.7
-    when testing via localhost.
-    
+    """    
     Defunct in python 3 where buffer is replaced by memoryview
     """
     loopcount = 0
@@ -222,6 +239,24 @@ def str_buffer_send(connection,msg,verbose=False):
         buf = buffer(msg,len(buf) + connection.send(buf))
         loopcount += 1
     
+    if verbose:
+        print("Sender looped %i times" % loopcount)
+
+def str_buffer_send_nb(connection,msg,verbose=False):
+    """
+    Robust enough for non-blocking sockets
+    
+    Defunct in python 3 where buffer is replaced by memoryview
+    """
+    loopcount = 0
+    buf = buffer(msg)
+    while len(buf):
+        try:
+            buf = buffer(msg,len(buf) + connection.send(buf))
+        except socket.error as e:
+            print "ouch got:%s" % e
+
+        loopcount += 1    
     if verbose:
         print("Sender looped %i times" % loopcount)
 
@@ -598,16 +633,16 @@ def runner():
     # Python 2.6 compatible
     testconf1 = {
         "verbose" : True,
-        "iterations" : 3,
-        "msgsize" : 10**5, # always in bytes
+        "iterations" : 4,
+        "msgsize" : 10**6, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
         #"rfunctions" : [str_list_recv],
-        "sfunctions" : [str_primitive_send],
+        "sfunctions" : [str_primitive_send_nb],
         "rfunctions" : [str_primitive_recv],
         #"sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
         #"rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
-        #"sfunctions" : [str_primitive_send, str_buffer_send],
+        #"sfunctions" : [str_primitive_send_nb, str_buffer_send_nb],
         #"rfunctions" : [str_primitive_recv, str_list_recv],
         "port" : port,  # This one should be pre-cleared
         "address" : host,
