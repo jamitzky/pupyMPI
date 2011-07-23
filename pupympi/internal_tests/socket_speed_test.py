@@ -252,7 +252,8 @@ def str_buffer_send_nb(connection,msg,verbose=False):
     buf = buffer(msg)
     while len(buf):
         try:
-            buf = buffer(msg,len(buf) + connection.send(buf))
+            s = connection.send(buf)
+            buf = buffer(msg,len(buf) + s)
         except socket.error as e:
             print "ouch got:%s" % e
 
