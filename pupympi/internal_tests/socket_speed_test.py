@@ -212,7 +212,6 @@ def str_primitive_send(connection,msg,verbose=False):
     if verbose:
         print("Sender looped %i times" % loopcount)
 
-
 def str_primitive_send_nb(connection,msg,verbose=False):
     """
     Robust enough for non-blocking sockets
@@ -229,7 +228,7 @@ def str_primitive_send_nb(connection,msg,verbose=False):
         loopcount += 1
     if verbose:
         print("Sender looped %i times" % loopcount)
-        
+
 def str_buffer_send(connection,msg,verbose=False):
     """    
     Defunct in python 3 where buffer is replaced by memoryview
@@ -251,17 +250,17 @@ def str_buffer_send_nb(connection,msg,verbose=False):
     """
     loopcount = 0
     buf = buffer(msg)
-    while len(buf):
+    print "sender starting send of size:%i" % (size)
+    while buf:
         try:
-            s = connection.send(buf)
-            buf = buffer(msg,len(buf) + s)
+            buf = buffer(buf, connection.send(buf))
         except socket.error as e:
-            #print "ouch got:%s" % e
+            #print "ouch with sent:%i got:%s" % (len(msg)-len(buf),e)
             pass
-
-        loopcount += 1    
+        loopcount += 1
     if verbose:
         print("Sender looped %i times" % loopcount)
+
 
 def str_view_send(connection,msg,verbose=False):
     """
@@ -462,6 +461,7 @@ def sender(confs):
                 func(connection, msg, conf['verbose'])
             t2 = time.time()
             
+            
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
             
@@ -538,7 +538,7 @@ def receiver(confs):
                     #print("C1: %s" % container)
                     container = func(connection, size, container)                    
                 t2 = time.time()
-                
+
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
             
@@ -640,12 +640,13 @@ def runner():
         "msgsize" : 10**6, # always in bytes
         "msgtype" : 'ascii',
         #"sfunctions" : [str_buffer_send],
-        #"rfunctions" : [str_list_recv],
+        "rfunctions" : [str_list_recv],
         #"sfunctions" : [str_buffer_send_nb],
         "sfunctions" : [str_primitive_send_nb],
-        "rfunctions" : [str_primitive_recv],
+        #"rfunctions" : [str_primitive_recv],
         #"sfunctions" : [str_primitive_send, str_primitive_send, str_buffer_send, str_buffer_send],
         #"rfunctions" : [str_primitive_recv, str_list_recv,str_primitive_recv, str_list_recv],
+        #"sfunctions" : [str_buffer_send_nb,str_primitive_send_nb],
         #"sfunctions" : [str_primitive_send_nb, str_buffer_send_nb],
         #"rfunctions" : [str_primitive_recv, str_list_recv],
         "port" : port,  # This one should be pre-cleared
