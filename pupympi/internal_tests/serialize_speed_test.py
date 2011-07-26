@@ -106,10 +106,13 @@ def numpyrunner(r = 100, testdata=numpydata):
     NOTE: With numpy 1.5 where numpy arrays and bytearray are friends the bytearray method is tested also
     """   
     # Serializers to try along with call hint
-    serializer_methods =    [(pickle,'dumpload',),
-                            (cPickle,'dumpload'),
+    serializer_methods =    [
+                            #(pickle,'dumpload',),
+                            #(cPickle,'dumpload'),
                             (marshal,'dumpload'),
-                            ('tostring','methodcall'),
+                            ('.tostring','methodcall'),
+                            ('.tostring b','methodcall'),
+                            ('.view','methodcall')
                             ]
     
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
@@ -166,12 +169,24 @@ def numpyrunner(r = 100, testdata=numpydata):
             # This case is a bit different
             elif syntax == 'methodcall':
                 if type(data) == numpy.ndarray:
-                    with timing("%s methodcall+frombuffer reps:%i %s" % ('tostring', repetitions,desc),repetitions):
-                        # TODO: Include this in timing or not?
-                        t = data.dtype
-                        for i in xrange(repetitions):
-                            s = data.tostring()
-                            l = numpy.frombuffer(s,dtype=t)
+                    if serializer == '.tostring':
+                        with timing("%s methodcall+fromstring reps:%i %s" % (serializer, repetitions,desc),repetitions):
+                            t = data.dtype
+                            for i in xrange(repetitions):
+                                s = data.tostring()
+                                l = numpy.fromstring(s,dtype=t)
+                    elif serializer == '.tostring b':
+                        with timing("%s methodcall+frombuffer reps:%i %s" % (serializer, repetitions,desc),repetitions):
+                            t = data.dtype
+                            for i in xrange(repetitions):
+                                s = data.tostring()
+                                l = numpy.frombuffer(s,dtype=t)
+                    elif serializer == '.view':
+                        with timing("%s methodcall+frombuffer reps:%i %s" % (serializer, repetitions,desc),repetitions):
+                            t = data.dtype
+                            for i in xrange(repetitions):
+                                s = data.view(numpy.uint8)
+                                l = numpy.frombuffer(s,dtype=t)
                 else:
                     print "ignoring type:%s since it has no tostring method" % type(data)                    
 
@@ -184,8 +199,8 @@ def numpyrunner(r = 100, testdata=numpydata):
 #plainrunner(100)
 #plainrunner(1000, testdata=numpydata)
 
-numpyrunner(10)
-#numpyrunner(1000)
+#numpyrunner(10)
+numpyrunner(1000)
 #numpyrunner(100, testdata=smalldata+bigdata)
 #numpyrunner(100, testdata=numpydata)
 

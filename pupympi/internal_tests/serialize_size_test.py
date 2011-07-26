@@ -1,7 +1,7 @@
 """
 Helper program to measure the size of serialized data
 
-Different serializers are timed with different datatypes
+Different serializers are tested with different datatypes
 Also the serialization and unserialization methods are validated by checking that data is the same
 """
 
@@ -67,7 +67,9 @@ def runner(testdata=numpydata):
     serializer_methods =    [(pickle,'dumpload',),
                             (cPickle,'dumpload'),
                             (marshal,'dumpload'),
-                            ('tostring','methodcall'),
+                            ('.tostring','methodcall'),     # using fromstring to restore
+                            ('.tostring b','methodcall'),   # using frombuffer to restore
+                            ('.view','methodcall')
                             ]
     
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
@@ -101,9 +103,21 @@ def runner(testdata=numpydata):
                     except Exception as e:                        
                         l = str(s)
                 elif syntax == 'methodcall':
+                    if serializer == '.tostring':
                         s = data.tostring() # serialize
                         t = data.dtype
-                        l = numpy.frombuffer(s,dtype=t) # unserialize to verify
+                        l = numpy.fromstring(s,dtype=t) # unserialize to verify
+                    elif serializer == '.tostring b':
+                        s = data.tostring() # serialize
+                        t = data.dtype
+                        l = numpy.frombuffer(s,dtype=t) # unserialize to verify                        
+                    elif serializer == '.view':
+                        s = data.view(numpy.uint8) # "serialize"
+                        s2 = s.tostring() # simulate socket transfer
+                        t = data.dtype
+                        l = numpy.frombuffer(s2,dtype=t) # unserialize to verify                        
+                    else:
+                        print "syntax error! Unknown serializer!"
                 else:
                     print "syntax error!"
                     continue
@@ -129,6 +143,8 @@ def runner(testdata=numpydata):
 # do it
 #runner()
 #runner(smalldata)
-runner(smalldata+bigdata+numpydata)
+runner(numpydata)
+#runner(smalldata+bigdata+numpydata)
+
 
 
