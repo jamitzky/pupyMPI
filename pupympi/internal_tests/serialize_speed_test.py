@@ -182,11 +182,12 @@ def numpyrunner(r = 100, testdata=numpydata):
                                 s = data.tostring()
                                 l = numpy.frombuffer(s,dtype=t)
                     elif serializer == '.view':
+                        s2 = data.view(numpy.uint8).tostring()
                         with timing("%s methodcall+frombuffer reps:%i %s" % (serializer, repetitions,desc),repetitions):
                             t = data.dtype
                             for i in xrange(repetitions):
                                 s = data.view(numpy.uint8)
-                                l = numpy.frombuffer(s,dtype=t)
+                                l = numpy.frombuffer(s2,dtype=t)
                 else:
                     print "ignoring type:%s since it has no tostring method" % type(data)                    
 
