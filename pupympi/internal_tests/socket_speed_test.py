@@ -128,9 +128,8 @@ def generate_container(type,size,filler=0):
     Filler is the value of the filler elements.
     """
     if type == 'numpy':
-        # We assume a standard int size of 64 bit
-        intsize = 8
-        elements = size // intsize
+        # We assume a standard int
+        elements = size // 8
         container = numpy.array([filler]*elements)
     elif type == 'bytearray':
         container = bytearray([filler]*size)
@@ -297,6 +296,23 @@ def view_send_nb(connection,msg,verbose=False):
         print("Sender looped %i times" % loopcount)
 
 
+def str_view_send(connection,msg,verbose=False):
+    """
+    Not used atm.
+    
+    Works for both 2.7 and 3.1
+    """
+    loopcount = 0
+    bytesize = len(msg)
+    sent = 0
+    view = memoryview(msg.encode('latin1'))
+    while sent < bytesize:        
+        sent += connection.send(view[sent:])
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
+
 def numpy_send(connection,msg,verbose=False):
     """
     sending numpy arrays with no pickling or bytearrays
@@ -318,21 +334,6 @@ def numpy_send_nb(connection,msg,verbose=False):
         except socket.error as e:
             pass
         loopcount += 1
-
-def str_view_send(connection,msg,verbose=False):
-    """
-    Works for both 2.7 and 3.1
-    """
-    loopcount = 0
-    bytesize = len(msg)
-    sent = 0
-    view = memoryview(msg.encode('latin1'))
-    while sent < bytesize:        
-        sent += connection.send(view[sent:])
-        loopcount += 1
-    
-    if verbose:
-        print("Sender looped %i times" % loopcount)
 
 ### RECEIVE LOOPS
 
@@ -454,7 +455,7 @@ def sender(conf):
                     nodelay = client_socket.getsockopt(socket.SOL_TCP, socket.TCP_NODELAY)
 
                     client_socket.connect( (address, portno))
-                     # set it to blocking AFTER connecting to avoid "[Errno 115] Operation now in progress"
+                    # set it to blocking AFTER connecting to avoid "[Errno 115] Operation now in progress"
                     if (not conf['blocking_timeout'] is None) and conf['blocking_timeout'] < 0.0:
                         client_socket.setblocking(1)
                     else:
@@ -489,7 +490,6 @@ def receiver(confs):
     def setup_connection(portno,address):
         if conf['connection_type'] == "local":
             socketfile = raw_input("paste name of socketfile:")
-            #socketfile = tempfile.NamedTemporaryFile()
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
     
@@ -504,7 +504,6 @@ def receiver(confs):
                     server_socket.bind( (address, portno) )
                     unbound = False
                 except socket.error as e:    
-                    #raise e
                     portno += 1
                     print("port not available (error:%s), trying %i ..." % (e,portno) )           
                 except Exception as e:
@@ -658,15 +657,16 @@ def runner():
     # generate base benchmark configuration
     baseconf = {
                 'process_type' : type,
-                'msg_size' : 10**3,
+                'msg_size' : 10**7,
                 'msg_type' : 'ascii',
-                'iterations' : 3,
+                'iterations' : 4,
                 'send_function' : str_primitive_send,
                 'recv_function' : str_primitive_recv,
                 'port' : options.port,
                 'host' : options.host,
                 'socketfile' : '/tmp/pupySockTest',
-                'connection_type' : 'tcp',
+                #'connection_type' : 'tcp',
+                'connection_type' : 'local',
                 'blocking_timeout' : None,
                 'nodelay' : True,
                 'rcvchunk' : 4096,
@@ -681,13 +681,11 @@ def runner():
     for f in (str_primitive_send, str_primitive_send_nb, str_buffer_send, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
-        c['msg_size'] = 10**7
         c['iterations'] = 4
         all_senders.append(c)
     
     # this conf should generate non-blocking warning
     normal_conf = copy.copy(baseconf)
-    normal_conf['msg_size'] = 10**7
     normal_conf['iterations'] = 4
     normal_conf['blocking_timeout'] = 0.0
     normal_configurations = [normal_conf]
@@ -696,7 +694,6 @@ def runner():
     for f in (str_primitive_send_nb, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
-        c['msg_size'] = 10**7
         c['iterations'] = 4
         c['blocking_timeout'] = 0.0
         nb_senders.append(c)
@@ -707,7 +704,6 @@ def runner():
     us_configurations = [unixsock_conf]
 
     view_conf = copy.copy(baseconf)
-    view_conf['msg_size'] = 10**6
     view_conf['msg_type'] = 'bytearray'
     view_conf['send_function'] = view_send_nb
     view_conf['iterations'] = 4
@@ -715,7 +711,6 @@ def runner():
     py27_configurations = [view_conf]
 
     numpy_conf = copy.copy(baseconf)
-    numpy_conf['msg_size'] = 10**7
     numpy_conf['msg_type'] = 'numpy'
     numpy_conf['send_function'] = numpy_send_nb
     numpy_conf['iterations'] = 4
@@ -735,7 +730,7 @@ def runner():
     #configurations = numpy_configurations
     configurations = [numpy_conf]
     
-    #configurations = all_senders + nb_senders + numpy_configurations
+    configurations = all_senders + nb_senders + numpy_configurations
     
     
     # Validate
