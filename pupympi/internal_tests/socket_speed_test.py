@@ -665,8 +665,7 @@ def runner():
                 'port' : options.port,
                 'host' : options.host,
                 'socketfile' : '/tmp/pupySockTest',
-                #'connection_type' : 'tcp',
-                'connection_type' : 'local',
+                'connection_type' : 'tcp',
                 'blocking_timeout' : None,
                 'nodelay' : True,
                 'rcvchunk' : 4096,
@@ -728,7 +727,7 @@ def runner():
     #configurations = all_senders
     #configurations = py27_configurations
     #configurations = numpy_configurations
-    configurations = [numpy_conf]
+    #configurations = [numpy_conf]
     
     configurations = all_senders + nb_senders + numpy_configurations
     
