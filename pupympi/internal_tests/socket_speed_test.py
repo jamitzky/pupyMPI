@@ -659,7 +659,7 @@ def runner():
                 'process_type' : type,
                 'msg_size' : 10**7,
                 'msg_type' : 'ascii',
-                'iterations' : 4,
+                'iterations' : 3,
                 'send_function' : str_primitive_send,
                 'recv_function' : str_primitive_recv,
                 'port' : options.port,
@@ -680,12 +680,10 @@ def runner():
     for f in (str_primitive_send, str_primitive_send_nb, str_buffer_send, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
-        c['iterations'] = 4
         all_senders.append(c)
     
     # this conf should generate non-blocking warning
     normal_conf = copy.copy(baseconf)
-    normal_conf['iterations'] = 4
     normal_conf['blocking_timeout'] = 0.0
     normal_configurations = [normal_conf]
     
@@ -693,7 +691,6 @@ def runner():
     for f in (str_primitive_send_nb, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
-        c['iterations'] = 4
         c['blocking_timeout'] = 0.0
         nb_senders.append(c)
     
@@ -705,14 +702,12 @@ def runner():
     view_conf = copy.copy(baseconf)
     view_conf['msg_type'] = 'bytearray'
     view_conf['send_function'] = view_send_nb
-    view_conf['iterations'] = 4
     view_conf['blocking_timeout'] = 0.0
     py27_configurations = [view_conf]
 
     numpy_conf = copy.copy(baseconf)
     numpy_conf['msg_type'] = 'numpy'
     numpy_conf['send_function'] = numpy_send_nb
-    numpy_conf['iterations'] = 4
     numpy_conf['blocking_timeout'] = 0.0
     numpy_conf2 = copy.copy(numpy_conf)
     numpy_conf2['blocking_timeout'] = None
