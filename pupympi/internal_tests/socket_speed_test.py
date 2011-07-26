@@ -6,6 +6,7 @@ import copy
 import socket
 import random
 import string
+import platform
 import sys
 import numpy
 import optparse
@@ -44,6 +45,7 @@ ISSUES:
 - Allow minimum python version in conf and validation of conf should include python version
 - Allow signaling that a conf wants a freshly made socket connection (to test with tcp slow start etc.)
 - consolidate printing of essential benchmark info, should be done after running a conf based on conf data
+- still not Python3 compatible
 
 FINDINGS:
 
@@ -86,6 +88,13 @@ unset buffer: 280000-300000 kB/s (!)
 With sndbuf specified, the results are more or less the same as with blocking sockets
 """
 
+### VERSION JIGGLING
+version = tuple(map(int, platform.python_version_tuple()[:-1] ) )
+
+
+if version[0] > 2:
+    # No xrange for python 3
+    xrange = range
 
 ### AUXILLARY
 possible_conf_keys = [
@@ -176,7 +185,7 @@ def validate_conf(conf):
     - Python version vs. recv function
     - Python version vs. send function        
     """
-    nonblocking_safe_functions = [str_primitive_send_nb, str_buffer_send_nb]
+    nonblocking_safe_functions = [str_primitive_send_nb, str_buffer_send_nb, view_send_nb, numpy_send_nb]
 
     valid = True
     if conf['msg_size'] < 0:
@@ -238,7 +247,7 @@ def str_primitive_send_nb(connection,msg,verbose=False):
         try:
             sent += connection.send(msg[sent:])
         except socket.error as e:
-            #print "ouch got:%s" % e
+            #print( "ouch got:%s" % e )
             pass
         loopcount += 1
     if verbose:
@@ -269,6 +278,47 @@ def str_buffer_send_nb(connection,msg,verbose=False):
         print("Sender looped %i times" % loopcount)
 
 
+def view_send_nb(connection,msg,verbose=False):
+    """
+    Robust enough for non-blocking sockets
+    
+    Defunct in python 2.6 for lack of memoryview
+    """
+    loopcount = 0
+    view = memoryview(msg)
+    while view:
+        try:
+            view = view[connection.send(view):]
+        except socket.error as e:
+            pass
+        loopcount += 1
+    
+    if verbose:
+        print("Sender looped %i times" % loopcount)
+
+
+def numpy_send(connection,msg,verbose=False):
+    """
+    sending numpy arrays with no pickling or bytearrays
+    """
+    npview = msg.view(numpy.uint8)
+    connection.send(npview)
+
+def numpy_send_nb(connection,msg,verbose=False):
+    """
+    Robust enough for non-blocking sockets
+    """
+    loopcount = 0
+    npview = msg.view(numpy.uint8)
+    length = len(npview)
+    sent = 0
+    while sent < length:
+        try:
+            sent += connection.send(npview)
+        except socket.error as e:
+            pass
+        loopcount += 1
+
 def str_view_send(connection,msg,verbose=False):
     """
     Works for both 2.7 and 3.1
@@ -283,38 +333,6 @@ def str_view_send(connection,msg,verbose=False):
     
     if verbose:
         print("Sender looped %i times" % loopcount)
-
-
-def numpy_send(connection,msg):
-    """
-    for now this is the same as primitive send, but we should determine whether
-    time is saved by using a view over the numpy array in the loop instead of normal slice
-    """
-    loopcount = 0
-    bytesize = msg.nbytes
-    sent = 0
-    while sent < bytesize:
-        sent += connection.send(msg[sent:])
-        loopcount += 1
-    
-    if verbose:
-        print("Sender looped %i times" % loopcount)
-    # DEBUG
-    #print("sent a numpy array of %i type:%s element-type:%s" % (len(msg),type(msg),type(msg[0])))
-
-        
-def bytearray_send(connection,msg,verbose=False):
-    loopcount = 0
-    bytesize = len(msg) # len equals size for bytearrays
-    sent = 0
-    view = memoryview(msg)
-    while sent < bytesize:
-        sent += connection.send(view[sent:])
-        loopcount += 1
-    
-    if verbose:
-        print("Sender looped %i times" % loopcount)
-
 
 ### RECEIVE LOOPS
 
@@ -437,13 +455,13 @@ def sender(conf):
 
                     client_socket.connect( (address, portno))
                      # set it to blocking AFTER connecting to avoid "[Errno 115] Operation now in progress"
-                    if conf['blocking_timeout'] < 0.0:
+                    if (not conf['blocking_timeout'] is None) and conf['blocking_timeout'] < 0.0:
                         client_socket.setblocking(1)
                     else:
                         client_socket.settimeout(conf['blocking_timeout'])
                     print("Connected TCP socket SO_SNDBUF:%i TCP_NODELAY:%i timeout:%s" % (bufs, nodelay, client_socket.gettimeout()) )
             except socket.error as e:
-                print "got a socket error (%s) trying again..." % e
+                print("got a socket error (%s) trying again..." % e)
                 tries += 1
                 time.sleep(tries) # give receiver time to open listening socket
 
@@ -475,7 +493,7 @@ def receiver(confs):
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
     
-        elif conf['connection_type'] == "tcp":            
+        elif conf['connection_type'] == "tcp":
             unbound = True
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if conf['nodelay']:
@@ -601,12 +619,12 @@ def sink(conf):
                         total += l
                         if l == chunksize:
                             max_received += 1
-                            #print "got datalen:%s \t%s" % (l, "" if l < chunksize else "!")
+                            #print( "got datalen:%s \t%s" % (l, "" if l < chunksize else "!") )
                     else:
-                        print "sink got empty data (connection closed) after receiving %i bytes" % total
+                        print( "sink got empty data (connection closed) after receiving %i bytes" % total )
                         break
                 except Exception as e:
-                    print "inner loop got exception:%s" % e
+                    print( "inner loop got exception:%s" % e )
                     break
                 
             print("sink had %i receptions of max size, SO_RCVBUF:%i" % (max_received, server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)) )
@@ -616,7 +634,7 @@ def sink(conf):
     except KeyboardInterrupt as e:
         server_socket.shutdown(socket.SHUT_RDWR)
         server_socket.close()
-        print "sink stopped"
+        print("sink stopped")
     
 
 def runner():
@@ -656,43 +674,72 @@ def runner():
                 'verbose' : True,
     }
 
-    # TODO
     # generate individual benchmark configurations
     minimal_configurations = [baseconf]
     
     all_senders = []
     for f in (str_primitive_send, str_primitive_send_nb, str_buffer_send, str_buffer_send_nb):
         c = copy.copy(baseconf)
+        c['send_function'] = f
         c['msg_size'] = 10**7
-        c['iterations'] = 3
+        c['iterations'] = 4
         all_senders.append(c)
-
+    
+    # this conf should generate non-blocking warning
     normal_conf = copy.copy(baseconf)
     normal_conf['msg_size'] = 10**7
-    normal_conf['iterations'] = 6
+    normal_conf['iterations'] = 4
     normal_conf['blocking_timeout'] = 0.0
     normal_configurations = [normal_conf]
     
-    nb_conf = copy.copy(baseconf)
-    nb_conf['send_function'] = str_primitive_send_nb
-    nb_conf['blocking_timeout'] = 0.0
-    nb_configurations = [baseconf, nb_conf, normal_conf]
+    nb_senders = []
+    for f in (str_primitive_send_nb, str_buffer_send_nb):
+        c = copy.copy(baseconf)
+        c['send_function'] = f
+        c['msg_size'] = 10**7
+        c['iterations'] = 4
+        c['blocking_timeout'] = 0.0
+        nb_senders.append(c)
     
     unixsock_conf = copy.copy(baseconf)
     unixsock_conf['send_function'] = str_primitive_send
     unixsock_conf['connection_type'] = 'local'
     us_configurations = [unixsock_conf]
 
+    view_conf = copy.copy(baseconf)
+    view_conf['msg_size'] = 10**6
+    view_conf['msg_type'] = 'bytearray'
+    view_conf['send_function'] = view_send_nb
+    view_conf['iterations'] = 4
+    view_conf['blocking_timeout'] = 0.0
+    py27_configurations = [view_conf]
+
+    numpy_conf = copy.copy(baseconf)
+    numpy_conf['msg_size'] = 10**7
+    numpy_conf['msg_type'] = 'numpy'
+    numpy_conf['send_function'] = numpy_send_nb
+    numpy_conf['iterations'] = 4
+    numpy_conf['blocking_timeout'] = 0.0
+    numpy_conf2 = copy.copy(numpy_conf)
+    numpy_conf2['blocking_timeout'] = None
+    numpy_conf2['send_function'] = numpy_send_nb
+    numpy_configurations = [numpy_conf, numpy_conf2]
+
     # Switcheroo
     #configurations = minimal_configurations
     #configurations = normal_configurations
-    #configurations = nb_configurations
+    #configurations = nb_senders
     #configurations = us_configurations
-    configurations = all_senders
+    #configurations = all_senders
+    #configurations = py27_configurations
+    configurations = numpy_configurations
+    
+    configurations = all_senders + nb_senders + numpy_configurations
+    
     
     # Validate
     map(validate_conf,configurations)
-    # TODO: looks confs through and generate data based on max size for ascii and numpy.array (bytearray is easily produceable from numpy array)
+    # data is not generated until now to minimize waste
     generate_data(configurations)
     
     sock = None
