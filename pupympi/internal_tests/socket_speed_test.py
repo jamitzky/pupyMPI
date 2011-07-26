@@ -314,7 +314,7 @@ def numpy_send_nb(connection,msg,verbose=False):
     sent = 0
     while sent < length:
         try:
-            sent += connection.send(npview)
+            sent += connection.send(npview[sent:])
         except socket.error as e:
             pass
         loopcount += 1
@@ -722,7 +722,7 @@ def runner():
     numpy_conf['blocking_timeout'] = 0.0
     numpy_conf2 = copy.copy(numpy_conf)
     numpy_conf2['blocking_timeout'] = None
-    numpy_conf2['send_function'] = numpy_send_nb
+    numpy_conf2['send_function'] = numpy_send
     numpy_configurations = [numpy_conf, numpy_conf2]
 
     # Switcheroo
@@ -732,9 +732,10 @@ def runner():
     #configurations = us_configurations
     #configurations = all_senders
     #configurations = py27_configurations
-    configurations = numpy_configurations
+    #configurations = numpy_configurations
+    configurations = [numpy_conf]
     
-    configurations = all_senders + nb_senders + numpy_configurations
+    #configurations = all_senders + nb_senders + numpy_configurations
     
     
     # Validate
