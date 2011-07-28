@@ -321,9 +321,9 @@ class Communicator:
         the entire send can be considered complete.
         """        
         rl = []
-        header, payload = utils.prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
+        header, payloads = utils.prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
         for recp in receivers:
-            request = Request("send", self, recp, tag, data=payload, header=header)
+            request = Request("send", self, recp, tag, data=payloads, header=header)
             request.is_prepared = True
             request.prepare_send()
             self.network.t_out.add_out_request(request)
@@ -469,6 +469,7 @@ class Communicator:
             raise MPIInvalidTagException("All tags should be integers")
 
         # Create a send request object. We use the **kwargs as a simple way for users to push things into the request.
+        # NOTE: Boxing request data
         handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, **kwargs)
         # If sending to self, take a short-cut
         if destination == self.rank():

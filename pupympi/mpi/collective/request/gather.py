@@ -151,9 +151,8 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
 
         # Data list to hold gathered result - indexed by rank
         self.data_list = [None] * self.size
-        self.data_list[self.rank],cmd = utils.serialize_message(data) # Fill in own value
+        self.data_list[self.rank],cmd,self.chunksize = utils.serialize_message(data) # Fill in own value
         self.msg_type = cmd
-        self.chunksize = len(self.data_list[self.rank])
 
     def start(self):
         self.iterations = int(log(self.size, 2)) # How many iterations the algorithm will run, excluding gap-filling
@@ -394,7 +393,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
 
         self.data = [None] * self.size
-        self.data[self.rank],cmd = utils.serialize_message(data)
+        self.data[self.rank],cmd,_ = utils.serialize_message(data)
         self.msg_type = cmd
         self.chunksize = len(self.data[self.rank])
 

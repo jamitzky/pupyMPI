@@ -19,16 +19,19 @@ world = mpi.MPI_COMM_WORLD
 rank = world.rank()
 size = world.size()
 ROOT = 3
+ROOT = 0
 
-local_reduce_data = np.int_([rank,rank*2,rank*4])
+#local_reduce_data = np.int_([rank,rank*2,rank*4])
+local_reduce_data = np.int_([[rank,rank]]*3)
 
-expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
+#expected_data = sum([ np.int_([r, r*2, r*4]) for r in range(size)])
 
 data = world.reduce(local_reduce_data, MPI_sum, ROOT)
 
 if rank == ROOT:
-    assert np.alltrue(data == expected_data)
-else:
-    assert data is None
-    
+    print "RECEIVED:%s" % data
+#    assert np.alltrue(data == expected_data)
+#else:
+#    assert data is None
+print "RANK %i DONE" %rank    
 mpi.finalize()

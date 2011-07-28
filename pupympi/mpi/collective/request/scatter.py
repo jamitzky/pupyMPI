@@ -86,7 +86,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
         # Serialize the data
         if self.root == self.rank:
             # TODO: This is done from the start but maybe we want to hold off until later, if so root could skip the (de)serialization to self
-            self.data,cmd = utils.serialize_message(data, recipients=self.size)
+            self.data,cmd,_ = utils.serialize_message(data, recipients=self.size)
             #Logger().debug("RANK:%i data:%s self.data:%s cmd:%s" % (self.rank,data, self.data, cmd) )
             self.msg_type = cmd
 

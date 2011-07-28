@@ -182,8 +182,8 @@ class Network(object):
         s_conn.connect(recipient)
 
         # Pack the data with our special format
-        header,payload = prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING)
-        utils.robust_send(s_conn, (header+payload) )
+        header,payloads = prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING)
+        utils.robust_send_multi(s_conn, [header]+payloads)
 
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
@@ -396,14 +396,14 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":
-                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
+                    Logger().debug("Starting data-send on request: %s datatype:%s data:%s" % (request, type(request.data), request.data))
                     # Send the data on the socket
                     try:
                         if request.multi:
                             utils.robust_send(write_socket,request.header)
                             utils.robust_send_multi(write_socket,request.data)
                         else:
-                            utils.robust_send_multi(write_socket,[request.header,request.data])
+                            utils.robust_send_multi(write_socket,[request.header]+request.data)
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time

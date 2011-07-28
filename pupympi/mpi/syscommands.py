@@ -65,7 +65,7 @@ def execute_commands(mpi):
     Execute the actual system commands. This functions returns a
     boolean indicating if the decorated function should be called.
     """
-    from mpi.network.utils import robust_send, prepare_message
+    from mpi.network.utils import robust_send_multi, prepare_message
     rest_list = []
     for obj in mpi.pending_systems_commands:
         cmd, connection, user_data = obj
@@ -79,14 +79,14 @@ def execute_commands(mpi):
             # We need to access the rank like this. Calling rank() on the
             # communicator will active this function again. Should be
             # apply some locking?
-            header,payload = prepare_message("PONG", rank)
-            robust_send(connection, header+payload)
+            header,payloads = prepare_message("PONG", rank)
+            robust_send_multi(connection, [header]+payloads)
 
         elif cmd == constants.CMD_READ_REGISTER:
             # Send our registers. We just send everything and let the
             # client filter.
-            header,payload = prepare_message(mpi.user_register, rank)
-            robust_send(connection, header+payload)
+            header,payloads = prepare_message(mpi.user_register, rank)
+            robust_send_multi(connection, [header]+payloads)
 
         elif cmd == constants.CMD_MIGRATE_PACK:
             # This if is just here so people know it is not missing. We
@@ -96,8 +96,8 @@ def execute_commands(mpi):
         elif cmd == constants.CMD_CONFIG:
             res = mpi.set_configuration(user_data)
             # Send the result back
-            header,payload = prepare_message(res, rank)
-            robust_send(connection, header+payload)
+            header,payloads = prepare_message(res, rank)
+            robust_send_multi(connection, [header]+payloads)
         
     mpi.pending_systems_commands = rest_list
 
