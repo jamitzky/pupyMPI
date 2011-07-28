@@ -205,8 +205,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         self.operation = operation
 
         self.data_list = [None] * self.size
-        self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
-        self.chunksize = len(self.data_list[self.rank])
+        self.data_list[self.rank],self.msg_type,self.chunksize  = utils.serialize_message(data)        
 
         self.partial = False # No partial reduction for now
 
@@ -248,7 +247,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
                 begin = pos_r * (self.chunksize)
                 end = begin + (self.chunksize)
                 # Add the data to the list of received data
-                self.data_list[r] = raw_data[begin:end]
+                self.data_list[r] = [raw_data[begin:end]]
 
             # When the list of missing children is empty we have received from
             # every child and can reduce the data and send to the parent.
@@ -280,7 +279,9 @@ class TreeAllReducePickless(BaseCollectiveRequest):
     def to_parent(self):
         # Send self.data to the parent.
         if self.parent is not None:
-            payloads = [d for d in self.data_list if d is not None]
+            #payloads = [d for d in self.data_list if d is not None]
+            payloads = [d for dl in self.data_list if dl is not None for d in dl] # flatten the lists that are not None
+            Logger().warning("Sending to_parent payloads: %s combined-len:%i passed-len:%s" % (payloads, sum(map(len,payloads)), len(payloads)*self.chunksize) )
             self.multisend(payloads, self.parent, tag=constants.TAG_ALLREDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
 
         self.phase = "down" # Mark next phase as begun
@@ -299,7 +300,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
                 self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
             val = reduce_elementwise(self.data_list, self.operation)
 
-            self.data_list,self.msg_type = utils.serialize_message(val)
+            self.data_list,self.msg_type,_ = utils.serialize_message(val)
             self.to_children()
 
     @classmethod
@@ -476,8 +477,7 @@ class TreeReducePickless(BaseCollectiveRequest):
         self.operation = operation
 
         self.data_list = [None] * self.size
-        self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
-        self.chunksize = len(self.data_list[self.rank])
+        self.data_list[self.rank],self.msg_type,self.chunksize  = utils.serialize_message(data)
 
         self.partial = False # No partial reduction for now
 
@@ -505,6 +505,7 @@ class TreeReducePickless(BaseCollectiveRequest):
             self.to_parent()
 
     def accept_msg(self, child_rank, raw_data, msg_type):
+        Logger().debug("PICKLESSREDUCE ACCEPT rank:%i" % self.rank)
         # Do not do anything if the request is completed.
 
         if self._finished.is_set():
@@ -526,7 +527,8 @@ class TreeReducePickless(BaseCollectiveRequest):
             begin = pos_r * (self.chunksize)
             end = begin + (self.chunksize)
             # Add the data to the list of received data
-            self.data_list[r] = raw_data[begin:end]
+            # NOTE: Boxing
+            self.data_list[r] = [raw_data[begin:end]]
 
         # If the list of missing children is empty we have received from
         # every child and can reduce the data and send to the parent.
@@ -553,17 +555,19 @@ class TreeReducePickless(BaseCollectiveRequest):
         return val
 
     def to_parent(self):
-        # FIXME: Avoid stupid list boxing
         # Send self.data to the parent.
         if self.parent is not None:
             if self.partial:
                 # With partial reduce we only send the reduced value up
+                # NOTE: Avoid stupid list boxing
                 payloads = [self.data_list[self.rank]]
             else:
-                payloads = [d for d in self.data_list if d is not None]
+                #payloads = [d for d in self.data_list if d is not None]
+                payloads = [d for dl in self.data_list if dl is not None for d in dl] # flatten the lists that are not None                
             self.multisend(payloads, self.parent, tag=constants.TAG_REDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
 
         self.done()
+
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):

@@ -29,7 +29,6 @@ from mpi.network import Network
 from mpi.group import Group
 from mpi.exceptions import MPIException
 from mpi import constants
-from mpi.network.utils import pickle, robust_send, prepare_message
 from mpi.network import utils as utils
 from mpi.syscommands import handle_system_commands, execute_system_commands
 from mpi.request import Request
@@ -454,8 +453,10 @@ class MPI(Thread):
         Look through all the received collective data and see if they can be
         matched with a pending collective request.
         """
+
         prune = False
         with self.received_collective_data_lock:
+            Logger().debug("MATCHCOLLECTIVE len(rcd):%i" % (len(self.received_collective_data)))
             unmatched_data_list = [] # save the unmatched for later
             for item in self.received_collective_data:
                 (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
@@ -536,7 +537,8 @@ class MPI(Thread):
             self.has_work_event.wait()
             self.has_work_event.clear()
 
-            #Logger().debug("--No more wait for work")
+            if self.MPI_COMM_WORLD.rank() == 0:
+                Logger().debug("--Going to work--  rd_hw:%s, ucr_hw:%s, pr_hw:%s" % (self.raw_data_has_work.is_set(),self.unstarted_collective_requests_has_work.is_set(), self.pending_collective_requests_has_work.is_set()) )
 
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
@@ -735,7 +737,7 @@ class MPI(Thread):
         read_only = (constants.CMD_PING, constants.CMD_READ_REGISTER)
         commands = (constants.CMD_CONFIG, constants.CMD_ABORT, constants.CMD_PING, constants.CMD_MIGRATE_PACK, constants.CMD_READ_REGISTER, constants.CMD_CONN_CLOSE)
 
-        data = pickle.loads(raw_data)
+        data = utils.pickle.loads(raw_data)
         user_data = None
         security_component = None
 

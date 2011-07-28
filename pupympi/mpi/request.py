@@ -72,7 +72,7 @@ class Request(BaseRequest):
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data # payload
         self.header = header # serialized header for the payload
-        self.multi = multi # flag that the request has a list of payloads
+        self.multi = multi # flag that the request has a list of already serialized payloads
         self.payload_size = payload_size # combined bytesize of payloads if single payload this is 0 for now
 
         self.cmd = cmd
@@ -92,6 +92,10 @@ class Request(BaseRequest):
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
         #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
+        if self.data is not None and not isinstance(self.data,list):
+            import inspect
+            caller = inspect.stack()[2][3]
+            Logger().debug("BOOO! Caller:%s Request object type:%s created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (caller, type(self.data), self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
 
     @classmethod
     def from_state(cls, state, mpi):
@@ -111,7 +115,8 @@ class Request(BaseRequest):
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, self.data )
+        # We don't show data since it can be very large, if needed just output Request.data
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), cmd(%s), multi(%s) status(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.cmd, self.multi, self.status )
 
     def prepare_send(self):
         """
@@ -130,9 +135,10 @@ class Request(BaseRequest):
         else:
             if not self.is_prepared:
                 # Create the proper data structure and pickle the data
-                header, payload = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
-                self.data = payload
+                header, payloads = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
+                self.data = payloads
                 self.header = header
+                # FIXME: Assign directly above
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))
