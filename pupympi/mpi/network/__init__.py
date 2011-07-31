@@ -354,6 +354,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if self.shutdown_event.is_set():
                     break # We don't care about incoming during shutdown
                 else:
+                    # TODO: We should check for a specific Exception thrown from get_raw_message to signify when other side has closed connection
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
                     continue
@@ -372,7 +373,6 @@ class BaseCommunicationHandler(threading.Thread):
                         self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
-                        #Logger().debug("Special treatment of :%s" % msg_type)
                 except AttributeError, e:
                     Logger().error("Strange error:%s" % e)
                     raise e
@@ -396,8 +396,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":
-                    Logger().debug("Starting data-send on request: %s datatype:%s data:%s" % (request, type(request.data), request.data))
-                    # Send the data on the socket
+                        # Send the data on the socket
                     try:
                         if request.multi:
                             utils.robust_send(write_socket,request.header)

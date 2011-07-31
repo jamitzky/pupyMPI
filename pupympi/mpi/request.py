@@ -92,10 +92,6 @@ class Request(BaseRequest):
         # 'cancelled' -> The user cancelled the request. A some later point this will be removed
 
         #Logger().debug("Request object created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
-        if self.data is not None and not isinstance(self.data,list):
-            import inspect
-            caller = inspect.stack()[2][3]
-            Logger().debug("BOOO! Caller:%s Request object type:%s created for communicator:%s, tag:%s, data:%s, ack:%s, request_type:%s and participant:%s" % (caller, type(self.data), self.communicator.name, self.tag, self.data, self.acknowledge, self.request_type, self.participant))
 
     @classmethod
     def from_state(cls, state, mpi):
@@ -116,7 +112,7 @@ class Request(BaseRequest):
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
         # We don't show data since it can be very large, if needed just output Request.data
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), cmd(%s), multi(%s) status(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.cmd, self.multi, self.status )
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), cmd(%s), multi(%s), payload_size(%s), status(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.cmd, self.multi, self.payload_size, self.status )
 
     def prepare_send(self):
         """
@@ -131,7 +127,7 @@ class Request(BaseRequest):
         common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : self.collective_header_information, }
 
         if self.multi:
-            self.header = utils.prepare_multiheader(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)
+            self.header = utils.prepare_header(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)
         else:
             if not self.is_prepared:
                 # Create the proper data structure and pickle the data
