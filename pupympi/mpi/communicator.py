@@ -319,7 +319,6 @@ class Communicator:
         The data is assumed to be properly serialized already in which case the call to
         prepare_message is just to produce a header.
         
-
         A list of request handles is returned, all of which needs to be waited on before
         the entire send can be considered complete.
         """
@@ -327,7 +326,7 @@ class Communicator:
             payloads = []
             length = 0
             for m in messages:
-                serialized_data, _, l = utils.serialize_message(m)
+                serialized_data,cmd, l = utils.serialize_message(m, constants.CMD_USER)
                 payloads.extend(serialized_data)
                 length += l
         else:
