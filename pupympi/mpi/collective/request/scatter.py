@@ -86,35 +86,35 @@ class TreeScatterPickless(BaseCollectiveRequest):
         # Serialize the data
         if self.root == self.rank:
             # TODO: This is done from the start but maybe we want to hold off until later, if so root could skip the (de)serialization to self
-            self.data,cmd,_ = utils.serialize_message(data, recipients=self.size)
-            #Logger().debug("RANK:%i data:%s self.data:%s cmd:%s" % (self.rank,data, self.data, cmd) )
-            self.msg_type = cmd
+            self.data,self.msg_type,length = utils.serialize_message(data, recipients=self.size)
 
-            # FIXME: The recreation of shape and/or shapebytes should be avoided by letting serialize_message return it
             # Multidimensional arrays require a bit more care
-            self.shapelen = cmd / 1000 # the number of shapebytes hide in the upper decimals of cmd
+            self.shapelen = self.msg_type / 1000 # the number of shapebytes hide in the upper decimals of cmd
             if self.shapelen:
                 # Slice shapebytes out of msg
-                self.shapebytes = self.data[:self.shapelen]
+                self.shapebytes = self.data[0]
                 self.shape = utils.get_shape(self.shapebytes)
-                #self.data = self.data[self.shapelen:] # try waiting with cutoff since this triggers an allocation
+                # for multidim the data will be in second position
+                self.data = self.data[1]
+            else:
+                self.data = self.data[0]
 
-            #Logger().debug("RANK:%i len:%i cmd:%s self.shapelen:%s" % (self.rank,len(self.data), cmd, self.shapelen) )
-            #Logger().debug("RANK:%i len:%i serialized:%s cmd:%s" % (self.rank,len(self.data), self.data, cmd) )
+            self.chunksize = (length-self.shapelen) / self.size # for scatter shapebytes are counted seperately
+            
+            # DEBUG
+            #Logger().debug("initialized msg_type:%s origlen:%s shapelen:%s chunksize:%s" % (self.msg_type, length, self.shapelen, self.chunksize) )
         else:
             self.data = None
             self.shapelen = False
-
-        #Logger().debug("rank:%i initialized data:%s from:%s" % (self.rank, self.data, data) )
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
         if not topology:
             raise Exception("Cannot broadcast without a topology... do you expect me to randomly behave well? I REFUSE!!!")
-
+        
         self.parent = topology.parent()
         self.children = topology.children()
-
+        
         if self.parent is None:
             self.send_to_children()
 
@@ -123,7 +123,7 @@ class TreeScatterPickless(BaseCollectiveRequest):
         if self._finished.is_set():
             return False
 
-        #Logger().debug("rank:%i accepts raw data:%s of len:%i msg_type:%s" % (self.rank, raw_data, len(raw_data), msg_type) )
+        #Logger().debug("accept raw data:%s of len:%i msg_type:%s" % (raw_data, len(raw_data), msg_type) )
 
         if rank == self.parent:
             self.msg_type = msg_type # Note msg_type since it determines how to send down
@@ -164,8 +164,13 @@ class TreeScatterPickless(BaseCollectiveRequest):
         all_ranks.sort()
         rank_pos_map = dict([(r,i) for i,r in enumerate(all_ranks)])
 
-        # chunksize is always the data the node holds relative to how many nodes (including self) will share it
-        self.chunksize = len(self.data[self.shapelen:]) / len(all_ranks) # should be calculated in advance based on tree generation
+        shapeoffset = 0
+        # non-root nodes need to set chunksize and have a shapeoffset since the shapebytes are included in self.data
+        if self.parent is not None:
+            # chunksize is always the data the node holds relative to how many nodes (including self) will share it
+            self.chunksize = (len(self.data)  - self.shapelen) / len(all_ranks)            
+            # TODO: len(all_ranks) should be calculated in advance based on tree generation
+            shapeoffset = self.shapelen
 
         # Note the position of the node's own slice (only differs from 0 if involved in a root-swap)
         self.pos = rank_pos_map[self.rank]
@@ -182,11 +187,12 @@ class TreeScatterPickless(BaseCollectiveRequest):
                 payloads = []
             for r in all_ranks:
                 pos_r = rank_pos_map[r]
-                begin = pos_r * (self.chunksize) + self.shapelen
+                begin = pos_r * (self.chunksize) + shapeoffset
                 end = begin + (self.chunksize)
                 # DEBUG
-                #na = utils.deserialize_message(self.data[begin:end], self.msg_type % 1000)
-                #Logger().debug("descendant:%i has pos:%i and gets begin:%i end:%i with na:%s" % (r, pos_r, begin, end, na) )
+                #if self.rank == 1:
+                #    na = utils.deserialize_message(self.data[begin:end], self.msg_type % 1000)
+                #    Logger().debug("descendant:%i has pos:%i and gets begin:%i end:%i with na:%s" % (r, pos_r, begin, end, na) )
                 try:
                     payloads.append( self.data[begin:end] )
                 except Exception as e:
@@ -194,7 +200,10 @@ class TreeScatterPickless(BaseCollectiveRequest):
                     raise e
 
             p_length = self.shapelen + len(all_ranks)*self.chunksize # length af all payloads combined
-            #Logger().debug("send to child:%s payloads:%s of len:%i" % (child, payloads, len(payloads[0]) ))
+            #if self.rank == 1:
+            #    Logger().debug("send to child:%s self.chunksize:%s len(self.data):%s p_length:%s payloads:%s" % (child, self.chunksize, len(self.data), p_length, payloads))
+            #Logger().debug("send to child:%s self.data:%s" % (child, self.data))
+            #Logger().debug("send to child:%s self.chunksize:%s self.data:%s payloads:%s" % (child, self.chunksize, self.data, payloads ))
             self.multisend(payloads, child, tag=constants.TAG_SCATTER, cmd=self.msg_type, payload_length=p_length)
 
         self.done()
@@ -228,13 +237,20 @@ class TreeScatterPickless(BaseCollectiveRequest):
             return obj
 
     def _get_data(self):
-        begin = self.pos * self.chunksize + self.shapelen
-        end = begin + self.chunksize
         #Logger().debug("rank:%i GET msg_type:%s chunksize:%s, datalen:%i finished:%s" % (self.rank, self.msg_type, self.chunksize, len(self.data), self._finished.is_set() ) )
         if self.shapelen:
-            #Logger().debug("rank:%i GET msg_type:%s chunksize:%s, datalen:%i shapebytes:%s finished:%s" % (self.rank, self.msg_type, self.chunksize, len(self.data), self.shapebytes, self._finished.is_set() ) )
-            return utils.deserialize_message(self.shapebytes+self.data[begin:end], self.msg_type)
+            if self.parent is None:
+                begin = self.pos * self.chunksize
+                end = begin + self.chunksize
+                return utils.deserialize_message([self.shapebytes,self.data[begin:end]], self.msg_type)
+            else:
+                begin = self.pos * self.chunksize + self.shapelen
+                end = begin + self.chunksize
+                return utils.deserialize_message(self.shapebytes+self.data[begin:end], self.msg_type)
+                
         else:
+            begin = self.pos * self.chunksize
+            end = begin + self.chunksize
             return utils.deserialize_message(self.data[begin:end], self.msg_type)
 
 
