@@ -302,7 +302,13 @@ def deserialize_message(raw_data, msg_type):
             # Numpy type or bytearray
             if msg_type == constants.CMD_BYTEARRAY:
                 # plain old bytearray
-                data = bytearray(raw_data)
+                try:
+                    data = bytearray(raw_data)
+                except TypeError as e:
+                    # bytearrays that are part of a collective operation
+                    # and have not been transmitted (ie. only serialized and deserialized
+                    # at same node) are not a bytestring but a list
+                    data = bytearray(raw_data[0])
             else:
                 # Lookup the numpy type
                 t = typeint_to_type[msg_type]
