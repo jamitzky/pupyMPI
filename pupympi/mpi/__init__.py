@@ -456,7 +456,6 @@ class MPI(Thread):
 
         prune = False
         with self.received_collective_data_lock:
-            Logger().debug("MATCHCOLLECTIVE len(rcd):%i" % (len(self.received_collective_data)))
             unmatched_data_list = [] # save the unmatched for later
             for item in self.received_collective_data:
                 (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) = item
@@ -536,10 +535,7 @@ class MPI(Thread):
             # check the queues anyway
             self.has_work_event.wait()
             self.has_work_event.clear()
-
-            if self.MPI_COMM_WORLD.rank() == 0:
-                Logger().debug("--Going to work--  rd_hw:%s, ucr_hw:%s, pr_hw:%s" % (self.raw_data_has_work.is_set(),self.unstarted_collective_requests_has_work.is_set(), self.pending_collective_requests_has_work.is_set()) )
-
+            
             # Unpickle raw data (received messages) and put them in received queue
             if self.raw_data_has_work.is_set():
                 self.raw_data_has_work.clear() # rather have an empty queue than hold the lock too long
