@@ -53,10 +53,8 @@ class DisseminationAllGather(BaseCollectiveRequest):
             gap_start = (gap_send_to + 1) % self.size
             gap_end = (gap_start + self.gap_size) % self.size
             self.send_ranges.append( (gap_start, gap_end) )
-            #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
 
         # Start by sending the message for iteration 0
-        #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
         self.isend(self.data_list, self.send_to[0], constants.TAG_ALLGATHER)
 
         # Mark send communication as done for iteration 0
@@ -102,8 +100,6 @@ class DisseminationAllGather(BaseCollectiveRequest):
                     iteration = i
                     blocked = True
 
-        #Logger().debug("rank:%i RECV iteration:%i, recv_from:%s, r:%s" % (self.rank,iteration,self.recv_from, rank))
-
         # Check if the next iteration needs sending
         for i, r in enumerate(self.send_to):
             if i > iteration: # We should send only up to the iteration after the one found to have been completed
@@ -116,17 +112,13 @@ class DisseminationAllGather(BaseCollectiveRequest):
                 else:
                     slice = [None]*start + self.data_list[start:end+1] + [None]*(self.size - (end+1))
 
-                #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
-
                 self.isend(slice, r, constants.TAG_ALLGATHER)
                 self.send_to[i] = None
 
         # Check if we are done
-        #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
         if set(self.recv_from+self.send_to) == set([None]):
             self.done()
-
-        #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
+        
         return True
 
     def _get_data(self):
@@ -151,8 +143,7 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
 
         # Data list to hold gathered result - indexed by rank
         self.data_list = [None] * self.size
-        self.data_list[self.rank],cmd,self.chunksize = utils.serialize_message(data) # Fill in own value
-        self.msg_type = cmd
+        self.data_list[self.rank],self.msg_type,self.chunksize = utils.serialize_message(data) # Fill in own value
 
     def start(self):
         self.iterations = int(log(self.size, 2)) # How many iterations the algorithm will run, excluding gap-filling
@@ -195,15 +186,9 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
             gap_start = (gap_send_to + 1) % self.size
             gap_end = (gap_start - 1 + self.gap_size) % self.size
             self.send_ranges.append( (gap_start, gap_end) )
-            #Logger().debug("rank:%i gap_start:%i gap_end:%i" % (self.rank, gap_start, gap_end))
-
-        # Start by sending the message for iteration 0
-        #Logger().debug("rank:%i sending to:%i data:%s" % (self.rank, self.send_to[0], self.data_list) )
-
-        #Logger().debug("rank:%i send_to:%s recv_from:%s recv_ranges:%s send_ranges:%s" % (self.rank, self.send_to, self.recv_from, self.recv_ranges, self.send_ranges) )
 
         # TODO: Use an isend with already serialized message instead?
-        self.multisend([self.data_list[self.rank]], self.send_to[0], tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=self.chunksize )
+        self.multisend(self.data_list[self.rank], self.send_to[0], tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=self.chunksize )
 
         # Mark send communication as done for iteration 0
         self.send_to[0] = None
@@ -255,22 +240,14 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
         if slice_end < slice_start:
             ranks_in_the_middle = slice_start - (slice_end - 1)
             ranks_in_last_slice = self.size - ranks_in_the_middle - (slice_end - 1)
-            #for raw_index, slice_rank in enumerate( range(0,slice_end)+range(slice_start, slice_start+ranks_in_last_slice) ):
             for raw_index, slice_rank in enumerate( range(0,slice_end+1)+range(slice_start, slice_start+ranks_in_last_slice) ):
-                #Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 try:
                     self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
                 except Exception as e:
-                    #Logger().debug("rank:%i slice_rank:%i start:%i end:%i len(data_list):%s" % (self.rank,slice_rank,slice_start, slice_end, len(self.data_list) ))
                     raise e
         else:
-            #for raw_index, slice_rank in enumerate(range(slice_start, slice_end)):
             for raw_index, slice_rank in enumerate(range(slice_start, slice_end+1)):
-                #Logger().debug("rank:%i slice_rank:%i" % (self.rank,slice_rank ))
                 self.data_list[slice_rank] = raw_data[raw_index*self.chunksize:(raw_index+1)*self.chunksize]
-
-
-        #Logger().debug("rank:%i RECV iteration:%i, recv_from:%s, r:%s" % (self.rank,iteration,self.recv_from, rank))
 
         # Check if the next iteration needs sending
         for i, r in enumerate(self.send_to):
@@ -283,21 +260,25 @@ class DisseminationAllGatherPickless(BaseCollectiveRequest):
                     payloads = self.data_list[:end+1] + self.data_list[start:]
                 else:
                     payloads = self.data_list[start:end+1]
-
-                #Logger().debug("rank:%i SENDING iteration:%i, send_to:%s, data:%s" % (self.rank,iteration,self.send_to, slice))
-                self.multisend(payloads, r, tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
+                
+                # flatten payloads in case the node's own load is there
+                temp = []
+                for p in payloads:
+                    if isinstance(p,list):
+                        temp.extend(p)
+                    else:
+                        temp.append(p)
+                
+                self.multisend(temp, r, tag=constants.TAG_ALLGATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
                 self.send_to[i] = None
 
         # Check if we are done
-        #if iteration == self.iterations: # This check is not good enough for procs who receive out of order
         if set(self.recv_from+self.send_to) == set([None]):
             self.done()
-
-        #Logger().debug("rank:%i ACCEPTED rf:%s st:%s" % (self.rank, self.recv_from, self.send_to))
+            
         return True
 
     def _get_data(self):
-        #Logger().debug("rank:%i GETTING data_list:%s" % (self.rank, self.data_list) )
         return [ utils.deserialize_message(self.data_list[r], self.msg_type) for r in range(self.size) ]
 
 class TreeGather(BaseCollectiveRequest):
@@ -330,7 +311,7 @@ class TreeGather(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
         self.missing_children = copy.copy(self.children)
-        #Logger().debug("No go away class!")
+
         # We forward up the tree unless we have to wait for children
         if not self.children:
             self.send_parent()
@@ -393,9 +374,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
         self.rank = communicator.comm_group.rank()
 
         self.data = [None] * self.size
-        self.data[self.rank],cmd,_ = utils.serialize_message(data)
-        self.msg_type = cmd
-        self.chunksize = len(self.data[self.rank])
+        self.data[self.rank],self.msg_type,self.chunksize = utils.serialize_message(data)
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -405,7 +384,6 @@ class TreeGatherPickless(BaseCollectiveRequest):
         self.parent = topology.parent()
         self.children = topology.children()
         self.missing_children = copy.copy(self.children)
-        #Logger().debug("NUMPY CLASS - rank:%i has children:%s" % (self.rank,self.children) )
 
         # We forward up the tree unless we have to wait for children
         if not self.children:
@@ -414,9 +392,20 @@ class TreeGatherPickless(BaseCollectiveRequest):
     def send_parent(self):
         # Send data to the parent (if any)
         if (not self._finished.is_set()) and self.parent is not None:
+            payloads =  []
+            for d in self.data:
+                if d is None:
+                    continue
+                if isinstance(d,list):
+                    payloads.extend(d)
+                else:
+                    payloads.append(d)
 
-            payloads = [d for d in self.data if d is not None] # Filter potential Nones away
-            self.multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize )
+            # how many payloads of chunksize are there?
+            # For multidimensional arrays there is an extra element in the
+            # payloads list namely the the node's own byteshape - in that case 1 is subtracted from length
+            length = len(payloads) - (len(self.data[self.rank]) - 1)
+            self.multisend(payloads, self.parent, tag=constants.TAG_GATHER, cmd=self.msg_type, payload_length=length*self.chunksize )
 
         self.done()
 
@@ -440,7 +429,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
 
             self.data[r] = raw_data[begin:end]
 
-
+        Logger().debug("accept_msg self.data:%s" % self.data)
         if not self.missing_children:
             self.send_parent()
 
