@@ -411,8 +411,9 @@ class BaseCommunicationHandler(threading.Thread):
                     except Exception, e:
                         Logger().error("Other exception got:%s for socket:%s with header:%s payload:%s" % (e,write_socket,request.header, request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
-                        continue
-
+                        #continue
+                        raise e
+                    
                     removal.append((write_socket, request))
 
                     if request.acknowledge:
