@@ -240,7 +240,7 @@ def serialize_message(data, cmd=None, recipients=1):
             ## Convert data to bytearray with shape prepended
             #serialized_data = byteshape + bytearray(data)
 
-            Logger().debug("prepare MULTIDIM shape:%s - type:%s cmd:%s" % (data.shape, type(data[0]), cmd) )
+            #Logger().debug("prepare MULTIDIM shape:%s - type:%s cmd:%s" % (data.shape, type(data[0]), cmd) )
         else:
             v = data.view(numpy.uint8)
             serialized_data = [v]
@@ -251,10 +251,10 @@ def serialize_message(data, cmd=None, recipients=1):
 
             # Look up the correct type int
             cmd = type_to_typeint[data.dtype]
-            Logger().debug("prepare ONEDIM - type:%s cmd:%s" % (type(data[0]), cmd) )
+            #Logger().debug("prepare ONEDIM - type:%s cmd:%s" % (type(data[0]), cmd) )
     elif isinstance(data,bytearray):
         cmd = type_to_typeint[type(data)]
-        Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
+        #Logger().debug("prepare BYTEARRAY - cmd:%i len:%s" % (cmd,len(data)) )
         serialized_data = [data]
         length = len(data) # a bytearray has the length it has
     else:
