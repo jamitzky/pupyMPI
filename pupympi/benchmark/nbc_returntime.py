@@ -1,5 +1,6 @@
 from mpi.benchmark import Benchmark
 from mpi import MPI
+from mpi.collective.operations import MPI_SUM
 
 def main(reps):
     mpi   = MPI()
@@ -12,7 +13,11 @@ def main(reps):
     if rank == 0:
         print "Benchmarking with %d reps" % reps
 
-    data = range(1000)
+    datacount = 1000
+    while datacount % size != 0:
+        datacount += 1
+
+    data = range(datacount)
     b = Benchmark(communicator=world, roots=range(size))
 
     # Testing allgather
@@ -22,23 +27,64 @@ def main(reps):
             obj = world.iallgather(data)
         handle_list.append(obj)
     world.waitall(handle_list)
-    b.flush()
-
 
     # Testing barrier
+    bw, _ = b.get_tester("barrier", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.ibarrier()
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Testing bcast
+    bw, _ = b.get_tester("bcast", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.ibcast(data, root=0)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Allreduce
+    bw, _ = b.get_tester("allreduce", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.iallreduce(data, operation=MPI_SUM)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Alltoall
+    bw, _ = b.get_tester("alltoall", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.ialltoall(data)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Gather
+    bw, _ = b.get_tester("gather", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.igather(data)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Reduce
+    bw, _ = b.get_tester("reduce", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.ireduce(data, root=0, operation=MPI_SUM)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
     # Scan # UHH.. DOES IT WORK
+    bw, _ = b.get_tester("scan", datasize=rank)
+    for _ in range(reps):
+        with bw:
+            obj = world.iscan(data, operation=MPI_SUM)
+        handle_list.append(obj)
+    world.waitall(handle_list)
 
+    b.flush()
     mpi.finalize()
 
 
