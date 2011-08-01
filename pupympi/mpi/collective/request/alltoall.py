@@ -192,16 +192,16 @@ class NaiveAllToAllPickless(BaseCollectiveRequest):
 
     def _get_data(self):
         import copy
-        tempdata = copy.deepcopy(self.data[-1])
+        tempdata = copy.deepcopy(self.data)
         chunk_size = self.chunksize / self.size
-        #Logger().debug("cleaning self.data:%s self.received:%s" % (self.data, self.received_data) )
+        #Logger().debug("BEFORE tempdata:%s self.received:%s" % (tempdata, self.received_data) )
         #Logger().debug("cleaning BEFORE self.data:%s self.received:%s" % (self.data, self.received_data) )
         for i,data in enumerate(self.received_data):
             if i == self.rank:
-                tempdata[i*chunk_size:(i+1)*chunk_size] = data
+                tempdata[-1][i*chunk_size:(i+1)*chunk_size] = data
             else:
-                tempdata[i*chunk_size:(i+1)*chunk_size] = numpy.fromstring(data,numpy.uint8)
+                tempdata[-1][i*chunk_size:(i+1)*chunk_size] = numpy.fromstring(data,numpy.uint8)
 
-        #Logger().debug("self.data:%s vs self.received_data:%s" % (self.data,self.received_data) )
+        #Logger().debug("AFTER tempdata:%s self.received:%s" % (tempdata, self.received_data) )
         data = utils.deserialize_message(tempdata, self.msg_type)
         return data
