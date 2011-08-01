@@ -1,7 +1,6 @@
 import numpy, sys, time
 from mpi import MPI
 from mpi.collective.operations import MPI_sum
-from mpi.benchmark import Benchmark
 
 pupy = MPI()
 world, rank, size = pupy.initinfo
@@ -74,23 +73,18 @@ if rank == 0:
     datasize = global_height*global_width*global_state.dtype.itemsize
 else:
     datasize = -1
-bw = Benchmark(world, datasize=datasize, roots=0)
-bw_complete, _ = bw.get_tester("complete")
 
-with bw_complete:
-    # All procs receive their local state and add empty ghost rows
-    epsilon = world.bcast(epsilon, root=0)
-    local_state = world.scatter(global_state, root=0)
-    height, width = local_state.shape
-    empty = numpy.zeros((1,width))
-    local_state = numpy.concatenate((empty,local_state,empty)) # add ghost rows top and bottom
+# All procs receive their local state and add empty ghost rows
+epsilon = world.bcast(epsilon, root=0)
+local_state = world.scatter(global_state, root=0)
+height, width = local_state.shape
+empty = numpy.zeros((1,width))
+local_state = numpy.concatenate((empty,local_state,empty)) # add ghost rows top and bottom
 
-    if rank == 0:
-        print "Starting to solve for np:%i w:%i h:%i e:%s" % (size, global_width, global_height, epsilon)
+if rank == 0:
+    print "Starting to solve for np:%i w:%i h:%i e:%s" % (size, global_width, global_height, epsilon)
 
-    stencil_solver(local_state,epsilon)
+stencil_solver(local_state,epsilon)
 
 
-# Flush the benchmarked data to files
-bw.flush()
 pupy.finalize()
