@@ -1205,7 +1205,7 @@ class Communicator:
         execute_system_commands(self.mpi)
         return self._ireduce(data, op, root).wait()
 
-    def ireduce(data, op, root=0):
+    def ireduce(self, data, op, root=0):
         """
         A non blocking version of the :func:`reduce` function. This makes it
         possible to latency hide calculation as normal the operations
