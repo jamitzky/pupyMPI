@@ -405,13 +405,13 @@ class BaseCommunicationHandler(threading.Thread):
                             utils.robust_send_multi(write_socket,[request.header]+request.data)
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        # TODO: Make sure we really want to continue here, instead of reacting
                         # Send went wrong, do not update, but hope for better luck next time
-                        #continue
-                        raise e
+                        continue
+                        #raise e
                     except Exception, e:
                         Logger().error("Other exception got:%s for socket:%s with header:%s payload:%s" % (e,write_socket,request.header, request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
-                        #continue
                         raise e
                     
                     removal.append((write_socket, request))
