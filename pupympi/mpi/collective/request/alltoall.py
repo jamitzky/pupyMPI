@@ -110,7 +110,10 @@ class NaiveAllToAllPickless(BaseCollectiveRequest):
     """
     def __init__(self, communicator, data):
         super(NaiveAllToAllPickless, self).__init__(communicator, data)
-
+        
+        # DEBUG
+        import copy        
+        #self.data, self.msg_type,_ = utils.serialize_message(copy.deepcopy(data))
         self.data, self.msg_type,_ = utils.serialize_message(data)
         self.chunksize = len(self.data[-1]) # we don't send shapebytes and so, don't count them if they are there
         self.communicator = communicator
@@ -127,7 +130,7 @@ class NaiveAllToAllPickless(BaseCollectiveRequest):
         self.received_data = range(self.size)
 
         self.tag = constants.TAG_ALLTOALL
-        #Logger().debug("PICKLESS! now also for all2all! chunksize:%s len:%s" % (self.chunksize, len(self.data[-1])) )
+        #Logger().warning("PICKLESS! now also for all2all! chunksize:%s len:%s" % (self.chunksize, len(self.data[-1])) )
 
     @classmethod
     def accept(cls, communicator, settings,  cache, *args, **kwargs):
@@ -170,7 +173,7 @@ class NaiveAllToAllPickless(BaseCollectiveRequest):
         # If we dont need to hear from anyone else we mark the request as finished,
         # clean data first.
         if len(self.missing_participants) == 0:
-            self.clean_data()
+            #self.clean_data() # Doing it in _getdata instead
             self.done()
 
         return True
@@ -180,15 +183,25 @@ class NaiveAllToAllPickless(BaseCollectiveRequest):
         insert the received data into the original array
         """
         chunk_size = self.chunksize / self.size
-        #Logger().debug("cleaning self.data:%s self.received:%s" % (self.data, self.received_data) )
         for i,data in enumerate(self.received_data):
             if i == self.rank:
                 self.data[-1][i*chunk_size:(i+1)*chunk_size] = data
             else:
                 self.data[-1][i*chunk_size:(i+1)*chunk_size] = numpy.fromstring(data,numpy.uint8)
-            
+                
 
     def _get_data(self):
+        import copy
+        tempdata = copy.deepcopy(self.data[-1])
+        chunk_size = self.chunksize / self.size
+        #Logger().debug("cleaning self.data:%s self.received:%s" % (self.data, self.received_data) )
+        #Logger().debug("cleaning BEFORE self.data:%s self.received:%s" % (self.data, self.received_data) )
+        for i,data in enumerate(self.received_data):
+            if i == self.rank:
+                tempdata[i*chunk_size:(i+1)*chunk_size] = data
+            else:
+                tempdata[i*chunk_size:(i+1)*chunk_size] = numpy.fromstring(data,numpy.uint8)
+
         #Logger().debug("self.data:%s vs self.received_data:%s" % (self.data,self.received_data) )
-        data = utils.deserialize_message(self.data, self.msg_type)
+        data = utils.deserialize_message(tempdata, self.msg_type)
         return data
