@@ -1,6 +1,6 @@
 from mpi.benchmark import Benchmark
 from mpi import MPI
-from mpi.collective.operations import MPI_SUM
+from mpi.collective.operations import MPI_sum
 
 def main(reps):
     mpi   = MPI()
@@ -48,7 +48,7 @@ def main(reps):
     bw, _ = b.get_tester("allreduce", datasize=rank)
     for _ in range(reps):
         with bw:
-            obj = world.iallreduce(data, operation=MPI_SUM)
+            obj = world.iallreduce(data, MPI_sum)
         handle_list.append(obj)
     world.waitall(handle_list)
 
@@ -72,7 +72,7 @@ def main(reps):
     bw, _ = b.get_tester("reduce", datasize=rank)
     for _ in range(reps):
         with bw:
-            obj = world.ireduce(data, root=0, operation=MPI_SUM)
+            obj = world.ireduce(data, MPI_sum, root=0)
         handle_list.append(obj)
     world.waitall(handle_list)
 
@@ -80,7 +80,7 @@ def main(reps):
     bw, _ = b.get_tester("scan", datasize=rank)
     for _ in range(reps):
         with bw:
-            obj = world.iscan(data, operation=MPI_SUM)
+            obj = world.iscan(data, MPI_sum)
         handle_list.append(obj)
     world.waitall(handle_list)
 
