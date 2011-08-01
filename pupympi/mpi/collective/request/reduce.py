@@ -263,7 +263,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             # FIXME: just fix!
             # NOTE: Unless we are sure that no reduce operation can change the
             # msg_type or chunksize we should really store them again here
-            Logger().debug("STORING msg_type:%s vs. old:%s type(raw_data):%s len(raw_data):%s raw_data:%s" % (msg_type, self.msg_type, type(raw_data), len(raw_data), raw_data))
+            #Logger().debug("STORING msg_type:%s vs. old:%s type(raw_data):%s len(raw_data):%s raw_data:%s" % (msg_type, self.msg_type, type(raw_data), len(raw_data), raw_data))
             self.data_list = [raw_data] # boxing
             self.to_children()
             return True
@@ -273,7 +273,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         return False
 
     def _get_data(self):
-        Logger().debug("deserializing type(data_list):%s data_list:%s" % (type(self.data_list), self.data_list))
+        #Logger().debug("deserializing type(data_list):%s data_list:%s" % (type(self.data_list), self.data_list))
         if self.parent is None:
             # Root has the data in another form
             return utils.deserialize_message(self.data_list, self.msg_type)
