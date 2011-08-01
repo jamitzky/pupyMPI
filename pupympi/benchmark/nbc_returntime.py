@@ -72,7 +72,7 @@ def main(reps):
     bw, _ = b.get_tester("reduce", datasize=rank)
     for _ in range(reps):
         with bw:
-            obj = world.ireduce(data, MPI_sum, root=0)
+            obj = world.ireduce(data, MPI_sum, 0)
         handle_list.append(obj)
     world.waitall(handle_list)
 
