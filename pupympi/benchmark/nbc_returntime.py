@@ -28,6 +28,8 @@ def main(reps):
         handle_list.append(obj)
     world.waitall(handle_list)
 
+    world.barrier()
+
     # Testing barrier
     bw, _ = b.get_tester("barrier", datasize=rank)
     for _ in range(reps):
@@ -35,6 +37,8 @@ def main(reps):
             obj = world.ibarrier()
         handle_list.append(obj)
     world.waitall(handle_list)
+
+    world.barrier()
 
     # Testing bcast
     bw, _ = b.get_tester("bcast", datasize=rank)
@@ -44,6 +48,8 @@ def main(reps):
         handle_list.append(obj)
     world.waitall(handle_list)
 
+    world.barrier()
+
     # Allreduce
     bw, _ = b.get_tester("allreduce", datasize=rank)
     for _ in range(reps):
@@ -51,6 +57,8 @@ def main(reps):
             obj = world.iallreduce(data, MPI_sum)
         handle_list.append(obj)
     world.waitall(handle_list)
+
+    world.barrier()
 
     # Alltoall
     bw, _ = b.get_tester("alltoall", datasize=rank)
@@ -60,6 +68,8 @@ def main(reps):
         handle_list.append(obj)
     world.waitall(handle_list)
 
+    world.barrier()
+
     # Gather
     bw, _ = b.get_tester("gather", datasize=rank)
     for _ in range(reps):
@@ -68,19 +78,12 @@ def main(reps):
         handle_list.append(obj)
     world.waitall(handle_list)
 
+    world.barrier()
     # Reduce
     bw, _ = b.get_tester("reduce", datasize=rank)
     for _ in range(reps):
         with bw:
             obj = world.ireduce(data, MPI_sum, 0)
-        handle_list.append(obj)
-    world.waitall(handle_list)
-
-    # Scan # UHH.. DOES IT WORK
-    bw, _ = b.get_tester("scan", datasize=rank)
-    for _ in range(reps):
-        with bw:
-            obj = world.iscan(data, MPI_sum)
         handle_list.append(obj)
     world.waitall(handle_list)
 
