@@ -429,7 +429,7 @@ class TreeGatherPickless(BaseCollectiveRequest):
 
             self.data[r] = raw_data[begin:end]
 
-        Logger().debug("accept_msg self.data:%s" % self.data)
+        #Logger().debug("accept_msg self.data:%s" % self.data)
         if not self.missing_children:
             self.send_parent()
 
