@@ -26,7 +26,7 @@ NOTES:
   practical applications we need to have the header received examined before
   receiving the payload but this makes measuring more complicated and also
   depends on eg. the header format chosen. So we postpone this.
-  
+
 QUESTIONS:
 - it seems that when sending, all the bytes are sent every time no matter how many are passed to socket.send
   This means that advice on how to construct the send loop is largely meaningless since there is never any looping done
@@ -38,9 +38,9 @@ QUESTIONS:
      Is the call releasing the GIL?
      What is the effect when multiple processes send over the same network interface? Will there be queuing up or intermingling?
      Do we use too much memory?
-     
-     
-  
+
+
+
 ISSUES:
 - Allow minimum python version in conf and validation of conf should include python version
 - Allow signaling that a conf wants a freshly made socket connection (to test with tcp slow start etc.)
@@ -123,7 +123,7 @@ possible_conf_keys = [
 def generate_container(type,size,filler=0):
     """
     Generate a container representing a buffer preallocated by the user
-    
+
     Size is the size in bytes of the container.
     Filler is the value of the filler elements.
     """
@@ -135,54 +135,54 @@ def generate_container(type,size,filler=0):
         container = bytearray([filler]*size)
     else:
         raise Exception("unknown container type requested")
-        
+
     return container
 
 def generate_data(confs):
     """
     Generate the required amount of testdata for each configuration
-    
+
     To minimize memory usage a base string of max size bytes is generated. This
     is used as base for other types as needed.
     """
     # We like predictable random for testing
     random.seed(42)
     numpy.random.seed(42)
-    
+
     # find max size
     sizes = []
     for conf in confs:
         sizes.append( conf['msg_size'] )
     maxsize = max(sizes)
     base = ''.join([ chr(i%255) for i in xrange(maxsize) ])
-    
+
     for conf in confs:
         size = conf['msg_size']
         if conf['msg_type'] == 'ascii':
             conf['data'] = base[0:size]
-            
+
         elif conf['msg_type'] == 'numpy':
             dt = numpy.int64 # only this standard type for now
             conf['data'] = numpy.fromstring(base[0:size], dtype=dt)
-            
+
         elif conf['msg_type'] == 'bytearray':
             try:
                 conf['data'] = bytearray(base[0:size])
-            except TypeError as e:        
+            except TypeError as e:
                 conf['data'] = bytearray(base[0:size].encode('latin-1')) # Python 3 needs special treatment
-            
+
         else:
             print("Bad type")
-            
+
 def validate_conf(conf):
     """
     check that configuration is valid
-    
+
     TODO:
     - Type vs. recv function
     - Type vs. send function
     - Python version vs. recv function
-    - Python version vs. send function        
+    - Python version vs. send function
     """
     nonblocking_safe_functions = [str_primitive_send_nb, str_buffer_send_nb, view_send_nb, numpy_send_nb]
 
@@ -194,17 +194,17 @@ def validate_conf(conf):
     if conf['blocking_timeout'] >= 0 and conf['send_function'] not in nonblocking_safe_functions:
         print("!!! %s is not listed as safe for non-blocking sockets - you'll have to VERIFY amount of data received every time" % (conf['send_function'].__name__) )
         valid = False
-    
+
     return valid
 
 def validate_results(received_data_list,reference_data):
     """
     simple check that all elements of received_data are equal to reference_data
-    
+
     only the first non-match is printed
     """
     for data in received_data_list:
-        if numpy.alltrue(data != reference_data): # This works fine for bytearrays also            
+        if numpy.alltrue(data != reference_data): # This works fine for bytearrays also
             toomuch = 100 # For big comparisons it makes no sense to spew everything to stdout
             size = len(data)
             refsize = len(reference_data)
@@ -253,7 +253,7 @@ def str_primitive_send_nb(connection,msg,verbose=False):
         print("Sender looped %i times" % loopcount)
 
 def str_buffer_send(connection,msg,verbose=False):
-    """    
+    """
     Defunct in python 3 where buffer is replaced by memoryview
     """
     buf = buffer(msg)
@@ -262,7 +262,7 @@ def str_buffer_send(connection,msg,verbose=False):
 def str_buffer_send_nb(connection,msg,verbose=False):
     """
     Robust enough for non-blocking sockets
-    
+
     Defunct in python 3 where buffer is replaced by memoryview
     """
     loopcount = 0
@@ -280,7 +280,7 @@ def str_buffer_send_nb(connection,msg,verbose=False):
 def view_send_nb(connection,msg,verbose=False):
     """
     Robust enough for non-blocking sockets
-    
+
     Defunct in python 2.6 for lack of memoryview
     """
     loopcount = 0
@@ -291,7 +291,7 @@ def view_send_nb(connection,msg,verbose=False):
         except socket.error as e:
             pass
         loopcount += 1
-    
+
     if verbose:
         print("Sender looped %i times" % loopcount)
 
@@ -299,17 +299,17 @@ def view_send_nb(connection,msg,verbose=False):
 def str_view_send(connection,msg,verbose=False):
     """
     Not used atm.
-    
+
     Works for both 2.7 and 3.1
     """
     loopcount = 0
     bytesize = len(msg)
     sent = 0
     view = memoryview(msg.encode('latin1'))
-    while sent < bytesize:        
+    while sent < bytesize:
         sent += connection.send(view[sent:])
         loopcount += 1
-    
+
     if verbose:
         print("Sender looped %i times" % loopcount)
 
@@ -351,10 +351,10 @@ def str_primitive_recv(connection,size,dummyarg=None):
         except Exception as e:
             print("Receiver error:%s" % e)
             raise e
-    
+
     return received
 
-def str_decoding_recv(connection,size,dummyarg=None):    
+def str_decoding_recv(connection,size,dummyarg=None):
     """
     Works for both 2.7 and 3.1
     """
@@ -367,15 +367,15 @@ def str_decoding_recv(connection,size,dummyarg=None):
         except Exception as e:
             print("Receiver error:%s" % e)
             raise e
-    
+
     return received.decode('latin1')
-    
+
 def str_list_recv(connection,size,dummyarg=None):
     """
     Trying to reduce string appends this way does not seem to help much. Only
     when rigging the test to loop a lot (ie. for very large message sizes) will
     this method _sometimes_ win over the primitive receive.
-    
+
     I guess the problem is we have to allocate the chunk explicitly in every
     iteration since we need to check its length. Maybe Pythonistas recommend this
     for historic reasons, since string concat used to be very slow.
@@ -390,16 +390,16 @@ def str_list_recv(connection,size,dummyarg=None):
             received.append(chunk)
         except Exception as e:
             print("Receiver error:%s" % e)
-            
+
     return ''.join(received)
 
 
 def numpy_recv(connection,size,container=None):
     intsize = 8 # standard int when converted to numpy int (on 64 bit python build)
-    
+
     if container is None:
         container = generate_container('numpy',size)
-    
+
     view = memoryview(container)
     missing = size
     while missing:
@@ -410,14 +410,14 @@ def numpy_recv(connection,size,container=None):
             missing -= connection.recv_into(view[(size-missing)//intsize:],missing) # striding in view is of element-size
         except ValueError as e:
             raise e
-    
+
     return container
-    
+
 
 def bytearray_recv(connection,size,container=None):
     if container is None:
         container = bytearray(size) # pre-allocate
-        
+
     view = memoryview(container)
     missing = size
     while missing:
@@ -425,7 +425,7 @@ def bytearray_recv(connection,size,container=None):
             missing -= connection.recv_into(view[size-missing:],missing)
         except Exception as e:
             print("Receiver error:%s" % e)
-    
+
     return container
 
 
@@ -437,11 +437,11 @@ def sender(conf):
         while tries < maxtries:
             try:
                 if conf['connection_type'] == "local":
-                    if conf['verbose']:                    
+                    if conf['verbose']:
                         print("Creating local socket to file %s" % (conf['socketfile']))
                     client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     client_socket.connect(conf['socketfile'])
-            
+
                 elif conf['connection_type'] == "tcp":
                     if conf['verbose']:
                         print("Creating TCP socket to (%s, %s)" % (portno,address))
@@ -467,23 +467,23 @@ def sender(conf):
                 time.sleep(tries) # give receiver time to open listening socket
 
             return client_socket
-    
+
     msg = conf['data']
     iterations = conf['iterations']
     size = conf['msg_size']
     func = conf['send_function']
-    
+
     connection = setup_connection(conf['port'],conf['host'])
-    
-    t1 = time.time()        
+
+    t1 = time.time()
     for i in xrange(conf['iterations']):
         func(connection, msg, conf['verbose'])
     t2 = time.time()
-    
+
     connection.shutdown(socket.SHUT_RDWR)
     connection.close()
-    
-    print("(%i KB/s) -- %s -- sent %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1) ) 
+
+    print("(%i KB/s) -- %s -- sent %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1) )
 
 
 def receiver(confs):
@@ -492,7 +492,7 @@ def receiver(confs):
             socketfile = raw_input("paste name of socketfile:")
             server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_socket.bind(socketfile)
-    
+
         elif conf['connection_type'] == "tcp":
             unbound = True
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -503,47 +503,47 @@ def receiver(confs):
                 try:
                     server_socket.bind( (address, portno) )
                     unbound = False
-                except socket.error as e:    
+                except socket.error as e:
                     portno += 1
-                    print("port not available (error:%s), trying %i ..." % (e,portno) )           
+                    print("port not available (error:%s), trying %i ..." % (e,portno) )
                 except Exception as e:
                     print("unexpected error:%s" % e )
                     raise e
-                
+
             server_socket.listen(10)
-            
+
         print("Receiver listening on port no:%i" % portno)
-        
+
         return server_socket.accept()
-       
+
     # Run configurations that are to be tested
     for conf in confs:
         if not validate_conf(conf):
             print("ignored invalid conf! %s" % conf)
             continue
-        
+
         functions = conf['rfunctions']
         size = conf['msg_size']
         iterations = conf['iterations']
         msg_type = conf['msg_type']
         prebuf = conf.get('prebuf',False)
-        
+
         # pregenerate a container if buffer-reuse is in effect
         if prebuf:
             container = generate_container(msg_type,size)
         else:
             container = None
-            
+
         for func in functions:
             connection, address = setup_connection(conf['port'],conf['address'])
             print("Receiver accepted connection")
-            
+
             # DEBUG
             #print("C0: %s" % container)
-            
+
             if prebuf:
                 t1 = time.time()
-                for i in xrange(iterations):                
+                for i in xrange(iterations):
                     # DEBUG
                     #print("C1: %s" % container)
                     func(connection, size, container)
@@ -553,14 +553,14 @@ def receiver(confs):
                 for i in xrange(iterations):
                     # DEBUG
                     #print("C1: %s" % container)
-                    container = func(connection, size, container)                    
+                    container = func(connection, size, container)
                 t2 = time.time()
 
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
-            
+
             print("(%i kB/s) -- %s -- got %i times %i bytes(*) in %f seconds" % ((iterations*size)/(1024*(t2-t1)), func.__name__,iterations,size,t2-t1))
-        
+
 
 def sink(conf):
     def setup_connection(portno,address):
@@ -573,11 +573,11 @@ def sink(conf):
                 # if the file already exists remove it first
                 os.remove(socketfile)
                 server_socket.bind(socketfile)
-                
-            server_socket.listen(10)                
+
+            server_socket.listen(10)
             print("Sink listening on file:%s" % (socketfile) )
-    
-        elif conf['connection_type'] == "tcp":            
+
+        elif conf['connection_type'] == "tcp":
             unbound = True
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if conf['nodelay']:
@@ -588,19 +588,19 @@ def sink(conf):
                 try:
                     server_socket.bind( (address, portno) )
                     unbound = False
-                except socket.error as e:    
+                except socket.error as e:
                     #raise e
                     portno += 1
-                    print("port not available (error:%s), trying %i ..." % (e,portno) )           
+                    print("port not available (error:%s), trying %i ..." % (e,portno) )
                 except Exception as e:
                     print("unexpected error:%s" % e )
                     raise e
-                
-            server_socket.listen(10)                
+
+            server_socket.listen(10)
             print("Sink listening on host:%s port no:%i" % (address,portno) )
-        
+
         return server_socket
-    
+
     server_socket = setup_connection(conf['port'],conf['host'])
     chunksize = conf['rcvchunk']
     try:
@@ -625,16 +625,16 @@ def sink(conf):
                 except Exception as e:
                     print( "inner loop got exception:%s" % e )
                     break
-                
+
             print("sink had %i receptions of max size, SO_RCVBUF:%i" % (max_received, server_socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)) )
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
-            
+
     except KeyboardInterrupt as e:
         server_socket.shutdown(socket.SHUT_RDWR)
         server_socket.close()
         print("sink stopped")
-    
+
 
 def runner():
     # Parse args
@@ -652,7 +652,7 @@ def runner():
         type = 'receiver'
     else:
         type = 'sink'
-    
+
 
     # generate base benchmark configuration
     baseconf = {
@@ -675,25 +675,25 @@ def runner():
 
     # generate individual benchmark configurations
     minimal_configurations = [baseconf]
-    
+
     all_senders = []
     for f in (str_primitive_send, str_primitive_send_nb, str_buffer_send, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
         all_senders.append(c)
-    
+
     # this conf should generate non-blocking warning
     normal_conf = copy.copy(baseconf)
     normal_conf['blocking_timeout'] = 0.0
     normal_configurations = [normal_conf]
-    
+
     nb_senders = []
     for f in (str_primitive_send_nb, str_buffer_send_nb):
         c = copy.copy(baseconf)
         c['send_function'] = f
         c['blocking_timeout'] = 0.0
         nb_senders.append(c)
-    
+
     unixsock_conf = copy.copy(baseconf)
     unixsock_conf['send_function'] = str_primitive_send
     unixsock_conf['connection_type'] = 'local'
@@ -723,18 +723,18 @@ def runner():
     #configurations = py27_configurations
     #configurations = numpy_configurations
     #configurations = [numpy_conf]
-    
+
     configurations = all_senders + nb_senders + numpy_configurations
-    
-    
+
+
     # Validate
     map(validate_conf,configurations)
     # data is not generated until now to minimize waste
     generate_data(configurations)
-    
+
     sock = None
     # Execute configurations
-    for conf in configurations:        
+    for conf in configurations:
         if type=='sender':
             sender(conf)
         elif type=='receiver':
@@ -742,7 +742,8 @@ def runner():
         else:
             sink(conf)
             break # reuse same sink for many confs
-        
+
     print("done running %i configurations" % (len(configurations)))
-    
-runner()
+
+if __name__ = "__main__":
+    runner()
