@@ -182,8 +182,8 @@ class Network(object):
         s_conn.connect(recipient)
 
         # Pack the data with our special format
-        header,payload = prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING)
-        utils.robust_send(s_conn, (header+payload) )
+        header,payloads = prepare_message(data, internal_rank, comm_id=-1, tag=constants.TAG_INITIALIZING)
+        utils.robust_send_multi(s_conn, [header]+payloads)
 
         # Receiving data about the communicator, by unpacking the head etc.
         # first _ is rank
@@ -354,6 +354,7 @@ class BaseCommunicationHandler(threading.Thread):
                 if self.shutdown_event.is_set():
                     break # We don't care about incoming during shutdown
                 else:
+                    # TODO: We should check for a specific Exception thrown from get_raw_message to signify when other side has closed connection
                     # We have no way of knowing whether other party has reached shutdown or this was indeed an error
                     # so we just try listening to next socket
                     continue
@@ -372,7 +373,6 @@ class BaseCommunicationHandler(threading.Thread):
                         self.network.mpi.raw_data_queue.append( (rank, msg_type, tag, ack, comm_id, coll_class_id, raw_data) )
                         self.network.mpi.raw_data_has_work.set()
                         self.network.mpi.has_work_event.set()
-                        #Logger().debug("Special treatment of :%s" % msg_type)
                 except AttributeError, e:
                     Logger().error("Strange error:%s" % e)
                     raise e
@@ -396,24 +396,24 @@ class BaseCommunicationHandler(threading.Thread):
                 if request.status == "cancelled":
                     removal.append((socket, request))
                 elif request.status == "new":
-                    #Logger().debug("Starting data-send on %s. request: %s" % (write_socket, request))
-                    # Send the data on the socket
+                        # Send the data on the socket
                     try:
                         if request.multi:
                             utils.robust_send(write_socket,request.header)
                             utils.robust_send_multi(write_socket,request.data)
                         else:
-                            utils.robust_send_multi(write_socket,[request.header,request.data])
+                            utils.robust_send_multi(write_socket,[request.header]+request.data)
                     except socket.error, e:
                         Logger().error("got:%s for socket:%s with data:%s" % (e,write_socket,request.data ) )
+                        # TODO: Make sure we really want to continue here, instead of reacting
                         # Send went wrong, do not update, but hope for better luck next time
-                        #continue
-                        raise e
+                        continue
+                        #raise e
                     except Exception, e:
                         Logger().error("Other exception got:%s for socket:%s with header:%s payload:%s" % (e,write_socket,request.header, request.data ) )
                         # Send went wrong, do not update, but hope for better luck next time
-                        continue
-
+                        raise e
+                    
                     removal.append((write_socket, request))
 
                     if request.acknowledge:

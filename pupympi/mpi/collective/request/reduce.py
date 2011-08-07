@@ -158,7 +158,7 @@ class TreeAllReduce(BaseCollectiveRequest):
             return val
 
     def to_children(self):
-        self.direct_send(self.data, receivers=self.children, tag=self.tag, serialized=False)
+        self.direct_send([self.data], receivers=self.children, tag=self.tag, serialized=False)
         self.done()
 
     def to_parent(self):
@@ -205,8 +205,7 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         self.operation = operation
 
         self.data_list = [None] * self.size
-        self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
-        self.chunksize = len(self.data_list[self.rank])
+        self.data_list[self.rank],self.msg_type,self.chunksize  = utils.serialize_message(data)        
 
         self.partial = False # No partial reduction for now
 
@@ -262,7 +261,10 @@ class TreeAllReducePickless(BaseCollectiveRequest):
                 return False
 
             # FIXME: just fix!
-            self.data_list = raw_data
+            # NOTE: Unless we are sure that no reduce operation can change the
+            # msg_type or chunksize we should really store them again here
+            #Logger().debug("STORING msg_type:%s vs. old:%s type(raw_data):%s len(raw_data):%s raw_data:%s" % (msg_type, self.msg_type, type(raw_data), len(raw_data), raw_data))
+            self.data_list = [raw_data] # boxing
             self.to_children()
             return True
         else:
@@ -271,17 +273,32 @@ class TreeAllReducePickless(BaseCollectiveRequest):
         return False
 
     def _get_data(self):
-        return utils.deserialize_message(self.data_list, self.msg_type)
+        #Logger().debug("deserializing type(data_list):%s data_list:%s" % (type(self.data_list), self.data_list))
+        if self.parent is None:
+            # Root has the data in another form
+            return utils.deserialize_message(self.data_list, self.msg_type)
+        else:
+            return utils.deserialize_message(self.data_list[0], self.msg_type)
 
     def to_children(self):
-        self.direct_send(self.data_list, receivers=self.children, tag=self.tag, serialized=True)
+        # since data_list is a singleton list on the way down, we can just give it directly to direct_send
+        if self.children:
+            self.direct_send(self.data_list, receivers=self.children, tag=self.tag, cmd=self.msg_type, serialized=True)
         self.done()
 
     def to_parent(self):
-        # Send self.data to the parent.
         if self.parent is not None:
-            payloads = [d for d in self.data_list if d is not None]
-            self.multisend(payloads, self.parent, tag=constants.TAG_ALLREDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
+            payloads =  []
+            for d in self.data_list:
+                if d is None:
+                    continue
+                if isinstance(d,list):
+                    payloads.extend(d)
+                else:
+                    payloads.append(d)
+            
+            length = len(payloads) - (len(self.data_list[self.rank]) - 1)
+            self.multisend(payloads, self.parent, tag=constants.TAG_ALLREDUCE, cmd=self.msg_type, payload_length=length*self.chunksize)
 
         self.phase = "down" # Mark next phase as begun
 
@@ -298,8 +315,8 @@ class TreeAllReducePickless(BaseCollectiveRequest):
             for r in range(self.size):
                 self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
             val = reduce_elementwise(self.data_list, self.operation)
-
-            self.data_list,self.msg_type = utils.serialize_message(val)
+            
+            self.data_list,self.msg_type,_ = utils.serialize_message(val)
             self.to_children()
 
     @classmethod
@@ -476,8 +493,7 @@ class TreeReducePickless(BaseCollectiveRequest):
         self.operation = operation
 
         self.data_list = [None] * self.size
-        self.data_list[self.rank],self.msg_type = utils.serialize_message(data)
-        self.chunksize = len(self.data_list[self.rank])
+        self.data_list[self.rank],self.msg_type,self.chunksize  = utils.serialize_message(data)
 
         self.partial = False # No partial reduction for now
 
@@ -506,7 +522,6 @@ class TreeReducePickless(BaseCollectiveRequest):
 
     def accept_msg(self, child_rank, raw_data, msg_type):
         # Do not do anything if the request is completed.
-
         if self._finished.is_set():
             return False
 
@@ -544,7 +559,7 @@ class TreeReducePickless(BaseCollectiveRequest):
             return None
 
         val = None
-
+        
         # Deserialize all payloads before reduction
         for r in range(self.size):
             self.data_list[r] = utils.deserialize_message(self.data_list[r], self.msg_type)
@@ -553,17 +568,31 @@ class TreeReducePickless(BaseCollectiveRequest):
         return val
 
     def to_parent(self):
-        # FIXME: Avoid stupid list boxing
         # Send self.data to the parent.
         if self.parent is not None:
             if self.partial:
                 # With partial reduce we only send the reduced value up
+                # NOTE: Avoid stupid list boxing
                 payloads = [self.data_list[self.rank]]
             else:
-                payloads = [d for d in self.data_list if d is not None]
-            self.multisend(payloads, self.parent, tag=constants.TAG_REDUCE, cmd=self.msg_type, payload_length=len(payloads)*self.chunksize)
+                length = 0
+                payloads =  []
+                for d in self.data_list:
+                    if d is None:
+                        continue
+                    if isinstance(d,list):
+                        payloads.extend(d)
+                    else:
+                        payloads.append(d)
+
+            # how many payloads of chunksize are there?
+            # For multidimensional arrays there is an extra element in the
+            # payloads list namely the the node's own byteshape - in that case 1 is subtracted from length
+            length = len(payloads) - (len(self.data_list[self.rank]) - 1)
+            self.multisend(payloads, self.parent, tag=constants.TAG_REDUCE, cmd=self.msg_type, payload_length=length*self.chunksize)
 
         self.done()
+
 
     @classmethod
     def accept(cls, communicator, settings, cache, *args, **kwargs):

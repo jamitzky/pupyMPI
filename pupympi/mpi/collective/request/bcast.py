@@ -38,7 +38,7 @@ class TreeBCast(BaseCollectiveRequest):
 
         self.parent = topology.parent()
         self.children = topology.children()
-
+        
         if self.parent is None:
             # we're the root.. let us send the data to each child
             self.send_to_children(transit=False)
@@ -72,7 +72,7 @@ class TreeBCast(BaseCollectiveRequest):
 
         Transit flag means the sending node is just a transit node for data, ie. the data is already serialized
         """
-        self.direct_send(self.data, receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
+        self.direct_send([self.data], receivers=self.children, cmd=self.msg_type, tag=constants.TAG_BCAST, serialized=transit)
 
     def _get_data(self):
         # For root the data is not serialized
@@ -80,8 +80,6 @@ class TreeBCast(BaseCollectiveRequest):
             return self.data
         else:
             return utils.deserialize_message(self.data, self.msg_type)
-            #import pickle
-            #return pickle.loads(self.data)
 
 class FlatTreeBCast(FlatTreeAccepter, TreeBCast):
     pass
