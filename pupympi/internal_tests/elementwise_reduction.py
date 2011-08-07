@@ -187,10 +187,7 @@ def nummy(sequences, operation):
     numpy_op = getattr(operation, "numpy_op", None)
     
     if isinstance(sequences[0], numpy.ndarray) and numpy_op:
-        if numpy_op == numpy.mean:
-            reduced_results = numpy_op(sequences,0)
-        else:
-            reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
+        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
     else:
         reduced_results = map(operation,zip(*sequences))
             
@@ -237,7 +234,6 @@ def generate_data(size, participants, random=False, data_type=numpy.dtype('float
 
     
     ISSUES:
-    - no randomization yet
     - only works for string and numpy types for now
     """
     if size < participants:
@@ -386,16 +382,16 @@ def runner():
     
     #functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
     #functions_to_test = [simple]
-    functions_to_test = [zippy, mammy, nummy] # Fast ones only
-    #functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy]
+    #functions_to_test = [zippy, mammy, nummy] # Fast ones only
+    functions_to_test = [simple, xsimple, convoluted, zippy, mammy, nummy] # all of them
     
     #types_to_test = [str, numpy.dtype('float64'), numpy.dtype('int32')]
     #types_to_test = [str, tuple, list]
     types_to_test = [numpy.dtype('float64'), numpy.dtype('float32'), numpy.dtype('int64'), numpy.dtype('int32')]    
     
-    #operations_to_test = [max, min, all, any, sum]
+    #operations_to_test = [max, min, all, any, sum] # built-ins
     operations_to_test = [sum, operations.MPI_sum, max, operations.MPI_max, min, operations.MPI_min, operations.MPI_avg]
-    operations_to_test = [sum, operations.MPI_sum, operations.MPI_avg, operations.MPI_min]
+    #operations_to_test = [sum, operations.MPI_sum, operations.MPI_avg, operations.MPI_min]
     
     for size in sizes_to_test:
         print "SIZE: %i" % size
@@ -405,10 +401,14 @@ def runner():
             
             test_data = generate_data(size, participants, False, t)
     
-            for func in functions_to_test:
-                for operation in operations_to_test:
+            for operation in operations_to_test:
+                try:
+                    opname = operation.func_name
+                except AttributeError as e:
+                    opname = "built-in %s" % str(operation)[-4:-1] # all the built-in ops are three letter
+                for func in functions_to_test:
                     #s = "size:%i, func:%s, type:%s, operation:%s %i repetitions" % (size, func.func_name, t, operation, repetitions)
-                    s = "func:%s, operation:%s %i repetitions" % (func.func_name, operation, repetitions)
+                    s = "func:%s operation:%s %i repetitions" % (str(func.func_name).ljust(10), opname, repetitions)
                     #print s
                     with timing(s, repetitions):
                         for r in xrange(repetitions):
