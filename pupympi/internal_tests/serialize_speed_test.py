@@ -105,87 +105,66 @@ def numpyrunner(r = 100, testdata=numpydata):
     
     NOTE: With numpy 1.5 where numpy arrays and bytearray are friends the bytearray method is tested also
     """   
-    # Serializers to try along with call hint
+    # Serializers to try along with call hint and protocol version
     serializer_methods =    [
-                            #(pickle,'dumpload',),
-                            #(cPickle,'dumpload'),
-                            (marshal,'dumpload'),
-                            ('.tostring','methodcall'),
-                            ('.tostring b','methodcall'),
-                            ('.view','methodcall')
+                            (pickle,'dumpload',pickle.HIGHEST_PROTOCOL),
+                            (cPickle,'dumpload',cPickle.HIGHEST_PROTOCOL),
+                            (marshal,'dumpload',2),
+                            ('.tostring','methodcall',None),
+                            ('.tostring b','methodcall',None),
+                            ('.view','methodcall',None)
                             ]
     
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
     if numpy.__version__ >= '1.5':
-        serializer_methods.append( (bytearray,'funcall') )
+        serializer_methods.append( (bytearray,'funcall',None) )
 
-    for (serializer,syntax) in serializer_methods:
+    for (serializer,syntax,version) in serializer_methods:
         for data, desc, scale in testdata:
             repetitions = r * scale
             if syntax == 'dumpload':
-                if type(data) == numpy.ndarray:
-                    with timing("%s dump+load+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                        # TODO: Include this in timing or not?
-                        t = data.dtype
-                        for i in xrange(repetitions):
-                            s = serializer.dumps(data)
-                            l = serializer.loads(s)
-                            n = numpy.frombuffer(l, dtype=t)
-                else:
-                    with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                        for i in xrange(repetitions):
-                            s = serializer.dumps(data)
-                            l = serializer.loads(s)
+                with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+                    for i in xrange(repetitions):
+                        s = serializer.dumps(data,version)
+                        l = serializer.loads(s)
                         
             elif syntax == 'funcall':
-                # The received data will be in the form of a string so we convert beforehand
                 if type(data) == numpy.ndarray:
                     with timing("%s func+frombuffer reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
-                        # TODO: Include this in timing or not?
-                        t = data.dtype                            
                         for i in xrange(repetitions):
+                            t = data.dtype                            
                             s = serializer(data)                        
                             l = numpy.frombuffer(s,dtype=t)
                 elif isinstance(data, str):
                     with timing("%s func+str reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):                                                
-                        # TODO: Include this in timing or not?
-                        t = type(data)
                         for i in xrange(repetitions):
-                            try:
-                                s = serializer(data)
-                                l = t(s)                                
-                            except Exception, e:
-                                print data
-                                print e
-                                raise e
-                            #
-                            #pass
+                            t = type(data)
+                            s = serializer(data)
+                            l = t(s)                                
                 else:
                     print "%s ignoring type %s" % (serializer.__name__, type(data))
-                    #print data
-                    #s = serializer(data)
-                    
-
+            
             # This case is a bit different
             elif syntax == 'methodcall':
                 if type(data) == numpy.ndarray:
                     if serializer == '.tostring':
                         with timing("%s methodcall+fromstring reps:%i %s" % (serializer, repetitions,desc),repetitions):
-                            t = data.dtype
                             for i in xrange(repetitions):
+                                t = data.dtype
                                 s = data.tostring()
                                 l = numpy.fromstring(s,dtype=t)
                     elif serializer == '.tostring b':
                         with timing("%s methodcall+frombuffer reps:%i %s" % (serializer, repetitions,desc),repetitions):
-                            t = data.dtype
                             for i in xrange(repetitions):
+                                t = data.dtype
                                 s = data.tostring()
                                 l = numpy.frombuffer(s,dtype=t)
                     elif serializer == '.view':
+                        # The received data will be in the form of a string so we convert beforehand
                         s2 = data.view(numpy.uint8).tostring()
                         with timing("%s methodcall+frombuffer reps:%i %s" % (serializer, repetitions,desc),repetitions):
-                            t = data.dtype
                             for i in xrange(repetitions):
+                                t = data.dtype
                                 s = data.view(numpy.uint8)
                                 l = numpy.frombuffer(s2,dtype=t)
                 else:
