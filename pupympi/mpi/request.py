@@ -72,7 +72,7 @@ class Request(BaseRequest):
         self.acknowledge = acknowledge # Boolean indicating that the message requires recieve acknowledgement (for ssend)
         self.data = data # payload
         self.header = header # serialized header for the payload
-        self.multi = multi # flag that the request has a list of payloads
+        self.multi = multi # flag that the request has a list of already serialized payloads
         self.payload_size = payload_size # combined bytesize of payloads if single payload this is 0 for now
 
         self.cmd = cmd
@@ -111,7 +111,8 @@ class Request(BaseRequest):
 
     def __repr__(self):
         orig_repr = super(Request, self).__repr__()
-        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), status(%s), data(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.status, self.data )
+        # We don't show data since it can be very large, if needed just output Request.data
+        return orig_repr[0:-1] + " type(%s), participant(%d), tag(%d), ack(%s), cmd(%s), multi(%s), payload_size(%s), status(%s) >" % (self.request_type, self.participant, self.tag, self.acknowledge, self.cmd, self.multi, self.payload_size, self.status )
 
     def prepare_send(self):
         """
@@ -126,13 +127,14 @@ class Request(BaseRequest):
         common_kwargs = {"cmd" : self.cmd, "tag" : self.tag, "ack" : self.acknowledge, "comm_id" : self.communicator.id, "collective_header_information" : self.collective_header_information, }
 
         if self.multi:
-            self.header = utils.prepare_multiheader(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)
+            self.header = utils.prepare_header(self.communicator.rank(), payload_length=self.payload_size, **common_kwargs)
         else:
             if not self.is_prepared:
                 # Create the proper data structure and pickle the data
-                header, payload = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
-                self.data = payload
+                header, payloads = utils.prepare_message(self.data, self.communicator.rank(), is_serialized=self.is_pickled, **common_kwargs)
+                self.data = payloads
                 self.header = header
+                # FIXME: Assign directly above
 
     def update(self, status, data=None):
         #Logger().debug("- changing status from %s to %s, for data: %s, tag:%s" %(self.status, status, data,self.tag))

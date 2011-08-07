@@ -312,18 +312,32 @@ class Communicator:
         self._add_unstarted_request(handle)
         return handle
 
-    def _direct_send(self, message, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True,collective_header_information=()):
+    def _direct_send(self, messages, receivers=[], cmd=constants.CMD_USER, tag=constants.MPI_TAG_ANY, serialized=True,collective_header_information=()):
         """
-        A helper function for sending a message without passing the
-        message through the queues. The data is assumed to be properly serialized already.
-
+        A helper function for sending the same message to multiple recipients
+        bypassing the queues.
+        The data is assumed to be properly serialized already in which case the call to
+        prepare_message is just to produce a header.
+        
         A list of request handles is returned, all of which needs to be waited on before
         the entire send can be considered complete.
-        """        
+        """
+        if not serialized:
+            payloads = []
+            length = 0
+            for m in messages:
+                serialized_data,cmd, l = utils.serialize_message(m, constants.CMD_USER)
+                payloads.extend(serialized_data)
+                length += l
+        else:
+            payloads = messages
+            length = sum(map(len,payloads))
+
+        header =  utils.prepare_header(self.rank(), cmd=cmd, tag=tag, comm_id=self.id, payload_length=length, collective_header_information=collective_header_information)
+            
         rl = []
-        header, payload = utils.prepare_message(message, self.rank(), cmd, tag=tag, ack=False, comm_id=self.id, is_serialized=serialized, collective_header_information=collective_header_information)
         for recp in receivers:
-            request = Request("send", self, recp, tag, data=payload, header=header)
+            request = Request("send", self, recp, tag, data=payloads, header=header)
             request.is_prepared = True
             request.prepare_send()
             self.network.t_out.add_out_request(request)
@@ -469,6 +483,7 @@ class Communicator:
             raise MPIInvalidTagException("All tags should be integers")
 
         # Create a send request object. We use the **kwargs as a simple way for users to push things into the request.
+        # NOTE: Boxing request data
         handle = Request("send", self, destination, tag, False, data=content, cmd=cmd, **kwargs)
         # If sending to self, take a short-cut
         if destination == self.rank():

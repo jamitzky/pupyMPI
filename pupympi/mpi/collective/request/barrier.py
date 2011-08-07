@@ -27,7 +27,8 @@ class TreeBarrier(BaseCollectiveRequest):
 
         self.size = communicator.comm_group.size()
         self.rank = communicator.comm_group.rank()
-        self.data = None
+        self.data = '\x42' # token is a B
+        self.msg_type = constants.CMD_USER 
 
     def start(self):
         topology = getattr(self, "topology", None) # You should really set the topology.. please
@@ -47,7 +48,7 @@ class TreeBarrier(BaseCollectiveRequest):
 
     def send_parent(self):
         # Send a barrier token upwards.
-        self.send(None, self.parent, tag=constants.TAG_BARRIER)
+        self.send(self.data, self.parent, tag=constants.TAG_BARRIER)
         self.wait_parent = True
 
     def accept_msg(self, rank, data, msg_type=None):
@@ -90,7 +91,7 @@ class TreeBarrier(BaseCollectiveRequest):
             return False
 
     def send_children(self):
-        self.direct_send(self.data, receivers=self.children, tag=constants.TAG_BARRIER, serialized=False)
+        self.direct_send([self.data], receivers=self.children, tag=constants.TAG_BARRIER, serialized=True)
         self.done()
 
     def _get_data(self):

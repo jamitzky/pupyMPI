@@ -32,12 +32,11 @@ elif rank == 1:
     for ep in expected_data:
         received = world.recv(0)
         
-        if received.shape != ep.shape:
+        if not np.alltrue(received== ep):
             print 80*"-"
             print "Expected", ep
             print "Received", received
             print 80*"-"
-
             match = False
 
 assert match

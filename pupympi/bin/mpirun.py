@@ -175,19 +175,22 @@ def communicate_startup(no_procs, ssocket, resume_state=None):
 
         data = (all_procs, session)
 
-        header,payload = prepare_message(data, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
-        utils.robust_send(conn, header+payload)
+        header,payloads = prepare_message(data, -1, comm_id=-1, tag=constants.TAG_INITIALIZING)
+        utils.robust_send_multi(conn, [header]+payloads)
 
     return all_procs, handle_procs, sender_conns
 
 def signal_handler(signal, frame):
+    """
+    TODO: Fix this to work if no all processes are living at call-time
+    """
     print 'Interrupt signal trapped - attempting to nuke children. You may want to verify manually that nothing is hanging.'
     COMM_ID = -1
     COMM_RANK = -1
     data = (COMM_ID, COMM_RANK, constants.TAG_SHUTDOWN, all_procs)
-    header,payload = prepare_message(data, constants.CMD_ABORT)
+    header,payloads = prepare_message(data, constants.CMD_ABORT)
     for conn in sender_conns:
-        utils.robust_send(conn, header+payload)
+        utils.robust_send_multi(conn, [header]+payloads)
     processloaders.terminate_children()
     sys.exit(3)
 

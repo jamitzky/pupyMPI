@@ -83,12 +83,12 @@ class MigratePack(object):
             print "\t Main session:", __main__.__dict__
 
         # Send the data+file on the connection.
-        from mpi.network.utils import robust_send, prepare_message
+        from mpi.network.utils import robust_send_multi, prepare_message
 
         connection = socket.create_connection(self.script_hostinfo, 4.0 )
 
-        header,payload = prepare_message(dill.dumps(self.data), self.rank, is_serialized=True)
-        robust_send(connection, header+payload)
+        header,payloads = prepare_message(dill.dumps(self.data), self.rank, is_serialized=True)
+        robust_send_multi(connection, [header]+payloads)
 
         sys.exit(0)
 
@@ -129,8 +129,8 @@ class MigratePack(object):
 
             # Handle the writes.
             for wsocket in wlist:
-                header,payload = mpi_utils.prepare_message("", rank, cmd=constants.CMD_CONN_CLOSE)
-                mpi_utils.robust_send(wsocket, header+payload)
+                header,payloads = mpi_utils.prepare_message("", rank, cmd=constants.CMD_CONN_CLOSE)
+                mpi_utils.robust_send_multi(wsocket, [header]+payloads)
                 write_connections.remove(wsocket)
 
             # Handle the reads.
