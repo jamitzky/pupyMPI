@@ -64,19 +64,19 @@ def runner(testdata=numpydata):
     NOTE: With numpy 1.5 where numpy arrays and bytearray are friends the bytearray method is tested also
     """   
     # Serializers to try along with call hint
-    serializer_methods =    [(pickle,'dumpload',),
-                            (cPickle,'dumpload'),
-                            (marshal,'dumpload'),
-                            ('.tostring','methodcall'),     # using fromstring to restore
-                            ('.tostring b','methodcall'),   # using frombuffer to restore
-                            ('.view','methodcall')
+    serializer_methods =    [(pickle,'dumpload',pickle.HIGHEST_PROTOCOL),
+                            (cPickle,'dumpload',cPickle.HIGHEST_PROTOCOL),
+                            (marshal,'dumpload',2),
+                            ('.tostring','methodcall',None),     # using fromstring to restore
+                            ('.tostring b','methodcall',None),   # using frombuffer to restore
+                            ('.view','methodcall',None)
                             ]
     
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
     if numpy.__version__ >= '1.5':
-        serializer_methods.append( (bytearray,'funcall') )
+        serializer_methods.append( (bytearray,'funcall',None) )
 
-    for (serializer,syntax) in serializer_methods:
+    for (serializer,syntax,version) in serializer_methods:
         try:
             serializer_name = serializer.__name__
         except:
@@ -93,7 +93,7 @@ def runner(testdata=numpydata):
             # Serialize
             try:
                 if syntax == 'dumpload':
-                    s = serializer.dumps(data) # serialize
+                    s = serializer.dumps(data,version) # serialize
                     l = serializer.loads(s)  # unserialize to verify                
                 elif syntax == 'funcall':
                     s = serializer(data)  # serialize
