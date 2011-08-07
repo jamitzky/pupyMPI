@@ -70,7 +70,6 @@ def greedy_fit(hosts, total_cpu, max_cpu, np=1, overmapping=True):
 
     return mapped_hosts
 
-
 def find_mapper(module_or_func):
     mod = __import__("mpi.lib.hostfile.mappers", fromlist="mpi.lib.hostfile")
     mapper = getattr(mod, module_or_func, None)
