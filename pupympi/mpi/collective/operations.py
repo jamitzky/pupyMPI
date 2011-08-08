@@ -72,6 +72,7 @@ def MPI_prod(input_list):
     return p
 MPI_prod.partial_data = True
 MPI_prod.numpy_op = numpy.multiply.reduce
+MPI_prod.numpy_matrix_op = "prod"
 
 def MPI_max(input_list):
     """
@@ -105,4 +106,5 @@ def MPI_avg(input_list):
 MPI_avg.partial_data = False
 # average (mean) is out for now since it flattens the array (delivers only a single scalar)  by default when averaging on multidimensional arrays
 # MPI_avg.numpy_op = numpy.mean
+MPI_avg.numpy_matrix_op = "mean"
     
