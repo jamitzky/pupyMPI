@@ -187,7 +187,7 @@ def nummy(sequences, operation):
     numpy_op = getattr(operation, "numpy_op", None)
     
     if isinstance(sequences[0], numpy.ndarray) and numpy_op:
-        reduced_results = numpy_op(sequences,dtype=sequences[0].dtype)
+        reduced_results = numpy_op(sequences)
     else:
         reduced_results = map(operation,zip(*sequences))
             
