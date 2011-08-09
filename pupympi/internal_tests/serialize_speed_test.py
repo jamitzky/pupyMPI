@@ -2,6 +2,10 @@
 Helper program to measure the speed of serializing and unserializing
 
 Different serializers are timed with different datatypes
+
+ISSUES:
+- The setup could be generated a lot nicer and more programmatically
+- We should test the effect of GC
 """
 
 import time
@@ -18,7 +22,10 @@ import numpy
 
 # sequence sizes
 small = 10
+smallish = 100
 medium = 500
+big = 1000
+bigger = 2000
 large = 10000
 
 
