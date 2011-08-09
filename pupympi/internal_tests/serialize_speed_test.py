@@ -116,7 +116,8 @@ def numpyrunner(r = 100, testdata=numpydata):
                             (marshal,'dumpload',2),
                             ('.tostring','methodcall',None),
                             ('.tostring b','methodcall',None),
-                            ('.view','methodcall',None)
+                            ('.view','methodcall',None),
+                            (buffer,'funcall',None)
                             ]
 
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
@@ -134,11 +135,13 @@ def numpyrunner(r = 100, testdata=numpydata):
 
             elif syntax == 'funcall':
                 if type(data) == numpy.ndarray:
+                    # The received data will be in the form of a string so we convert beforehand
+                    s2 = data.tostring()
                     with timing("%s;frombuffer;reps:%i;%s" % (serializer.__name__, repetitions,desc),repetitions):
                         for i in xrange(repetitions):
                             t = data.dtype
-                            s = serializer(data)
-                            l = numpy.frombuffer(s,dtype=t)
+                            s = serializer(data) # serialize to bytearray or buffer
+                            l = numpy.frombuffer(s2,dtype=t)
                 elif isinstance(data, str):
                     with timing("%s;str;reps:%i;%s" % (serializer.__name__, repetitions,desc),repetitions):
                         for i in xrange(repetitions):
@@ -170,7 +173,7 @@ def numpyrunner(r = 100, testdata=numpydata):
                         with timing("%s;frombuffer;reps:%i;%s" % (serializer, repetitions,desc),repetitions):
                             for i in xrange(repetitions):
                                 t = data.dtype
-                                s = data.view(numpy.uint8)
+                                s = data.view(numpy.uint8) # serialize to view
                                 l = numpy.frombuffer(s2,dtype=t)
                 else:
                     print "ignoring type:%s since it has no tostring method" % type(data)
@@ -185,7 +188,7 @@ if __name__ == "__main__":
         reps = int(sys.argv[1])
     except:
         reps = 1000
-    plainrunner(reps)
+    #plainrunner(reps)
     #plainrunner(1000, testdata=numpydata)
 
     #numpyrunner(10)

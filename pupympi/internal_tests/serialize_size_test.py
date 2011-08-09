@@ -69,7 +69,8 @@ def runner(testdata=numpydata):
                             (marshal,'dumpload',2),
                             ('.tostring','methodcall',None),     # using fromstring to restore
                             ('.tostring b','methodcall',None),   # using frombuffer to restore
-                            ('.view','methodcall',None)
+                            ('.view','methodcall',None),
+                            (buffer,'funcall',None)
                             ]
     
     # For numpy versions before 1.5 bytearray cannot take multi-byte numpy arrays so skip that method
@@ -97,11 +98,12 @@ def runner(testdata=numpydata):
                     l = serializer.loads(s)  # unserialize to verify                
                 elif syntax == 'funcall':
                     s = serializer(data)  # serialize
+                    s2 = str(s) # make a copy representing the received string
                     try:
                         t = data.dtype
-                        l = numpy.frombuffer(s,dtype=t) # unserialize to verify
+                        l = numpy.frombuffer(s2,dtype=t) # unserialize to verify
                     except Exception as e:                        
-                        l = str(s)
+                        l = False
                 elif syntax == 'methodcall':
                     if serializer == '.tostring':
                         s = data.tostring() # serialize
