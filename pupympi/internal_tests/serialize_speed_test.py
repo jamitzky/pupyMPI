@@ -32,16 +32,16 @@ d4 = ([A() for x in range(100)], "100 objects")
 
 # Test objects and nice descriptions
 
-i1 = (42, "a simple small int")
-i2 = (sys.maxint, "a really big int")
+i1 = (42, "small.int")
+i2 = (sys.maxint, "big.int")
 
-sl1 = (range(small), "a small(%i) int list" % small)
+sl1 = (range(small), "%i;int.list" % small)
 
-ml1 = (range(medium), "a medium(%i) int list" % medium)
-ml2 = ([ i*1.0/3.0 for i in range(medium) ], "a medium(%i) float list" % medium)
+ml1 = (range(medium), "%i;int.list" % medium)
+ml2 = ([ i*1.0/3.0 for i in range(medium) ], "%i;float.list" % medium)
 
-ll1 = (range(large), "a large(%i) int list" % large)
-ll2 = ([ i*1.0/3.0 for i in range(large) ], "a large(%i) float list" % large)
+ll1 = (range(large), "%i;int.list" % large)
+ll2 = ([ i*1.0/3.0 for i in range(large) ], "%i;float.list" % large)
 
 na1 = (numpy.array(range(small), dtype='int64'), "%i;numpy.int64" % small)
 na2 = (numpy.array(range(medium), dtype='int64'), "%i;numpy.int64" % medium)
@@ -90,7 +90,7 @@ def plainrunner(r = 100, testdata=smalldata+bigdata):
     for serializer in pickle_methods:
         for data, desc, scale in testdata:
             repetitions = r * scale
-            with timing("%s dump+load reps:%i %s" % (serializer.__name__, repetitions,desc),repetitions):
+            with timing("%s;load;reps:%i;%s" % (serializer.__name__, repetitions,desc),repetitions):
                 for i in xrange(repetitions):
                     s = serializer.dumps(data)
                     l = serializer.loads(s)
@@ -151,7 +151,8 @@ def numpyrunner(r = 100, testdata=numpydata):
                                 s = data.tostring()
                                 l = numpy.fromstring(s,dtype=t)
                     elif serializer == '.tostring b':
-                        with timing("%s;frombuffer;reps:%i;%s" % (serializer, repetitions,desc),repetitions):
+                        serializer_name = '.tostring'
+                        with timing("%s;frombuffer;reps:%i;%s" % (serializer_name, repetitions,desc),repetitions):
                             for i in xrange(repetitions):
                                 t = data.dtype
                                 s = data.tostring()
@@ -172,11 +173,16 @@ def numpyrunner(r = 100, testdata=numpydata):
 
 # do it
 if __name__ == "__main__":
-    plainrunner(1000)
+    import sys
+    try:
+        reps = int(sys.argv[1])
+    except:
+        reps = 1000
+    plainrunner(reps)
     #plainrunner(1000, testdata=numpydata)
 
     #numpyrunner(10)
-    numpyrunner(1000)
+    numpyrunner(reps)
     #numpyrunner(100, testdata=smalldata+bigdata)
     #numpyrunner(100, testdata=numpydata)
 
