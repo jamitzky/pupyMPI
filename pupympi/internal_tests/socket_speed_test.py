@@ -745,5 +745,5 @@ def runner():
 
     print("done running %i configurations" % (len(configurations)))
 
-if __name__ = "__main__":
+if __name__ == "__main__":
     runner()
