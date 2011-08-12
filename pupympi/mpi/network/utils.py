@@ -223,10 +223,14 @@ def serialize_message(data, cmd=None, recipients=1):
             # Store shapelen in the upper decimals of the cmd
             cmd = shapelen*1000 + cmd
             
-            v = data.view(numpy.uint8).flatten()
-            #v = data.view(numpy.uint8)
-            serialized_data = [byteshape, v]
-            length = shapelen+v.size
+            #v = data.view(numpy.uint8).flatten()
+            ##v = data.view(numpy.uint8)
+            #serialized_data = [byteshape, v]
+            #length = shapelen+v.size
+            
+            b = buffer(data)
+            serialized_data = [byteshape, b]
+            length = shapelen+len(b)
 
             # BELOW WORKS WITH NUMPY >= 1.5
             ## Transform the shape to a bytearray (via numpy array since shape might contain ints larger than 255)
@@ -242,9 +246,13 @@ def serialize_message(data, cmd=None, recipients=1):
 
             #Logger().debug("prepare MULTIDIM shape:%s - type:%s cmd:%s" % (data.shape, type(data[0]), cmd) )
         else:
-            v = data.view(numpy.uint8)
-            serialized_data = [v]
-            length = v.size
+            #v = data.view(numpy.uint8)
+            #serialized_data = [v]
+            #length = v.size
+
+            b = buffer(data)
+            serialized_data = [b]
+            length = len(b)
 
             # BELOW WORKS WITH NUMPY >= 1.5
             #serialized_data = bytearray(data)
