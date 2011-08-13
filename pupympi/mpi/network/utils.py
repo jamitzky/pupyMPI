@@ -224,10 +224,10 @@ def serialize_message(data, cmd=None, recipients=1):
             cmd = shapelen*1000 + cmd
             
             v = data.view(numpy.uint8).flatten()
-            #v = data.view(numpy.uint8)
             serialized_data = [byteshape, v]
             length = shapelen+v.size
             
+            # BELOW WORKS EXCEPT FOR DEEPCOPY IN ALLTOALL
             #b = buffer(data)
             #serialized_data = [byteshape, b]
             #length = shapelen+len(b)
@@ -249,7 +249,8 @@ def serialize_message(data, cmd=None, recipients=1):
             v = data.view(numpy.uint8)
             serialized_data = [v]
             length = v.size
-
+            
+            # BELOW WORKS EXCEPT FOR DEEPCOPY IN ALLTOALL
             #b = buffer(data)
             #serialized_data = [b]
             #length = len(b)
