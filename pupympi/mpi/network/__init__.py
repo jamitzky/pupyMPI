@@ -394,7 +394,7 @@ class BaseCommunicationHandler(threading.Thread):
                     raise e
             for request in request_list:
                 if request.status == "cancelled":
-                    removal.append((socket, request))
+                    removal.append(request)
                 elif request.status == "new":
                         # Send the data on the socket
                     try:
@@ -414,8 +414,8 @@ class BaseCommunicationHandler(threading.Thread):
                         # Send went wrong, do not update, but hope for better luck next time
                         raise e
                     
-                    removal.append((write_socket, request))
-
+                    removal.append(request)
+                    
                     if request.acknowledge:
                         request.update("unacked") # update status to wait for acknowledgement
                     else:
@@ -427,9 +427,9 @@ class BaseCommunicationHandler(threading.Thread):
             if removal:
                 removed = len(removal)
                 with self.socket_to_request_lock:
-                    for (write_socket,matched_request) in removal:
-                        self.socket_to_request[write_socket].remove(matched_request)
-
+                    live_requests = self.socket_to_request[write_socket]                    
+                    for req in removal:
+                        live_requests.remove(req)
                     self.outbound_requests -= removed
 
     def run(self):
