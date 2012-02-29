@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 #
 # Copyright 2010 Rune Bromer, Frederik Hantho, Jan Wiberg and Asser Femoe
 # This file is part of pupyMPI.

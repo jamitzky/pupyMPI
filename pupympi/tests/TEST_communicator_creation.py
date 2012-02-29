@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test communicator creation and limiting of communicator ids
 # meta-expectedresult: 0
 # meta-minprocesses: 4

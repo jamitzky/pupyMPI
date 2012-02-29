@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test that irecv and isend request can be cancelled
 # meta-expectedresult: 0
 # meta-minprocesses: 2

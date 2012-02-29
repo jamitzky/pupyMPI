@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Baseline test of cartesian topologies (use CartesianTest class to be thorough)
 # meta-expectedresult: 0
 # meta-minprocesses: 8

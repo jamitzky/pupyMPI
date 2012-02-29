@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Gather test, receive information from all processes to one
 # meta-expectedresult: 0
 # meta-minprocesses: 10

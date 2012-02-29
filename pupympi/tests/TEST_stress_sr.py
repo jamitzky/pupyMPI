@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Cyclic blocking send/receive between two processes. Runs 500 iterations, and verifies that the data received are correct. (at current timeout-bound design, 500 iterations can take about 600 seconds)
 # meta-expectedresult: 0
 # meta-minprocesses: 2

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test all collective operations receiving a root parameter with invalid root
 # meta-expectedresult: 0
 # meta-minprocesses: 4

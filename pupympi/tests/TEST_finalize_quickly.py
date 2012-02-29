@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: The minimal correct pupyMPI program does nothing but finalize
 # meta-expectedresult: 0
 # meta-minprocesses: 8

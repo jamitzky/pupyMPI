@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test when connections are attempted rapidly between many processes for a small socket pool
 # meta-expectedresult: 0
 # meta-minprocesses: 10

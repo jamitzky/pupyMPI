@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Basic send and recive over many iterations where communicating parties should remain in sync
 # meta-expectedresult: 0
 # meta-minprocesses: 2

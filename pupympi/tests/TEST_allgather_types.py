@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test allgather, gathers rank from all processes and distributes to all
 # meta-expectedresult: 0
 # meta-minprocesses: 10

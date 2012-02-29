@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test reduce, first compute factorial of mpi_size, then compare builtin ops max, min, sum to Python built-ins
 # meta-expectedresult: 0
 # meta-minprocesses: 10

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test that established socket connections are reused.
 # meta-expectedresult: 0
 # meta-minprocesses: 2

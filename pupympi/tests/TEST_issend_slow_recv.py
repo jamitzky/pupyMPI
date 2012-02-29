@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test issend with delayed matching receive
 # meta-expectedresult: 0
 # meta-minprocesses: 2
