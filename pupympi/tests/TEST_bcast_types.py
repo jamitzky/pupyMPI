@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test if broadcast works with all types
 # meta-expectedresult: 0
 # meta-minprocesses: 11

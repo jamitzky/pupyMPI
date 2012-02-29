@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test socket pool where connections are replaced since rank 0 has to send to more procs than pool allows
 # meta-expectedresult: 0
 # meta-minprocesses: 7

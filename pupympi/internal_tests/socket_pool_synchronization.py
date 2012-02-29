@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 """
 Test to provoke duplicate connections where processes try to send more or less simultaneously to each other resulting
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Simple pupympi hello world'ish program used for examples
 # meta-expectedresult: 0
 

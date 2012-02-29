@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 """
 pstatter.py - helper function to parse output from Python profiling
 """

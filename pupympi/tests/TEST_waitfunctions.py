@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Tests waitall returning data
 # meta-expectedresult: 0
 # meta-minprocesses: 10

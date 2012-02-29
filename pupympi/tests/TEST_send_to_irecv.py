@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test send to irecv with out of order recieving
 # meta-expectedresult: 0
 # meta-minprocesses: 2

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test simple send to recv between 2 processes
 # meta-expectedresult: 0
 # meta-minprocesses: 2

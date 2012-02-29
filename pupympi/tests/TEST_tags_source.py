@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test if tags/sources are handled correctly. Rank 0 sends 5 messages to rank 1 which should receive the first 3 but not the last 2.
 # meta-expectedresult: 0
 # meta-minprocesses: 2

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test that testsome returns handles ready to be waited on
 # meta-expectedresult: 0
 # meta-minprocesses: 4

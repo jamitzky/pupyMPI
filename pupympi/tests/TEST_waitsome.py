@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test waitsome on list of request handles
 # meta-expectedresult: 0
 # meta-minprocesses: 3

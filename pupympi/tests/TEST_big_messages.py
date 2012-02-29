@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Tests how we deal with transmitting very large messages
 # meta-expectedresult: 0
 # meta-minprocesses: 2

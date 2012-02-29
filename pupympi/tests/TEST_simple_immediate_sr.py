@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Test basic immediate communication. First rank 0 isends timestamp to rank 1 who is a very slow reciever so rank 0 should quit early
 # meta-expectedresult: 0
 # meta-minprocesses: 2

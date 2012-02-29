@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 # meta-description: Tests if that crashes in MPI program are propagated back to initiator
 # meta-expectedresult: 1
 
